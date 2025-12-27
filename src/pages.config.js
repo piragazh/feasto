@@ -11,6 +11,7 @@ import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminRestaurants from './pages/AdminRestaurants';
 import GroupOrder from './pages/GroupOrder';
+import SuperAdmin from './pages/SuperAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -28,6 +29,7 @@ export const PAGES = {
     "AdminDashboard": AdminDashboard,
     "AdminRestaurants": AdminRestaurants,
     "GroupOrder": GroupOrder,
+    "SuperAdmin": SuperAdmin,
 }
 
 export const pagesConfig = {
