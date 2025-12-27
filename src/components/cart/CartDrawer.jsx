@@ -1,0 +1,115 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, restaurantName }) {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFee = 2.99;
+    const total = subtotal + deliveryFee;
+
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
+                <SheetHeader className="p-6 border-b">
+                    <SheetTitle className="flex items-center gap-2">
+                        <ShoppingBag className="h-5 w-5" />
+                        Your Order
+                    </SheetTitle>
+                    {restaurantName && (
+                        <p className="text-sm text-gray-500">from {restaurantName}</p>
+                    )}
+                </SheetHeader>
+                
+                <div className="flex-1 overflow-y-auto p-6">
+                    {cart.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <ShoppingBag className="h-10 w-10 text-gray-400" />
+                            </div>
+                            <h3 className="font-medium text-gray-900 mb-2">Your cart is empty</h3>
+                            <p className="text-gray-500 text-sm">Add items from a restaurant to get started</p>
+                        </div>
+                    ) : (
+                        <AnimatePresence>
+                            <div className="space-y-4">
+                                {cart.map((item) => (
+                                    <motion.div
+                                        key={item.menu_item_id}
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, x: -100 }}
+                                        className="flex gap-4 p-4 bg-gray-50 rounded-xl"
+                                    >
+                                        {item.image_url && (
+                                            <img
+                                                src={item.image_url}
+                                                alt={item.name}
+                                                className="w-16 h-16 rounded-lg object-cover"
+                                            />
+                                        )}
+                                        <div className="flex-1">
+                                            <h4 className="font-medium text-gray-900">{item.name}</h4>
+                                            <p className="text-orange-500 font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <button
+                                                onClick={() => removeFromCart(item.menu_item_id)}
+                                                className="text-gray-400 hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                            <div className="flex items-center gap-2 bg-white rounded-full border px-1">
+                                                <button
+                                                    onClick={() => updateQuantity(item.menu_item_id, item.quantity - 1)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                                                >
+                                                    <Minus className="h-3 w-3" />
+                                                </button>
+                                                <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                                                <button
+                                                    onClick={() => updateQuantity(item.menu_item_id, item.quantity + 1)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </AnimatePresence>
+                    )}
+                </div>
+                
+                {cart.length > 0 && (
+                    <div className="border-t p-6 bg-white">
+                        <div className="space-y-3 mb-6">
+                            <div className="flex justify-between text-gray-600">
+                                <span>Subtotal</span>
+                                <span>${subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Delivery Fee</span>
+                                <span>${deliveryFee.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-semibold text-lg pt-3 border-t">
+                                <span>Total</span>
+                                <span>${total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <Link to={createPageUrl('Checkout')}>
+                            <Button className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg">
+                                Go to Checkout
+                            </Button>
+                        </Link>
+                    </div>
+                )}
+            </SheetContent>
+        </Sheet>
+    );
+}
