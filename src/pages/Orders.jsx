@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import LeaveReviewDialog from '@/components/reviews/LeaveReviewDialog';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -21,9 +22,19 @@ const statusConfig = {
 };
 
 export default function Orders() {
+    const [reviewingOrder, setReviewingOrder] = useState(null);
+    
     const { data: orders = [], isLoading, refetch } = useQuery({
         queryKey: ['orders'],
         queryFn: () => base44.entities.Order.list('-created_date'),
+    });
+
+    const { data: reviews = [] } = useQuery({
+        queryKey: ['user-reviews'],
+        queryFn: async () => {
+            const user = await base44.auth.me();
+            return base44.entities.Review.filter({ created_by: user.email });
+        },
     });
 
     return (
@@ -104,9 +115,9 @@ export default function Orders() {
                                                         </span>
                                                     </div>
                                                 ))}
-                                            </div>
+                                                </div>
 
-                                            <div className="border-t pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div className="border-t pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                 <div className="flex items-start gap-2 text-sm text-gray-500">
                                                     <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
                                                     <span className="line-clamp-1">{order.delivery_address}</span>
@@ -119,7 +130,20 @@ export default function Orders() {
                                                     )}
                                                     <span className="font-bold text-lg">${order.total?.toFixed(2)}</span>
                                                 </div>
-                                            </div>
+                                                </div>
+
+                                                {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
+                                                <div className="border-t pt-4">
+                                                    <Button
+                                                        onClick={() => setReviewingOrder(order)}
+                                                        variant="outline"
+                                                        className="w-full"
+                                                    >
+                                                        <Star className="h-4 w-4 mr-2" />
+                                                        Leave a Review
+                                                    </Button>
+                                                </div>
+                                                )}
                                         </CardContent>
                                     </Card>
                                 </motion.div>

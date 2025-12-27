@@ -12,6 +12,7 @@ import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import MealDealCard from '@/components/restaurant/MealDealCard';
 import CartDrawer from '@/components/cart/CartDrawer';
+import ReviewsList from '@/components/reviews/ReviewsList';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -307,6 +308,12 @@ export default function Restaurant() {
                     }}
                     onAddToCart={addToCartWithCustomizations}
                 />
+
+                {/* Reviews Section */}
+                <div className="mt-12">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+                    <ReviewsList restaurantId={restaurantId} />
+                </div>
             </div>
 
             {/* Floating Cart Button */}

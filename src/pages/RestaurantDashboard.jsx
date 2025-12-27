@@ -12,7 +12,8 @@ import {
     Settings, 
     LogOut,
     Bell,
-    MessageSquare
+    MessageSquare,
+    Star
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import MenuManagement from '@/components/restaurant/MenuManagement';
@@ -20,6 +21,7 @@ import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
 import CouponsManagement from '@/components/restaurant/CouponsManagement';
 import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
+import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -163,6 +165,10 @@ export default function RestaurantDashboard() {
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Messages
                         </TabsTrigger>
+                        <TabsTrigger value="reviews">
+                            <Star className="h-4 w-4 mr-2" />
+                            Reviews
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="orders">
@@ -190,6 +196,10 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="messages">
                         <RestaurantMessages restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="reviews">
+                        <ReviewsManagement restaurantId={restaurant.id} />
                     </TabsContent>
                 </Tabs>
             </div>
