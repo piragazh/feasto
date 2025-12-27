@@ -29,11 +29,30 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
 
     const assignOwnerMutation = useMutation({
         mutationFn: async ({ userId, restaurantId }) => {
-            return base44.auth.updateMe({ restaurant_id: restaurantId });
+            const userToAssign = users.find(u => u.id === userId);
+            if (!userToAssign) {
+                throw new Error('User not found');
+            }
+
+            const managerRecords = await base44.entities.RestaurantManager.filter({ user_email: userToAssign.email });
+            if (managerRecords.length > 0) {
+                const manager = managerRecords[0];
+                const updatedRestaurantIds = [...new Set([...manager.restaurant_ids, restaurantId])];
+                await base44.entities.RestaurantManager.update(manager.id, {
+                    restaurant_ids: updatedRestaurantIds,
+                    full_name: userToAssign.full_name || userToAssign.email,
+                });
+            } else {
+                await base44.entities.RestaurantManager.create({
+                    user_email: userToAssign.email,
+                    full_name: userToAssign.full_name || userToAssign.email,
+                    restaurant_ids: [restaurantId],
+                });
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['all-users']);
-            toast.success('Owner assigned successfully');
+            toast.success('Manager assigned successfully');
             onClose();
         },
     });

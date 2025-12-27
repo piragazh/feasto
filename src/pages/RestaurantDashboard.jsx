@@ -63,18 +63,18 @@ export default function RestaurantDashboard() {
                 const manager = managerRecords[0];
                 if (manager.restaurant_ids.length > 0) {
                     // Load first assigned restaurant
-                    const restaurants = await base44.entities.Restaurant.filter({ 
-                        id: manager.restaurant_ids[0] 
-                    });
-                    if (restaurants[0]) {
-                        setRestaurant(restaurants[0]);
+                    const allRestaurants = await base44.entities.Restaurant.list();
+                    const restaurantData = allRestaurants.find(r => r.id === manager.restaurant_ids[0]);
+                    if (restaurantData) {
+                        setRestaurant(restaurantData);
                     }
                 }
             } else if (userData.restaurant_id) {
                 // User is restaurant owner
-                const restaurants = await base44.entities.Restaurant.filter({ id: userData.restaurant_id });
-                if (restaurants[0]) {
-                    setRestaurant(restaurants[0]);
+                const allRestaurants = await base44.entities.Restaurant.list();
+                const restaurantData = allRestaurants.find(r => r.id === userData.restaurant_id);
+                if (restaurantData) {
+                    setRestaurant(restaurantData);
                     
                     // Show onboarding for new restaurant owners
                     if (!userData.onboarding_completed) {
