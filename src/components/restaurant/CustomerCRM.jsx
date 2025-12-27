@@ -348,11 +348,11 @@ export default function CustomerCRM({ restaurantId }) {
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-500">Total Spent</p>
-                                                    <p className="font-semibold text-green-600">${customer.totalSpent.toFixed(2)}</p>
+                                                    <p className="font-semibold text-green-600">£{customer.totalSpent.toFixed(2)}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-500">Avg Order</p>
-                                                    <p className="font-semibold">${customer.avgOrderValue.toFixed(2)}</p>
+                                                    <p className="font-semibold">£{customer.avgOrderValue.toFixed(2)}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-500">Favorite</p>
@@ -388,7 +388,7 @@ export default function CustomerCRM({ restaurantId }) {
                                     <CardContent className="pt-4">
                                         <p className="text-sm text-gray-600">Total Spent</p>
                                         <p className="text-2xl font-bold text-green-600">
-                                            ${selectedCustomer.totalSpent.toFixed(2)}
+                                            £{selectedCustomer.totalSpent.toFixed(2)}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -407,7 +407,7 @@ export default function CustomerCRM({ restaurantId }) {
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="font-semibold">${order.total.toFixed(2)}</p>
+                                                    <p className="font-semibold">£{order.total.toFixed(2)}</p>
                                                     <Badge variant="outline" className="text-xs">
                                                         {order.status}
                                                     </Badge>

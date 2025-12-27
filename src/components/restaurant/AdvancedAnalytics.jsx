@@ -167,9 +167,9 @@ export default function AdvancedAnalytics({ restaurantId }) {
             prompt: `Based on this sales data, forecast the next ${forecastDays} days:
 
 Historical Data (last ${dateRange} days):
-- Total Revenue: $${analytics.totalRevenue.toFixed(2)}
+- Total Revenue: £${analytics.totalRevenue.toFixed(2)}
 - Total Orders: ${analytics.totalOrders}
-- Average Order Value: $${analytics.avgOrderValue.toFixed(2)}
+- Average Order Value: £${analytics.avgOrderValue.toFixed(2)}
 - Daily Stats: ${JSON.stringify(analytics.dailyStats.slice(-7))}
 
 Consider:
@@ -310,7 +310,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                             <span className="text-sm text-gray-600">Total Revenue</span>
                             <DollarSign className="h-5 w-5 text-green-500" />
                         </div>
-                        <p className="text-3xl font-bold">${analytics.totalRevenue.toFixed(2)}</p>
+                        <p className="text-3xl font-bold">£{analytics.totalRevenue.toFixed(2)}</p>
                         <p className="text-xs text-gray-500 mt-1">
                             <span className={analytics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}>
                                 {analytics.revenueGrowth >= 0 ? '+' : ''}{analytics.revenueGrowth.toFixed(1)}%
@@ -340,7 +340,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                             <span className="text-sm text-gray-600">Avg Order Value</span>
                             <Target className="h-5 w-5 text-purple-500" />
                         </div>
-                        <p className="text-3xl font-bold">${analytics.avgOrderValue.toFixed(2)}</p>
+                        <p className="text-3xl font-bold">£{analytics.avgOrderValue.toFixed(2)}</p>
                         <p className="text-xs text-gray-500 mt-1">Per order</p>
                     </CardContent>
                 </Card>
@@ -379,7 +379,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                     fill="#f97316" 
                                     stroke="#f97316" 
                                     fillOpacity={0.3}
-                                    name="Revenue ($)"
+                                    name="Revenue (£)"
                                 />
                                 <Bar 
                                     yAxisId="right"
@@ -433,7 +433,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                             dataKey="predicted_revenue" 
                                             stroke="#8b5cf6" 
                                             strokeWidth={2}
-                                            name="Predicted Revenue ($)"
+                                            name="Predicted Revenue (£)"
                                         />
                                         <Line 
                                             type="monotone" 
@@ -486,7 +486,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                         <XAxis dataKey="day" />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="revenue" fill="#3b82f6" name="Revenue ($)" />
+                                        <Bar dataKey="revenue" fill="#3b82f6" name="Revenue (£)" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
