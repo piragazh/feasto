@@ -182,7 +182,7 @@ Provide only the time range (e.g., "25-30 min").`;
                     ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
                     <p><strong>Customer:</strong> ${order.phone}</p>
                     <div class="separator"></div>
-                    <p class="total">TOTAL: $${order.total.toFixed(2)}</p>
+                    <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
                 </body>
             </html>
         `);
@@ -240,7 +240,7 @@ Provide only the time range (e.g., "25-30 min").`;
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-bold text-gray-900">${order.total.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
                                     <p className="text-xs text-gray-500">{order.payment_method}</p>
                                 </div>
                             </div>
@@ -260,7 +260,7 @@ Provide only the time range (e.g., "25-30 min").`;
                                                 </div>
                                             )}
                                         </div>
-                                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                        <span>£{(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
                                 ))}
                             </div>

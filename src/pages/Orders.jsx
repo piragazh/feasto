@@ -113,7 +113,7 @@ export default function Orders() {
                                                             {item.quantity}x {item.name}
                                                         </span>
                                                         <span className="text-gray-900">
-                                                            ${(item.price * item.quantity).toFixed(2)}
+                                                            £{(item.price * item.quantity).toFixed(2)}
                                                         </span>
                                                     </div>
                                                 ))}
@@ -130,7 +130,7 @@ export default function Orders() {
                                                             ETA: {order.estimated_delivery}
                                                         </span>
                                                     )}
-                                                    <span className="font-bold text-lg">${order.total?.toFixed(2)}</span>
+                                                    <span className="font-bold text-lg">£{order.total?.toFixed(2)}</span>
                                                     </div>
                                                     </div>
 
