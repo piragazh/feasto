@@ -135,8 +135,8 @@ export default function RestaurantAnalytics({ restaurantId }) {
             dateRange: `${dateRange.start} to ${dateRange.end}`,
             summary: {
                 totalOrders: analytics.totalOrders,
-                totalRevenue: `$${analytics.totalRevenue.toFixed(2)}`,
-                avgOrderValue: `$${analytics.avgOrderValue.toFixed(2)}`,
+                totalRevenue: `£${analytics.totalRevenue.toFixed(2)}`,
+                avgOrderValue: `£${analytics.avgOrderValue.toFixed(2)}`,
                 uniqueCustomers: analytics.uniqueCustomers,
                 retentionRate: `${analytics.retentionRate.toFixed(1)}%`,
                 avgRating: analytics.avgRating
@@ -218,7 +218,7 @@ export default function RestaurantAnalytics({ restaurantId }) {
                             <div>
                                 <p className="text-sm text-gray-600">Total Revenue</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    ${analytics.totalRevenue.toFixed(2)}
+                                    £{analytics.totalRevenue.toFixed(2)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -248,7 +248,7 @@ export default function RestaurantAnalytics({ restaurantId }) {
                             <div>
                                 <p className="text-sm text-gray-600">Avg Order Value</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    ${analytics.avgOrderValue.toFixed(2)}
+                                    £{analytics.avgOrderValue.toFixed(2)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
@@ -286,7 +286,7 @@ export default function RestaurantAnalytics({ restaurantId }) {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="date" />
                             <YAxis />
-                            <Tooltip formatter={(value) => `$${value}`} />
+                            <Tooltip formatter={(value) => `£${value}`} />
                             <Legend />
                             <Line type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} />
                         </LineChart>

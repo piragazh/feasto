@@ -157,7 +157,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                     ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
                     <p><strong>Customer:</strong> ${order.phone}</p>
                     <div class="separator"></div>
-                    <p class="total">TOTAL: $${order.total.toFixed(2)}</p>
+                    <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
                 </body>
             </html>
         `);
@@ -341,7 +341,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-2xl font-bold text-gray-900">${order.total.toFixed(2)}</p>
+                                            <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
                                             <p className="text-xs text-gray-500">{order.payment_method}</p>
                                         </div>
                                     </div>
@@ -352,7 +352,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                         {order.items.map((item, idx) => (
                                             <div key={idx} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
                                                 <span className="font-medium">{item.quantity}x {item.name}</span>
-                                                <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                                <span>£{(item.price * item.quantity).toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>

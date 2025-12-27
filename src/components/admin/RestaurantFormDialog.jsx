@@ -159,7 +159,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                             />
                         </div>
                         <div>
-                            <Label>Delivery Fee ($)</Label>
+                            <Label>Delivery Fee (£)</Label>
                             <Input
                                 type="number"
                                 step="0.01"
@@ -168,7 +168,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                             />
                         </div>
                         <div>
-                            <Label>Min Order ($)</Label>
+                            <Label>Min Order (£)</Label>
                             <Input
                                 type="number"
                                 step="0.01"
