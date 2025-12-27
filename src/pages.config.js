@@ -10,6 +10,7 @@ import DriverApp from './pages/DriverApp';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminRestaurants from './pages/AdminRestaurants';
+import GroupOrder from './pages/GroupOrder';
 import __Layout from './Layout.jsx';
 
 
@@ -26,6 +27,7 @@ export const PAGES = {
     "ManageRestaurantManagers": ManageRestaurantManagers,
     "AdminDashboard": AdminDashboard,
     "AdminRestaurants": AdminRestaurants,
+    "GroupOrder": GroupOrder,
 }
 
 export const pagesConfig = {

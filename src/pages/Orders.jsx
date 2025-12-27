@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import LeaveReviewDialog from '@/components/reviews/LeaveReviewDialog';
 import OrderStatusTimeline from '@/components/restaurant/OrderStatusTimeline';
 
@@ -23,6 +24,7 @@ const statusConfig = {
 };
 
 export default function Orders() {
+    const navigate = useNavigate();
     const [reviewingOrder, setReviewingOrder] = useState(null);
     
     const { data: orders = [], isLoading, refetch } = useQuery({
@@ -38,6 +40,15 @@ export default function Orders() {
             return base44.entities.Review.filter({ created_by: user.email });
         },
     });
+
+    const reorderOrder = (order) => {
+        // Save order items to cart
+        localStorage.setItem('cart', JSON.stringify(order.items));
+        localStorage.setItem('cartRestaurantId', order.restaurant_id);
+        
+        toast.success('Items added to cart!');
+        navigate(createPageUrl('Restaurant') + '?id=' + order.restaurant_id);
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -92,18 +103,31 @@ export default function Orders() {
                                     <Card className="overflow-hidden">
                                         <CardContent className="p-6">
                                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                                                <div>
-                                                    <h3 className="font-semibold text-lg text-gray-900">
-                                                        {order.restaurant_name || 'Restaurant'}
-                                                    </h3>
-                                                    <p className="text-sm text-gray-500">
-                                                        {order.created_date && format(new Date(order.created_date), 'MMM d, yyyy • h:mm a')}
-                                                    </p>
-                                                </div>
-                                                <Badge className={`${status.color} flex items-center gap-1.5 px-3 py-1.5`}>
-                                                    <StatusIcon className="h-4 w-4" />
-                                                    {status.label}
-                                                </Badge>
+                                               <div>
+                                                   <div className="flex items-center gap-2 mb-1">
+                                                       <h3 className="font-semibold text-lg text-gray-900">
+                                                           {order.restaurant_name || 'Restaurant'}
+                                                       </h3>
+                                                       {order.is_scheduled && (
+                                                           <Badge variant="outline" className="text-xs">
+                                                               <Clock className="h-3 w-3 mr-1" />
+                                                               Scheduled
+                                                           </Badge>
+                                                       )}
+                                                   </div>
+                                                   <p className="text-sm text-gray-500">
+                                                       {order.created_date && format(new Date(order.created_date), 'MMM d, yyyy • h:mm a')}
+                                                   </p>
+                                                   {order.is_scheduled && order.scheduled_for && (
+                                                       <p className="text-xs text-orange-600 mt-1">
+                                                           Scheduled for: {format(new Date(order.scheduled_for), 'MMM d, yyyy • h:mm a')}
+                                                       </p>
+                                                   )}
+                                               </div>
+                                               <Badge className={`${status.color} flex items-center gap-1.5 px-3 py-1.5`}>
+                                                   <StatusIcon className="h-4 w-4" />
+                                                   {status.label}
+                                               </Badge>
                                             </div>
 
                                             <div className="space-y-2 mb-4">
@@ -156,16 +180,26 @@ export default function Orders() {
                                                         </div>
                                                     )}
 
-                                                    {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
-                                                        <div className="border-t pt-4">
+                                                    {(order.status === 'delivered' || order.status === 'cancelled') && (
+                                                        <div className="border-t pt-4 flex gap-2">
                                                             <Button
-                                                                onClick={() => setReviewingOrder(order)}
+                                                                onClick={() => reorderOrder(order)}
                                                                 variant="outline"
-                                                                className="w-full"
+                                                                className="flex-1"
                                                             >
-                                                                <Star className="h-4 w-4 mr-2" />
-                                                                Leave a Review
+                                                                <RotateCcw className="h-4 w-4 mr-2" />
+                                                                Reorder
                                                             </Button>
+                                                            {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
+                                                                <Button
+                                                                    onClick={() => setReviewingOrder(order)}
+                                                                    variant="outline"
+                                                                    className="flex-1"
+                                                                >
+                                                                    <Star className="h-4 w-4 mr-2" />
+                                                                    Review
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     )}
                                         </CardContent>
@@ -176,6 +210,12 @@ export default function Orders() {
                     </div>
                 )}
             </div>
+
+            <LeaveReviewDialog
+                open={!!reviewingOrder}
+                onClose={() => setReviewingOrder(null)}
+                order={reviewingOrder}
+            />
         </div>
     );
 }

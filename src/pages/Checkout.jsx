@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react';
 import CouponInput from '@/components/checkout/CouponInput';
 import PaymentMethods from '@/components/checkout/PaymentMethods';
+import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection';
+import GroupOrderSection from '@/components/checkout/GroupOrderSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -21,6 +23,10 @@ export default function Checkout() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(false);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [isScheduled, setIsScheduled] = useState(false);
+    const [scheduledFor, setScheduledFor] = useState('');
+    const [groupOrderId, setGroupOrderId] = useState(null);
+    const [shareCode, setShareCode] = useState(null);
     
     const [formData, setFormData] = useState({
         delivery_address: '',
@@ -33,6 +39,7 @@ export default function Checkout() {
         const savedCart = localStorage.getItem('cart');
         const savedRestaurantId = localStorage.getItem('cartRestaurantId');
         const savedRestaurantName = localStorage.getItem('cartRestaurantName');
+        const savedGroupOrderId = localStorage.getItem('groupOrderId');
         
         if (savedCart) {
             setCart(JSON.parse(savedCart));
@@ -40,6 +47,9 @@ export default function Checkout() {
         if (savedRestaurantId) {
             setRestaurantId(savedRestaurantId);
             loadRestaurantName(savedRestaurantId);
+        }
+        if (savedGroupOrderId) {
+            setGroupOrderId(savedGroupOrderId);
         }
     }, []);
 
@@ -70,7 +80,7 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
-            await base44.entities.Order.create({
+            const orderData = {
                 restaurant_id: restaurantId,
                 restaurant_name: restaurantName,
                 items: cart,
@@ -84,8 +94,19 @@ export default function Checkout() {
                 delivery_address: formData.delivery_address,
                 phone: formData.phone,
                 notes: formData.notes,
-                estimated_delivery: '30-45 minutes'
-            });
+                estimated_delivery: isScheduled ? 'Scheduled' : '30-45 minutes',
+                is_scheduled: isScheduled,
+                scheduled_for: isScheduled ? scheduledFor : null,
+                is_group_order: !!groupOrderId,
+                group_order_id: groupOrderId
+            };
+
+            await base44.entities.Order.create(orderData);
+
+            // Update group order status if applicable
+            if (groupOrderId) {
+                await base44.entities.GroupOrder.update(groupOrderId, { status: 'placed' });
+            }
 
             // Increment coupon usage if applied
             if (appliedCoupon) {
@@ -96,6 +117,7 @@ export default function Checkout() {
 
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
+            localStorage.removeItem('groupOrderId');
             setOrderPlaced(true);
 
             setTimeout(() => {
@@ -212,6 +234,13 @@ export default function Checkout() {
                                     />
                                 </CardContent>
                             </Card>
+
+                            <ScheduleOrderSection
+                                isScheduled={isScheduled}
+                                onScheduleToggle={setIsScheduled}
+                                scheduledFor={scheduledFor}
+                                onScheduleChange={setScheduledFor}
+                            />
 
                             <Card>
                                 <CardHeader>
