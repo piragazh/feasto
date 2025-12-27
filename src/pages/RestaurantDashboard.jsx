@@ -29,6 +29,7 @@ import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
 import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
 import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
+import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import { toast } from 'sonner';
@@ -238,7 +239,7 @@ export default function RestaurantDashboard() {
                     </TabsContent>
 
                     <TabsContent value="analytics">
-                        <RestaurantAnalytics restaurantId={restaurant.id} />
+                        <AdvancedAnalytics restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="drivers">
