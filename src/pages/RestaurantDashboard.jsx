@@ -52,19 +52,38 @@ export default function RestaurantDashboard() {
             const userData = await base44.auth.me();
             setUser(userData);
             
-            if (!userData.restaurant_id) {
+            // Check if user is a restaurant manager
+            const managerRecords = await base44.entities.RestaurantManager.filter({ 
+                user_email: userData.email,
+                is_active: true 
+            });
+            
+            if (managerRecords.length > 0) {
+                // User is a restaurant manager
+                const manager = managerRecords[0];
+                if (manager.restaurant_ids.length > 0) {
+                    // Load first assigned restaurant
+                    const restaurants = await base44.entities.Restaurant.filter({ 
+                        id: manager.restaurant_ids[0] 
+                    });
+                    if (restaurants[0]) {
+                        setRestaurant(restaurants[0]);
+                    }
+                }
+            } else if (userData.restaurant_id) {
+                // User is restaurant owner
+                const restaurants = await base44.entities.Restaurant.filter({ id: userData.restaurant_id });
+                if (restaurants[0]) {
+                    setRestaurant(restaurants[0]);
+                    
+                    // Show onboarding for new restaurant owners
+                    if (!userData.onboarding_completed) {
+                        setShowOnboarding(true);
+                    }
+                }
+            } else {
                 toast.error('No restaurant assigned to this account');
                 return;
-            }
-
-            const restaurants = await base44.entities.Restaurant.filter({ id: userData.restaurant_id });
-            if (restaurants[0]) {
-                setRestaurant(restaurants[0]);
-                
-                // Show onboarding for new restaurant owners
-                if (!userData.onboarding_completed) {
-                    setShowOnboarding(true);
-                }
             }
         } catch (e) {
             base44.auth.redirectToLogin();
