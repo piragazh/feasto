@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import ImportFromJustEat from './ImportFromJustEat';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -117,16 +118,18 @@ export default function MenuManagement({ restaurantId }) {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Menu Items</h2>
-                <Dialog open={dialogOpen} onOpenChange={(open) => {
-                    setDialogOpen(open);
-                    if (!open) resetForm();
-                }}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-orange-500 hover:bg-orange-600">
-                            <Plus className="h-5 w-5 mr-2" />
-                            Add Menu Item
-                        </Button>
-                    </DialogTrigger>
+                <div className="flex gap-2">
+                    <ImportFromJustEat restaurantId={restaurantId} />
+                    <Dialog open={dialogOpen} onOpenChange={(open) => {
+                        setDialogOpen(open);
+                        if (!open) resetForm();
+                    }}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-orange-500 hover:bg-orange-600">
+                                <Plus className="h-5 w-5 mr-2" />
+                                Add Menu Item
+                            </Button>
+                        </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>{editingItem ? 'Edit' : 'Add'} Menu Item</DialogTitle>
@@ -215,6 +218,7 @@ export default function MenuManagement({ restaurantId }) {
                         </form>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
