@@ -11,6 +11,7 @@ import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star }
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import LeaveReviewDialog from '@/components/reviews/LeaveReviewDialog';
+import OrderStatusTimeline from '@/components/restaurant/OrderStatusTimeline';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -27,6 +28,7 @@ export default function Orders() {
     const { data: orders = [], isLoading, refetch } = useQuery({
         queryKey: ['orders'],
         queryFn: () => base44.entities.Order.list('-created_date'),
+        refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time updates
     });
 
     const { data: reviews = [] } = useQuery({
@@ -123,27 +125,38 @@ export default function Orders() {
                                                     <span className="line-clamp-1">{order.delivery_address}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4">
-                                                    {order.estimated_delivery && order.status !== 'delivered' && (
+                                                    {order.estimated_delivery && order.status !== 'delivered' && order.status !== 'cancelled' && (
                                                         <span className="text-sm text-gray-500">
                                                             ETA: {order.estimated_delivery}
                                                         </span>
                                                     )}
                                                     <span className="font-bold text-lg">${order.total?.toFixed(2)}</span>
-                                                </div>
-                                                </div>
+                                                    </div>
+                                                    </div>
 
-                                                {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
-                                                <div className="border-t pt-4">
-                                                    <Button
-                                                        onClick={() => setReviewingOrder(order)}
-                                                        variant="outline"
-                                                        className="w-full"
-                                                    >
-                                                        <Star className="h-4 w-4 mr-2" />
-                                                        Leave a Review
-                                                    </Button>
-                                                </div>
-                                                )}
+                                                    {order.status === 'cancelled' && order.rejection_reason && (
+                                                    <div className="border-t pt-4">
+                                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                                        <p className="text-sm font-semibold text-red-900 mb-1">Order Cancelled</p>
+                                                        <p className="text-sm text-red-700">{order.rejection_reason}</p>
+                                                    </div>
+                                                    </div>
+                                                    )}
+
+                                                    <OrderStatusTimeline statusHistory={order.status_history} />
+
+                                                    {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
+                                                        <div className="border-t pt-4">
+                                                            <Button
+                                                                onClick={() => setReviewingOrder(order)}
+                                                                variant="outline"
+                                                                className="w-full"
+                                                            >
+                                                                <Star className="h-4 w-4 mr-2" />
+                                                                Leave a Review
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                         </CardContent>
                                     </Card>
                                 </motion.div>

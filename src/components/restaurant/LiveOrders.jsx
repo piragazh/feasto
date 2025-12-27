@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,10 @@ import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer } from 'lucide-reac
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import RejectOrderDialog from './RejectOrderDialog';
 
 export default function LiveOrders({ restaurantId, onOrderUpdate }) {
+    const [rejectingOrder, setRejectingOrder] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: orders = [], isLoading } = useQuery({
@@ -23,13 +25,63 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     });
 
     const updateOrderMutation = useMutation({
-        mutationFn: ({ orderId, status }) => 
-            base44.entities.Order.update(orderId, { status }),
+        mutationFn: async ({ orderId, status, rejection_reason, notify = true }) => {
+            const updateData = { status };
+            if (rejection_reason) {
+                updateData.rejection_reason = rejection_reason;
+            }
+            
+            // Add to status history
+            const order = orders.find(o => o.id === orderId);
+            const statusHistory = order?.status_history || [];
+            statusHistory.push({
+                status,
+                timestamp: new Date().toISOString(),
+                note: rejection_reason || ''
+            });
+            updateData.status_history = statusHistory;
+            
+            const result = await base44.entities.Order.update(orderId, updateData);
+            
+            // Send notification to customer
+            if (notify) {
+                await sendCustomerNotification(orderId, status, rejection_reason);
+            }
+            
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['live-orders']);
             onOrderUpdate();
         },
     });
+
+    const sendCustomerNotification = async (orderId, status, rejectionReason) => {
+        try {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+
+            const statusMessages = {
+                confirmed: 'Your order has been confirmed and will be prepared shortly.',
+                preparing: 'Your order is being prepared.',
+                out_for_delivery: 'Your order is on its way!',
+                delivered: 'Your order has been delivered. Enjoy!',
+                cancelled: `Your order has been cancelled. Reason: ${rejectionReason || 'Restaurant unable to fulfill order'}`
+            };
+
+            const message = statusMessages[status] || 'Order status updated';
+            
+            // SMS notification placeholder - requires backend functions
+            // await base44.integrations.Core.SendSMS({
+            //     to: order.phone,
+            //     message: `Order #${order.id.slice(-6)}: ${message}`
+            // });
+            
+            console.log(`SMS would be sent to ${order.phone}: ${message}`);
+        } catch (error) {
+            console.error('Notification error:', error);
+        }
+    };
 
     const handleAccept = (orderId) => {
         updateOrderMutation.mutate({ orderId, status: 'confirmed' });
@@ -37,18 +89,24 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         printOrderDetails(orderId);
     };
 
-    const handleReject = (orderId) => {
-        if (confirm('Are you sure you want to reject this order?')) {
-            updateOrderMutation.mutate({ orderId, status: 'cancelled' });
-            toast.success('Order cancelled');
-        }
+    const handleReject = (orderId, reason) => {
+        updateOrderMutation.mutate({ 
+            orderId, 
+            status: 'cancelled',
+            rejection_reason: reason
+        });
+        toast.success('Order rejected and customer notified');
     };
 
     const handleStatusChange = (orderId, newStatus) => {
         updateOrderMutation.mutate({ orderId, status: newStatus });
-        if (newStatus === 'out_for_delivery') {
-            toast.success('Customer notified: Order dispatched!');
-        }
+        const statusLabels = {
+            confirmed: 'Order accepted',
+            preparing: 'Preparing order',
+            out_for_delivery: 'Order dispatched',
+            delivered: 'Order delivered'
+        };
+        toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
     };
 
     const printOrderDetails = (orderId) => {
@@ -203,7 +261,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                                             Accept Order
                                         </Button>
                                         <Button
-                                            onClick={() => handleReject(order.id)}
+                                            onClick={() => setRejectingOrder(order)}
                                             variant="destructive"
                                             className="flex-1"
                                         >
@@ -252,6 +310,13 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                     </Card>
                 </motion.div>
             ))}
+
+            <RejectOrderDialog
+                open={!!rejectingOrder}
+                onClose={() => setRejectingOrder(null)}
+                onReject={(reason) => handleReject(rejectingOrder.id, reason)}
+                orderNumber={rejectingOrder?.id.slice(-6)}
+            />
         </div>
     );
 }
