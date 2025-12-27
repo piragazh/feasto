@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react';
 import CouponInput from '@/components/checkout/CouponInput';
+import PaymentMethods from '@/components/checkout/PaymentMethods';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ export default function Checkout() {
         phone: '',
         notes: ''
     });
+    const [paymentMethod, setPaymentMethod] = useState('cash');
 
     useEffect(() => {
         const savedCart = localStorage.getItem('cart');
@@ -77,6 +79,7 @@ export default function Checkout() {
                 discount: discount,
                 coupon_code: appliedCoupon?.code,
                 total,
+                payment_method: paymentMethod,
                 status: 'pending',
                 delivery_address: formData.delivery_address,
                 phone: formData.phone,
@@ -222,6 +225,11 @@ export default function Checkout() {
                                     />
                                 </CardContent>
                             </Card>
+
+                            <PaymentMethods
+                                selectedMethod={paymentMethod}
+                                onMethodChange={setPaymentMethod}
+                            />
 
                             <Button
                                 type="submit"
