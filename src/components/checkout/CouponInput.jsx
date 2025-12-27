@@ -45,7 +45,7 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
             }
 
             if (coupon.minimum_order && subtotal < coupon.minimum_order) {
-                toast.error(`Minimum order of $${coupon.minimum_order.toFixed(2)} required`);
+                toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`);
                 setIsValidating(false);
                 return;
             }
@@ -82,7 +82,7 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
 
             setAppliedCoupon({ ...coupon, discount });
             onCouponApply({ ...coupon, discount });
-            toast.success(`Coupon applied! You saved $${discount.toFixed(2)}`);
+            toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
 
         } catch (error) {
             toast.error('Failed to validate coupon');
@@ -110,7 +110,7 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
                         <div>
                             <p className="font-semibold text-green-900">{appliedCoupon.code}</p>
                             <p className="text-sm text-green-700">
-                                {appliedCoupon.description || `Saved $${appliedCoupon.discount.toFixed(2)}`}
+                                {appliedCoupon.description || `Saved £${appliedCoupon.discount.toFixed(2)}`}
                             </p>
                         </div>
                     </div>

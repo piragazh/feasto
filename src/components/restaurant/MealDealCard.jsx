@@ -35,10 +35,10 @@ export default function MealDealCard({ deal, onAddToCart }) {
                     
                     <div className="flex items-center gap-3 mb-3">
                         <span className="text-gray-400 line-through text-sm">
-                            ${deal.original_price?.toFixed(2)}
+                            £{deal.original_price?.toFixed(2)}
                         </span>
                         <span className="font-bold text-xl text-orange-600">
-                            ${deal.deal_price?.toFixed(2)}
+                            £{deal.deal_price?.toFixed(2)}
                         </span>
                     </div>
 

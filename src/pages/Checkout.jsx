@@ -242,7 +242,7 @@ export default function Checkout() {
                                         Placing Order...
                                     </>
                                 ) : (
-                                    `Place Order • $${total.toFixed(2)}`
+                                    `Place Order • £${total.toFixed(2)}`
                                 )}
                             </Button>
                         </form>
@@ -276,7 +276,7 @@ export default function Checkout() {
                                                     )}
                                                 </div>
                                             </div>
-                                            <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                                            <span className="font-medium">£{(item.price * item.quantity).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -284,21 +284,21 @@ export default function Checkout() {
                                 <div className="border-t pt-4 space-y-2">
                                     <div className="flex justify-between text-gray-600">
                                         <span>Subtotal</span>
-                                        <span>${subtotal.toFixed(2)}</span>
+                                        <span>£{subtotal.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
                                         <span>Delivery Fee</span>
-                                        <span>${deliveryFee.toFixed(2)}</span>
+                                        <span>£{deliveryFee.toFixed(2)}</span>
                                     </div>
                                     {discount > 0 && (
                                         <div className="flex justify-between text-green-600">
                                             <span>Discount ({appliedCoupon?.code})</span>
-                                            <span>-${discount.toFixed(2)}</span>
+                                            <span>-£{discount.toFixed(2)}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
                                         <span>Total</span>
-                                        <span>${total.toFixed(2)}</span>
+                                        <span>£{total.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </CardContent>

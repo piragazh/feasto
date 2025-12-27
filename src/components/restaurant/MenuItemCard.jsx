@@ -25,7 +25,7 @@ export default function MenuItemCard({ item, onAddToCart }) {
                 </div>
                 <p className="text-gray-500 text-sm mb-3 line-clamp-2">{item.description}</p>
                 <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg text-gray-900">${item.price?.toFixed(2)}</span>
+                    <span className="font-bold text-lg text-gray-900">£{item.price?.toFixed(2)}</span>
                     {item.is_vegetarian && (
                         <div className="flex items-center gap-1 text-green-600">
                             <Leaf className="h-4 w-4" />
