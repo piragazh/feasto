@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import HeroSection from '@/components/home/HeroSection';
 import CuisineFilter from '@/components/home/CuisineFilter';
 import RestaurantCard from '@/components/home/RestaurantCard';
+import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from 'framer-motion';
 
@@ -39,6 +40,8 @@ export default function Home() {
                     selectedCuisine={selectedCuisine}
                     setSelectedCuisine={setSelectedCuisine}
                 />
+
+                <PersonalizedRecommendations restaurants={filteredRestaurants} />
                 
                 <div className="pb-12">
                     <div className="flex items-center justify-between mb-6">

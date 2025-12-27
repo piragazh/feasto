@@ -18,6 +18,7 @@ import {
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import MenuManagement from '@/components/restaurant/MenuManagement';
 import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
+import AIMealDealSuggestions from '@/components/restaurant/AIMealDealSuggestions';
 import CouponsManagement from '@/components/restaurant/CouponsManagement';
 import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
@@ -183,6 +184,7 @@ export default function RestaurantDashboard() {
                     </TabsContent>
 
                     <TabsContent value="deals">
+                        <AIMealDealSuggestions restaurantId={restaurant.id} />
                         <MealDealsManagement restaurantId={restaurant.id} />
                     </TabsContent>
 
