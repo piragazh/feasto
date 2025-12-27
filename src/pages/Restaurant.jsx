@@ -222,7 +222,7 @@ export default function Restaurant() {
                             </div>
                             <div className="flex items-center gap-1">
                                 <Bike className="h-4 w-4" />
-                                <span>{restaurant.delivery_fee ? `$${restaurant.delivery_fee.toFixed(2)} delivery` : 'Free delivery'}</span>
+                                <span>{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)} delivery` : 'Free delivery'}</span>
                             </div>
                         </div>
                     </div>
@@ -242,7 +242,7 @@ export default function Restaurant() {
                         {restaurant.minimum_order > 0 && (
                             <div className="flex items-center gap-2">
                                 <Info className="h-4 w-4 text-gray-400" />
-                                <span>Min. order ${restaurant.minimum_order}</span>
+                                <span>Min. order £{restaurant.minimum_order}</span>
                             </div>
                         )}
                         <div className="flex items-center gap-2 text-xs">
@@ -338,7 +338,7 @@ export default function Restaurant() {
                                 </div>
                                 <span>View Cart</span>
                             </div>
-                            <span>${cartTotal.toFixed(2)}</span>
+                            <span>£{cartTotal.toFixed(2)}</span>
                         </Button>
                     </div>
                 </motion.div>
