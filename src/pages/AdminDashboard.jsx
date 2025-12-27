@@ -84,7 +84,7 @@ export default function AdminDashboard() {
                                 <span className="text-sm text-gray-600">Total Revenue</span>
                                 <DollarSign className="h-5 w-5 text-green-500" />
                             </div>
-                            <p className="text-3xl font-bold">${totalRevenue.toFixed(2)}</p>
+                            <p className="text-3xl font-bold">£{totalRevenue.toFixed(2)}</p>
                             <p className="text-xs text-gray-500 mt-1">All time</p>
                         </CardContent>
                     </Card>
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
                                 <span className="text-sm text-gray-600">Avg Order Value</span>
                                 <TrendingUp className="h-5 w-5 text-purple-500" />
                             </div>
-                            <p className="text-3xl font-bold">${avgOrderValue.toFixed(2)}</p>
+                            <p className="text-3xl font-bold">£{avgOrderValue.toFixed(2)}</p>
                             <p className="text-xs text-gray-500 mt-1">Per order</p>
                         </CardContent>
                     </Card>
@@ -136,7 +136,7 @@ export default function AdminDashboard() {
                                     <XAxis dataKey="name" />
                                     <YAxis />
                                     <Tooltip />
-                                    <Bar dataKey="revenue" fill="#f97316" name="Revenue ($)" />
+                                    <Bar dataKey="revenue" fill="#f97316" name="Revenue (£)" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </CardContent>
@@ -189,10 +189,10 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="text-right py-3 px-4">{restaurant.orderCount}</td>
                                             <td className="text-right py-3 px-4 font-semibold">
-                                                ${restaurant.revenue.toFixed(2)}
+                                                £{restaurant.revenue.toFixed(2)}
                                             </td>
                                             <td className="text-right py-3 px-4">
-                                                ${restaurant.orderCount > 0 ? (restaurant.revenue / restaurant.orderCount).toFixed(2) : '0.00'}
+                                                £{restaurant.orderCount > 0 ? (restaurant.revenue / restaurant.orderCount).toFixed(2) : '0.00'}
                                             </td>
                                             <td className="text-right py-3 px-4">
                                                 <div className="flex items-center justify-end gap-1">
