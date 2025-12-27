@@ -5,6 +5,8 @@ import { Plus, Flame, Leaf } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function MenuItemCard({ item, onAddToCart }) {
+    const hasCustomizations = item.customization_options?.length > 0;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -16,6 +18,9 @@ export default function MenuItemCard({ item, onAddToCart }) {
                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
                     {item.is_popular && (
                         <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
+                    )}
+                    {hasCustomizations && (
+                        <Badge variant="outline" className="text-xs">Customizable</Badge>
                     )}
                 </div>
                 <p className="text-gray-500 text-sm mb-3 line-clamp-2">{item.description}</p>

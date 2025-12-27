@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react';
+import CouponInput from '@/components/checkout/CouponInput';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -18,6 +19,7 @@ export default function Checkout() {
     const [restaurantName, setRestaurantName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(false);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
     
     const [formData, setFormData] = useState({
         delivery_address: '',
@@ -52,7 +54,8 @@ export default function Checkout() {
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = 2.99;
-    const total = subtotal + deliveryFee;
+    const discount = appliedCoupon?.discount || 0;
+    const total = subtotal + deliveryFee - discount;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -71,6 +74,8 @@ export default function Checkout() {
                 items: cart,
                 subtotal,
                 delivery_fee: deliveryFee,
+                discount: discount,
+                coupon_code: appliedCoupon?.code,
                 total,
                 status: 'pending',
                 delivery_address: formData.delivery_address,
@@ -78,6 +83,13 @@ export default function Checkout() {
                 notes: formData.notes,
                 estimated_delivery: '30-45 minutes'
             });
+
+            // Increment coupon usage if applied
+            if (appliedCoupon) {
+                await base44.entities.Coupon.update(appliedCoupon.id, {
+                    usage_count: (appliedCoupon.usage_count || 0) + 1
+                });
+            }
 
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
@@ -198,6 +210,19 @@ export default function Checkout() {
                                 </CardContent>
                             </Card>
 
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Have a Coupon?</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <CouponInput
+                                        restaurantId={restaurantId}
+                                        subtotal={subtotal}
+                                        onCouponApply={setAppliedCoupon}
+                                    />
+                                </CardContent>
+                            </Card>
+
                             <Button
                                 type="submit"
                                 disabled={isSubmitting}
@@ -225,13 +250,26 @@ export default function Checkout() {
                                 )}
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {cart.map((item) => (
-                                    <div key={item.menu_item_id} className="flex justify-between">
-                                        <div className="flex gap-2">
-                                            <span className="text-gray-500">{item.quantity}x</span>
-                                            <span>{item.name}</span>
+                                {cart.map((item, idx) => (
+                                    <div key={`${item.menu_item_id}-${idx}`}>
+                                        <div className="flex justify-between">
+                                            <div className="flex gap-2 flex-1">
+                                                <span className="text-gray-500">{item.quantity}x</span>
+                                                <div className="flex-1">
+                                                    <span>{item.name}</span>
+                                                    {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {Object.entries(item.customizations).map(([key, value]) => (
+                                                                <div key={key}>
+                                                                    {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
                                         </div>
-                                        <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
                                 ))}
                                 
@@ -244,6 +282,12 @@ export default function Checkout() {
                                         <span>Delivery Fee</span>
                                         <span>${deliveryFee.toFixed(2)}</span>
                                     </div>
+                                    {discount > 0 && (
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Discount ({appliedCoupon?.code})</span>
+                                            <span>-${discount.toFixed(2)}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
                                         <span>Total</span>
                                         <span>${total.toFixed(2)}</span>

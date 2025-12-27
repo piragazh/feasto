@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu } from 'lucide-react';
+import { Home, ShoppingBag, User, LogOut, Menu, Tag } from 'lucide-react';
 
 export default function Layout({ children, currentPageName }) {
     const [user, setUser] = useState(null);
@@ -94,6 +94,18 @@ export default function Layout({ children, currentPageName }) {
                                 >
                                     My Orders
                                 </Link>
+                                {user?.role === 'admin' && (
+                                    <Link 
+                                        to={createPageUrl('ManageCoupons')} 
+                                        className={`text-sm font-medium transition-colors ${
+                                            currentPageName === 'ManageCoupons' 
+                                                ? 'text-orange-500' 
+                                                : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                    >
+                                        Coupons
+                                    </Link>
+                                )}
                             </nav>
 
                             <div className="flex items-center gap-3">
@@ -129,6 +141,14 @@ export default function Layout({ children, currentPageName }) {
                                                     My Orders
                                                 </Link>
                                             </DropdownMenuItem>
+                                            {user?.role === 'admin' && (
+                                                <DropdownMenuItem asChild>
+                                                    <Link to={createPageUrl('ManageCoupons')} className="flex items-center gap-2">
+                                                        <Tag className="h-4 w-4" />
+                                                        Manage Coupons
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            )}
                                             <DropdownMenuSeparator />
                                         </div>
                                         {user && (

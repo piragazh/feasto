@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info } from 'lucide-react';
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
+import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
+import MealDealCard from '@/components/restaurant/MealDealCard';
 import CartDrawer from '@/components/cart/CartDrawer';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -20,6 +22,8 @@ export default function Restaurant() {
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('all');
+    const [customizationModalOpen, setCustomizationModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
 
     // Load cart from localStorage
     useEffect(() => {
@@ -53,18 +57,35 @@ export default function Restaurant() {
         enabled: !!restaurantId,
     });
 
+    const { data: mealDeals = [], isLoading: dealsLoading } = useQuery({
+        queryKey: ['mealDeals', restaurantId],
+        queryFn: () => base44.entities.MealDeal.filter({ restaurant_id: restaurantId, is_active: true }),
+        enabled: !!restaurantId,
+    });
+
     const categories = ['all', ...new Set(menuItems.map(item => item.category).filter(Boolean))];
 
     const filteredItems = activeCategory === 'all' 
         ? menuItems 
         : menuItems.filter(item => item.category === activeCategory);
 
-    const addToCart = (item) => {
+    const handleItemClick = (item) => {
+        // If item has customizations, open modal; otherwise add directly
+        if (item.customization_options?.length > 0) {
+            setSelectedItem(item);
+            setCustomizationModalOpen(true);
+        } else {
+            addToCartDirect(item);
+        }
+    };
+
+    const addToCartDirect = (item) => {
         setCart(prev => {
-            const existing = prev.find(i => i.menu_item_id === item.id);
+            const cartKey = `${item.id}`;
+            const existing = prev.find(i => i.menu_item_id === item.id && !i.customizations);
             if (existing) {
                 return prev.map(i => 
-                    i.menu_item_id === item.id 
+                    i.menu_item_id === item.id && !i.customizations
                         ? { ...i, quantity: i.quantity + 1 }
                         : i
                 );
@@ -78,6 +99,47 @@ export default function Restaurant() {
             }];
         });
         toast.success(`${item.name} added to cart`);
+    };
+
+    const addToCartWithCustomizations = (itemData) => {
+        const customizationKey = JSON.stringify(itemData.customizations);
+        setCart(prev => {
+            const existing = prev.find(i => 
+                i.menu_item_id === itemData.id && 
+                JSON.stringify(i.customizations) === customizationKey
+            );
+            
+            if (existing) {
+                return prev.map(i => 
+                    i.menu_item_id === itemData.id && 
+                    JSON.stringify(i.customizations) === customizationKey
+                        ? { ...i, quantity: i.quantity + itemData.quantity }
+                        : i
+                );
+            }
+            
+            return [...prev, {
+                menu_item_id: itemData.id,
+                name: itemData.name,
+                price: itemData.final_price,
+                quantity: itemData.quantity,
+                image_url: itemData.image_url,
+                customizations: itemData.customizations
+            }];
+        });
+        toast.success(`${itemData.name} added to cart`);
+    };
+
+    const addMealDealToCart = (deal) => {
+        setCart(prev => [...prev, {
+            menu_item_id: `deal_${deal.id}`,
+            name: deal.name,
+            price: deal.deal_price,
+            quantity: 1,
+            image_url: deal.image_url,
+            is_deal: true
+        }]);
+        toast.success(`${deal.name} added to cart`);
     };
 
     const updateQuantity = (itemId, newQuantity) => {
@@ -188,6 +250,18 @@ export default function Restaurant() {
 
             {/* Menu */}
             <div className="max-w-4xl mx-auto px-4 py-8">
+                {/* Meal Deals Section */}
+                {mealDeals.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">🔥 Meal Deals</h2>
+                        <div className="space-y-4">
+                            {mealDeals.map(deal => (
+                                <MealDealCard key={deal.id} deal={deal} onAddToCart={addMealDealToCart} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Menu</h2>
                 
                 {categories.length > 1 && (
@@ -219,10 +293,20 @@ export default function Restaurant() {
                 ) : (
                     <div className="space-y-4">
                         {filteredItems.map(item => (
-                            <MenuItemCard key={item.id} item={item} onAddToCart={addToCart} />
+                            <MenuItemCard key={item.id} item={item} onAddToCart={handleItemClick} />
                         ))}
                     </div>
                 )}
+
+                <ItemCustomizationModal
+                    item={selectedItem}
+                    open={customizationModalOpen}
+                    onClose={() => {
+                        setCustomizationModalOpen(false);
+                        setSelectedItem(null);
+                    }}
+                    onAddToCart={addToCartWithCustomizations}
+                />
             </div>
 
             {/* Floating Cart Button */}
