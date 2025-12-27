@@ -1,0 +1,89 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+export default function OpeningHours({ openingHours, isOpen }) {
+    const [expanded, setExpanded] = useState(false);
+
+    if (!openingHours) return null;
+
+    const today = DAYS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+    const todayHours = openingHours[today];
+
+    const isCurrentlyOpen = () => {
+        if (!todayHours || todayHours.closed) return false;
+        
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        
+        const [openHour, openMin] = todayHours.open.split(':').map(Number);
+        const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
+        
+        const openTime = openHour * 60 + openMin;
+        const closeTime = closeHour * 60 + closeMin;
+        
+        return currentTime >= openTime && currentTime <= closeTime;
+    };
+
+    const formatTime = (time) => {
+        if (!time) return '';
+        const [hour, min] = time.split(':');
+        const h = parseInt(hour);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+        return `${displayHour}:${min} ${ampm}`;
+    };
+
+    return (
+        <Card>
+            <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setExpanded(!expanded)}
+            >
+                <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-orange-500" />
+                        Opening Hours
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {isCurrentlyOpen() ? (
+                            <Badge className="bg-green-100 text-green-800">Open Now</Badge>
+                        ) : (
+                            <Badge className="bg-red-100 text-red-800">Closed</Badge>
+                        )}
+                        {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    </div>
+                </CardTitle>
+            </CardHeader>
+            {expanded && (
+                <CardContent className="space-y-2">
+                    {DAYS.map((day) => {
+                        const hours = openingHours[day];
+                        const isToday = day === today;
+                        
+                        return (
+                            <div 
+                                key={day}
+                                className={`flex justify-between text-sm ${isToday ? 'font-semibold text-orange-600' : 'text-gray-600'}`}
+                            >
+                                <span className="capitalize">{day}</span>
+                                <span>
+                                    {hours?.closed ? (
+                                        'Closed'
+                                    ) : hours?.open && hours?.close ? (
+                                        `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+                                    ) : (
+                                        'Not set'
+                                    )}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </CardContent>
+            )}
+        </Card>
+    );
+}

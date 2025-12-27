@@ -6,13 +6,18 @@ import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info } from 'lucide-react';
+import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search } from 'lucide-react';
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import MealDealCard from '@/components/restaurant/MealDealCard';
 import CartDrawer from '@/components/cart/CartDrawer';
-import ReviewsList from '@/components/reviews/ReviewsList';
+import ImageGallery from '@/components/restaurant/ImageGallery';
+import OpeningHours from '@/components/restaurant/OpeningHours';
+import SpecialOffers from '@/components/restaurant/SpecialOffers';
+import PopularItems from '@/components/restaurant/PopularItems';
+import ReviewsSection from '@/components/restaurant/ReviewsSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -25,6 +30,7 @@ export default function Restaurant() {
     const [activeCategory, setActiveCategory] = useState('all');
     const [customizationModalOpen, setCustomizationModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [menuSearchQuery, setMenuSearchQuery] = useState('');
 
     // Load cart from localStorage
     useEffect(() => {
@@ -66,9 +72,20 @@ export default function Restaurant() {
 
     const categories = ['all', ...new Set(menuItems.map(item => item.category).filter(Boolean))];
 
-    const filteredItems = activeCategory === 'all' 
-        ? menuItems 
-        : menuItems.filter(item => item.category === activeCategory);
+    const filteredItems = React.useMemo(() => {
+        let items = activeCategory === 'all' 
+            ? menuItems 
+            : menuItems.filter(item => item.category === activeCategory);
+        
+        if (menuSearchQuery) {
+            items = items.filter(item => 
+                item.name?.toLowerCase().includes(menuSearchQuery.toLowerCase()) ||
+                item.description?.toLowerCase().includes(menuSearchQuery.toLowerCase())
+            );
+        }
+        
+        return items;
+    }, [menuItems, activeCategory, menuSearchQuery]);
 
     const handleItemClick = (item) => {
         // If item has customizations, open modal; otherwise add directly
@@ -208,7 +225,14 @@ export default function Restaurant() {
                 
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                     <div className="max-w-4xl mx-auto">
-                        <Badge className="bg-white/90 text-gray-800 mb-3">{restaurant.cuisine_type}</Badge>
+                        <div className="flex items-center gap-2 mb-3">
+                            <Badge className="bg-white/90 text-gray-800">{restaurant.cuisine_type}</Badge>
+                            {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                                <Badge className="bg-orange-500 text-white animate-pulse">
+                                    Special Offers Available
+                                </Badge>
+                            )}
+                        </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{restaurant.name}</h1>
                         <div className="flex flex-wrap items-center gap-4 text-white/90">
                             <div className="flex items-center gap-1">
@@ -253,8 +277,32 @@ export default function Restaurant() {
                 </div>
             </div>
 
-            {/* Menu */}
+            {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
+                {/* Image Gallery */}
+                {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
+                        <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                    </div>
+                )}
+
+                {/* Special Offers */}
+                {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                    <div className="mb-8">
+                        <SpecialOffers offers={restaurant.special_offers} />
+                    </div>
+                )}
+
+                {/* Opening Hours */}
+                <div className="mb-8">
+                    <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
+                </div>
+
+                {/* Popular Items */}
+                <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+
+                {/* Menu */}
                 {/* Meal Deals Section */}
                 {mealDeals.length > 0 && (
                     <div className="mb-8">
@@ -267,8 +315,20 @@ export default function Restaurant() {
                     </div>
                 )}
 
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Menu</h2>
-                
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Full Menu</h2>
+
+                {/* Menu Search */}
+                <div className="mb-6 relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                        type="text"
+                        placeholder="Search menu items..."
+                        value={menuSearchQuery}
+                        onChange={(e) => setMenuSearchQuery(e.target.value)}
+                        className="pl-12 h-12 bg-white border-gray-200"
+                    />
+                </div>
+
                 {categories.length > 1 && (
                     <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-6">
                         <TabsList className="bg-gray-100 p-1 h-auto flex-wrap">
@@ -315,8 +375,7 @@ export default function Restaurant() {
 
                 {/* Reviews Section */}
                 <div className="mt-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
-                    <ReviewsList restaurantId={restaurantId} />
+                    <ReviewsSection restaurantId={restaurantId} />
                 </div>
             </div>
 
