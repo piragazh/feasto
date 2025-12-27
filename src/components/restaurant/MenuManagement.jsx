@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
+import AIMenuInsights from './AIMenuInsights';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -115,7 +116,9 @@ export default function MenuManagement({ restaurantId }) {
     };
 
     return (
-        <div>
+        <div className="space-y-6">
+            <AIMenuInsights restaurantId={restaurantId} />
+            
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Menu Items</h2>
                 <div className="flex gap-2">
