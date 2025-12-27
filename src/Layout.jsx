@@ -144,6 +144,18 @@ export default function Layout({ children, currentPageName }) {
                                             {user?.role === 'admin' && (
                                                 <>
                                                     <DropdownMenuItem asChild>
+                                                        <Link to={createPageUrl('AdminDashboard')} className="flex items-center gap-2">
+                                                            <Home className="h-4 w-4" />
+                                                            Admin Dashboard
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={createPageUrl('AdminRestaurants')} className="flex items-center gap-2">
+                                                            <Home className="h-4 w-4" />
+                                                            Manage Restaurants
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild>
                                                         <Link to={createPageUrl('ManageCoupons')} className="flex items-center gap-2">
                                                             <Tag className="h-4 w-4" />
                                                             Manage Coupons
