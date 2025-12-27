@@ -26,7 +26,8 @@ export default function MenuManagement({ restaurantId }) {
         is_popular: false,
         is_vegetarian: false,
         is_spicy: false,
-        is_available: true
+        is_available: true,
+        customization_options: []
     });
 
     const queryClient = useQueryClient();
@@ -79,7 +80,8 @@ export default function MenuManagement({ restaurantId }) {
             is_popular: false,
             is_vegetarian: false,
             is_spicy: false,
-            is_available: true
+            is_available: true,
+            customization_options: []
         });
         setEditingItem(null);
         setDialogOpen(false);
@@ -96,7 +98,8 @@ export default function MenuManagement({ restaurantId }) {
             is_popular: item.is_popular || false,
             is_vegetarian: item.is_vegetarian || false,
             is_spicy: item.is_spicy || false,
-            is_available: item.is_available !== false
+            is_available: item.is_available !== false,
+            customization_options: item.customization_options || []
         });
         setDialogOpen(true);
     };
@@ -156,7 +159,7 @@ export default function MenuManagement({ restaurantId }) {
                                     />
                                 </div>
                                 <div>
-                                    <Label>Price ($) *</Label>
+                                    <Label>Price (£) *</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -208,9 +211,135 @@ export default function MenuManagement({ restaurantId }) {
                                         onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
                                     />
                                     <Label>Available</Label>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 justify-end">
+                                    </div>
+                                    </div>
+
+                                    {/* Customization Options */}
+                                    <div className="col-span-2 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                    <Label className="text-base">Customization Options</Label>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setFormData({
+                                                ...formData,
+                                                customization_options: [
+                                                    ...formData.customization_options,
+                                                    { name: '', type: 'single', required: false, options: [{ label: '', price: 0 }] }
+                                                ]
+                                            });
+                                        }}
+                                    >
+                                        Add Customization
+                                    </Button>
+                                    </div>
+                                    {formData.customization_options.map((custom, idx) => (
+                                    <Card key={idx} className="p-3">
+                                        <div className="space-y-2">
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="Name (e.g., Size, Toppings)"
+                                                    value={custom.name}
+                                                    onChange={(e) => {
+                                                        const newCustoms = [...formData.customization_options];
+                                                        newCustoms[idx].name = e.target.value;
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                />
+                                                <select
+                                                    className="px-3 py-2 border rounded-md"
+                                                    value={custom.type}
+                                                    onChange={(e) => {
+                                                        const newCustoms = [...formData.customization_options];
+                                                        newCustoms[idx].type = e.target.value;
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                >
+                                                    <option value="single">Single Choice</option>
+                                                    <option value="multiple">Multiple Choice</option>
+                                                </select>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        const newCustoms = formData.customization_options.filter((_, i) => i !== idx);
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Switch
+                                                    checked={custom.required}
+                                                    onCheckedChange={(checked) => {
+                                                        const newCustoms = [...formData.customization_options];
+                                                        newCustoms[idx].required = checked;
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                />
+                                                <Label className="text-sm">Required</Label>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {custom.options.map((opt, optIdx) => (
+                                                    <div key={optIdx} className="flex gap-2">
+                                                        <Input
+                                                            placeholder="Option label"
+                                                            value={opt.label}
+                                                            onChange={(e) => {
+                                                                const newCustoms = [...formData.customization_options];
+                                                                newCustoms[idx].options[optIdx].label = e.target.value;
+                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                            }}
+                                                        />
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            placeholder="Extra £"
+                                                            value={opt.price}
+                                                            onChange={(e) => {
+                                                                const newCustoms = [...formData.customization_options];
+                                                                newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
+                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                            }}
+                                                            className="w-24"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                const newCustoms = [...formData.customization_options];
+                                                                newCustoms[idx].options = newCustoms[idx].options.filter((_, i) => i !== optIdx);
+                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                            }}
+                                                        >
+                                                            ×
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        const newCustoms = [...formData.customization_options];
+                                                        newCustoms[idx].options.push({ label: '', price: 0 });
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                >
+                                                    Add Option
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                    ))}
+                                    </div>
+
+                                    <div className="flex gap-3 justify-end">
                                 <Button type="button" variant="outline" onClick={resetForm}>
                                     Cancel
                                 </Button>
@@ -245,7 +374,12 @@ export default function MenuManagement({ restaurantId }) {
                                 )}
                             </div>
                             <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
-                            <p className="text-lg font-bold text-orange-600 mb-3">${item.price.toFixed(2)}</p>
+                            <p className="text-lg font-bold text-orange-600 mb-3">£{item.price.toFixed(2)}</p>
+                            {item.customization_options?.length > 0 && (
+                                <p className="text-xs text-gray-500 mb-3">
+                                    {item.customization_options.length} customization{item.customization_options.length > 1 ? 's' : ''}
+                                </p>
+                            )}
                             <div className="flex gap-2">
                                 <Button
                                     size="sm"
