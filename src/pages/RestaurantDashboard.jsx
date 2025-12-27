@@ -19,6 +19,7 @@ import {
     Users
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
+import OrderQueue from '@/components/restaurant/OrderQueue';
 import MenuManagement from '@/components/restaurant/MenuManagement';
 import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
 import AIMealDealSuggestions from '@/components/restaurant/AIMealDealSuggestions';
