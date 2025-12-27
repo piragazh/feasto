@@ -52,25 +52,19 @@ export default function ImportFromJustEat({ restaurantId }) {
 
         setIsExtracting(true);
         try {
-            // Fetch the website
-            const { markdown } = await base44.integrations.Core.FetchWebsite({
-                url: url,
-                formats: ['markdown']
-            });
-
-            // Extract menu data using LLM
+            // Use InvokeLLM with web context
             const response = await base44.integrations.Core.InvokeLLM({
-                prompt: `Extract menu items from this JustEat restaurant page. For each item extract:
+                prompt: `Visit this Just Eat restaurant page: ${url}
+
+Extract all menu items from the page. For each item extract:
 - name (required)
 - description (if available)
-- price (as a number, remove £ symbol)
+- price (as a number, remove £ symbol and convert to number)
 - category (e.g., Starters, Mains, Desserts, Drinks)
 - image_url (if available)
 
-Here's the page content:
-${markdown}
-
-Return a JSON array of menu items. Only include actual food/drink items, not restaurant info.`,
+Return only the menu items as a JSON array. Do not include restaurant info, only the actual food/drink items with their prices.`,
+                add_context_from_internet: true,
                 response_json_schema: {
                     type: "object",
                     properties: {
