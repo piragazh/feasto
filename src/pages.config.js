@@ -3,6 +3,7 @@ import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import ManageCoupons from './pages/ManageCoupons';
+import RestaurantDashboard from './pages/RestaurantDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -12,6 +13,7 @@ export const PAGES = {
     "Checkout": Checkout,
     "Orders": Orders,
     "ManageCoupons": ManageCoupons,
+    "RestaurantDashboard": RestaurantDashboard,
 }
 
 export const pagesConfig = {
