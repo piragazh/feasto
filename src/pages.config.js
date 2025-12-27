@@ -5,6 +5,7 @@ import Orders from './pages/Orders';
 import ManageCoupons from './pages/ManageCoupons';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import TrackOrder from './pages/TrackOrder';
+import DriverDashboard from './pages/DriverDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -16,6 +17,7 @@ export const PAGES = {
     "ManageCoupons": ManageCoupons,
     "RestaurantDashboard": RestaurantDashboard,
     "TrackOrder": TrackOrder,
+    "DriverDashboard": DriverDashboard,
 }
 
 export const pagesConfig = {

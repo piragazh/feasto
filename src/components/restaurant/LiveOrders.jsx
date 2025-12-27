@@ -98,12 +98,50 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         toast.success('Order rejected and customer notified');
     };
 
-    const handleStatusChange = (orderId, newStatus) => {
+    const handleStatusChange = async (orderId, newStatus) => {
+        // Auto-assign driver when dispatching
+        if (newStatus === 'out_for_delivery') {
+            const availableDrivers = await base44.entities.Driver.filter({ 
+                is_available: true,
+                current_order_id: null 
+            });
+            
+            if (availableDrivers.length > 0) {
+                const driver = availableDrivers[0];
+                
+                // Calculate ETA using AI
+                const order = orders.find(o => o.id === orderId);
+                const etaPrompt = `Calculate estimated delivery time for a food delivery order.
+Distance: Assume 3-5 km average urban delivery.
+Traffic: Consider it's ${new Date().getHours()}:00, adjust for peak hours (12-14, 18-21).
+Vehicle: ${driver.vehicle_type}
+Provide only the time range (e.g., "25-30 min").`;
+                
+                try {
+                    const etaResponse = await base44.integrations.Core.InvokeLLM({
+                        prompt: etaPrompt
+                    });
+                    
+                    await base44.entities.Order.update(orderId, { 
+                        driver_id: driver.id,
+                        estimated_delivery: etaResponse
+                    });
+                    
+                    await base44.entities.Driver.update(driver.id, {
+                        current_order_id: orderId,
+                        is_available: false
+                    });
+                } catch (e) {
+                    console.error('ETA calculation failed:', e);
+                }
+            }
+        }
+        
         updateOrderMutation.mutate({ orderId, status: newStatus });
         const statusLabels = {
             confirmed: 'Order accepted',
             preparing: 'Preparing order',
-            out_for_delivery: 'Order dispatched',
+            out_for_delivery: 'Order dispatched - Driver assigned',
             delivered: 'Order delivered'
         };
         toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
