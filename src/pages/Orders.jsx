@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import LeaveReviewDialog from '@/components/reviews/LeaveReviewDialog';
 import OrderStatusTimeline from '@/components/restaurant/OrderStatusTimeline';
+import RequestRefundDialog from '@/components/customer/RequestRefundDialog';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -25,7 +27,9 @@ const statusConfig = {
 
 export default function Orders() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [reviewingOrder, setReviewingOrder] = useState(null);
+    const [refundingOrder, setRefundingOrder] = useState(null);
     
     const { data: orders = [], isLoading, refetch } = useQuery({
         queryKey: ['orders'],
@@ -41,6 +45,24 @@ export default function Orders() {
         },
     });
 
+    const refundRequestMutation = useMutation({
+        mutationFn: ({ orderId, refundType, refundedItems, refundAmount, reason, issueDescription }) =>
+            base44.entities.Order.update(orderId, {
+                status: 'refund_requested',
+                refund_request_type: refundType,
+                refund_requested_items: refundedItems,
+                refund_requested_amount: refundAmount,
+                refund_request_reason: reason,
+                refund_request_description: issueDescription,
+                refund_request_date: new Date().toISOString()
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['orders']);
+            toast.success('Refund request submitted! The restaurant will review it shortly.');
+            setRefundingOrder(null);
+        },
+    });
+
     const reorderOrder = (order) => {
         // Save order items to cart
         localStorage.setItem('cart', JSON.stringify(order.items));
@@ -48,6 +70,10 @@ export default function Orders() {
         
         toast.success('Items added to cart!');
         navigate(createPageUrl('Restaurant') + '?id=' + order.restaurant_id);
+    };
+
+    const handleRefundRequest = (refundData) => {
+        refundRequestMutation.mutate(refundData);
     };
 
     return (
@@ -180,8 +206,36 @@ export default function Orders() {
                                                         </div>
                                                     )}
 
+                                                    {order.status === 'refund_requested' && (
+                                                        <div className="border-t pt-4">
+                                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                                                <div className="flex gap-2">
+                                                                    <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+                                                                    <div>
+                                                                        <p className="text-sm font-semibold text-yellow-900">Refund Requested</p>
+                                                                        <p className="text-xs text-yellow-700 mt-1">
+                                                                            Your refund request is being reviewed by the restaurant.
+                                                                            Amount: £{order.refund_requested_amount?.toFixed(2) || '0.00'}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {order.status === 'refunded' && (
+                                                        <div className="border-t pt-4">
+                                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                                <p className="text-sm font-semibold text-green-900">Refund Processed</p>
+                                                                <p className="text-xs text-green-700 mt-1">
+                                                                    Amount refunded: £{order.refund_amount?.toFixed(2) || '0.00'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     {(order.status === 'delivered' || order.status === 'cancelled') && (
-                                                        <div className="border-t pt-4 flex gap-2">
+                                                        <div className="border-t pt-4 flex gap-2 flex-wrap">
                                                             <Button
                                                                 onClick={() => reorderOrder(order)}
                                                                 variant="outline"
@@ -200,6 +254,16 @@ export default function Orders() {
                                                                     Review
                                                                 </Button>
                                                             )}
+                                                            {order.status === 'delivered' && order.status !== 'refund_requested' && order.status !== 'refunded' && (
+                                                                <Button
+                                                                    onClick={() => setRefundingOrder(order)}
+                                                                    variant="outline"
+                                                                    className="flex-1 text-orange-600"
+                                                                >
+                                                                    <AlertCircle className="h-4 w-4 mr-2" />
+                                                                    Request Refund
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     )}
                                         </CardContent>
@@ -216,6 +280,13 @@ export default function Orders() {
                 onClose={() => setReviewingOrder(null)}
                 order={reviewingOrder}
             />
-        </div>
-    );
-}
+
+            <RequestRefundDialog
+                open={!!refundingOrder}
+                onClose={() => setRefundingOrder(null)}
+                order={refundingOrder}
+                onSubmit={handleRefundRequest}
+            />
+            </div>
+            );
+            }

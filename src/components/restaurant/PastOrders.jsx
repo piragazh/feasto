@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,31 +7,38 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import PartialRefundDialog from './PartialRefundDialog';
 
 export default function PastOrders({ restaurantId }) {
+    const [refundingOrder, setRefundingOrder] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: orders = [] } = useQuery({
         queryKey: ['past-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ 
             restaurant_id: restaurantId,
-            status: { $in: ['delivered', 'cancelled'] }
+            status: { $in: ['delivered', 'cancelled', 'refunded', 'refund_requested'] }
         }, '-created_date', 100),
     });
 
     const refundMutation = useMutation({
-        mutationFn: ({ orderId }) => 
-            base44.entities.Order.update(orderId, { status: 'refunded' }),
+        mutationFn: ({ orderId, refundedItems, refundAmount, reason }) => 
+            base44.entities.Order.update(orderId, { 
+                status: 'refunded',
+                refunded_items: refundedItems,
+                refund_amount: refundAmount,
+                refund_reason: reason,
+                refund_date: new Date().toISOString()
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries(['past-orders']);
-            toast.success('Refund processed');
+            toast.success('Refund processed successfully');
+            setRefundingOrder(null);
         },
     });
 
-    const handleRefund = (orderId) => {
-        if (confirm('Issue refund for this order?')) {
-            refundMutation.mutate({ orderId });
-        }
+    const handleRefund = (refundData) => {
+        refundMutation.mutate(refundData);
     };
 
     return (
@@ -63,17 +70,47 @@ export default function PastOrders({ restaurantId }) {
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleRefund(order.id)}
+                                    onClick={() => setRefundingOrder(order)}
                                     className="text-orange-600"
                                 >
                                     <DollarSign className="h-4 w-4 mr-1" />
                                     Issue Refund
                                 </Button>
                             )}
+                            {order.status === 'refunded' && order.refund_amount && (
+                                <div className="text-sm text-green-600 mt-2">
+                                    Refunded: £{order.refund_amount.toFixed(2)}
+                                    {order.refund_reason && (
+                                        <p className="text-xs text-gray-500">Reason: {order.refund_reason}</p>
+                                    )}
+                                </div>
+                            )}
+                            {order.status === 'refund_requested' && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-2">
+                                    <p className="text-sm font-semibold text-yellow-900">Refund Requested</p>
+                                    {order.refund_request_reason && (
+                                        <p className="text-xs text-yellow-700 mt-1">{order.refund_request_reason}</p>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        className="mt-2"
+                                        onClick={() => setRefundingOrder(order)}
+                                    >
+                                        Process Refund
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 ))}
             </div>
+            
+            <PartialRefundDialog
+                open={!!refundingOrder}
+                onClose={() => setRefundingOrder(null)}
+                order={refundingOrder}
+                onRefund={handleRefund}
+            />
         </div>
     );
 }
