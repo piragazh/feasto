@@ -52,6 +52,15 @@ export default function RestaurantDashboard() {
             const userData = await base44.auth.me();
             setUser(userData);
             
+            // For admin users, just show first restaurant
+            if (userData.role === 'admin') {
+                const allRestaurants = await base44.entities.Restaurant.list();
+                if (allRestaurants.length > 0) {
+                    setRestaurant(allRestaurants[0]);
+                }
+                return;
+            }
+            
             // Check if user is a restaurant manager
             const managerRecords = await base44.entities.RestaurantManager.filter({ 
                 user_email: userData.email,
@@ -61,31 +70,24 @@ export default function RestaurantDashboard() {
             if (managerRecords.length > 0) {
                 // User is a restaurant manager
                 const manager = managerRecords[0];
-                if (manager.restaurant_ids.length > 0) {
+                if (manager.restaurant_ids && manager.restaurant_ids.length > 0) {
                     // Load first assigned restaurant
                     const allRestaurants = await base44.entities.Restaurant.list();
                     const restaurantData = allRestaurants.find(r => r.id === manager.restaurant_ids[0]);
                     if (restaurantData) {
                         setRestaurant(restaurantData);
+                    } else {
+                        toast.error('Restaurant not found');
                     }
-                }
-            } else if (userData.restaurant_id) {
-                // User is restaurant owner
-                const allRestaurants = await base44.entities.Restaurant.list();
-                const restaurantData = allRestaurants.find(r => r.id === userData.restaurant_id);
-                if (restaurantData) {
-                    setRestaurant(restaurantData);
-                    
-                    // Show onboarding for new restaurant owners
-                    if (!userData.onboarding_completed) {
-                        setShowOnboarding(true);
-                    }
+                } else {
+                    toast.error('No restaurant assigned to your account');
                 }
             } else {
-                toast.error('No restaurant assigned to this account');
-                return;
+                toast.error('No restaurant assigned to this account. Please contact admin.');
             }
         } catch (e) {
+            console.error('Error loading restaurant:', e);
+            toast.error('Error loading restaurant dashboard');
             base44.auth.redirectToLogin();
         }
     };
