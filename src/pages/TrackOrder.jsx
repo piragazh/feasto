@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, MapPin, Clock, Phone, Package, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Phone, Package, CheckCircle, Loader2, Star } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import { format } from 'date-fns';
+import RateDriverDialog from '@/components/driver/RateDriverDialog';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -76,6 +77,20 @@ export default function TrackOrder() {
         },
         enabled: !!order?.restaurant_id,
     });
+
+    const { data: driverRatings = [] } = useQuery({
+        queryKey: ['driver-ratings', order?.driver_id, order?.id],
+        queryFn: async () => {
+            const user = await base44.auth.me();
+            return base44.entities.DriverRating.filter({ 
+                order_id: order.id,
+                created_by: user.email
+            });
+        },
+        enabled: !!order?.driver_id && order?.status === 'delivered',
+    });
+
+    const hasRatedDriver = driverRatings.length > 0;
 
     if (!orderId) {
         return (
