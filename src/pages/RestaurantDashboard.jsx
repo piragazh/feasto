@@ -206,7 +206,7 @@ export default function RestaurantDashboard() {
                     </TabsList>
 
                     <TabsContent value="orders">
-                        <LiveOrders 
+                        <OrderQueue 
                             restaurantId={restaurant.id} 
                             onOrderUpdate={() => {}} 
                         />
