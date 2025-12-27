@@ -20,6 +20,7 @@ export default function MealDealsManagement({ restaurantId }) {
         image_url: '',
         original_price: '',
         deal_price: '',
+        items: [],
         is_active: true
     });
 
@@ -28,6 +29,11 @@ export default function MealDealsManagement({ restaurantId }) {
     const { data: deals = [] } = useQuery({
         queryKey: ['meal-deals', restaurantId],
         queryFn: () => base44.entities.MealDeal.filter({ restaurant_id: restaurantId }),
+    });
+
+    const { data: menuItems = [] } = useQuery({
+        queryKey: ['menu-items', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
     });
 
     const createMutation = useMutation({
@@ -63,6 +69,7 @@ export default function MealDealsManagement({ restaurantId }) {
             image_url: '',
             original_price: '',
             deal_price: '',
+            items: [],
             is_active: true
         });
         setEditingDeal(null);
@@ -77,6 +84,7 @@ export default function MealDealsManagement({ restaurantId }) {
             image_url: deal.image_url || '',
             original_price: deal.original_price?.toString() || '',
             deal_price: deal.deal_price.toString(),
+            items: deal.items || [],
             is_active: deal.is_active !== false
         });
         setDialogOpen(true);
@@ -87,7 +95,8 @@ export default function MealDealsManagement({ restaurantId }) {
         const data = {
             ...formData,
             original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-            deal_price: parseFloat(formData.deal_price)
+            deal_price: parseFloat(formData.deal_price),
+            items: formData.items
         };
 
         if (editingDeal) {
@@ -139,9 +148,73 @@ export default function MealDealsManagement({ restaurantId }) {
                                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                                 />
                             </div>
+                            <div>
+                                <Label>Items in Deal</Label>
+                                <div className="space-y-2">
+                                    {formData.items.map((item, idx) => (
+                                        <div key={idx} className="flex gap-2">
+                                            <select
+                                                className="flex-1 px-3 py-2 border rounded-md"
+                                                value={item.menu_item_id}
+                                                onChange={(e) => {
+                                                    const menuItem = menuItems.find(m => m.id === e.target.value);
+                                                    const newItems = [...formData.items];
+                                                    newItems[idx] = {
+                                                        menu_item_id: e.target.value,
+                                                        name: menuItem?.name || '',
+                                                        quantity: item.quantity || 1
+                                                    };
+                                                    setFormData({ ...formData, items: newItems });
+                                                }}
+                                            >
+                                                <option value="">Select menu item</option>
+                                                {menuItems.map(m => (
+                                                    <option key={m.id} value={m.id}>{m.name} - £{m.price.toFixed(2)}</option>
+                                                ))}
+                                            </select>
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const newItems = [...formData.items];
+                                                    newItems[idx].quantity = parseInt(e.target.value) || 1;
+                                                    setFormData({ ...formData, items: newItems });
+                                                }}
+                                                className="w-20"
+                                                placeholder="Qty"
+                                            />
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    const newItems = formData.items.filter((_, i) => i !== idx);
+                                                    setFormData({ ...formData, items: newItems });
+                                                }}
+                                            >
+                                                ×
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setFormData({
+                                                ...formData,
+                                                items: [...formData.items, { menu_item_id: '', name: '', quantity: 1 }]
+                                            });
+                                        }}
+                                    >
+                                        Add Item
+                                    </Button>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label>Original Price ($)</Label>
+                                    <Label>Original Price (£)</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -150,7 +223,7 @@ export default function MealDealsManagement({ restaurantId }) {
                                     />
                                 </div>
                                 <div>
-                                    <Label>Deal Price ($) *</Label>
+                                    <Label>Deal Price (£) *</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -195,14 +268,19 @@ export default function MealDealsManagement({ restaurantId }) {
                                 <div className="flex-1">
                                     <h3 className="font-semibold mb-1">{deal.name}</h3>
                                     <p className="text-sm text-gray-600 mb-2 line-clamp-2">{deal.description}</p>
+                                    {deal.items?.length > 0 && (
+                                        <p className="text-xs text-gray-500 mb-2">
+                                            {deal.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
+                                        </p>
+                                    )}
                                     <div className="flex items-center gap-2 mb-2">
                                         {deal.original_price && (
                                             <span className="text-sm text-gray-400 line-through">
-                                                ${deal.original_price.toFixed(2)}
+                                                £{deal.original_price.toFixed(2)}
                                             </span>
                                         )}
                                         <span className="text-lg font-bold text-orange-600">
-                                            ${deal.deal_price.toFixed(2)}
+                                            £{deal.deal_price.toFixed(2)}
                                         </span>
                                         {deal.original_price && (
                                             <span className="text-xs text-green-600">
