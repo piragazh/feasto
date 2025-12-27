@@ -12,6 +12,7 @@ import CouponInput from '@/components/checkout/CouponInput';
 import PaymentMethods from '@/components/checkout/PaymentMethods';
 import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection';
 import GroupOrderSection from '@/components/checkout/GroupOrderSection';
+import LocationPicker from '@/components/location/LocationPicker';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -33,6 +34,7 @@ export default function Checkout() {
         phone: '',
         notes: ''
     });
+    const [deliveryCoordinates, setDeliveryCoordinates] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('cash');
 
     useEffect(() => {
@@ -40,6 +42,8 @@ export default function Checkout() {
         const savedRestaurantId = localStorage.getItem('cartRestaurantId');
         const savedRestaurantName = localStorage.getItem('cartRestaurantName');
         const savedGroupOrderId = localStorage.getItem('groupOrderId');
+        const savedAddress = localStorage.getItem('userAddress');
+        const savedCoords = localStorage.getItem('userCoordinates');
         
         if (savedCart) {
             setCart(JSON.parse(savedCart));
@@ -50,6 +54,12 @@ export default function Checkout() {
         }
         if (savedGroupOrderId) {
             setGroupOrderId(savedGroupOrderId);
+        }
+        if (savedAddress) {
+            setFormData(prev => ({ ...prev, delivery_address: savedAddress }));
+        }
+        if (savedCoords) {
+            setDeliveryCoordinates(JSON.parse(savedCoords));
         }
     }, []);
 
@@ -92,6 +102,7 @@ export default function Checkout() {
                 payment_method: paymentMethod,
                 status: 'pending',
                 delivery_address: formData.delivery_address,
+                delivery_coordinates: deliveryCoordinates,
                 phone: formData.phone,
                 notes: formData.notes,
                 estimated_delivery: isScheduled ? 'Scheduled' : '30-45 minutes',
@@ -189,12 +200,12 @@ export default function Checkout() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <Input
-                                        placeholder="Enter your full delivery address"
-                                        value={formData.delivery_address}
-                                        onChange={(e) => setFormData({ ...formData, delivery_address: e.target.value })}
-                                        className="h-12"
-                                        required
+                                    <LocationPicker
+                                        onLocationSelect={(locationData) => {
+                                            setFormData({ ...formData, delivery_address: locationData.address });
+                                            setDeliveryCoordinates(locationData.coordinates);
+                                        }}
+                                        className="[&>div]:h-12"
                                     />
                                 </CardContent>
                             </Card>

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Star, Clock, Bike } from 'lucide-react';
+import { Star, Clock, Bike, MapPin } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { motion } from 'framer-motion';
 
-export default function RestaurantCard({ restaurant }) {
+export default function RestaurantCard({ restaurant, distance }) {
     return (
         <Link to={createPageUrl(`Restaurant?id=${restaurant.id}`)}>
             <motion.div
@@ -32,6 +32,14 @@ export default function RestaurantCard({ restaurant }) {
                         <div className="absolute top-3 right-3">
                             <Badge className="bg-green-500 text-white hover:bg-green-600 font-medium px-3 py-1">
                                 Free Delivery
+                            </Badge>
+                        </div>
+                    )}
+                    {distance !== null && distance !== undefined && (
+                        <div className="absolute bottom-3 right-3">
+                            <Badge className="bg-orange-500 text-white font-medium px-3 py-1">
+                                <MapPin className="h-3 w-3 mr-1 inline" />
+                                {distance.toFixed(1)} mi
                             </Badge>
                         </div>
                     )}

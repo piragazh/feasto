@@ -1,9 +1,10 @@
 import React from 'react';
-import { Search, MapPin } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import LocationPicker from '@/components/location/LocationPicker';
 
-export default function HeroSection({ searchQuery, setSearchQuery, location, setLocation }) {
+export default function HeroSection({ searchQuery, setSearchQuery, onLocationChange }) {
     return (
         <div className="relative bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400 overflow-hidden">
             {/* Decorative elements */}
@@ -25,18 +26,14 @@ export default function HeroSection({ searchQuery, setSearchQuery, location, set
                     
                     <div className="bg-white rounded-2xl p-2 shadow-2xl shadow-orange-600/20">
                         <div className="flex flex-col md:flex-row gap-2">
-                            <div className="flex-1 relative">
-                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <Input
-                                    type="text"
-                                    placeholder="Enter your delivery address"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    className="pl-12 h-14 border-0 bg-gray-50 rounded-xl text-gray-800 placeholder:text-gray-400 focus-visible:ring-orange-500"
+                            <div className="flex-1">
+                                <LocationPicker 
+                                    onLocationSelect={onLocationChange}
+                                    className="[&>div]:border-0 [&>div]:bg-gray-50 [&>div]:rounded-xl [&>button]:h-14 [&>button]:rounded-xl"
                                 />
                             </div>
                             <div className="flex-1 relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
                                 <Input
                                     type="text"
                                     placeholder="Search restaurants or dishes..."
