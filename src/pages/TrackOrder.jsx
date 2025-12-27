@@ -33,6 +33,7 @@ const statusConfig = {
 export default function TrackOrder() {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('id');
+    const [showRatingDialog, setShowRatingDialog] = useState(false);
     const [driverLocation, setDriverLocation] = useState(null);
 
     const { data: order, isLoading } = useQuery({
@@ -332,8 +333,25 @@ export default function TrackOrder() {
                                 </div>
                             )}
                         </div>
+
+                        {order.status === 'delivered' && order.driver_id && !hasRatedDriver && (
+                            <Button 
+                                onClick={() => setShowRatingDialog(true)}
+                                className="w-full bg-orange-500 hover:bg-orange-600 mt-4"
+                            >
+                                <Star className="h-4 w-4 mr-2" />
+                                Rate Your Driver
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
+
+                <RateDriverDialog
+                    open={showRatingDialog}
+                    onClose={() => setShowRatingDialog(false)}
+                    order={order}
+                    ratedBy="customer"
+                />
             </div>
         </div>
     );

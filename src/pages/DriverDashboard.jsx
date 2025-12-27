@@ -6,15 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin, Phone, Navigation, CheckCircle, Package, Bike } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MapPin, Phone, Navigation, CheckCircle, Package, Bike, MessageSquare, DollarSign, Star } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import DriverChat from '@/components/driver/DriverChat';
+import DriverEarnings from '@/components/driver/DriverEarnings';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverDashboard() {
     const [driver, setDriver] = useState(null);
     const [location, setLocation] = useState(null);
+    const [activeTab, setActiveTab] = useState('delivery');
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -160,6 +164,10 @@ export default function DriverDashboard() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            <Badge variant="outline" className="flex items-center gap-1">
+                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                {driver.rating || 5.0}
+                            </Badge>
                             <div className="flex items-center gap-2">
                                 <Label htmlFor="availability">Available</Label>
                                 <Switch
@@ -175,7 +183,23 @@ export default function DriverDashboard() {
 
             <div className="max-w-7xl mx-auto p-4 space-y-6">
                 {assignedOrder ? (
-                    <>
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="delivery">
+                                <Navigation className="h-4 w-4 mr-2" />
+                                Delivery
+                            </TabsTrigger>
+                            <TabsTrigger value="chat">
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Chat
+                            </TabsTrigger>
+                            <TabsTrigger value="earnings">
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                Earnings
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="delivery" className="space-y-6 mt-6">
                         <Card className="border-2 border-orange-500">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
@@ -238,17 +262,35 @@ export default function DriverDashboard() {
                                     <div className="h-96 rounded-lg overflow-hidden">
                                         <MapContainer 
                                             center={[location.lat, location.lng]} 
-                                            zoom={13} 
+                                            zoom={14} 
                                             style={{ height: '100%', width: '100%' }}
                                         >
                                             <TileLayer
                                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                             />
                                             <Marker position={[location.lat, location.lng]}>
-                                                <Popup>Your Location</Popup>
+                                                <Popup>
+                                                    <div className="text-center">
+                                                        <p className="font-semibold">Your Location</p>
+                                                        <Button 
+                                                            size="sm" 
+                                                            className="mt-2"
+                                                            onClick={() => {
+                                                                const url = `https://www.google.com/maps/dir/?api=1&origin=${location.lat},${location.lng}&destination=${assignedOrder.delivery_coordinates.lat},${assignedOrder.delivery_coordinates.lng}&travelmode=driving`;
+                                                                window.open(url, '_blank');
+                                                            }}
+                                                        >
+                                                            <Navigation className="h-3 w-3 mr-1" />
+                                                            Open in Maps
+                                                        </Button>
+                                                    </div>
+                                                </Popup>
                                             </Marker>
                                             <Marker position={[assignedOrder.delivery_coordinates.lat, assignedOrder.delivery_coordinates.lng]}>
-                                                <Popup>Delivery Destination</Popup>
+                                                <Popup>
+                                                    <p className="font-semibold">Delivery Destination</p>
+                                                    <p className="text-xs">{assignedOrder.delivery_address}</p>
+                                                </Popup>
                                             </Marker>
                                             <Polyline 
                                                 positions={[
@@ -256,13 +298,23 @@ export default function DriverDashboard() {
                                                     [assignedOrder.delivery_coordinates.lat, assignedOrder.delivery_coordinates.lng]
                                                 ]} 
                                                 color="orange"
+                                                weight={4}
                                             />
                                         </MapContainer>
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
-                    </>
+                        </TabsContent>
+
+                        <TabsContent value="chat" className="mt-6">
+                            <DriverChat order={assignedOrder} driver={driver} />
+                        </TabsContent>
+
+                        <TabsContent value="earnings" className="mt-6">
+                            <DriverEarnings driverId={driver.id} />
+                        </TabsContent>
+                    </Tabs>
                 ) : driver.is_available ? (
                     <>
                         <Card>
@@ -304,12 +356,15 @@ export default function DriverDashboard() {
                         </Card>
                     </>
                 ) : (
-                    <Card>
-                        <CardContent className="text-center py-12">
-                            <p className="text-gray-500 mb-2">You're currently offline</p>
-                            <p className="text-sm text-gray-400">Toggle availability to start receiving orders</p>
-                        </CardContent>
-                    </Card>
+                    <>
+                        <Card>
+                            <CardContent className="text-center py-12">
+                                <p className="text-gray-500 mb-2">You're currently offline</p>
+                                <p className="text-sm text-gray-400">Toggle availability to start receiving orders</p>
+                            </CardContent>
+                        </Card>
+                        <DriverEarnings driverId={driver.id} />
+                    </>
                 )}
             </div>
         </div>
