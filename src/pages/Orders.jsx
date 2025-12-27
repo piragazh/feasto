@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import LeaveReviewDialog from '@/components/reviews/LeaveReviewDialog';
@@ -144,6 +144,17 @@ export default function Orders() {
                                                     )}
 
                                                     <OrderStatusTimeline statusHistory={order.status_history} />
+
+                                                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                                        <div className="border-t pt-4">
+                                                            <Link to={createPageUrl('TrackOrder') + '?id=' + order.id}>
+                                                                <Button variant="outline" className="w-full">
+                                                                    <Navigation className="h-4 w-4 mr-2" />
+                                                                    Track Order
+                                                                </Button>
+                                                            </Link>
+                                                        </div>
+                                                    )}
 
                                                     {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
                                                         <div className="border-t pt-4">
