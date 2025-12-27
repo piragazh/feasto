@@ -15,7 +15,8 @@ import {
     MessageSquare,
     Star,
     BarChart3,
-    Navigation
+    Navigation,
+    Users
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import MenuManagement from '@/components/restaurant/MenuManagement';
@@ -28,6 +29,7 @@ import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
 import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
 import DriverTracking from '@/components/restaurant/DriverTracking';
+import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -196,6 +198,10 @@ export default function RestaurantDashboard() {
                             <Navigation className="h-4 w-4 mr-2" />
                             Drivers
                         </TabsTrigger>
+                        <TabsTrigger value="crm">
+                            <Users className="h-4 w-4 mr-2" />
+                            CRM
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="orders">
@@ -236,6 +242,10 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="drivers">
                         <DriverTracking restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="crm">
+                        <CustomerCRM restaurantId={restaurant.id} />
                     </TabsContent>
                 </Tabs>
             </div>
