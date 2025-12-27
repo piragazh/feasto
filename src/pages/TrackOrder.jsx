@@ -302,7 +302,7 @@ export default function TrackOrder() {
                                         {item.quantity}x {item.name}
                                     </span>
                                     <span className="text-gray-900">
-                                        ${(item.price * item.quantity).toFixed(2)}
+                                        £{(item.price * item.quantity).toFixed(2)}
                                     </span>
                                 </div>
                             ))}
@@ -311,21 +311,21 @@ export default function TrackOrder() {
                         <div className="border-t pt-3 space-y-1">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Subtotal</span>
-                                <span className="text-gray-900">${order.subtotal?.toFixed(2)}</span>
+                                <span className="text-gray-900">£{order.subtotal?.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Delivery Fee</span>
-                                <span className="text-gray-900">${order.delivery_fee?.toFixed(2)}</span>
+                                <span className="text-gray-900">£{order.delivery_fee?.toFixed(2)}</span>
                             </div>
                             {order.discount > 0 && (
                                 <div className="flex justify-between text-sm text-green-600">
                                     <span>Discount</span>
-                                    <span>-${order.discount.toFixed(2)}</span>
+                                    <span>-£{order.discount.toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between font-bold text-lg pt-2 border-t">
                                 <span>Total</span>
-                                <span>${order.total?.toFixed(2)}</span>
+                                <span>£{order.total?.toFixed(2)}</span>
                             </div>
                         </div>
 

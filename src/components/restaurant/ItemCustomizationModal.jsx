@@ -107,7 +107,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                 )}
 
                 <p className="text-gray-600">{item.description}</p>
-                <p className="text-xl font-bold text-gray-900">Base Price: ${item.price?.toFixed(2)}</p>
+                <p className="text-xl font-bold text-gray-900">Base Price: £{item.price?.toFixed(2)}</p>
 
                 {hasCustomizations && (
                     <div className="space-y-6 py-4">
@@ -134,7 +134,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                     </Label>
                                                 </div>
                                                 {choice.price > 0 && (
-                                                    <span className="text-sm text-gray-600">+${choice.price.toFixed(2)}</span>
+                                                    <span className="text-sm text-gray-600">+£{choice.price.toFixed(2)}</span>
                                                 )}
                                             </div>
                                         ))}
@@ -156,7 +156,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                     </Label>
                                                 </div>
                                                 {choice.price > 0 && (
-                                                    <span className="text-sm text-gray-600">+${choice.price.toFixed(2)}</span>
+                                                    <span className="text-sm text-gray-600">+£{choice.price.toFixed(2)}</span>
                                                 )}
                                             </div>
                                         ))}
@@ -195,7 +195,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                         onClick={handleAddToCart}
                         className="flex-1 bg-orange-500 hover:bg-orange-600 h-12"
                     >
-                        Add to Cart • ${calculatePrice().toFixed(2)}
+                        Add to Cart • £{calculatePrice().toFixed(2)}
                     </Button>
                 </DialogFooter>
             </DialogContent>
