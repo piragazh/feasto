@@ -245,6 +245,10 @@ export default function Restaurant() {
                                 <span>Min. order ${restaurant.minimum_order}</span>
                             </div>
                         )}
+                        <div className="flex items-center gap-2 text-xs">
+                            <Info className="h-4 w-4 text-gray-400" />
+                            <span className="text-gray-400">ID: {restaurant.id}</span>
+                        </div>
                     </div>
                 </div>
             </div>
