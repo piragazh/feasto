@@ -54,7 +54,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                         )}
                                         <div className="flex-1">
                                             <h4 className="font-medium text-gray-900">{item.name}</h4>
-                                            <p className="text-orange-500 font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                                            <p className="text-orange-500 font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <button
@@ -91,15 +91,15 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                         <div className="space-y-3 mb-6">
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal</span>
-                                <span>${subtotal.toFixed(2)}</span>
+                                <span>£{subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Delivery Fee</span>
-                                <span>${deliveryFee.toFixed(2)}</span>
+                                <span>£{deliveryFee.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between font-semibold text-lg pt-3 border-t">
                                 <span>Total</span>
-                                <span>${total.toFixed(2)}</span>
+                                <span>£{total.toFixed(2)}</span>
                             </div>
                         </div>
                         <Link to={createPageUrl('Checkout')}>

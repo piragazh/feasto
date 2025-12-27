@@ -58,10 +58,10 @@ export default function RestaurantCard({ restaurant }) {
                         </div>
                         <div className="flex items-center gap-1.5">
                             <Bike className="h-4 w-4 text-gray-400" />
-                            <span>{restaurant.delivery_fee ? `$${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
+                            <span>{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
                         </div>
                         {restaurant.minimum_order > 0 && (
-                            <span className="text-gray-400">Min ${restaurant.minimum_order}</span>
+                            <span className="text-gray-400">Min £{restaurant.minimum_order}</span>
                         )}
                     </div>
                 </div>
