@@ -48,7 +48,7 @@ export default function AIMealDealSuggestions({ restaurantId }) {
             const prompt = `You are a restaurant business consultant specializing in creating profitable meal deals. Based on the following data, suggest 3 compelling meal deal combinations.
 
 Restaurant Menu Items:
-${menuItems.map(item => `- ${item.name} ($${item.price}) - ${item.category || 'Main'} ${item.is_popular ? '(Popular)' : ''}`).join('\n')}
+${menuItems.map(item => `- ${item.name} (£${item.price}) - ${item.category || 'Main'} ${item.is_popular ? '(Popular)' : ''}`).join('\n')}
 
 Item Popularity from Recent Orders:
 ${Object.entries(itemPopularity).length > 0 
@@ -156,10 +156,10 @@ For each deal, calculate the original price (sum of individual items) and sugges
                                     </div>
                                     <div className="flex items-center gap-3 mb-2">
                                         <span className="text-sm text-gray-400 line-through">
-                                            ${suggestion.original_price.toFixed(2)}
+                                            £{suggestion.original_price.toFixed(2)}
                                         </span>
                                         <span className="text-lg font-bold text-purple-600">
-                                            ${suggestion.deal_price.toFixed(2)}
+                                            £{suggestion.deal_price.toFixed(2)}
                                         </span>
                                         <span className="text-xs text-green-600 font-semibold">
                                             Save {Math.round(((suggestion.original_price - suggestion.deal_price) / suggestion.original_price) * 100)}%

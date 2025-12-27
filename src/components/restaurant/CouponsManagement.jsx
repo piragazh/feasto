@@ -160,7 +160,7 @@ export default function CouponsManagement({ restaurantId }) {
                                 </div>
                             </div>
                             <div>
-                                <Label>Min Order ($)</Label>
+                                <Label>Min Order (£)</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -193,7 +193,7 @@ export default function CouponsManagement({ restaurantId }) {
                             <p className="font-semibold text-orange-600 mb-3">
                                 {coupon.discount_type === 'percentage' 
                                     ? `${coupon.discount_value}% Off` 
-                                    : `$${coupon.discount_value} Off`}
+                                    : `£${coupon.discount_value} Off`}
                             </p>
                             <div className="flex gap-2">
                                 <Button size="sm" variant="outline" onClick={() => handleEdit(coupon)}>
