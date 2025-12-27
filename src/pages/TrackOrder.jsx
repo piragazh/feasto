@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, MapPin, Clock, Phone, Package, CheckCircle, Loader2, Star } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import { format } from 'date-fns';
 import RateDriverDialog from '@/components/driver/RateDriverDialog';
+import LiveDriverMap from '@/components/tracking/LiveDriverMap';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -35,7 +35,6 @@ export default function TrackOrder() {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('id');
     const [showRatingDialog, setShowRatingDialog] = useState(false);
-    const [driverLocation, setDriverLocation] = useState(null);
 
     const { data: order, isLoading } = useQuery({
         queryKey: ['track-order', orderId],
@@ -47,27 +46,15 @@ export default function TrackOrder() {
         refetchInterval: 3000, // Update every 3 seconds
     });
 
-    useEffect(() => {
-        // Simulate driver location updates when order is out for delivery
-        if (order?.status === 'out_for_delivery') {
-            simulateDriverMovement();
-        }
-    }, [order?.status]);
-
-    const simulateDriverMovement = () => {
-        // In a real app, this would come from a GPS tracking API
-        // For demo purposes, we'll simulate movement near a fixed location
-        const baseLocation = [40.7589, -73.9851]; // Example: Times Square, NYC
-        const interval = setInterval(() => {
-            const randomOffset = () => (Math.random() - 0.5) * 0.01;
-            setDriverLocation([
-                baseLocation[0] + randomOffset(),
-                baseLocation[1] + randomOffset()
-            ]);
-        }, 5000);
-
-        return () => clearInterval(interval);
-    };
+    const { data: driver } = useQuery({
+        queryKey: ['driver-info', order?.driver_id],
+        queryFn: async () => {
+            const drivers = await base44.entities.Driver.filter({ id: order.driver_id });
+            return drivers[0];
+        },
+        enabled: !!order?.driver_id && order?.status === 'out_for_delivery',
+        refetchInterval: 3000,
+    });
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant-for-tracking', order?.restaurant_id],
@@ -216,45 +203,23 @@ export default function TrackOrder() {
                     </CardContent>
                 </Card>
 
-                {/* Map - Show when out for delivery */}
+                {/* Live Driver Tracking Map */}
                 {order.status === 'out_for_delivery' && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <MapPin className="h-5 w-5 text-orange-500" />
-                                Delivery Location
+                                Live Tracking
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="h-64 rounded-lg overflow-hidden border">
-                                {driverLocation ? (
-                                    <MapContainer 
-                                        center={driverLocation} 
-                                        zoom={13} 
-                                        style={{ height: '100%', width: '100%' }}
-                                    >
-                                        <TileLayer
-                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        />
-                                        <Marker position={driverLocation}>
-                                            <Popup>Delivery driver is here</Popup>
-                                        </Marker>
-                                        <Circle 
-                                            center={driverLocation} 
-                                            radius={200} 
-                                            pathOptions={{ color: 'orange', fillColor: 'orange', fillOpacity: 0.2 }}
-                                        />
-                                    </MapContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center bg-gray-100">
-                                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                                    </div>
-                                )}
+                            <div className="h-96 rounded-lg overflow-hidden border">
+                                <LiveDriverMap order={order} driver={driver} />
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                🚗 Your order is on the way! The driver is nearby.
-                            </p>
+                            <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span>Real-time location updates</span>
+                            </div>
                         </CardContent>
                     </Card>
                 )}
