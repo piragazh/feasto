@@ -23,6 +23,7 @@ import CouponsManagement from '@/components/restaurant/CouponsManagement';
 import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
 import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
+import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -31,6 +32,7 @@ export default function RestaurantDashboard() {
     const [activeTab, setActiveTab] = useState('orders');
     const [newOrdersCount, setNewOrdersCount] = useState(0);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     useEffect(() => {
         loadUserAndRestaurant();
@@ -50,6 +52,11 @@ export default function RestaurantDashboard() {
             const restaurants = await base44.entities.Restaurant.filter({ id: userData.restaurant_id });
             if (restaurants[0]) {
                 setRestaurant(restaurants[0]);
+                
+                // Show onboarding for new restaurant owners
+                if (!userData.onboarding_completed) {
+                    setShowOnboarding(true);
+                }
             }
         } catch (e) {
             base44.auth.redirectToLogin();
@@ -104,6 +111,13 @@ export default function RestaurantDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {showOnboarding && (
+                <RestaurantOnboarding 
+                    restaurant={restaurant}
+                    onComplete={() => setShowOnboarding(false)}
+                />
+            )}
+
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 py-4">
