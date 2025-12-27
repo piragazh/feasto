@@ -7,6 +7,7 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import TrackOrder from './pages/TrackOrder';
 import DriverDashboard from './pages/DriverDashboard';
 import DriverApp from './pages/DriverApp';
+import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import __Layout from './Layout.jsx';
 
 
@@ -20,6 +21,7 @@ export const PAGES = {
     "TrackOrder": TrackOrder,
     "DriverDashboard": DriverDashboard,
     "DriverApp": DriverApp,
+    "ManageRestaurantManagers": ManageRestaurantManagers,
 }
 
 export const pagesConfig = {

@@ -142,12 +142,20 @@ export default function Layout({ children, currentPageName }) {
                                                 </Link>
                                             </DropdownMenuItem>
                                             {user?.role === 'admin' && (
-                                                <DropdownMenuItem asChild>
-                                                    <Link to={createPageUrl('ManageCoupons')} className="flex items-center gap-2">
-                                                        <Tag className="h-4 w-4" />
-                                                        Manage Coupons
-                                                    </Link>
-                                                </DropdownMenuItem>
+                                                <>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={createPageUrl('ManageCoupons')} className="flex items-center gap-2">
+                                                            <Tag className="h-4 w-4" />
+                                                            Manage Coupons
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={createPageUrl('ManageRestaurantManagers')} className="flex items-center gap-2">
+                                                            <User className="h-4 w-4" />
+                                                            Restaurant Managers
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                </>
                                             )}
                                             <DropdownMenuSeparator />
                                         </div>
