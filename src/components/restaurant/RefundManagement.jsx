@@ -123,10 +123,10 @@ export default function RefundManagement({ restaurantId }) {
                                             {order.refund_request_type === 'full' ? 'Full Refund' : 'Partial Refund'}
                                         </p>
                                         <p className="text-sm text-yellow-800 mb-1">
-                                            <span className="font-medium">Reason:</span> {order.refund_request_reason}
+                                            <span className="font-medium">Reason:</span> {order.refund_request_reason || 'Not provided'}
                                         </p>
                                         <p className="text-sm text-yellow-800">
-                                            <span className="font-medium">Details:</span> {order.refund_request_description}
+                                            <span className="font-medium">Details:</span> {order.refund_request_description || 'Not provided'}
                                         </p>
                                         {order.refund_request_type === 'partial' && order.refund_requested_items && (
                                             <div className="mt-2">
@@ -231,10 +231,10 @@ export default function RefundManagement({ restaurantId }) {
                         <div className="border-l-4 border-yellow-500 bg-yellow-50 p-4">
                             <p className="font-semibold text-yellow-900 mb-2">Customer's Reason:</p>
                             <p className="text-sm text-yellow-800 mb-2">
-                                <span className="font-medium">Issue:</span> {viewDialog?.refund_request_reason}
+                                <span className="font-medium">Issue:</span> {viewDialog?.refund_request_reason || 'Not provided'}
                             </p>
                             <p className="text-sm text-yellow-800">
-                                <span className="font-medium">Description:</span> {viewDialog?.refund_request_description}
+                                <span className="font-medium">Description:</span> {viewDialog?.refund_request_description || 'Not provided'}
                             </p>
                         </div>
 
