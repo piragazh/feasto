@@ -73,6 +73,10 @@ export default function Orders() {
     });
 
     const reorderOrder = (order) => {
+        if (!order || !order.items || !order.restaurant_id) {
+            toast.error('Unable to reorder this order');
+            return;
+        }
         // Save order items to cart
         localStorage.setItem('cart', JSON.stringify(order.items));
         localStorage.setItem('cartRestaurantId', order.restaurant_id);
@@ -184,16 +188,16 @@ export default function Orders() {
                                                     <span className="line-clamp-1">{order.delivery_address || 'N/A'}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4">
-                                                    {order.estimated_delivery && order.status !== 'delivered' && order.status !== 'cancelled' && (
-                                                        <span className="text-sm text-gray-500">
-                                                            ETA: {order.estimated_delivery}
-                                                        </span>
+                                                    {order?.estimated_delivery && order?.status !== 'delivered' && order?.status !== 'cancelled' && (
+                                                       <span className="text-sm text-gray-500">
+                                                           ETA: {order.estimated_delivery}
+                                                       </span>
                                                     )}
-                                                    <span className="font-bold text-lg">£{order.total?.toFixed(2)}</span>
+                                                    <span className="font-bold text-lg">£{(order?.total || 0).toFixed(2)}</span>
                                                     </div>
                                                     </div>
 
-                                                    {order.status === 'cancelled' && order.rejection_reason && (
+                                                    {order?.status === 'cancelled' && order?.rejection_reason && (
                                                     <div className="border-t pt-4">
                                                     <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                                         <p className="text-sm font-semibold text-red-900 mb-1">Order Cancelled</p>
@@ -202,11 +206,11 @@ export default function Orders() {
                                                     </div>
                                                     )}
 
-                                                    <OrderStatusTimeline statusHistory={order.status_history} />
+                                                    {order?.status_history && <OrderStatusTimeline statusHistory={order.status_history} />}
 
-                                                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                                    {order?.status !== 'delivered' && order?.status !== 'cancelled' && (
                                                         <div className="border-t pt-4">
-                                                            <Link to={createPageUrl('TrackOrder') + '?id=' + order.id}>
+                                                            <Link to={createPageUrl('TrackOrder') + '?id=' + (order?.id || '')}>
                                                                 <Button variant="outline" className="w-full">
                                                                     <Navigation className="h-4 w-4 mr-2" />
                                                                     Track Order
@@ -215,7 +219,7 @@ export default function Orders() {
                                                         </div>
                                                     )}
 
-                                                    {order.status === 'refund_requested' && (
+                                                    {order?.status === 'refund_requested' && (
                                                         <div className="border-t pt-4">
                                                             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                                                                 <div className="flex gap-2">
@@ -232,18 +236,18 @@ export default function Orders() {
                                                         </div>
                                                     )}
 
-                                                    {order.status === 'refunded' && (
+                                                    {order?.status === 'refunded' && (
                                                         <div className="border-t pt-4">
                                                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                                                 <p className="text-sm font-semibold text-green-900">Refund Processed</p>
                                                                 <p className="text-xs text-green-700 mt-1">
-                                                                    Amount refunded: £{order.refund_amount?.toFixed(2) || '0.00'}
+                                                                    Amount refunded: £{order?.refund_amount?.toFixed(2) || '0.00'}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     )}
 
-                                                    {(order.status === 'delivered' || order.status === 'cancelled') && (
+                                                    {(order?.status === 'delivered' || order?.status === 'cancelled') && (
                                                         <div className="border-t pt-4 flex gap-2 flex-wrap">
                                                             <Button
                                                                 onClick={() => reorderOrder(order)}
@@ -253,7 +257,7 @@ export default function Orders() {
                                                                 <RotateCcw className="h-4 w-4 mr-2" />
                                                                 Reorder
                                                             </Button>
-                                                            {order.status === 'delivered' && !reviews.find(r => r.order_id === order.id) && (
+                                                            {order?.status === 'delivered' && !reviews.find(r => r.order_id === order?.id) && (
                                                                 <Button
                                                                     onClick={() => setReviewingOrder(order)}
                                                                     variant="outline"
@@ -263,7 +267,7 @@ export default function Orders() {
                                                                     Review
                                                                 </Button>
                                                             )}
-                                                            {order.status === 'delivered' && order.status !== 'refund_requested' && order.status !== 'refunded' && (
+                                                            {order?.status === 'delivered' && order?.status !== 'refund_requested' && order?.status !== 'refunded' && (
                                                                 <Button
                                                                     onClick={() => setRefundingOrder(order)}
                                                                     variant="outline"
