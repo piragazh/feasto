@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { MessageSquare, Send, Edit2, Trash2, X, Check } from 'lucide-react';
+import { MessageSquare, Send, Edit2, Trash2, X, Check, Eye } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -17,6 +18,8 @@ export default function RestaurantMessages({ restaurantId }) {
     const [editingId, setEditingId] = useState(null);
     const [editText, setEditText] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+    const [viewingPlatformMessage, setViewingPlatformMessage] = useState(null);
+    const [deletingPlatformMessage, setDeletingPlatformMessage] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: orders = [] } = useQuery({
@@ -91,6 +94,16 @@ export default function RestaurantMessages({ restaurantId }) {
         },
     });
 
+    const deletePlatformMessageMutation = useMutation({
+        mutationFn: (id) => base44.entities.RestaurantMessage.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-messages']);
+            queryClient.invalidateQueries(['restaurant-unread-messages']);
+            setDeletingPlatformMessage(null);
+            toast.success('Message deleted');
+        },
+    });
+
     const handleSend = () => {
         if (!messageText.trim() || !selectedOrder) return;
         
@@ -123,35 +136,56 @@ export default function RestaurantMessages({ restaurantId }) {
                         <ScrollArea className="h-[300px]">
                             <div className="space-y-3">
                                 {adminMessages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        className={`border rounded-lg p-4 ${!msg.is_read ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}
-                                        onClick={() => !msg.is_read && markAsRead.mutate(msg.id)}
-                                    >
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <p className="font-semibold text-sm">{msg.subject || 'Platform Message'}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    {format(new Date(msg.created_date), 'MMM d, yyyy h:mm a')}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {msg.priority && (
-                                                    <span className={`text-xs px-2 py-1 rounded ${
-                                                        msg.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                                                        msg.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                                        'bg-blue-100 text-blue-800'
-                                                    }`}>
-                                                        {msg.priority}
-                                                    </span>
-                                                )}
-                                                {!msg.is_read && (
-                                                    <span className="h-2 w-2 bg-orange-500 rounded-full"></span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-gray-700">{msg.message}</p>
-                                    </div>
+                                   <div
+                                       key={msg.id}
+                                       className={`border rounded-lg p-4 ${!msg.is_read ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}
+                                   >
+                                       <div className="flex items-start justify-between mb-2">
+                                           <div className="flex-1">
+                                               <p className="font-semibold text-sm">{msg.subject || 'Platform Message'}</p>
+                                               <p className="text-xs text-gray-500">
+                                                   {format(new Date(msg.created_date), 'MMM d, yyyy h:mm a')}
+                                               </p>
+                                           </div>
+                                           <div className="flex items-center gap-2">
+                                               {msg.priority && (
+                                                   <span className={`text-xs px-2 py-1 rounded ${
+                                                       msg.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                                       msg.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                                       'bg-blue-100 text-blue-800'
+                                                   }`}>
+                                                       {msg.priority}
+                                                   </span>
+                                               )}
+                                               {!msg.is_read && (
+                                                   <span className="h-2 w-2 bg-orange-500 rounded-full"></span>
+                                               )}
+                                           </div>
+                                       </div>
+                                       <p className="text-sm text-gray-700 line-clamp-2 mb-3">{msg.message}</p>
+                                       <div className="flex gap-2">
+                                           <Button
+                                               size="sm"
+                                               variant="outline"
+                                               onClick={() => {
+                                                   setViewingPlatformMessage(msg);
+                                                   if (!msg.is_read) markAsRead.mutate(msg.id);
+                                               }}
+                                           >
+                                               <Eye className="h-3 w-3 mr-1" />
+                                               View Full
+                                           </Button>
+                                           <Button
+                                               size="sm"
+                                               variant="outline"
+                                               onClick={() => setDeletingPlatformMessage(msg.id)}
+                                               className="text-red-600 hover:text-red-700"
+                                           >
+                                               <Trash2 className="h-3 w-3 mr-1" />
+                                               Delete
+                                           </Button>
+                                       </div>
+                                   </div>
                                 ))}
                             </div>
                         </ScrollArea>
@@ -306,7 +340,44 @@ export default function RestaurantMessages({ restaurantId }) {
             </Card>
         </div>
 
-        {/* Delete Confirmation */}
+        {/* View Platform Message Dialog */}
+        <Dialog open={!!viewingPlatformMessage} onOpenChange={() => setViewingPlatformMessage(null)}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>
+                        {viewingPlatformMessage?.subject || 'Platform Message'}
+                    </DialogTitle>
+                </DialogHeader>
+                {viewingPlatformMessage && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-500">
+                                {format(new Date(viewingPlatformMessage.created_date), 'MMM d, yyyy h:mm a')}
+                            </span>
+                            {viewingPlatformMessage.priority && (
+                                <span className={`text-xs px-2 py-1 rounded ${
+                                    viewingPlatformMessage.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                    viewingPlatformMessage.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-blue-100 text-blue-800'
+                                }`}>
+                                    {viewingPlatformMessage.priority}
+                                </span>
+                            )}
+                        </div>
+                        <div className="border-t pt-4">
+                            <p className="text-gray-700 whitespace-pre-wrap">{viewingPlatformMessage.message}</p>
+                        </div>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setViewingPlatformMessage(null)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Delete Order Message Confirmation */}
         <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -319,6 +390,27 @@ export default function RestaurantMessages({ restaurantId }) {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                         onClick={() => deleteMutation.mutate(deletingId)}
+                        className="bg-red-600 hover:bg-red-700"
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Platform Message Confirmation */}
+        <AlertDialog open={!!deletingPlatformMessage} onOpenChange={() => setDeletingPlatformMessage(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Platform Message?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete this message from the platform. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={() => deletePlatformMessageMutation.mutate(deletingPlatformMessage)}
                         className="bg-red-600 hover:bg-red-700"
                     >
                         Delete
