@@ -124,9 +124,9 @@ export default function Orders() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {orders.filter(order => order && order.id).map((order, index) => {
-                            const status = statusConfig[order.status] || statusConfig.pending;
-                            const StatusIcon = status.icon;
+                        {orders.filter(order => order && order.id && order.restaurant_name).map((order, index) => {
+                            const status = statusConfig[order?.status] || statusConfig.pending;
+                            const StatusIcon = status?.icon || Clock;
                             
                             return (
                                 <motion.div
@@ -141,9 +141,9 @@ export default function Orders() {
                                                <div>
                                                    <div className="flex items-center gap-2 mb-1">
                                                        <h3 className="font-semibold text-lg text-gray-900">
-                                                           {order.restaurant_name || 'Restaurant'}
+                                                           {order?.restaurant_name || 'Restaurant'}
                                                        </h3>
-                                                       {order.is_scheduled && (
+                                                       {order?.is_scheduled && (
                                                            <Badge variant="outline" className="text-xs">
                                                                <Clock className="h-3 w-3 mr-1" />
                                                                Scheduled
@@ -151,17 +151,17 @@ export default function Orders() {
                                                        )}
                                                    </div>
                                                    <p className="text-sm text-gray-500">
-                                                       {order.created_date ? format(new Date(order.created_date), 'MMM d, yyyy • h:mm a') : 'N/A'}
+                                                       {order?.created_date ? format(new Date(order.created_date), 'MMM d, yyyy • h:mm a') : 'N/A'}
                                                    </p>
-                                                   {order.is_scheduled && order.scheduled_for && (
+                                                   {order?.is_scheduled && order?.scheduled_for && (
                                                        <p className="text-xs text-orange-600 mt-1">
                                                            Scheduled for: {format(new Date(order.scheduled_for), 'MMM d, yyyy • h:mm a')}
                                                        </p>
                                                    )}
                                                </div>
-                                               <Badge className={`${status.color} flex items-center gap-1.5 px-3 py-1.5`}>
+                                               <Badge className={`${status?.color || 'bg-gray-100 text-gray-700'} flex items-center gap-1.5 px-3 py-1.5`}>
                                                    <StatusIcon className="h-4 w-4" />
-                                                   {status.label}
+                                                   {status?.label || 'Unknown'}
                                                </Badge>
                                             </div>
 
