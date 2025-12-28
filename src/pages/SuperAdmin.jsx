@@ -35,44 +35,67 @@ export default function SuperAdmin() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-700 text-white">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <div className="flex items-center gap-3">
+            {/* Header with Top Navigation */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-700 text-white sticky top-0 z-50 shadow-lg">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center gap-3 mb-4">
                         <Shield className="h-8 w-8" />
                         <div>
                             <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
                             <p className="text-slate-300 text-sm">System Management & Monitoring</p>
                         </div>
                     </div>
+                    
+                    {/* Top Menu Navigation */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        <Button
+                            variant={activeTab === 'overview' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('overview')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Activity className="h-4 w-4" />
+                            Overview
+                        </Button>
+                        <Button
+                            variant={activeTab === 'restaurants' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('restaurants')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Settings className="h-4 w-4" />
+                            Restaurants
+                        </Button>
+                        <Button
+                            variant={activeTab === 'messages' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('messages')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <MessageSquare className="h-4 w-4" />
+                            Messages
+                        </Button>
+                        <Button
+                            variant={activeTab === 'commission' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('commission')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <DollarSign className="h-4 w-4" />
+                            Commission
+                        </Button>
+                        <Button
+                            variant={activeTab === 'monitoring' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('monitoring')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Activity className="h-4 w-4" />
+                            Monitoring
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {/* Content */}
             <div className="max-w-7xl mx-auto px-4 py-8">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid grid-cols-5 w-full max-w-3xl mb-8">
-                        <TabsTrigger value="overview" className="flex items-center gap-2">
-                            <Activity className="h-4 w-4" />
-                            <span className="hidden sm:inline">Overview</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="restaurants" className="flex items-center gap-2">
-                            <Settings className="h-4 w-4" />
-                            <span className="hidden sm:inline">Restaurants</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="messages" className="flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4" />
-                            <span className="hidden sm:inline">Messages</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="commission" className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            <span className="hidden sm:inline">Commission</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="monitoring" className="flex items-center gap-2">
-                            <Activity className="h-4 w-4" />
-                            <span className="hidden sm:inline">Monitoring</span>
-                        </TabsTrigger>
-                    </TabsList>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden">
+                    <TabsList className="hidden"></TabsList>
 
                     <TabsContent value="overview">
                         <SystemOverview />

@@ -11,6 +11,7 @@ import PartialRefundDialog from './PartialRefundDialog';
 
 export default function PastOrders({ restaurantId }) {
     const [refundingOrder, setRefundingOrder] = useState(null);
+    const [expandedOrder, setExpandedOrder] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: orders = [] } = useQuery({
@@ -34,6 +35,21 @@ export default function PastOrders({ restaurantId }) {
             queryClient.invalidateQueries(['past-orders']);
             toast.success('Refund processed successfully');
             setRefundingOrder(null);
+        },
+    });
+
+    const undoRefundMutation = useMutation({
+        mutationFn: (orderId) => 
+            base44.entities.Order.update(orderId, { 
+                status: 'delivered',
+                refunded_items: null,
+                refund_amount: null,
+                refund_reason: null,
+                refund_date: null
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['past-orders']);
+            toast.success('Refund undone successfully');
         },
     });
 
@@ -64,8 +80,55 @@ export default function PastOrders({ restaurantId }) {
                             </div>
                             <div className="text-sm text-gray-600 mb-3">
                                 <p><strong>Customer:</strong> {order.phone}</p>
+                                <p><strong>Address:</strong> {order.delivery_address}</p>
                                 <p><strong>Items:</strong> {order.items?.length || 0} items</p>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                                    className="text-orange-600 mt-2 p-0 h-auto"
+                                >
+                                    {expandedOrder === order.id ? 'Hide Details' : 'View Details'}
+                                </Button>
                             </div>
+                            {expandedOrder === order.id && (
+                                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                                    <p className="font-semibold text-sm mb-2">Order Items:</p>
+                                    <div className="space-y-2">
+                                        {order.items?.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between text-sm">
+                                                <span>{item.quantity}x {item.name}</span>
+                                                <span className="font-medium">£{(item.price * item.quantity).toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="border-t mt-2 pt-2 space-y-1 text-sm">
+                                        <div className="flex justify-between">
+                                            <span>Subtotal:</span>
+                                            <span>£{order.subtotal?.toFixed(2) || '0.00'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Delivery Fee:</span>
+                                            <span>£{order.delivery_fee?.toFixed(2) || '0.00'}</span>
+                                        </div>
+                                        {order.discount > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Discount:</span>
+                                                <span>-£{order.discount?.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between font-bold text-base border-t pt-1">
+                                            <span>Total:</span>
+                                            <span>£{order.total?.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    {order.notes && (
+                                        <div className="mt-2 pt-2 border-t">
+                                            <p className="text-xs text-gray-500"><strong>Notes:</strong> {order.notes}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {order.status === 'delivered' && (
                                 <Button
                                     size="sm"
@@ -78,11 +141,23 @@ export default function PastOrders({ restaurantId }) {
                                 </Button>
                             )}
                             {order.status === 'refunded' && order.refund_amount && (
-                                <div className="text-sm text-green-600 mt-2">
-                                    Refunded: £{order.refund_amount.toFixed(2)}
-                                    {order.refund_reason && (
-                                        <p className="text-xs text-gray-500">Reason: {order.refund_reason}</p>
-                                    )}
+                                <div className="bg-green-50 border border-green-200 rounded p-3 mt-2">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <p className="text-sm font-semibold text-green-900">Refunded: £{order.refund_amount.toFixed(2)}</p>
+                                            {order.refund_reason && (
+                                                <p className="text-xs text-gray-600 mt-1">Reason: {order.refund_reason}</p>
+                                            )}
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => undoRefundMutation.mutate(order.id)}
+                                            className="text-red-600"
+                                        >
+                                            Undo Refund
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                             {order.status === 'refund_requested' && (
