@@ -120,6 +120,22 @@ export default function RestaurantDashboard() {
         refetchInterval: 5000,
     });
 
+    const { data: orderMessages = [] } = useQuery({
+        queryKey: ['order-messages', restaurant?.id],
+        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id }),
+        enabled: !!restaurant,
+        refetchInterval: 5000,
+    });
+
+    const { data: restaurantMessages = [] } = useQuery({
+        queryKey: ['restaurant-messages', restaurant?.id],
+        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id }),
+        enabled: !!restaurant,
+        refetchInterval: 5000,
+    });
+
+    const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(msg => !msg.is_read).length;
+
     useEffect(() => {
         if (pendingOrders.length > newOrdersCount && newOrdersCount > 0) {
             playNotificationSound();
@@ -217,9 +233,14 @@ export default function RestaurantDashboard() {
                             <History className="h-4 w-4 mr-2" />
                             Past Orders
                         </TabsTrigger>
-                        <TabsTrigger value="messages">
+                        <TabsTrigger value="messages" className="relative">
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Messages
+                            {unreadMessagesCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                                    {unreadMessagesCount}
+                                </span>
+                            )}
                         </TabsTrigger>
                         <TabsTrigger value="reviews">
                             <Star className="h-4 w-4 mr-2" />
