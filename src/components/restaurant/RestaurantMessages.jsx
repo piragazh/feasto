@@ -41,8 +41,27 @@ export default function RestaurantMessages({ restaurantId }) {
         mutationFn: (messageId) => base44.entities.RestaurantMessage.update(messageId, { is_read: true }),
         onSuccess: () => {
             queryClient.invalidateQueries(['admin-messages']);
+            queryClient.invalidateQueries(['restaurant-unread-messages']);
         },
     });
+
+    const markOrderMessageAsRead = useMutation({
+        mutationFn: (messageId) => base44.entities.Message.update(messageId, { is_read: true }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['messages']);
+            queryClient.invalidateQueries(['restaurant-unread-messages']);
+        },
+    });
+
+    // Mark order messages as read when viewing them
+    React.useEffect(() => {
+        if (selectedOrder && orderMessages.length > 0) {
+            const unreadMessages = orderMessages.filter(m => m.sender_type === 'customer' && !m.is_read);
+            unreadMessages.forEach(msg => {
+                markOrderMessageAsRead.mutate(msg.id);
+            });
+        }
+    }, [selectedOrder, orderMessages.length]);
 
     const sendMutation = useMutation({
         mutationFn: (data) => base44.entities.Message.create(data),
