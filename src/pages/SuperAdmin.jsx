@@ -51,91 +51,93 @@ export default function SuperAdmin() {
                     </div>
                     
                     {/* Top Menu Navigation */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
-                        <Button
-                            variant={activeTab === 'overview' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('overview')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Activity className="h-4 w-4" />
-                            Overview
-                        </Button>
-                        <Button
-                            variant={activeTab === 'restaurants' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('restaurants')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Settings className="h-4 w-4" />
-                            Restaurants
-                        </Button>
-                        <Button
-                            variant={activeTab === 'messages' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('messages')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <MessageSquare className="h-4 w-4" />
-                            Messages
-                        </Button>
-                        <Button
-                            variant={activeTab === 'commission' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('commission')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <DollarSign className="h-4 w-4" />
-                            Commission
-                        </Button>
-                        <Button
-                            variant={activeTab === 'monitoring' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('monitoring')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Activity className="h-4 w-4" />
-                            Monitoring
-                        </Button>
-                        <Button
-                            variant={activeTab === 'cuisine' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('cuisine')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <ChefHat className="h-4 w-4" />
-                            Cuisine Types
-                        </Button>
-                        <Link to={createPageUrl('ManageRestaurantManagers')}>
+                    <div className="overflow-x-auto pb-2">
+                        <div className="flex gap-2 min-w-max">
                             <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                                variant={activeTab === 'overview' ? 'secondary' : 'ghost'}
+                                onClick={() => setActiveTab('overview')}
+                                className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
                             >
-                                <Users className="h-4 w-4" />
-                                Managers
+                                <Activity className="h-4 w-4" />
+                                Overview
                             </Button>
-                        </Link>
-                        <Link to={createPageUrl('DriverDashboard')}>
                             <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                                variant={activeTab === 'restaurants' ? 'secondary' : 'ghost'}
+                                onClick={() => setActiveTab('restaurants')}
+                                className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
                             >
-                                <Truck className="h-4 w-4" />
-                                Drivers
+                                <Settings className="h-4 w-4" />
+                                Restaurants
                             </Button>
-                        </Link>
-                        <Link to={createPageUrl('AdminDashboard')}>
                             <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                                variant={activeTab === 'messages' ? 'secondary' : 'ghost'}
+                                onClick={() => setActiveTab('messages')}
+                                className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
                             >
-                                <LayoutDashboard className="h-4 w-4" />
-                                Admin Dashboard
+                                <MessageSquare className="h-4 w-4" />
+                                Messages
                             </Button>
-                        </Link>
-                        <Link to={createPageUrl('AdminRestaurants')}>
                             <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                                variant={activeTab === 'commission' ? 'secondary' : 'ghost'}
+                                onClick={() => setActiveTab('commission')}
+                                className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
                             >
-                                <Store className="h-4 w-4" />
-                                Admin Restaurants
+                                <DollarSign className="h-4 w-4" />
+                                Commission
                             </Button>
-                        </Link>
+                            <Button
+                                variant={activeTab === 'monitoring' ? 'secondary' : 'ghost'}
+                                onClick={() => setActiveTab('monitoring')}
+                                className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
+                            >
+                                <Activity className="h-4 w-4" />
+                                Monitoring
+                            </Button>
+                            <Button
+                                variant={activeTab === 'cuisine' ? 'secondary' : 'ghost'}
+                                onClick={() => setActiveTab('cuisine')}
+                                className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
+                            >
+                                <ChefHat className="h-4 w-4" />
+                                Cuisine Types
+                            </Button>
+                            <Link to={createPageUrl('ManageRestaurantManagers')}>
+                                <Button
+                                    variant="ghost"
+                                    className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
+                                >
+                                    <Users className="h-4 w-4" />
+                                    Managers
+                                </Button>
+                            </Link>
+                            <Link to={createPageUrl('DriverDashboard')}>
+                                <Button
+                                    variant="ghost"
+                                    className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
+                                >
+                                    <Truck className="h-4 w-4" />
+                                    Drivers
+                                </Button>
+                            </Link>
+                            <Link to={createPageUrl('AdminDashboard')}>
+                                <Button
+                                    variant="ghost"
+                                    className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
+                                >
+                                    <LayoutDashboard className="h-4 w-4" />
+                                    Admin Dashboard
+                                </Button>
+                            </Link>
+                            <Link to={createPageUrl('AdminRestaurants')}>
+                                <Button
+                                    variant="ghost"
+                                    className="flex items-center gap-2 text-white hover:bg-white/10 whitespace-nowrap"
+                                >
+                                    <Store className="h-4 w-4" />
+                                    Admin Restaurants
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>
