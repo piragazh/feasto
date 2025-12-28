@@ -1,21 +1,20 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 
-export default function CuisineFilter({ selectedCuisine, setSelectedCuisine }) {
-    const { data: cuisineTypes = [] } = useQuery({
-        queryKey: ['cuisine-types'],
-        queryFn: async () => {
-            const types = await base44.entities.CuisineType.filter({ is_active: true });
-            return types;
-        },
-    });
+const cuisines = [
+    { name: 'All', emoji: '🍽️' },
+    { name: 'Pizza', emoji: '🍕' },
+    { name: 'Burgers', emoji: '🍔' },
+    { name: 'Chinese', emoji: '🥡' },
+    { name: 'Indian', emoji: '🍛' },
+    { name: 'Thai', emoji: '🍜' },
+    { name: 'Sushi', emoji: '🍣' },
+    { name: 'Mexican', emoji: '🌮' },
+    { name: 'Italian', emoji: '🍝' },
+    { name: 'Healthy', emoji: '🥗' },
+];
 
-    const cuisines = [
-        { name: 'All', icon: '🍽️' },
-        ...cuisineTypes.map(type => ({ name: type.name, icon: type.icon || '🍽️' }))
-    ];
+export default function CuisineFilter({ selectedCuisine, setSelectedCuisine }) {
     return (
         <div className="py-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">What are you craving?</h2>
@@ -32,7 +31,7 @@ export default function CuisineFilter({ selectedCuisine, setSelectedCuisine }) {
                                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-100'
                         }`}
                     >
-                        <span className="text-2xl">{cuisine.icon}</span>
+                        <span className="text-2xl">{cuisine.emoji}</span>
                         <span className="text-sm font-medium whitespace-nowrap">{cuisine.name}</span>
                     </motion.button>
                 ))}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +23,6 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
     });
 
     const queryClient = useQueryClient();
-
-    const { data: cuisineTypes = [] } = useQuery({
-        queryKey: ['cuisine-types'],
-        queryFn: async () => {
-            const types = await base44.entities.CuisineType.filter({ is_active: true });
-            return types;
-        },
-    });
 
     useEffect(() => {
         if (restaurant) {
@@ -114,15 +106,19 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                             onValueChange={(value) => setFormData({ ...formData, cuisine_type: value })}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Select cuisine type" />
+                                <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {cuisineTypes.map((type) => (
-                                    <SelectItem key={type.id} value={type.name}>
-                                        {type.icon && <span className="mr-2">{type.icon}</span>}
-                                        {type.name}
-                                    </SelectItem>
-                                ))}
+                                <SelectItem value="Pizza">Pizza</SelectItem>
+                                <SelectItem value="Burgers">Burgers</SelectItem>
+                                <SelectItem value="Chinese">Chinese</SelectItem>
+                                <SelectItem value="Indian">Indian</SelectItem>
+                                <SelectItem value="Thai">Thai</SelectItem>
+                                <SelectItem value="Sushi">Sushi</SelectItem>
+                                <SelectItem value="Mexican">Mexican</SelectItem>
+                                <SelectItem value="Italian">Italian</SelectItem>
+                                <SelectItem value="American">American</SelectItem>
+                                <SelectItem value="Healthy">Healthy</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
