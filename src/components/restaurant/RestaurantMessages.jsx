@@ -4,14 +4,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Send } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { MessageSquare, Send, Edit2, Trash2, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function RestaurantMessages({ restaurantId }) {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [messageText, setMessageText] = useState('');
+    const [editingId, setEditingId] = useState(null);
+    const [editText, setEditText] = useState('');
+    const [deletingId, setDeletingId] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: orders = [] } = useQuery({
@@ -44,6 +49,26 @@ export default function RestaurantMessages({ restaurantId }) {
         onSuccess: () => {
             queryClient.invalidateQueries(['messages']);
             setMessageText('');
+            toast.success('Message sent');
+        },
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, text }) => base44.entities.Message.update(id, { message: text }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['messages']);
+            setEditingId(null);
+            setEditText('');
+            toast.success('Message updated');
+        },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id) => base44.entities.Message.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['messages']);
+            setDeletingId(null);
+            toast.success('Message deleted');
         },
     });
 
@@ -173,10 +198,68 @@ export default function RestaurantMessages({ restaurantId }) {
                                                             : 'bg-gray-100 text-gray-900'
                                                     }`}
                                                 >
-                                                    <p className="text-sm">{msg.message}</p>
-                                                    <p className="text-xs opacity-70 mt-1">
-                                                        {format(new Date(msg.created_date), 'h:mm a')}
-                                                    </p>
+                                                    {editingId === msg.id ? (
+                                                        <div className="space-y-2">
+                                                            <Textarea
+                                                                value={editText}
+                                                                onChange={(e) => setEditText(e.target.value)}
+                                                                rows={2}
+                                                                className="text-sm"
+                                                            />
+                                                            <div className="flex gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    onClick={() => updateMutation.mutate({ id: editingId, text: editText })}
+                                                                    className="h-7"
+                                                                >
+                                                                    <Check className="h-3 w-3 mr-1" />
+                                                                    Save
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        setEditingId(null);
+                                                                        setEditText('');
+                                                                    }}
+                                                                    className="h-7"
+                                                                >
+                                                                    <X className="h-3 w-3 mr-1" />
+                                                                    Cancel
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {msg.sender_type === 'restaurant' && (
+                                                                <div className="flex gap-1 mb-2">
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-6 w-6 hover:bg-white/20"
+                                                                        onClick={() => {
+                                                                            setEditingId(msg.id);
+                                                                            setEditText(msg.message);
+                                                                        }}
+                                                                    >
+                                                                        <Edit2 className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-6 w-6 hover:bg-white/20"
+                                                                        onClick={() => setDeletingId(msg.id)}
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                            <p className="text-sm">{msg.message}</p>
+                                                            <p className="text-xs opacity-70 mt-1">
+                                                                {format(new Date(msg.created_date), 'h:mm a')}
+                                                            </p>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -203,6 +286,27 @@ export default function RestaurantMessages({ restaurantId }) {
                 </CardContent>
             </Card>
         </div>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Message?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete this message. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={() => deleteMutation.mutate(deletingId)}
+                        className="bg-red-600 hover:bg-red-700"
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         </div>
     );
 }

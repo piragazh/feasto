@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw, AlertCircle, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import LeaveReviewDialog from '@/components/reviews/LeaveReviewDialog';
 import OrderStatusTimeline from '@/components/restaurant/OrderStatusTimeline';
 import RequestRefundDialog from '@/components/customer/RequestRefundDialog';
+import CustomerMessaging from '@/components/customer/CustomerMessaging';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -30,6 +32,7 @@ export default function Orders() {
     const queryClient = useQueryClient();
     const [reviewingOrder, setReviewingOrder] = useState(null);
     const [refundingOrder, setRefundingOrder] = useState(null);
+    const [messagingOrder, setMessagingOrder] = useState(null);
     
     const { data: orders = [], isLoading, refetch, error } = useQuery({
         queryKey: ['orders'],
@@ -209,13 +212,21 @@ export default function Orders() {
                                                     {order?.status_history && <OrderStatusTimeline statusHistory={order.status_history} />}
 
                                                     {order?.status !== 'delivered' && order?.status !== 'cancelled' && (
-                                                        <div className="border-t pt-4">
+                                                        <div className="border-t pt-4 space-y-2">
                                                             <Link to={createPageUrl('TrackOrder') + '?id=' + (order?.id || '')}>
                                                                 <Button variant="outline" className="w-full">
                                                                     <Navigation className="h-4 w-4 mr-2" />
                                                                     Track Order
                                                                 </Button>
                                                             </Link>
+                                                            <Button 
+                                                                variant="outline" 
+                                                                className="w-full"
+                                                                onClick={() => setMessagingOrder(order)}
+                                                            >
+                                                                <MessageSquare className="h-4 w-4 mr-2" />
+                                                                Message Restaurant
+                                                            </Button>
                                                         </div>
                                                     )}
 
@@ -300,6 +311,20 @@ export default function Orders() {
                 order={refundingOrder}
                 onSubmit={handleRefundRequest}
             />
+
+            <Dialog open={!!messagingOrder} onOpenChange={() => setMessagingOrder(null)}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Chat with {messagingOrder?.restaurant_name || 'Restaurant'}</DialogTitle>
+                    </DialogHeader>
+                    {messagingOrder && (
+                        <CustomerMessaging 
+                            orderId={messagingOrder.id} 
+                            restaurantId={messagingOrder.restaurant_id} 
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
             </div>
             );
             }
