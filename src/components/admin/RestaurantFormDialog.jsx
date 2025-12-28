@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,11 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
     });
 
     const queryClient = useQueryClient();
+
+    const { data: cuisineTypes = [] } = useQuery({
+        queryKey: ['cuisine-types'],
+        queryFn: () => base44.entities.CuisineType.filter({ is_active: true }),
+    });
 
     useEffect(() => {
         if (restaurant) {
@@ -109,16 +114,12 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Pizza">Pizza</SelectItem>
-                                <SelectItem value="Burgers">Burgers</SelectItem>
-                                <SelectItem value="Chinese">Chinese</SelectItem>
-                                <SelectItem value="Indian">Indian</SelectItem>
-                                <SelectItem value="Thai">Thai</SelectItem>
-                                <SelectItem value="Sushi">Sushi</SelectItem>
-                                <SelectItem value="Mexican">Mexican</SelectItem>
-                                <SelectItem value="Italian">Italian</SelectItem>
-                                <SelectItem value="American">American</SelectItem>
-                                <SelectItem value="Healthy">Healthy</SelectItem>
+                                {cuisineTypes.map((cuisine) => (
+                                    <SelectItem key={cuisine.id} value={cuisine.name}>
+                                        {cuisine.icon && <span className="mr-2">{cuisine.icon}</span>}
+                                        {cuisine.name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
