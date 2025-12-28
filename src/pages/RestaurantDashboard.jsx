@@ -17,7 +17,8 @@ import {
     BarChart3,
     Navigation,
     Users,
-    AlertCircle
+    AlertCircle,
+    Tag
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import OrderQueue from '@/components/restaurant/OrderQueue';
@@ -34,6 +35,7 @@ import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import RefundManagement from '@/components/restaurant/RefundManagement';
+import PromotionManagement from '@/components/restaurant/PromotionManagement';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -267,6 +269,10 @@ export default function RestaurantDashboard() {
                                 </span>
                             )}
                         </TabsTrigger>
+                        <TabsTrigger value="promotions">
+                            <Tag className="h-4 w-4 mr-2" />
+                            Promotions
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="orders">
@@ -315,6 +321,10 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="refunds">
                         <RefundManagement restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="promotions">
+                        <PromotionManagement restaurantId={restaurant.id} />
                     </TabsContent>
                 </Tabs>
             </div>
