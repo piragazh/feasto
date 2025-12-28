@@ -9,7 +9,8 @@ import RestaurantManagement from '@/components/superadmin/RestaurantManagement';
 import MessagingCenter from '@/components/superadmin/MessagingCenter';
 import CommissionManagement from '@/components/superadmin/CommissionManagement';
 import SystemMonitoring from '@/components/superadmin/SystemMonitoring';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store } from 'lucide-react';
+import CuisineTypeManagement from '@/components/superadmin/CuisineTypeManagement';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -91,6 +92,14 @@ export default function SuperAdmin() {
                             <Activity className="h-4 w-4" />
                             Monitoring
                         </Button>
+                        <Button
+                            variant={activeTab === 'cuisine' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('cuisine')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <ChefHat className="h-4 w-4" />
+                            Cuisine Types
+                        </Button>
                         <Link to={createPageUrl('ManageRestaurantManagers')}>
                             <Button
                                 variant="ghost"
@@ -138,6 +147,7 @@ export default function SuperAdmin() {
                 {activeTab === 'messages' && <MessagingCenter />}
                 {activeTab === 'commission' && <CommissionManagement />}
                 {activeTab === 'monitoring' && <SystemMonitoring />}
+                {activeTab === 'cuisine' && <CuisineTypeManagement />}
             </div>
         </div>
     );
