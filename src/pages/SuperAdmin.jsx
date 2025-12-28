@@ -9,7 +9,9 @@ import RestaurantManagement from '@/components/superadmin/RestaurantManagement';
 import MessagingCenter from '@/components/superadmin/MessagingCenter';
 import CommissionManagement from '@/components/superadmin/CommissionManagement';
 import SystemMonitoring from '@/components/superadmin/SystemMonitoring';
-import { Shield, Activity, MessageSquare, DollarSign, Settings } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
@@ -89,6 +91,42 @@ export default function SuperAdmin() {
                             <Activity className="h-4 w-4" />
                             Monitoring
                         </Button>
+                        <Link to={createPageUrl('ManageRestaurantManagers')}>
+                            <Button
+                                variant="ghost"
+                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                            >
+                                <Users className="h-4 w-4" />
+                                Managers
+                            </Button>
+                        </Link>
+                        <Link to={createPageUrl('DriverDashboard')}>
+                            <Button
+                                variant="ghost"
+                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                            >
+                                <Truck className="h-4 w-4" />
+                                Drivers
+                            </Button>
+                        </Link>
+                        <Link to={createPageUrl('AdminDashboard')}>
+                            <Button
+                                variant="ghost"
+                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                            >
+                                <LayoutDashboard className="h-4 w-4" />
+                                Admin Dashboard
+                            </Button>
+                        </Link>
+                        <Link to={createPageUrl('AdminRestaurants')}>
+                            <Button
+                                variant="ghost"
+                                className="flex items-center gap-2 text-white hover:bg-white/10"
+                            >
+                                <Store className="h-4 w-4" />
+                                Admin Restaurants
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             </div>
