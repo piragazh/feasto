@@ -1,20 +1,18 @@
 import React from 'react';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 
-const cuisines = [
-    { name: 'All', emoji: '🍽️' },
-    { name: 'Pizza', emoji: '🍕' },
-    { name: 'Burgers', emoji: '🍔' },
-    { name: 'Chinese', emoji: '🥡' },
-    { name: 'Indian', emoji: '🍛' },
-    { name: 'Thai', emoji: '🍜' },
-    { name: 'Sushi', emoji: '🍣' },
-    { name: 'Mexican', emoji: '🌮' },
-    { name: 'Italian', emoji: '🍝' },
-    { name: 'Healthy', emoji: '🥗' },
-];
-
 export default function CuisineFilter({ selectedCuisine, setSelectedCuisine }) {
+    const { data: cuisineTypes = [] } = useQuery({
+        queryKey: ['cuisine-types'],
+        queryFn: () => base44.entities.CuisineType.filter({ is_active: true }),
+    });
+
+    const cuisines = [
+        { name: 'All', emoji: '🍽️' },
+        ...cuisineTypes.map(ct => ({ name: ct.name, emoji: ct.icon || '🍽️' }))
+    ];
     return (
         <div className="py-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">What are you craving?</h2>
