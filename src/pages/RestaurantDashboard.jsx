@@ -16,7 +16,8 @@ import {
     Star,
     BarChart3,
     Navigation,
-    Users
+    Users,
+    AlertCircle
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import OrderQueue from '@/components/restaurant/OrderQueue';
@@ -32,6 +33,7 @@ import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
 import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
+import RefundManagement from '@/components/restaurant/RefundManagement';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -106,6 +108,16 @@ export default function RestaurantDashboard() {
         }),
         enabled: !!restaurant,
         refetchInterval: 3000, // Check every 3 seconds
+    });
+
+    const { data: refundRequests = [] } = useQuery({
+        queryKey: ['refund-requests-count', restaurant?.id],
+        queryFn: () => base44.entities.Order.filter({ 
+            restaurant_id: restaurant.id, 
+            status: 'refund_requested' 
+        }),
+        enabled: !!restaurant,
+        refetchInterval: 5000,
     });
 
     useEffect(() => {
@@ -225,6 +237,15 @@ export default function RestaurantDashboard() {
                             <Users className="h-4 w-4 mr-2" />
                             CRM
                         </TabsTrigger>
+                        <TabsTrigger value="refunds" className="relative">
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            Refunds
+                            {refundRequests.length > 0 && (
+                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
+                                    {refundRequests.length}
+                                </span>
+                            )}
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="orders">
@@ -269,6 +290,10 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="crm">
                         <CustomerCRM restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="refunds">
+                        <RefundManagement restaurantId={restaurant.id} />
                     </TabsContent>
                 </Tabs>
             </div>
