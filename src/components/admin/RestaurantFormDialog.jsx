@@ -33,7 +33,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
         if (restaurant) {
             setFormData({
                 name: restaurant.name || '',
-                cuisine_type: restaurant.cuisine_type || 'Pizza',
+                cuisine_type: restaurant.cuisine_type || (cuisineTypes[0]?.name || ''),
                 image_url: restaurant.image_url || '',
                 description: restaurant.description || '',
                 address: restaurant.address || '',
@@ -45,7 +45,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
         } else {
             setFormData({
                 name: '',
-                cuisine_type: 'Pizza',
+                cuisine_type: cuisineTypes[0]?.name || '',
                 image_url: '',
                 description: '',
                 address: '',
@@ -55,7 +55,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                 is_open: true
             });
         }
-    }, [restaurant, open]);
+    }, [restaurant, open, cuisineTypes]);
 
     const saveMutation = useMutation({
         mutationFn: (data) => {
