@@ -151,7 +151,7 @@ export default function Orders() {
                                                        )}
                                                    </div>
                                                    <p className="text-sm text-gray-500">
-                                                       {order.created_date && format(new Date(order.created_date), 'MMM d, yyyy • h:mm a')}
+                                                       {order.created_date ? format(new Date(order.created_date), 'MMM d, yyyy • h:mm a') : 'N/A'}
                                                    </p>
                                                    {order.is_scheduled && order.scheduled_for && (
                                                        <p className="text-xs text-orange-600 mt-1">
@@ -166,22 +166,22 @@ export default function Orders() {
                                             </div>
 
                                             <div className="space-y-2 mb-4">
-                                                {order.items?.map((item, i) => (
-                                                    <div key={i} className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">
-                                                            {item.quantity}x {item.name}
-                                                        </span>
-                                                        <span className="text-gray-900">
-                                                            £{(item.price * item.quantity).toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                                </div>
+                                               {(order.items || []).map((item, i) => (
+                                                   <div key={i} className="flex justify-between text-sm">
+                                                       <span className="text-gray-600">
+                                                           {item?.quantity || 0}x {item?.name || 'Item'}
+                                                       </span>
+                                                       <span className="text-gray-900">
+                                                           £{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}
+                                                       </span>
+                                                   </div>
+                                               ))}
+                                               </div>
 
                                                 <div className="border-t pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                 <div className="flex items-start gap-2 text-sm text-gray-500">
                                                     <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                                                    <span className="line-clamp-1">{order.delivery_address}</span>
+                                                    <span className="line-clamp-1">{order.delivery_address || 'N/A'}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     {order.estimated_delivery && order.status !== 'delivered' && order.status !== 'cancelled' && (
