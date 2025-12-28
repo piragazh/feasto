@@ -33,7 +33,10 @@ export default function Orders() {
     
     const { data: orders = [], isLoading, refetch } = useQuery({
         queryKey: ['orders'],
-        queryFn: () => base44.entities.Order.list('-created_date'),
+        queryFn: async () => {
+            const user = await base44.auth.me();
+            return base44.entities.Order.filter({ created_by: user.email }, '-created_date');
+        },
         refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time updates
     });
 
