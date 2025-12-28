@@ -22,10 +22,12 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
     };
 
     const calculateRefundAmount = () => {
-        if (refundType === 'full') return order.total;
+        if (!order) return 0;
+        if (refundType === 'full') return order.total || 0;
         return selectedItems.reduce((sum, index) => {
-            const item = order.items[index];
-            return sum + (item.price * item.quantity);
+            const item = order.items?.[index];
+            if (!item) return sum;
+            return sum + ((item.price || 0) * (item.quantity || 0));
         }, 0);
     };
 
@@ -38,9 +40,9 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
         }
         
         onSubmit({
-            orderId: order.id,
+            orderId: order?.id,
             refundType,
-            refundedItems: refundType === 'partial' ? selectedItems.map(i => order.items[i]) : order.items,
+            refundedItems: refundType === 'partial' ? selectedItems.map(i => order?.items?.[i]).filter(Boolean) : (order?.items || []),
             refundAmount: calculateRefundAmount(),
             reason,
             issueDescription
@@ -69,7 +71,7 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Request Refund - Order #{order.id.slice(-6)}</DialogTitle>
+                    <DialogTitle>Request Refund - Order #{order?.id?.slice(-6) || 'N/A'}</DialogTitle>
                 </DialogHeader>
                 
                 <div className="space-y-4">
@@ -105,7 +107,7 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
                         <div>
                             <Label className="text-base font-semibold mb-2 block">Select Items</Label>
                             <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-2">
-                                {order.items.map((item, index) => (
+                                {(order?.items || []).map((item, index) => (
                                     <div key={index} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded">
                                         <Checkbox
                                             checked={selectedItems.includes(index)}

@@ -36,12 +36,14 @@ export default function LeaveReviewDialog({ order, open, onClose }) {
         }
 
         reviewMutation.mutate({
-            order_id: order.id,
-            restaurant_id: order.restaurant_id,
+            order_id: order?.id,
+            restaurant_id: order?.restaurant_id,
             rating,
             review_text: reviewText
         });
     };
+
+    if (!order) return null;
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -52,7 +54,7 @@ export default function LeaveReviewDialog({ order, open, onClose }) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="text-center">
                         <p className="text-sm text-gray-600 mb-3">
-                            How was your order from {order.restaurant_name}?
+                            How was your order from {order?.restaurant_name || 'this restaurant'}?
                         </p>
                         <div className="flex justify-center gap-2 mb-4">
                             {[1, 2, 3, 4, 5].map((star) => (
