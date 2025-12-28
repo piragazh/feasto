@@ -31,13 +31,19 @@ export default function Orders() {
     const [reviewingOrder, setReviewingOrder] = useState(null);
     const [refundingOrder, setRefundingOrder] = useState(null);
     
-    const { data: orders = [], isLoading, refetch } = useQuery({
+    const { data: orders = [], isLoading, refetch, error } = useQuery({
         queryKey: ['orders'],
         queryFn: async () => {
-            const user = await base44.auth.me();
-            return base44.entities.Order.filter({ created_by: user.email }, '-created_date');
+            try {
+                const user = await base44.auth.me();
+                const result = await base44.entities.Order.filter({ created_by: user.email }, '-created_date');
+                return (result || []).filter(order => order && order.id);
+            } catch (e) {
+                console.error('Error fetching orders:', e);
+                return [];
+            }
         },
-        refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time updates
+        refetchInterval: 5000,
     });
 
     const { data: reviews = [] } = useQuery({
@@ -118,7 +124,7 @@ export default function Orders() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {orders.map((order, index) => {
+                        {orders.filter(order => order && order.id).map((order, index) => {
                             const status = statusConfig[order.status] || statusConfig.pending;
                             const StatusIcon = status.icon;
                             
