@@ -95,29 +95,11 @@ export default function SuperAdmin() {
 
             {/* Content */}
             <div className="max-w-7xl mx-auto px-4 py-8">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden">
-                    <TabsList className="hidden"></TabsList>
-
-                    <TabsContent value="overview">
-                        <SystemOverview />
-                    </TabsContent>
-
-                    <TabsContent value="restaurants">
-                        <RestaurantManagement />
-                    </TabsContent>
-
-                    <TabsContent value="messages">
-                        <MessagingCenter />
-                    </TabsContent>
-
-                    <TabsContent value="commission">
-                        <CommissionManagement />
-                    </TabsContent>
-
-                    <TabsContent value="monitoring">
-                        <SystemMonitoring />
-                    </TabsContent>
-                </Tabs>
+                {activeTab === 'overview' && <SystemOverview />}
+                {activeTab === 'restaurants' && <RestaurantManagement />}
+                {activeTab === 'messages' && <MessagingCenter />}
+                {activeTab === 'commission' && <CommissionManagement />}
+                {activeTab === 'monitoring' && <SystemMonitoring />}
             </div>
         </div>
     );
