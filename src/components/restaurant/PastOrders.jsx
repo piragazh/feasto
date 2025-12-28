@@ -4,14 +4,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign } from 'lucide-react';
+import { DollarSign, X, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import PartialRefundDialog from './PartialRefundDialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function PastOrders({ restaurantId }) {
     const [refundingOrder, setRefundingOrder] = useState(null);
     const [expandedOrder, setExpandedOrder] = useState(null);
+    const [rejectingRefund, setRejectingRefund] = useState(null);
+    const [rejectionReason, setRejectionReason] = useState('');
     const queryClient = useQueryClient();
 
     const { data: orders = [] } = useQuery({
@@ -50,6 +60,25 @@ export default function PastOrders({ restaurantId }) {
         onSuccess: () => {
             queryClient.invalidateQueries(['past-orders']);
             toast.success('Refund undone successfully');
+        },
+    });
+
+    const rejectRefundMutation = useMutation({
+        mutationFn: ({ orderId, rejectionReason }) => 
+            base44.entities.Order.update(orderId, { 
+                status: 'delivered',
+                refund_request_type: null,
+                refund_requested_items: null,
+                refund_requested_amount: null,
+                refund_request_reason: null,
+                refund_request_description: null,
+                refund_request_date: null,
+                refund_rejection_reason: rejectionReason,
+                refund_rejected_date: new Date().toISOString()
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['past-orders']);
+            toast.success('Refund request rejected');
         },
     });
 
@@ -143,17 +172,32 @@ export default function PastOrders({ restaurantId }) {
                             {order.status === 'refunded' && order.refund_amount && (
                                 <div className="bg-green-50 border border-green-200 rounded p-3 mt-2">
                                     <div className="flex items-start justify-between">
-                                        <div>
+                                        <div className="flex-1">
                                             <p className="text-sm font-semibold text-green-900">Refunded: £{order.refund_amount.toFixed(2)}</p>
                                             {order.refund_reason && (
-                                                <p className="text-xs text-gray-600 mt-1">Reason: {order.refund_reason}</p>
+                                                <p className="text-xs text-gray-600 mt-1"><strong>Reason:</strong> {order.refund_reason}</p>
+                                            )}
+                                            {order.refunded_items && order.refunded_items.length > 0 && (
+                                                <div className="text-xs text-gray-600 mt-2">
+                                                    <p className="font-semibold">Refunded Items:</p>
+                                                    <ul className="list-disc list-inside ml-2">
+                                                        {order.refunded_items.map((item, idx) => (
+                                                            <li key={idx}>{item.name} (£{item.price.toFixed(2)})</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {order.refund_date && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Refunded on: {format(new Date(order.refund_date), 'MMM d, yyyy h:mm a')}
+                                                </p>
                                             )}
                                         </div>
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => undoRefundMutation.mutate(order.id)}
-                                            className="text-red-600"
+                                            className="text-red-600 ml-2"
                                         >
                                             Undo Refund
                                         </Button>
@@ -162,17 +206,51 @@ export default function PastOrders({ restaurantId }) {
                             )}
                             {order.status === 'refund_requested' && (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-2">
-                                    <p className="text-sm font-semibold text-yellow-900">Refund Requested</p>
-                                    {order.refund_request_reason && (
-                                        <p className="text-xs text-yellow-700 mt-1">{order.refund_request_reason}</p>
-                                    )}
-                                    <Button
-                                        size="sm"
-                                        className="mt-2"
-                                        onClick={() => setRefundingOrder(order)}
-                                    >
-                                        Process Refund
-                                    </Button>
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <AlertCircle className="h-5 w-5 text-yellow-600" />
+                                            <p className="text-sm font-semibold text-yellow-900">Refund Requested</p>
+                                        </div>
+                                        <Badge className="bg-orange-100 text-orange-800">
+                                            {order.refund_request_type === 'full' ? 'Full Refund' : 'Partial Refund'}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-2 text-xs text-yellow-800">
+                                        {order.refund_request_reason && (
+                                            <p><strong>Reason:</strong> {order.refund_request_reason}</p>
+                                        )}
+                                        {order.refund_request_description && (
+                                            <p><strong>Details:</strong> {order.refund_request_description}</p>
+                                        )}
+                                        <p><strong>Amount:</strong> £{order.refund_requested_amount?.toFixed(2) || '0.00'}</p>
+                                        {order.refund_requested_items && order.refund_requested_items.length > 0 && (
+                                            <div>
+                                                <p className="font-semibold">Items:</p>
+                                                <ul className="list-disc list-inside ml-2">
+                                                    {order.refund_requested_items.map((item, idx) => (
+                                                        <li key={idx}>{item.name} (£{item.price.toFixed(2)})</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2 mt-3">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => setRefundingOrder(order)}
+                                            className="bg-green-600 hover:bg-green-700"
+                                        >
+                                            Approve Refund
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setRejectingRefund(order)}
+                                            className="text-red-600"
+                                        >
+                                            Reject
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
@@ -186,6 +264,47 @@ export default function PastOrders({ restaurantId }) {
                 order={refundingOrder}
                 onRefund={handleRefund}
             />
+
+            <Dialog open={!!rejectingRefund} onOpenChange={(open) => !open && setRejectingRefund(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Reject Refund Request</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-600">
+                            Please provide a reason for rejecting this refund request. The customer will be notified.
+                        </p>
+                        <Textarea
+                            placeholder="Reason for rejection..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRejectingRefund(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (!rejectionReason.trim()) {
+                                    toast.error('Please provide a rejection reason');
+                                    return;
+                                }
+                                rejectRefundMutation.mutate({
+                                    orderId: rejectingRefund.id,
+                                    rejectionReason
+                                });
+                                setRejectionReason('');
+                                setRejectingRefund(null);
+                            }}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            Reject Refund
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
