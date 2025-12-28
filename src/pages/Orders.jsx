@@ -37,7 +37,7 @@ export default function Orders() {
             try {
                 const user = await base44.auth.me();
                 const result = await base44.entities.Order.filter({ created_by: user.email }, '-created_date');
-                return (result || []).filter(order => order && order.id);
+                return (result || []).filter(order => order && order.id && order.restaurant_name);
             } catch (e) {
                 console.error('Error fetching orders:', e);
                 return [];
