@@ -107,9 +107,11 @@ export default function RefundManagement({ restaurantId }) {
                                         <div>
                                             <h3 className="font-semibold text-lg">Order #{order.id.slice(-6)}</h3>
                                             <p className="text-sm text-gray-600">{order.created_by}</p>
-                                            <p className="text-xs text-gray-500">
-                                                Requested: {format(new Date(order.refund_request_date), 'MMM d, yyyy h:mm a')}
-                                            </p>
+                                            {order.refund_request_date && (
+                                                <p className="text-xs text-gray-500">
+                                                    Requested: {format(new Date(order.refund_request_date), 'MMM d, yyyy h:mm a')}
+                                                </p>
+                                            )}
                                         </div>
                                         <Badge className="bg-yellow-500 text-white">
                                             £{order.refund_requested_amount?.toFixed(2) || '0.00'}
