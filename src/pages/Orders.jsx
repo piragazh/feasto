@@ -211,7 +211,7 @@ export default function Orders() {
 
                                                     {order?.status_history && <OrderStatusTimeline statusHistory={order.status_history} />}
 
-                                                    {order?.status !== 'delivered' && order?.status !== 'cancelled' && (
+                                                    {(order?.status !== 'delivered' && order?.status !== 'cancelled') && (
                                                         <div className="border-t pt-4 space-y-2">
                                                             <Link to={createPageUrl('TrackOrder') + '?id=' + (order?.id || '')}>
                                                                 <Button variant="outline" className="w-full">
