@@ -14,13 +14,33 @@ export default function DriverOrderList({ orders, driverId }) {
 
     const acceptOrderMutation = useMutation({
         mutationFn: async (orderId) => {
+            const order = orders.find(o => o.id === orderId);
+            
             await base44.entities.Order.update(orderId, {
                 driver_id: driverId,
-                status: 'out_for_delivery'
+                status: 'out_for_delivery',
+                estimated_delivery: new Date(Date.now() + 30 * 60000).toISOString(),
+                status_history: [
+                    ...(order?.status_history || []),
+                    {
+                        status: 'out_for_delivery',
+                        timestamp: new Date().toISOString(),
+                        note: 'Driver accepted and picked up order'
+                    }
+                ]
             });
+            
             await base44.entities.Driver.update(driverId, {
                 current_order_id: orderId,
                 is_available: false
+            });
+
+            // Notify customer
+            await base44.entities.Message.create({
+                order_id: orderId,
+                restaurant_id: order.restaurant_id,
+                sender_type: 'restaurant',
+                message: 'Your order is now out for delivery! The driver is on the way.'
             });
         },
         onSuccess: () => {
