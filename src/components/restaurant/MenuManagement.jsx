@@ -18,9 +18,12 @@ export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterAvailable, setFilterAvailable] = useState('all');
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -86,6 +89,30 @@ export default function MenuManagement({ restaurantId }) {
             queryClient.invalidateQueries(['restaurant']);
             toast.success('Category added');
             setNewCategoryName('');
+            setEditingCategory(null);
+            setCategoryDialogOpen(false);
+        },
+    });
+
+    const editCategoryMutation = useMutation({
+        mutationFn: ({ oldName, newName }) => {
+            const currentCategories = restaurant?.menu_categories || [];
+            const updatedCategories = currentCategories.map(c => c === oldName ? newName : c);
+            return base44.entities.Restaurant.update(restaurantId, {
+                menu_categories: updatedCategories
+            });
+        },
+        onSuccess: async (_, { oldName, newName }) => {
+            // Update all menu items with the old category
+            const itemsToUpdate = menuItems.filter(item => item.category === oldName);
+            for (const item of itemsToUpdate) {
+                await base44.entities.MenuItem.update(item.id, { category: newName });
+            }
+            queryClient.invalidateQueries(['restaurant']);
+            queryClient.invalidateQueries(['menu-items']);
+            toast.success('Category updated');
+            setNewCategoryName('');
+            setEditingCategory(null);
             setCategoryDialogOpen(false);
         },
     });
@@ -103,11 +130,59 @@ export default function MenuManagement({ restaurantId }) {
         },
     });
 
+    const bulkDeleteMutation = useMutation({
+        mutationFn: async (itemIds) => {
+            for (const id of itemIds) {
+                await base44.entities.MenuItem.delete(id);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['menu-items']);
+            toast.success(`Deleted ${selectedItems.length} items`);
+            setSelectedItems([]);
+        },
+    });
+
     const toggleAvailability = (item) => {
         updateMutation.mutate({
             id: item.id,
             data: { is_available: !item.is_available }
         });
+    };
+
+    const handleImageUpload = async (file) => {
+        setUploadingImage(true);
+        try {
+            const result = await base44.integrations.Core.UploadFile({ file });
+            setFormData({ ...formData, image_url: result.file_url });
+            toast.success('Image uploaded');
+        } catch (error) {
+            toast.error('Failed to upload image');
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleBulkDelete = () => {
+        if (confirm(`Delete ${selectedItems.length} selected items?`)) {
+            bulkDeleteMutation.mutate(selectedItems);
+        }
+    };
+
+    const toggleSelectItem = (itemId) => {
+        setSelectedItems(prev => 
+            prev.includes(itemId) 
+                ? prev.filter(id => id !== itemId)
+                : [...prev, itemId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedItems.length === filteredMenuItems.length) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(filteredMenuItems.map(item => item.id));
+        }
     };
 
     const categories = restaurant?.menu_categories || [];
@@ -190,18 +265,32 @@ export default function MenuManagement({ restaurantId }) {
                             <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
                         ) : (
                             categories.map((category) => (
-                                <Badge key={category} variant="secondary" className="text-sm py-1 px-3">
+                                <Badge key={category} variant="secondary" className="text-sm py-1 px-3 flex items-center gap-2">
                                     {category}
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(`Remove category "${category}"?`)) {
-                                                removeCategoryMutation.mutate(category);
-                                            }
-                                        }}
-                                        className="ml-2 text-gray-500 hover:text-red-600"
-                                    >
-                                        ×
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => {
+                                                setEditingCategory(category);
+                                                setNewCategoryName(category);
+                                                setCategoryDialogOpen(true);
+                                            }}
+                                            className="text-gray-500 hover:text-blue-600"
+                                            title="Edit category"
+                                        >
+                                            <Edit className="h-3 w-3" />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`Remove category "${category}"?`)) {
+                                                    removeCategoryMutation.mutate(category);
+                                                }
+                                            }}
+                                            className="text-gray-500 hover:text-red-600"
+                                            title="Remove category"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
                                 </Badge>
                             ))
                         )}
@@ -272,12 +361,27 @@ export default function MenuManagement({ restaurantId }) {
                                     )}
                                 </div>
                                 <div className="col-span-2">
-                                    <Label>Image URL</Label>
-                                    <Input
-                                        value={formData.image_url}
-                                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                                        placeholder="https://..."
-                                    />
+                                    <Label>Image</Label>
+                                    <div className="space-y-2">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleImageUpload(file);
+                                            }}
+                                            disabled={uploadingImage}
+                                        />
+                                        <Input
+                                            value={formData.image_url}
+                                            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                                            placeholder="Or paste image URL"
+                                        />
+                                        {uploadingImage && <p className="text-xs text-gray-500">Uploading image...</p>}
+                                        {formData.image_url && (
+                                            <img src={formData.image_url} alt="Preview" className="h-20 w-20 object-cover rounded" />
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Switch
@@ -475,34 +579,57 @@ export default function MenuManagement({ restaurantId }) {
 
             <Card className="mb-6">
                 <CardContent className="pt-6">
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium">Filter by Category:</Label>
-                            <select
-                                value={filterCategory}
-                                onChange={(e) => setFilterCategory(e.target.value)}
-                                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                            >
-                                <option value="all">All Categories</option>
-                                {categories.map((cat) => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedItems.length === filteredMenuItems.length && filteredMenuItems.length > 0}
+                                    onChange={toggleSelectAll}
+                                    className="h-4 w-4 rounded border-gray-300"
+                                />
+                                <Label className="text-sm font-medium">Select All</Label>
+                            </div>
+                            {selectedItems.length > 0 && (
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkDeleteMutation.isPending}
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete {selectedItems.length} Items
+                                </Button>
+                            )}
+                            <div className="flex items-center gap-2">
+                                <Label className="text-sm font-medium">Category:</Label>
+                                <select
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                                >
+                                    <option value="all">All</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Label className="text-sm font-medium">Availability:</Label>
+                                <select
+                                    value={filterAvailable}
+                                    onChange={(e) => setFilterAvailable(e.target.value)}
+                                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                                >
+                                    <option value="all">All</option>
+                                    <option value="available">Available</option>
+                                    <option value="unavailable">Unavailable</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium">Availability:</Label>
-                            <select
-                                value={filterAvailable}
-                                onChange={(e) => setFilterAvailable(e.target.value)}
-                                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                            >
-                                <option value="all">All Items</option>
-                                <option value="available">Available Only</option>
-                                <option value="unavailable">Unavailable Only</option>
-                            </select>
-                        </div>
-                        <div className="text-sm text-gray-500 ml-auto">
-                            Showing {filteredMenuItems.length} of {menuItems.length} items
+                        <div className="text-sm text-gray-500">
+                            {selectedItems.length > 0 && `${selectedItems.length} selected • `}
+                            {filteredMenuItems.length} of {menuItems.length} items
                         </div>
                     </div>
                 </CardContent>
@@ -510,8 +637,16 @@ export default function MenuManagement({ restaurantId }) {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredMenuItems.map((item) => (
-                    <Card key={item.id} className={item.is_available === false ? 'opacity-60' : ''}>
+                    <Card key={item.id} className={`${item.is_available === false ? 'opacity-60' : ''} ${selectedItems.includes(item.id) ? 'ring-2 ring-orange-500' : ''}`}>
                         <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedItems.includes(item.id)}
+                                    onChange={() => toggleSelectItem(item.id)}
+                                    className="h-4 w-4 rounded border-gray-300 mt-1"
+                                />
+                            </div>
                             {item.image_url && (
                                 <img
                                     src={item.image_url}
@@ -569,10 +704,16 @@ export default function MenuManagement({ restaurantId }) {
                 ))}
             </div>
 
-            <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+            <Dialog open={categoryDialogOpen} onOpenChange={(open) => {
+                setCategoryDialogOpen(open);
+                if (!open) {
+                    setNewCategoryName('');
+                    setEditingCategory(null);
+                }
+            }}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add Menu Category</DialogTitle>
+                        <DialogTitle>{editingCategory ? 'Edit' : 'Add'} Menu Category</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div>
@@ -587,19 +728,27 @@ export default function MenuManagement({ restaurantId }) {
                             <Button variant="outline" onClick={() => {
                                 setCategoryDialogOpen(false);
                                 setNewCategoryName('');
+                                setEditingCategory(null);
                             }}>
                                 Cancel
                             </Button>
                             <Button
                                 onClick={() => {
                                     if (newCategoryName.trim()) {
-                                        addCategoryMutation.mutate(newCategoryName.trim());
+                                        if (editingCategory) {
+                                            editCategoryMutation.mutate({ 
+                                                oldName: editingCategory, 
+                                                newName: newCategoryName.trim() 
+                                            });
+                                        } else {
+                                            addCategoryMutation.mutate(newCategoryName.trim());
+                                        }
                                     }
                                 }}
-                                disabled={!newCategoryName.trim() || addCategoryMutation.isPending}
+                                disabled={!newCategoryName.trim() || addCategoryMutation.isPending || editCategoryMutation.isPending}
                                 className="bg-orange-500 hover:bg-orange-600"
                             >
-                                Add Category
+                                {editingCategory ? 'Update' : 'Add'} Category
                             </Button>
                         </div>
                     </div>
