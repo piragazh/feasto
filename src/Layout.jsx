@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu, Tag } from 'lucide-react';
+import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Layout({ children, currentPageName }) {
@@ -142,6 +142,12 @@ export default function Layout({ children, currentPageName }) {
                                                 <Link to={createPageUrl('Orders')} className="flex items-center gap-2">
                                                         <ShoppingBag className="h-4 w-4" />
                                                         My Orders
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link to={createPageUrl('Messages')} className="flex items-center gap-2">
+                                                        <MessageSquare className="h-4 w-4" />
+                                                        Messages
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
