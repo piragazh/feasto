@@ -20,6 +20,11 @@ function GeomanControl({ onDrawn, editingZone }) {
     useEffect(() => {
         if (!map) return;
 
+        // Fix map size on mount
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+
         // Import geoman dynamically
         import('@geoman-io/leaflet-geoman-free').then(() => {
             if (!map.pm) return;
