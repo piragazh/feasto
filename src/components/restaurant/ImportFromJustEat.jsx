@@ -56,14 +56,16 @@ export default function ImportFromJustEat({ restaurantId }) {
             const response = await base44.integrations.Core.InvokeLLM({
                 prompt: `Visit this Just Eat restaurant page: ${url}
 
-Extract all menu items from the page. For each item extract:
-- name (required)
-- description (if available)
-- price (as a number, remove £ symbol and convert to number)
-- category (e.g., Starters, Mains, Desserts, Drinks)
-- image_url (if available)
+Extract ALL menu items from the page. For each item, carefully extract:
+- name (required) - the exact dish name
+- description (if available) - full description text
+- price (as a number, remove £ symbol and convert to decimal number)
+- category (e.g., Starters, Mains, Pizza, Burgers, Desserts, Drinks, Sides) - use the section/category name from the page
+- image_url (IMPORTANT: if there's an image, extract the FULL URL including https://)
 
-Return only the menu items as a JSON array. Do not include restaurant info, only the actual food/drink items with their prices.`,
+CRITICAL: Make sure to extract image URLs properly. Look for img src attributes or background images. Include the complete URL starting with https://
+
+Return ONLY the menu items as a JSON array. Include ALL items you find on the page.`,
                 add_context_from_internet: true,
                 response_json_schema: {
                     type: "object",
