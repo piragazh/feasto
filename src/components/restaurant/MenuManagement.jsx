@@ -17,6 +17,10 @@ import AIMenuInsights from './AIMenuInsights';
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterAvailable, setFilterAvailable] = useState('all');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -35,6 +39,14 @@ export default function MenuManagement({ restaurantId }) {
     const { data: menuItems = [], isLoading } = useQuery({
         queryKey: ['menu-items', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+    });
+
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return restaurants[0];
+        },
     });
 
     const createMutation = useMutation({
@@ -63,12 +75,50 @@ export default function MenuManagement({ restaurantId }) {
         },
     });
 
+    const addCategoryMutation = useMutation({
+        mutationFn: (categoryName) => {
+            const currentCategories = restaurant?.menu_categories || [];
+            return base44.entities.Restaurant.update(restaurantId, {
+                menu_categories: [...currentCategories, categoryName]
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant']);
+            toast.success('Category added');
+            setNewCategoryName('');
+            setCategoryDialogOpen(false);
+        },
+    });
+
+    const removeCategoryMutation = useMutation({
+        mutationFn: (categoryName) => {
+            const currentCategories = restaurant?.menu_categories || [];
+            return base44.entities.Restaurant.update(restaurantId, {
+                menu_categories: currentCategories.filter(c => c !== categoryName)
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant']);
+            toast.success('Category removed');
+        },
+    });
+
     const toggleAvailability = (item) => {
         updateMutation.mutate({
             id: item.id,
             data: { is_available: !item.is_available }
         });
     };
+
+    const categories = restaurant?.menu_categories || [];
+    
+    const filteredMenuItems = menuItems.filter(item => {
+        const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
+        const matchesAvailability = filterAvailable === 'all' || 
+            (filterAvailable === 'available' && item.is_available !== false) ||
+            (filterAvailable === 'unavailable' && item.is_available === false);
+        return matchesCategory && matchesAvailability;
+    });
 
     const resetForm = () => {
         setFormData({
@@ -122,6 +172,43 @@ export default function MenuManagement({ restaurantId }) {
         <div className="space-y-6">
             <AIMenuInsights restaurantId={restaurantId} />
             
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">Menu Categories</h3>
+                        <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setCategoryDialogOpen(true)}
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Category
+                        </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {categories.length === 0 ? (
+                            <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
+                        ) : (
+                            categories.map((category) => (
+                                <Badge key={category} variant="secondary" className="text-sm py-1 px-3">
+                                    {category}
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`Remove category "${category}"?`)) {
+                                                removeCategoryMutation.mutate(category);
+                                            }
+                                        }}
+                                        className="ml-2 text-gray-500 hover:text-red-600"
+                                    >
+                                        ×
+                                    </button>
+                                </Badge>
+                            ))
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+            
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Menu Items</h2>
                 <div className="flex gap-2">
@@ -170,11 +257,19 @@ export default function MenuManagement({ restaurantId }) {
                                 </div>
                                 <div>
                                     <Label>Category</Label>
-                                    <Input
+                                    <select
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        placeholder="e.g., Starters, Mains"
-                                    />
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Select a category</option>
+                                        {categories.map((cat) => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    {categories.length === 0 && (
+                                        <p className="text-xs text-gray-500 mt-1">Add categories first to organize your menu</p>
+                                    )}
                                 </div>
                                 <div className="col-span-2">
                                     <Label>Image URL</Label>
@@ -378,8 +473,43 @@ export default function MenuManagement({ restaurantId }) {
                 </div>
             </div>
 
+            <Card className="mb-6">
+                <CardContent className="pt-6">
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Filter by Category:</Label>
+                            <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                            >
+                                <option value="all">All Categories</option>
+                                {categories.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Availability:</Label>
+                            <select
+                                value={filterAvailable}
+                                onChange={(e) => setFilterAvailable(e.target.value)}
+                                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                            >
+                                <option value="all">All Items</option>
+                                <option value="available">Available Only</option>
+                                <option value="unavailable">Unavailable Only</option>
+                            </select>
+                        </div>
+                        <div className="text-sm text-gray-500 ml-auto">
+                            Showing {filteredMenuItems.length} of {menuItems.length} items
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {menuItems.map((item) => (
+                {filteredMenuItems.map((item) => (
                     <Card key={item.id} className={item.is_available === false ? 'opacity-60' : ''}>
                         <CardContent className="p-4">
                             {item.image_url && (
