@@ -140,11 +140,17 @@ export default function Layout({ children, currentPageName }) {
                                             </DropdownMenuItem>
                                             <DropdownMenuItem asChild>
                                                 <Link to={createPageUrl('Orders')} className="flex items-center gap-2">
-                                                    <ShoppingBag className="h-4 w-4" />
-                                                    My Orders
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            {user?.role === 'admin' && (
+                                                        <ShoppingBag className="h-4 w-4" />
+                                                        My Orders
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link to={createPageUrl('CustomerProfile')} className="flex items-center gap-2">
+                                                        <User className="h-4 w-4" />
+                                                        My Profile
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                {user?.role === 'admin' && (
                                                 <>
                                                     <DropdownMenuItem asChild>
                                                         <Link to={createPageUrl('SuperAdmin')} className="flex items-center gap-2">

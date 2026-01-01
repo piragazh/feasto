@@ -12,6 +12,7 @@ import Restaurant from './pages/Restaurant';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TrackOrder from './pages/TrackOrder';
+import CustomerProfile from './pages/CustomerProfile';
 import __Layout from './Layout.jsx';
 
 
@@ -30,6 +31,7 @@ export const PAGES = {
     "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
     "TrackOrder": TrackOrder,
+    "CustomerProfile": CustomerProfile,
 }
 
 export const pagesConfig = {
