@@ -22,6 +22,8 @@ function GeomanControl({ onDrawn, editingZone }) {
 
         // Import geoman dynamically
         import('@geoman-io/leaflet-geoman-free').then(() => {
+            if (!map.pm) return;
+            
             map.pm.addControls({
                 position: 'topright',
                 drawMarker: false,
@@ -36,7 +38,7 @@ function GeomanControl({ onDrawn, editingZone }) {
                 rotateMode: false,
             });
 
-            map.on('pm:create', (e) => {
+            const handleCreate = (e) => {
                 const layer = e.layer;
                 if (e.shape === 'Polygon') {
                     const coords = layer.getLatLngs()[0].map(latlng => ({
@@ -46,13 +48,19 @@ function GeomanControl({ onDrawn, editingZone }) {
                     onDrawn(coords);
                     layer.remove();
                 }
-            });
-        });
+            };
 
-        return () => {
-            map.pm.removeControls();
-            map.off('pm:create');
-        };
+            map.on('pm:create', handleCreate);
+
+            return () => {
+                if (map.pm) {
+                    map.pm.removeControls();
+                }
+                map.off('pm:create', handleCreate);
+            };
+        }).catch(err => {
+            console.error('Failed to load geoman:', err);
+        });
     }, [map, editingZone, onDrawn]);
 
     return null;
