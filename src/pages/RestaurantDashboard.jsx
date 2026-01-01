@@ -36,6 +36,8 @@ import DriverTracking from '@/components/restaurant/DriverTracking';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import RefundManagement from '@/components/restaurant/RefundManagement';
 import PromotionManagement from '@/components/restaurant/PromotionManagement';
+import OrderBatching from '@/components/restaurant/OrderBatching';
+import OrderModification from '@/components/restaurant/OrderModification';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -273,7 +275,15 @@ export default function RestaurantDashboard() {
                             <Tag className="h-4 w-4 mr-2" />
                             Promotions
                         </TabsTrigger>
-                    </TabsList>
+                        <TabsTrigger value="batching">
+                            <ShoppingBag className="h-4 w-4 mr-2" />
+                            Order Batching
+                        </TabsTrigger>
+                        <TabsTrigger value="modifications">
+                            <Settings className="h-4 w-4 mr-2" />
+                            Modifications
+                        </TabsTrigger>
+                        </TabsList>
 
                     <TabsContent value="orders">
                         <OrderQueue 
@@ -326,8 +336,16 @@ export default function RestaurantDashboard() {
                     <TabsContent value="promotions">
                         <PromotionManagement restaurantId={restaurant.id} />
                     </TabsContent>
-                </Tabs>
-            </div>
-        </div>
-    );
-}
+
+                    <TabsContent value="batching">
+                        <OrderBatching restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="modifications">
+                        <OrderModification restaurantId={restaurant.id} />
+                    </TabsContent>
+                    </Tabs>
+                    </div>
+                    </div>
+                    );
+                    }

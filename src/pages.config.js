@@ -1,35 +1,35 @@
-import Home from './pages/Home';
-import Restaurant from './pages/Restaurant';
-import Checkout from './pages/Checkout';
-import Orders from './pages/Orders';
-import ManageCoupons from './pages/ManageCoupons';
-import RestaurantDashboard from './pages/RestaurantDashboard';
-import TrackOrder from './pages/TrackOrder';
-import DriverDashboard from './pages/DriverDashboard';
-import DriverApp from './pages/DriverApp';
-import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminRestaurants from './pages/AdminRestaurants';
+import Checkout from './pages/Checkout';
+import DriverApp from './pages/DriverApp';
+import DriverDashboard from './pages/DriverDashboard';
 import GroupOrder from './pages/GroupOrder';
+import Home from './pages/Home';
+import ManageCoupons from './pages/ManageCoupons';
+import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
+import Orders from './pages/Orders';
+import Restaurant from './pages/Restaurant';
+import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
+import TrackOrder from './pages/TrackOrder';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Home": Home,
-    "Restaurant": Restaurant,
-    "Checkout": Checkout,
-    "Orders": Orders,
-    "ManageCoupons": ManageCoupons,
-    "RestaurantDashboard": RestaurantDashboard,
-    "TrackOrder": TrackOrder,
-    "DriverDashboard": DriverDashboard,
-    "DriverApp": DriverApp,
-    "ManageRestaurantManagers": ManageRestaurantManagers,
     "AdminDashboard": AdminDashboard,
     "AdminRestaurants": AdminRestaurants,
+    "Checkout": Checkout,
+    "DriverApp": DriverApp,
+    "DriverDashboard": DriverDashboard,
     "GroupOrder": GroupOrder,
+    "Home": Home,
+    "ManageCoupons": ManageCoupons,
+    "ManageRestaurantManagers": ManageRestaurantManagers,
+    "Orders": Orders,
+    "Restaurant": Restaurant,
+    "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
+    "TrackOrder": TrackOrder,
 }
 
 export const pagesConfig = {
