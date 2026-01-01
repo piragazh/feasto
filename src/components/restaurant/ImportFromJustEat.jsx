@@ -13,6 +13,7 @@ export default function ImportFromJustEat({ restaurantId }) {
     const [url, setUrl] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [extractedItems, setExtractedItems] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([]);
     const [isExtracting, setIsExtracting] = useState(false);
     const queryClient = useQueryClient();
 
@@ -36,6 +37,7 @@ export default function ImportFromJustEat({ restaurantId }) {
             setIsOpen(false);
             setUrl('');
             setExtractedItems([]);
+            setSelectedItems([]);
         },
     });
 
@@ -90,6 +92,7 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
 
             if (response.items && response.items.length > 0) {
                 setExtractedItems(response.items);
+                setSelectedItems(response.items.map((_, idx) => idx));
                 toast.success(`Found ${response.items.length} menu items!`);
             } else {
                 toast.error('No menu items found. Please check the URL.');
@@ -103,11 +106,28 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
     };
 
     const handleImport = () => {
-        if (extractedItems.length === 0) {
-            toast.error('No items to import');
+        if (selectedItems.length === 0) {
+            toast.error('Please select items to import');
             return;
         }
-        importMutation.mutate(extractedItems);
+        const itemsToImport = extractedItems.filter((_, idx) => selectedItems.includes(idx));
+        importMutation.mutate(itemsToImport);
+    };
+
+    const toggleSelectItem = (idx) => {
+        setSelectedItems(prev => 
+            prev.includes(idx) 
+                ? prev.filter(i => i !== idx)
+                : [...prev, idx]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedItems.length === extractedItems.length) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(extractedItems.map((_, idx) => idx));
+        }
     };
 
     return (
@@ -152,15 +172,23 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
                         {extractedItems.length > 0 && (
                             <>
                                 <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle className="h-5 w-5 text-green-600" />
-                                        <span className="font-medium text-green-900">
-                                            {extractedItems.length} items ready to import
-                                        </span>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedItems.length === extractedItems.length}
+                                            onChange={toggleSelectAll}
+                                            className="h-4 w-4 rounded border-gray-300"
+                                        />
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle className="h-5 w-5 text-green-600" />
+                                            <span className="font-medium text-green-900">
+                                                {selectedItems.length} of {extractedItems.length} items selected
+                                            </span>
+                                        </div>
                                     </div>
                                     <Button 
                                         onClick={handleImport}
-                                        disabled={importMutation.isPending}
+                                        disabled={importMutation.isPending || selectedItems.length === 0}
                                         className="bg-green-600 hover:bg-green-700"
                                     >
                                         {importMutation.isPending ? (
@@ -171,7 +199,7 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
                                         ) : (
                                             <>
                                                 <Upload className="h-4 w-4 mr-2" />
-                                                Import All Items
+                                                Import Selected ({selectedItems.length})
                                             </>
                                         )}
                                     </Button>
@@ -179,9 +207,15 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
 
                                 <div className="grid gap-3 max-h-96 overflow-y-auto">
                                     {extractedItems.map((item, idx) => (
-                                        <Card key={idx}>
+                                        <Card key={idx} className={selectedItems.includes(idx) ? 'ring-2 ring-green-500' : ''}>
                                             <CardContent className="p-4">
                                                 <div className="flex gap-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedItems.includes(idx)}
+                                                        onChange={() => toggleSelectItem(idx)}
+                                                        className="h-4 w-4 rounded border-gray-300 mt-1"
+                                                    />
                                                     {item.image_url && (
                                                         <img 
                                                             src={item.image_url} 
