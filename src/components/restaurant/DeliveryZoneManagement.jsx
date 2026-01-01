@@ -8,13 +8,55 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Polygon, Popup } from 'react-leaflet';
-import { FeatureGroup } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
+import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import { MapPin, Trash2, Edit, Plus, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
+
+function GeomanControl({ onDrawn, editingZone }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map) return;
+
+        // Import geoman dynamically
+        import('@geoman-io/leaflet-geoman-free').then(() => {
+            map.pm.addControls({
+                position: 'topright',
+                drawMarker: false,
+                drawCircleMarker: false,
+                drawCircle: false,
+                drawPolyline: false,
+                drawRectangle: false,
+                drawPolygon: !editingZone,
+                editMode: true,
+                dragMode: false,
+                cutPolygon: false,
+                rotateMode: false,
+            });
+
+            map.on('pm:create', (e) => {
+                const layer = e.layer;
+                if (e.shape === 'Polygon') {
+                    const coords = layer.getLatLngs()[0].map(latlng => ({
+                        lat: latlng.lat,
+                        lng: latlng.lng
+                    }));
+                    onDrawn(coords);
+                    layer.remove();
+                }
+            });
+        });
+
+        return () => {
+            map.pm.removeControls();
+            map.off('pm:create');
+        };
+    }, [map, editingZone, onDrawn]);
+
+    return null;
+}
 
 export default function DeliveryZoneManagement({ restaurantId, restaurantLocation }) {
     const [showDialog, setShowDialog] = useState(false);
@@ -125,30 +167,8 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
         }
     };
 
-    const onCreated = (e) => {
-        const { layerType, layer } = e;
-        if (layerType === 'polygon') {
-            const coordinates = layer.getLatLngs()[0].map(latlng => ({
-                lat: latlng.lat,
-                lng: latlng.lng
-            }));
-            setDrawnCoordinates(coordinates);
-        }
-    };
-
-    const onEdited = (e) => {
-        const layers = e.layers;
-        layers.eachLayer((layer) => {
-            const coordinates = layer.getLatLngs()[0].map(latlng => ({
-                lat: latlng.lat,
-                lng: latlng.lng
-            }));
-            setDrawnCoordinates(coordinates);
-        });
-    };
-
-    const onDeleted = () => {
-        setDrawnCoordinates(null);
+    const handleDrawn = (coords) => {
+        setDrawnCoordinates(coords);
     };
 
     const centerLocation = restaurantLocation || { lat: 51.5074, lng: -0.1278 };
@@ -374,32 +394,17 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     style={{ height: '100%', width: '100%' }}
                                 >
                                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                    <FeatureGroup>
-                                        <EditControl
-                                            position="topright"
-                                            onCreated={onCreated}
-                                            onEdited={onEdited}
-                                            onDeleted={onDeleted}
-                                            draw={{
-                                                rectangle: false,
-                                                circle: false,
-                                                circlemarker: false,
-                                                marker: false,
-                                                polyline: false,
-                                                polygon: !editingZone
+                                    <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} />
+                                    {editingZone && drawnCoordinates && (
+                                        <Polygon
+                                            positions={drawnCoordinates.map(c => [c.lat, c.lng])}
+                                            pathOptions={{
+                                                color: formData.color,
+                                                fillColor: formData.color,
+                                                fillOpacity: 0.3,
                                             }}
                                         />
-                                        {editingZone && drawnCoordinates && (
-                                            <Polygon
-                                                positions={drawnCoordinates.map(c => [c.lat, c.lng])}
-                                                pathOptions={{
-                                                    color: formData.color,
-                                                    fillColor: formData.color,
-                                                    fillOpacity: 0.3,
-                                                }}
-                                            />
-                                        )}
-                                    </FeatureGroup>
+                                    )}
                                 </MapContainer>
                             </div>
                         </div>
