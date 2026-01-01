@@ -215,81 +215,86 @@ export default function RestaurantDashboard() {
             {/* Main Content */}
             <div className="max-w-7xl mx-auto p-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="mb-6 bg-white p-1 shadow-sm">
-                        <TabsTrigger value="orders" className="relative">
-                            <ShoppingBag className="h-4 w-4 mr-2" />
-                            Live Orders
-                            {pendingOrders.length > 0 && (
-                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                    {pendingOrders.length}
-                                </span>
-                            )}
-                        </TabsTrigger>
-                        <TabsTrigger value="menu">
-                            <UtensilsCrossed className="h-4 w-4 mr-2" />
-                            Menu Items
-                        </TabsTrigger>
-                        <TabsTrigger value="deals">
-                            Meal Deals
-                        </TabsTrigger>
-                        <TabsTrigger value="coupons">
-                            Coupons
-                        </TabsTrigger>
-                        <TabsTrigger value="history">
-                            <History className="h-4 w-4 mr-2" />
-                            Past Orders
-                        </TabsTrigger>
-                        <TabsTrigger value="messages" className="relative">
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Messages
-                            {unreadMessagesCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                                    {unreadMessagesCount}
-                                </span>
-                            )}
-                        </TabsTrigger>
-                        <TabsTrigger value="reviews">
-                            <Star className="h-4 w-4 mr-2" />
-                            Reviews
-                        </TabsTrigger>
-                        <TabsTrigger value="analytics">
-                            <BarChart3 className="h-4 w-4 mr-2" />
-                            Analytics
-                        </TabsTrigger>
-                        <TabsTrigger value="drivers">
-                            <Navigation className="h-4 w-4 mr-2" />
-                            Drivers
-                        </TabsTrigger>
-                        <TabsTrigger value="crm">
-                            <Users className="h-4 w-4 mr-2" />
-                            CRM
-                        </TabsTrigger>
-                        <TabsTrigger value="refunds" className="relative">
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            Refunds
-                            {refundRequests.length > 0 && (
-                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
-                                    {refundRequests.length}
-                                </span>
-                            )}
-                        </TabsTrigger>
-                        <TabsTrigger value="promotions">
-                            <Tag className="h-4 w-4 mr-2" />
-                            Promotions
-                        </TabsTrigger>
-                        <TabsTrigger value="batching">
-                            <ShoppingBag className="h-4 w-4 mr-2" />
-                            Order Batching
-                        </TabsTrigger>
-                        <TabsTrigger value="modifications">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Modifications
-                        </TabsTrigger>
-                        <TabsTrigger value="zones">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            Zones
-                        </TabsTrigger>
+                    <div className="flex flex-col gap-2 mb-6">
+                        <TabsList className="bg-white p-1 shadow-sm">
+                            <TabsTrigger value="orders" className="relative">
+                                <ShoppingBag className="h-4 w-4 mr-2" />
+                                Live Orders
+                                {pendingOrders.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                                        {pendingOrders.length}
+                                    </span>
+                                )}
+                            </TabsTrigger>
+                            <TabsTrigger value="menu">
+                                <UtensilsCrossed className="h-4 w-4 mr-2" />
+                                Menu Items
+                            </TabsTrigger>
+                            <TabsTrigger value="deals">
+                                Meal Deals
+                            </TabsTrigger>
+                            <TabsTrigger value="coupons">
+                                Coupons
+                            </TabsTrigger>
+                            <TabsTrigger value="history">
+                                <History className="h-4 w-4 mr-2" />
+                                Past Orders
+                            </TabsTrigger>
+                            <TabsTrigger value="messages" className="relative">
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Messages
+                                {unreadMessagesCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                                        {unreadMessagesCount}
+                                    </span>
+                                )}
+                            </TabsTrigger>
+                            <TabsTrigger value="reviews">
+                                <Star className="h-4 w-4 mr-2" />
+                                Reviews
+                            </TabsTrigger>
+                            <TabsTrigger value="analytics">
+                                <BarChart3 className="h-4 w-4 mr-2" />
+                                Analytics
+                            </TabsTrigger>
                         </TabsList>
+                        
+                        <TabsList className="bg-white p-1 shadow-sm">
+                            <TabsTrigger value="drivers">
+                                <Navigation className="h-4 w-4 mr-2" />
+                                Drivers
+                            </TabsTrigger>
+                            <TabsTrigger value="crm">
+                                <Users className="h-4 w-4 mr-2" />
+                                CRM
+                            </TabsTrigger>
+                            <TabsTrigger value="refunds" className="relative">
+                                <AlertCircle className="h-4 w-4 mr-2" />
+                                Refunds
+                                {refundRequests.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
+                                        {refundRequests.length}
+                                    </span>
+                                )}
+                            </TabsTrigger>
+                            <TabsTrigger value="promotions">
+                                <Tag className="h-4 w-4 mr-2" />
+                                Promotions
+                            </TabsTrigger>
+                            <TabsTrigger value="batching">
+                                <ShoppingBag className="h-4 w-4 mr-2" />
+                                Order Batching
+                            </TabsTrigger>
+                            <TabsTrigger value="modifications">
+                                <Settings className="h-4 w-4 mr-2" />
+                                Modifications
+                            </TabsTrigger>
+                            <TabsTrigger value="zones">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                Zones
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
 
                     <TabsContent value="orders">
                         <OrderQueue 
