@@ -54,20 +54,25 @@ export default function ImportFromJustEat({ restaurantId }) {
 
         setIsExtracting(true);
         try {
-            // Use InvokeLLM with web context
             const response = await base44.integrations.Core.InvokeLLM({
-                prompt: `Visit this Just Eat restaurant page: ${url}
+                prompt: `I need you to scrape the menu from this Just Eat restaurant page: ${url}
 
-Extract ALL menu items from the page. For each item, carefully extract:
-- name (required) - the exact dish name
-- description (if available) - full description text
-- price (as a number, remove £ symbol and convert to decimal number)
-- category (e.g., Starters, Mains, Pizza, Burgers, Desserts, Drinks, Sides) - use the section/category name from the page
-- image_url (IMPORTANT: if there's an image, extract the FULL URL including https://)
+IMPORTANT INSTRUCTIONS:
+1. Extract EVERY SINGLE menu item you can find on the page
+2. Look for menu sections/categories and the items within them
+3. For each menu item, extract:
+   - name: The exact name of the dish/item
+   - description: Any description text (can be empty string if none)
+   - price: The numeric price value (remove £ symbol, convert to number like 12.99)
+   - category: The section name it belongs to (e.g., "Starters", "Mains", "Pizza", "Burgers", "Sides", "Desserts", "Drinks")
+   - image_url: If there's an image, extract the full URL (must start with http:// or https://). Leave empty string if no image.
 
-CRITICAL: Make sure to extract image URLs properly. Look for img src attributes or background images. Include the complete URL starting with https://
+4. Be thorough - scan the entire page for all menu items
+5. Group items by their categories as they appear on the page
+6. Make sure ALL prices are numbers (e.g., 12.99 not "£12.99")
+7. For image URLs, look for img tags, background images, or any image sources
 
-Return ONLY the menu items as a JSON array. Include ALL items you find on the page.`,
+Return a JSON object with an "items" array containing ALL menu items found.`,
                 add_context_from_internet: true,
                 response_json_schema: {
                     type: "object",
@@ -83,10 +88,11 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
                                     category: { type: "string" },
                                     image_url: { type: "string" }
                                 },
-                                required: ["name", "price"]
+                                required: ["name", "price", "category"]
                             }
                         }
-                    }
+                    },
+                    required: ["items"]
                 }
             });
 
@@ -95,11 +101,11 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
                 setSelectedItems(response.items.map((_, idx) => idx));
                 toast.success(`Found ${response.items.length} menu items!`);
             } else {
-                toast.error('No menu items found. Please check the URL.');
+                toast.error('No menu items found on this page. Please check the URL or try a different restaurant.');
             }
         } catch (error) {
             console.error('Extraction error:', error);
-            toast.error('Failed to extract menu. Please try again.');
+            toast.error('Failed to extract menu. The page might be inaccessible or the format is not supported.');
         } finally {
             setIsExtracting(false);
         }
@@ -144,16 +150,25 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
                     </DialogHeader>
 
                     <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <p className="text-sm text-blue-800">
+                                📋 <strong>Instructions:</strong> Paste a Just Eat restaurant menu page URL below. 
+                                The system will automatically extract all menu items, prices, descriptions, and images.
+                            </p>
+                        </div>
+
                         <div className="flex gap-2">
                             <Input
-                                placeholder="Paste Just Eat menu URL (e.g., https://www.just-eat.co.uk/restaurants-...)"
+                                placeholder="https://www.just-eat.co.uk/restaurants-your-restaurant-name/menu"
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
                                 disabled={isExtracting}
+                                className="flex-1"
                             />
                             <Button 
                                 onClick={handleExtract}
                                 disabled={isExtracting || !url.trim()}
+                                className="whitespace-nowrap"
                             >
                                 {isExtracting ? (
                                     <>
@@ -247,8 +262,9 @@ Return ONLY the menu items as a JSON array. Include ALL items you find on the pa
                         {isExtracting && (
                             <div className="text-center py-8">
                                 <Loader2 className="h-12 w-12 animate-spin text-orange-500 mx-auto mb-4" />
-                                <p className="text-gray-600">Extracting menu items from Just Eat...</p>
-                                <p className="text-sm text-gray-500">This may take a moment</p>
+                                <p className="text-gray-600 font-medium">Extracting menu items from Just Eat...</p>
+                                <p className="text-sm text-gray-500 mt-2">Scanning the page for menu items, prices, and images</p>
+                                <p className="text-xs text-gray-400 mt-1">This usually takes 10-30 seconds</p>
                             </div>
                         )}
                     </div>
