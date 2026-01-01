@@ -235,12 +235,13 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                     <CardTitle>Delivery Coverage Map</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-96 rounded-lg overflow-hidden border">
+                    <div className="h-96 rounded-lg overflow-hidden border relative" style={{ zIndex: 1 }}>
                         <MapContainer
                             center={[centerLocation.lat, centerLocation.lng]}
                             zoom={12}
                             style={{ height: '100%', width: '100%' }}
                             ref={mapRef}
+                            zoomControl={true}
                         >
                             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                             
@@ -447,13 +448,14 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     👉 Click the polygon tool (📐) in the top-right corner of the map to draw your delivery zone
                                 </p>
                             </div>
-                            <div className="h-[500px] rounded-lg overflow-hidden border relative">
+                            <div className="h-[500px] rounded-lg overflow-hidden border relative" style={{ zIndex: 1 }}>
                                 <MapContainer
                                     key={mapKey}
                                     center={[centerLocation.lat, centerLocation.lng]}
                                     zoom={13}
-                                    style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
+                                    style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
                                     scrollWheelZoom={true}
+                                    zoomControl={true}
                                 >
                                     <TileLayer 
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
