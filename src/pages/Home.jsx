@@ -1,72 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { Search, MapPin, Filter, Star, Clock, DollarSign } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import HeroSection from '@/components/home/HeroSection';
 import CuisineFilter from '@/components/home/CuisineFilter';
-import RestaurantCard from '@/components/home/RestaurantCard';
 import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { motion } from 'framer-motion';
+import RestaurantCard from '@/components/home/RestaurantCard';
 
 export default function Home() {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCuisine, setSelectedCuisine] = useState('');
+    const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
-    const [selectedCuisine, setSelectedCuisine] = useState(null);
-    const [sortBy, setSortBy] = useState('recommended'); // 'recommended', 'distance', 'rating'
 
     const { data: restaurants = [], isLoading } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
     });
 
-    const handleLocationChange = (locationData) => {
-        setUserLocation(locationData);
-        // Store for checkout
-        if (locationData.address) {
-            localStorage.setItem('userAddress', locationData.address);
+    // Check for custom domain on mount
+    useEffect(() => {
+        checkCustomDomain();
+    }, [restaurants]);
+
+    const checkCustomDomain = async () => {
+        const currentDomain = window.location.hostname;
+        
+        // Skip check for localhost or main platform domain
+        if (currentDomain === 'localhost' || currentDomain.includes('base44')) {
+            return;
         }
-        if (locationData.coordinates) {
-            localStorage.setItem('userCoordinates', JSON.stringify(locationData.coordinates));
+
+        // Find restaurant with matching custom domain
+        const domainRestaurant = restaurants.find(r => 
+            r.custom_domain && 
+            r.domain_verified && 
+            r.custom_domain.toLowerCase() === currentDomain.toLowerCase()
+        );
+
+        if (domainRestaurant) {
+            // Redirect to restaurant page for custom domain
+            navigate(createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`, { replace: true });
         }
     };
 
-    const restaurantsWithDistance = React.useMemo(() => {
-        if (!userLocation?.coordinates) return restaurants.map(r => ({ ...r, distance: null }));
-        
-        return restaurants.map(restaurant => {
-            if (!restaurant.latitude || !restaurant.longitude) {
-                return { ...restaurant, distance: null };
-            }
-            
-            // Calculate distance using Haversine formula
-            const distance = calculateDistance(
-                userLocation.coordinates.lat,
-                userLocation.coordinates.lng,
-                restaurant.latitude,
-                restaurant.longitude
+    useEffect(() => {
+        getUserLocation();
+    }, []);
+
+    const getUserLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                },
+                () => {
+                    // Default to London if geolocation fails
+                    setUserLocation({ lat: 51.5074, lng: -0.1278 });
+                }
             );
-            return { ...restaurant, distance };
-        });
-    }, [restaurants, userLocation]);
-
-    const filteredRestaurants = restaurantsWithDistance.filter(restaurant => {
-        const matchesSearch = !searchQuery || 
-            restaurant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            restaurant.description?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCuisine = !selectedCuisine || restaurant.cuisine_type === selectedCuisine;
-        return matchesSearch && matchesCuisine;
-    }).sort((a, b) => {
-        if (sortBy === 'distance' && a.distance !== null && b.distance !== null) {
-            return a.distance - b.distance;
+        } else {
+            setUserLocation({ lat: 51.5074, lng: -0.1278 });
         }
-        if (sortBy === 'rating') {
-            return (b.rating || 0) - (a.rating || 0);
-        }
-        return 0; // recommended (default order)
-    });
+    };
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 3959; // Earth's radius in miles
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
@@ -76,107 +83,111 @@ export default function Home() {
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
-    }
+    };
 
-    function toRad(degrees) {
-        return degrees * (Math.PI / 180);
-    }
+    const toRad = (value) => {
+        return (value * Math.PI) / 180;
+    };
+
+    const filteredRestaurants = restaurants
+        .filter(r => {
+            const matchesSearch = !searchQuery || 
+                r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.cuisine_type?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesCuisine = !selectedCuisine || r.cuisine_type === selectedCuisine;
+            return matchesSearch && matchesCuisine;
+        })
+        .map(r => {
+            if (userLocation && r.latitude && r.longitude) {
+                return {
+                    ...r,
+                    distance: calculateDistance(userLocation.lat, userLocation.lng, r.latitude, r.longitude)
+                };
+            }
+            return { ...r, distance: null };
+        })
+        .sort((a, b) => {
+            if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+            if (sortBy === 'delivery_fee') return (a.delivery_fee || 0) - (b.delivery_fee || 0);
+            if (sortBy === 'distance' && a.distance && b.distance) return a.distance - b.distance;
+            return 0;
+        });
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <HeroSection
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onLocationChange={handleLocationChange}
-            />
-            
-            <div className="max-w-6xl mx-auto px-4">
-                <CuisineFilter
-                    selectedCuisine={selectedCuisine}
-                    setSelectedCuisine={setSelectedCuisine}
-                />
+            <HeroSection />
 
-                <PersonalizedRecommendations restaurants={filteredRestaurants} />
-                
-                <div className="pb-12">
-                    <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900">
-                                {selectedCuisine ? `${selectedCuisine} Restaurants` : 'All Restaurants'}
-                            </h2>
-                            <span className="text-gray-500 text-sm">{filteredRestaurants.length} places</span>
+            <div className="max-w-6xl mx-auto px-4 py-8">
+                {/* Search and Filters */}
+                <div className="mb-8 space-y-4">
+                    <div className="flex gap-4">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Input
+                                placeholder="Search for restaurants or cuisines..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 h-12"
+                            />
                         </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant={sortBy === 'recommended' ? 'default' : 'outline'}
-                                onClick={() => setSortBy('recommended')}
-                                size="sm"
-                            >
-                                Recommended
-                            </Button>
-                            {userLocation?.coordinates && (
-                                <Button
-                                    variant={sortBy === 'distance' ? 'default' : 'outline'}
-                                    onClick={() => setSortBy('distance')}
-                                    size="sm"
-                                >
-                                    Nearest
-                                </Button>
-                            )}
-                            <Button
-                                variant={sortBy === 'rating' ? 'default' : 'outline'}
-                                onClick={() => setSortBy('rating')}
-                                size="sm"
-                            >
-                                Top Rated
-                            </Button>
-                        </div>
-                    </div>
-                    
-                    {isLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {[1, 2, 3, 4, 5, 6].map((i) => (
-                                <div key={i} className="bg-white rounded-2xl overflow-hidden">
-                                    <Skeleton className="h-48 w-full" />
-                                    <div className="p-4 space-y-3">
-                                        <Skeleton className="h-6 w-3/4" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-1/2" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : filteredRestaurants.length === 0 ? (
-                        <div className="text-center py-16">
-                            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-4xl">🍽️</span>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No restaurants found</h3>
-                            <p className="text-gray-500">Try adjusting your search or filters</p>
-                        </div>
-                    ) : (
-                        <motion.div
-                            initial="hidden"
-                            animate="visible"
-                            variants={{
-                                visible: { transition: { staggerChildren: 0.05 } }
-                            }}
-                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="px-4 h-12 border rounded-lg bg-white"
                         >
-                            {filteredRestaurants.map((restaurant) => (
-                                <motion.div
-                                    key={restaurant.id}
-                                    variants={{
-                                        hidden: { opacity: 0, y: 20 },
-                                        visible: { opacity: 1, y: 0 }
-                                    }}
-                                >
-                                    <RestaurantCard restaurant={restaurant} distance={restaurant.distance} />
-                                </motion.div>
-                            ))}
-                        </motion.div>
-                    )}
+                            <option value="rating">Rating</option>
+                            <option value="delivery_fee">Delivery Fee</option>
+                            <option value="distance">Distance</option>
+                        </select>
+                    </div>
+
+                    <CuisineFilter
+                        selectedCuisine={selectedCuisine}
+                        onCuisineSelect={setSelectedCuisine}
+                    />
                 </div>
+
+                <PersonalizedRecommendations />
+
+                {/* Restaurants List */}
+                <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                        {selectedCuisine || searchQuery ? 'Results' : 'All Restaurants'}
+                    </h2>
+                    <p className="text-gray-600">
+                        {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} available
+                    </p>
+                </div>
+
+                {isLoading ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[1, 2, 3, 4, 5, 6].map((n) => (
+                            <Card key={n} className="animate-pulse">
+                                <CardContent className="p-0">
+                                    <div className="h-48 bg-gray-200"></div>
+                                    <div className="p-4 space-y-3">
+                                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : filteredRestaurants.length === 0 ? (
+                    <Card>
+                        <CardContent className="py-12 text-center">
+                            <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Restaurants Found</h3>
+                            <p className="text-gray-500">Try adjusting your search or filters</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredRestaurants.map((restaurant) => (
+                            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
