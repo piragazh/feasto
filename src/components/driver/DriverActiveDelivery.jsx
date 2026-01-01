@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
-import { MapPin, Navigation, Phone, CheckCircle, Package, MessageSquare } from 'lucide-react';
+import { MapPin, Navigation, Phone, CheckCircle, Package, MessageSquare, Camera, Star } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
@@ -16,6 +18,9 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     const [currentLocation, setCurrentLocation] = useState(driver.current_location);
     const [showChat, setShowChat] = useState(false);
     const [messageText, setMessageText] = useState('');
+    const [showProofDialog, setShowProofDialog] = useState(false);
+    const [proofPhoto, setProofPhoto] = useState(null);
+    const [showRatingDialog, setShowRatingDialog] = useState(false);
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -59,7 +64,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     });
 
     const updateStatusMutation = useMutation({
-        mutationFn: async (newStatus) => {
+        mutationFn: async ({ status: newStatus, proofUrl }) => {
             const statusNote = newStatus === 'delivered' 
                 ? 'Order delivered successfully' 
                 : `Status updated to ${newStatus}`;
@@ -78,21 +83,35 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
 
             if (newStatus === 'delivered') {
                 updates.actual_delivery_time = new Date().toISOString();
+                if (proofUrl) {
+                    updates.proof_of_delivery = proofUrl;
+                }
+                
                 // Free up driver
                 await base44.entities.Driver.update(driver.id, {
                     current_order_id: null,
                     is_available: true,
                     total_deliveries: (driver.total_deliveries || 0) + 1
                 });
+
+                // Notify customer
+                await base44.functions.invoke('sendNotification', {
+                    userId: order.created_by,
+                    title: 'Order Delivered!',
+                    message: `Your order from ${order.restaurant_name} has been delivered.`,
+                    type: 'delivered',
+                    orderId: order.id
+                });
             }
 
             return base44.entities.Order.update(order.id, updates);
         },
-        onSuccess: (data, newStatus) => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries(['driver-active-order']);
-            toast.success(`Order marked as ${newStatus}`);
-            if (newStatus === 'delivered') {
-                onComplete();
+            toast.success(`Order marked as ${variables.status}`);
+            if (variables.status === 'delivered') {
+                setShowProofDialog(false);
+                setShowRatingDialog(true);
             }
         },
     });
@@ -116,6 +135,38 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
             sender_type: 'driver',
             message: messageText
         });
+    };
+
+    const handlePhotoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            setProofPhoto(file_url);
+            toast.success('Photo uploaded');
+        } catch (error) {
+            toast.error('Failed to upload photo');
+        }
+    };
+
+    const handleCompleteDelivery = async () => {
+        if (!proofPhoto) {
+            toast.error('Please upload proof of delivery');
+            return;
+        }
+        updateStatusMutation.mutate({ status: 'delivered', proofUrl: proofPhoto });
+    };
+
+    const openNavigation = () => {
+        if (order.delivery_coordinates) {
+            const { lat, lng } = order.delivery_coordinates;
+            // Open in Google Maps or Apple Maps
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(url, '_blank');
+        } else {
+            toast.error('Delivery coordinates not available');
+        }
     };
 
     const calculateETA = () => {
@@ -231,6 +282,15 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                     {/* Action Buttons */}
                     <div className="space-y-2">
                         <Button
+                            onClick={openNavigation}
+                            variant="outline"
+                            className="w-full"
+                        >
+                            <Navigation className="h-4 w-4 mr-2" />
+                            Open Navigation
+                        </Button>
+                        
+                        <Button
                             onClick={() => setShowChat(true)}
                             variant="outline"
                             className="w-full"
@@ -240,12 +300,11 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                         </Button>
                         
                         <Button
-                            onClick={() => updateStatusMutation.mutate('delivered')}
-                            disabled={updateStatusMutation.isPending}
+                            onClick={() => setShowProofDialog(true)}
                             className="w-full bg-green-600 hover:bg-green-700"
                         >
                             <CheckCircle className="h-4 w-4 mr-2" />
-                            Mark as Delivered
+                            Complete Delivery
                         </Button>
                     </div>
                 </CardContent>
@@ -295,6 +354,83 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                             </Button>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Proof of Delivery Dialog */}
+            <Dialog open={showProofDialog} onOpenChange={setShowProofDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Proof of Delivery</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="proof-photo" className="mb-2 block">
+                                Upload Photo *
+                            </Label>
+                            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                                {proofPhoto ? (
+                                    <div>
+                                        <img src={proofPhoto} alt="Proof" className="max-h-48 mx-auto mb-2 rounded" />
+                                        <Button variant="outline" size="sm" onClick={() => setProofPhoto(null)}>
+                                            Change Photo
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <label htmlFor="proof-photo" className="cursor-pointer">
+                                        <Camera className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                        <p className="text-sm text-gray-600">Click to upload photo</p>
+                                        <Input
+                                            id="proof-photo"
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={handlePhotoUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={() => setShowProofDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleCompleteDelivery}
+                            disabled={!proofPhoto || updateStatusMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            Complete Delivery
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Rating Dialog */}
+            <Dialog open={showRatingDialog} onOpenChange={() => {
+                setShowRatingDialog(false);
+                onComplete();
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delivery Completed! 🎉</DialogTitle>
+                    </DialogHeader>
+                    <div className="text-center py-4">
+                        <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                        <p className="text-lg font-semibold mb-2">Great job!</p>
+                        <p className="text-gray-600">Order delivered successfully</p>
+                    </div>
+                    <Button
+                        onClick={() => {
+                            setShowRatingDialog(false);
+                            onComplete();
+                        }}
+                        className="w-full bg-orange-500 hover:bg-orange-600"
+                    >
+                        Continue
+                    </Button>
                 </DialogContent>
             </Dialog>
         </div>

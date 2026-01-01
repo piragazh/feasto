@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Home, ShoppingBag, User, LogOut, Menu, Tag } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Layout({ children, currentPageName }) {
     const [user, setUser] = useState(null);
@@ -109,6 +110,8 @@ export default function Layout({ children, currentPageName }) {
                             </nav>
 
                             <div className="flex items-center gap-3">
+                                {user && <NotificationBell userEmail={user.email} />}
+
                                 {cartCount > 0 && (
                                     <Link to={createPageUrl('Checkout')}>
                                         <Button variant="outline" className="relative rounded-full">
