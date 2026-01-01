@@ -14,59 +14,88 @@ import { toast } from 'sonner';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import 'leaflet/dist/leaflet.css';
 
-function GeomanControl({ onDrawn, editingZone }) {
+function GeomanControl({ onDrawn, editingZone, mapKey }) {
     const map = useMap();
 
     useEffect(() => {
         if (!map) return;
 
         // Fix map size on mount
-        setTimeout(() => {
+        const sizeTimeout = setTimeout(() => {
             map.invalidateSize();
-        }, 100);
+        }, 200);
+
+        let cleanup;
 
         // Import geoman dynamically
-        import('@geoman-io/leaflet-geoman-free').then(() => {
-            if (!map.pm) return;
-            
-            map.pm.addControls({
-                position: 'topright',
-                drawMarker: false,
-                drawCircleMarker: false,
-                drawCircle: false,
-                drawPolyline: false,
-                drawRectangle: false,
-                drawPolygon: !editingZone,
-                editMode: true,
-                dragMode: false,
-                cutPolygon: false,
-                rotateMode: false,
-            });
+        const initGeoman = async () => {
+            try {
+                await import('@geoman-io/leaflet-geoman-free');
+                
+                if (!map.pm) return;
 
-            const handleCreate = (e) => {
-                const layer = e.layer;
-                if (e.shape === 'Polygon') {
-                    const coords = layer.getLatLngs()[0].map(latlng => ({
-                        lat: latlng.lat,
-                        lng: latlng.lng
-                    }));
-                    onDrawn(coords);
-                    layer.remove();
-                }
-            };
-
-            map.on('pm:create', handleCreate);
-
-            return () => {
-                if (map.pm) {
+                // Remove existing controls first
+                if (map.pm.controlsVisible()) {
                     map.pm.removeControls();
                 }
-                map.off('pm:create', handleCreate);
-            };
-        }).catch(err => {
-            console.error('Failed to load geoman:', err);
-        });
-    }, [map, editingZone, onDrawn]);
+                
+                // Add controls
+                map.pm.addControls({
+                    position: 'topright',
+                    drawMarker: false,
+                    drawCircleMarker: false,
+                    drawCircle: false,
+                    drawPolyline: false,
+                    drawRectangle: false,
+                    drawPolygon: true,
+                    editMode: false,
+                    dragMode: false,
+                    cutPolygon: false,
+                    rotateMode: false,
+                    removalMode: false,
+                });
+
+                const handleCreate = (e) => {
+                    const layer = e.layer;
+                    if (e.shape === 'Polygon') {
+                        const coords = layer.getLatLngs()[0].map(latlng => ({
+                            lat: latlng.lat,
+                            lng: latlng.lng
+                        }));
+                        onDrawn(coords);
+                        // Remove the layer after capture
+                        setTimeout(() => {
+                            if (map.hasLayer(layer)) {
+                                map.removeLayer(layer);
+                            }
+                        }, 100);
+                    }
+                };
+
+                map.on('pm:create', handleCreate);
+
+                cleanup = () => {
+                    map.off('pm:create', handleCreate);
+                    if (map.pm && map.pm.controlsVisible()) {
+                        try {
+                            map.pm.removeControls();
+                        } catch (e) {
+                            console.log('Controls already removed');
+                        }
+                    }
+                };
+            } catch (err) {
+                console.error('Failed to load geoman:', err);
+            }
+        };
+
+        initGeoman();
+
+        return () => {
+            clearTimeout(sizeTimeout);
+            if (cleanup) cleanup();
+        };
+    }, [map, mapKey]);
 
     return null;
 }
@@ -75,6 +104,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
     const [showDialog, setShowDialog] = useState(false);
     const [editingZone, setEditingZone] = useState(null);
     const [drawnCoordinates, setDrawnCoordinates] = useState(null);
+    const [mapKey, setMapKey] = useState(0);
     const queryClient = useQueryClient();
     const mapRef = useRef(null);
 
@@ -136,6 +166,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
         setDrawnCoordinates(null);
         setEditingZone(null);
         setShowDialog(false);
+        setMapKey(prev => prev + 1);
     };
 
     const handleEdit = (zone) => {
@@ -148,6 +179,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             color: zone.color || '#FF6B35'
         });
         setDrawnCoordinates(zone.coordinates);
+        setMapKey(prev => prev + 1);
         setShowDialog(true);
     };
 
@@ -404,6 +436,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             </div>
                             <div className="h-[500px] rounded-lg overflow-hidden border relative">
                                 <MapContainer
+                                    key={mapKey}
                                     center={[centerLocation.lat, centerLocation.lng]}
                                     zoom={13}
                                     style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
@@ -413,7 +446,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         attribution='&copy; OpenStreetMap'
                                     />
-                                    <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} />
+                                    <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
                                     {drawnCoordinates && (
                                         <Polygon
                                             positions={drawnCoordinates.map(c => [c.lat, c.lng])}
