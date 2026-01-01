@@ -568,6 +568,43 @@ export default function MenuManagement({ restaurantId }) {
                     </Card>
                 ))}
             </div>
+
+            <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Menu Category</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Category Name</Label>
+                            <Input
+                                placeholder="e.g., Starters, Mains, Desserts, Drinks"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => {
+                                setCategoryDialogOpen(false);
+                                setNewCategoryName('');
+                            }}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    if (newCategoryName.trim()) {
+                                        addCategoryMutation.mutate(newCategoryName.trim());
+                                    }
+                                }}
+                                disabled={!newCategoryName.trim() || addCategoryMutation.isPending}
+                                className="bg-orange-500 hover:bg-orange-600"
+                            >
+                                Add Category
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
