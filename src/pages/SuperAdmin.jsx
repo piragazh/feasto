@@ -12,7 +12,6 @@ import SystemMonitoring from '@/components/superadmin/SystemMonitoring';
 import CuisineTypeManagement from '@/components/superadmin/CuisineTypeManagement';
 import DomainManagement from '@/components/superadmin/DomainManagement';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
@@ -109,42 +108,38 @@ export default function SuperAdmin() {
                             <Globe className="h-4 w-4" />
                             Domains
                         </Button>
-                        <Link to={createPageUrl('ManageRestaurantManagers')}>
-                            <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
-                            >
-                                <Users className="h-4 w-4" />
-                                Managers
-                            </Button>
-                        </Link>
-                        <Link to={createPageUrl('DriverDashboard')}>
-                            <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
-                            >
-                                <Truck className="h-4 w-4" />
-                                Drivers
-                            </Button>
-                        </Link>
-                        <Link to={createPageUrl('AdminDashboard')}>
-                            <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
-                            >
-                                <LayoutDashboard className="h-4 w-4" />
-                                Admin Dashboard
-                            </Button>
-                        </Link>
-                        <Link to={createPageUrl('AdminRestaurants')}>
-                            <Button
-                                variant="ghost"
-                                className="flex items-center gap-2 text-white hover:bg-white/10"
-                            >
-                                <Store className="h-4 w-4" />
-                                Admin Restaurants
-                            </Button>
-                        </Link>
+                        <Button
+                            variant={activeTab === 'managers' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('managers')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Users className="h-4 w-4" />
+                            Managers
+                        </Button>
+                        <Button
+                            variant={activeTab === 'drivers' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('drivers')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Truck className="h-4 w-4" />
+                            Drivers
+                        </Button>
+                        <Button
+                            variant={activeTab === 'admin-dashboard' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('admin-dashboard')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <LayoutDashboard className="h-4 w-4" />
+                            Analytics
+                        </Button>
+                        <Button
+                            variant={activeTab === 'admin-restaurants' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('admin-restaurants')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Store className="h-4 w-4" />
+                            Admin Panel
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -158,6 +153,34 @@ export default function SuperAdmin() {
                 {activeTab === 'monitoring' && <SystemMonitoring />}
                 {activeTab === 'cuisine' && <CuisineTypeManagement />}
                 {activeTab === 'domains' && <DomainManagement />}
+                {activeTab === 'managers' && (
+                    <iframe 
+                        src={createPageUrl('ManageRestaurantManagers')} 
+                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
+                        title="Restaurant Managers"
+                    />
+                )}
+                {activeTab === 'drivers' && (
+                    <iframe 
+                        src={createPageUrl('DriverDashboard')} 
+                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
+                        title="Driver Dashboard"
+                    />
+                )}
+                {activeTab === 'admin-dashboard' && (
+                    <iframe 
+                        src={createPageUrl('AdminDashboard')} 
+                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
+                        title="Admin Dashboard"
+                    />
+                )}
+                {activeTab === 'admin-restaurants' && (
+                    <iframe 
+                        src={createPageUrl('AdminRestaurants')} 
+                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
+                        title="Admin Restaurants"
+                    />
+                )}
             </div>
         </div>
     );
