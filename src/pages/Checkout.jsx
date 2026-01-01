@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { calculateDeliveryDetails } from '@/components/checkout/DeliveryZoneCalculator';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,9 @@ export default function Checkout() {
     const [scheduledFor, setScheduledFor] = useState('');
     const [groupOrderId, setGroupOrderId] = useState(null);
     const [shareCode, setShareCode] = useState(null);
+    const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
+    const [zoneCheckComplete, setZoneCheckComplete] = useState(false);
+    const [restaurant, setRestaurant] = useState(null);
     
     const [formData, setFormData] = useState({
         delivery_address: '',
@@ -68,6 +72,7 @@ export default function Checkout() {
             const restaurants = await base44.entities.Restaurant.filter({ id });
             if (restaurants[0]) {
                 setRestaurantName(restaurants[0].name);
+                setRestaurant(restaurants[0]);
             }
         } catch (e) {
             console.error(e);
@@ -75,7 +80,7 @@ export default function Checkout() {
     };
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = 2.99;
+    const deliveryFee = deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99;
     const discount = appliedCoupon?.discount || 0;
     const total = subtotal + deliveryFee - discount;
 
@@ -84,6 +89,16 @@ export default function Checkout() {
         
         if (!formData.delivery_address || !formData.phone) {
             toast.error('Please fill in all required fields');
+            return;
+        }
+
+        if (deliveryZoneInfo && !deliveryZoneInfo.available) {
+            toast.error('Delivery is not available to your location');
+            return;
+        }
+
+        if (deliveryZoneInfo?.minOrderValue && subtotal < deliveryZoneInfo.minOrderValue) {
+            toast.error(`Minimum order value for this area is £${deliveryZoneInfo.minOrderValue.toFixed(2)}`);
             return;
         }
 
@@ -199,14 +214,50 @@ export default function Checkout() {
                                         Delivery Address
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="space-y-3">
                                     <LocationPicker
-                                        onLocationSelect={(locationData) => {
+                                        onLocationSelect={async (locationData) => {
                                             setFormData({ ...formData, delivery_address: locationData.address });
                                             setDeliveryCoordinates(locationData.coordinates);
+                                            
+                                            if (locationData.coordinates && restaurantId) {
+                                                setZoneCheckComplete(false);
+                                                const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
+                                                setDeliveryZoneInfo(zoneInfo);
+                                                setZoneCheckComplete(true);
+                                            }
                                         }}
                                         className="[&>div]:h-12"
                                     />
+                                    
+                                    {zoneCheckComplete && deliveryZoneInfo && (
+                                        <div className={`p-3 rounded-lg border ${
+                                            deliveryZoneInfo.available 
+                                                ? 'bg-green-50 border-green-200' 
+                                                : 'bg-red-50 border-red-200'
+                                        }`}>
+                                            {deliveryZoneInfo.available ? (
+                                                <div>
+                                                    <p className="text-sm font-medium text-green-800">
+                                                        ✓ Delivery available to {deliveryZoneInfo.zoneName}
+                                                    </p>
+                                                    <p className="text-xs text-green-700 mt-1">
+                                                        Fee: £{deliveryZoneInfo.deliveryFee.toFixed(2)} • 
+                                                        ETA: {deliveryZoneInfo.estimatedTime}
+                                                    </p>
+                                                    {deliveryZoneInfo.minOrderValue && (
+                                                        <p className="text-xs text-green-700">
+                                                            Min order: £{deliveryZoneInfo.minOrderValue.toFixed(2)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm font-medium text-red-800">
+                                                    ✗ {deliveryZoneInfo.message}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 

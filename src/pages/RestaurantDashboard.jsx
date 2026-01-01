@@ -18,7 +18,8 @@ import {
     Navigation,
     Users,
     AlertCircle,
-    Tag
+    Tag,
+    MapPin
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import OrderQueue from '@/components/restaurant/OrderQueue';
@@ -38,6 +39,7 @@ import RefundManagement from '@/components/restaurant/RefundManagement';
 import PromotionManagement from '@/components/restaurant/PromotionManagement';
 import OrderBatching from '@/components/restaurant/OrderBatching';
 import OrderModification from '@/components/restaurant/OrderModification';
+import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -283,6 +285,10 @@ export default function RestaurantDashboard() {
                             <Settings className="h-4 w-4 mr-2" />
                             Modifications
                         </TabsTrigger>
+                        <TabsTrigger value="zones">
+                            <MapPin className="h-4 w-4 mr-2" />
+                            Zones
+                        </TabsTrigger>
                         </TabsList>
 
                     <TabsContent value="orders">
@@ -343,6 +349,16 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="modifications">
                         <OrderModification restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="zones">
+                        <DeliveryZoneManagement 
+                            restaurantId={restaurant.id}
+                            restaurantLocation={restaurant.latitude && restaurant.longitude ? {
+                                lat: restaurant.latitude,
+                                lng: restaurant.longitude
+                            } : null}
+                        />
                     </TabsContent>
                     </Tabs>
                     </div>
