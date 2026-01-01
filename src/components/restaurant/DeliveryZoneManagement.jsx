@@ -397,18 +397,24 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
 
                         <div>
                             <Label>Draw Delivery Zone on Map *</Label>
-                            <p className="text-xs text-gray-500 mb-2">
-                                Use the polygon tool to draw your delivery area
-                            </p>
-                            <div className="h-96 rounded-lg overflow-hidden border">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                <p className="text-sm text-blue-800">
+                                    👉 Click the polygon tool (📐) in the top-right corner of the map to draw your delivery zone
+                                </p>
+                            </div>
+                            <div className="h-[500px] rounded-lg overflow-hidden border relative">
                                 <MapContainer
                                     center={[centerLocation.lat, centerLocation.lng]}
                                     zoom={13}
-                                    style={{ height: '100%', width: '100%' }}
+                                    style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
+                                    scrollWheelZoom={true}
                                 >
-                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <TileLayer 
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; OpenStreetMap'
+                                    />
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} />
-                                    {editingZone && drawnCoordinates && (
+                                    {drawnCoordinates && (
                                         <Polygon
                                             positions={drawnCoordinates.map(c => [c.lat, c.lng])}
                                             pathOptions={{

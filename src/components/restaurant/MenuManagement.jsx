@@ -294,6 +294,7 @@ export default function MenuManagement({ restaurantId }) {
                                                                 newCustoms[idx].options[optIdx].label = e.target.value;
                                                                 setFormData({ ...formData, customization_options: newCustoms });
                                                             }}
+                                                            className="flex-1"
                                                         />
                                                         <Input
                                                             type="number"
@@ -305,34 +306,58 @@ export default function MenuManagement({ restaurantId }) {
                                                                 newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
                                                                 setFormData({ ...formData, customization_options: newCustoms });
                                                             }}
-                                                            className="w-24"
+                                                            className="w-28"
                                                         />
                                                         <Button
                                                             type="button"
-                                                            size="sm"
+                                                            size="icon"
                                                             variant="ghost"
                                                             onClick={() => {
                                                                 const newCustoms = [...formData.customization_options];
                                                                 newCustoms[idx].options = newCustoms[idx].options.filter((_, i) => i !== optIdx);
                                                                 setFormData({ ...formData, customization_options: newCustoms });
                                                             }}
+                                                            className="h-10 w-10"
                                                         >
-                                                            ×
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 ))}
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        const newCustoms = [...formData.customization_options];
-                                                        newCustoms[idx].options.push({ label: '', price: 0 });
-                                                        setFormData({ ...formData, customization_options: newCustoms });
-                                                    }}
-                                                >
-                                                    Add Option
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            const newCustoms = [...formData.customization_options];
+                                                            newCustoms[idx].options.push({ label: '', price: 0 });
+                                                            setFormData({ ...formData, customization_options: newCustoms });
+                                                        }}
+                                                        className="flex-1"
+                                                    >
+                                                        <Plus className="h-4 w-4 mr-1" />
+                                                        Add Option Row
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            const newCustoms = [...formData.customization_options];
+                                                            // Add 3 rows at once
+                                                            newCustoms[idx].options.push(
+                                                                { label: '', price: 0 },
+                                                                { label: '', price: 0 },
+                                                                { label: '', price: 0 }
+                                                            );
+                                                            setFormData({ ...formData, customization_options: newCustoms });
+                                                        }}
+                                                        className="whitespace-nowrap"
+                                                    >
+                                                        <Plus className="h-4 w-4 mr-1" />
+                                                        Add 3 Rows
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     </Card>
