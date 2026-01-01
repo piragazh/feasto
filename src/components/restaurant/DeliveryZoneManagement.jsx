@@ -63,12 +63,10 @@ function GeomanControl({ onDrawn, editingZone, mapKey }) {
                             lng: latlng.lng
                         }));
                         onDrawn(coords);
-                        // Remove the layer after capture
-                        setTimeout(() => {
-                            if (map.hasLayer(layer)) {
-                                map.removeLayer(layer);
-                            }
-                        }, 100);
+                        // Remove the layer immediately to prevent overlaps
+                        if (map.hasLayer(layer)) {
+                            map.removeLayer(layer);
+                        }
                     }
                 };
 
@@ -428,7 +426,22 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         </div>
 
                         <div>
-                            <Label>Draw Delivery Zone on Map *</Label>
+                            <div className="flex items-center justify-between mb-2">
+                                <Label>Draw Delivery Zone on Map *</Label>
+                                {drawnCoordinates && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setDrawnCoordinates(null);
+                                            setMapKey(prev => prev + 1);
+                                        }}
+                                    >
+                                        Clear & Redraw
+                                    </Button>
+                                )}
+                            </div>
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
                                 <p className="text-sm text-blue-800">
                                     👉 Click the polygon tool (📐) in the top-right corner of the map to draw your delivery zone
