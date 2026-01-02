@@ -117,29 +117,31 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <HeroSection />
+            <div className="md:block hidden">
+                <HeroSection />
+            </div>
 
-            <div className="max-w-6xl mx-auto px-4 py-8">
+            <div className="max-w-6xl mx-auto px-3 md:px-4 py-4 md:py-8">
                 {/* Search and Filters */}
-                <div className="mb-8 space-y-4">
-                    <div className="flex gap-4">
+                <div className="mb-6 md:mb-8 space-y-3 md:space-y-4">
+                    <div className="flex gap-2 md:gap-4">
                         <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                             <Input
-                                placeholder="Search for restaurants or cuisines..."
+                                placeholder="Search restaurants..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 h-12"
+                                className="pl-9 md:pl-10 h-11 md:h-12 text-sm md:text-base rounded-xl"
                             />
                         </div>
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="px-4 h-12 border rounded-lg bg-white"
+                            className="px-3 md:px-4 h-11 md:h-12 border rounded-xl bg-white text-sm md:text-base"
                         >
-                            <option value="rating">Rating</option>
-                            <option value="delivery_fee">Delivery Fee</option>
-                            <option value="distance">Distance</option>
+                            <option value="rating">⭐ Rating</option>
+                            <option value="delivery_fee">💰 Fee</option>
+                            <option value="distance">📍 Distance</option>
                         </select>
                     </div>
 
@@ -152,22 +154,22 @@ export default function Home() {
                 <PersonalizedRecommendations />
 
                 {/* Restaurants List */}
-                <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">
+                <div className="mb-4 md:mb-6">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-900">
                         {selectedCuisine || searchQuery ? 'Results' : 'All Restaurants'}
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-sm md:text-base text-gray-600">
                         {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} available
                     </p>
                 </div>
 
                 {isLoading ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {[1, 2, 3, 4, 5, 6].map((n) => (
-                            <Card key={n} className="animate-pulse">
+                            <Card key={n} className="animate-pulse rounded-2xl">
                                 <CardContent className="p-0">
-                                    <div className="h-48 bg-gray-200"></div>
-                                    <div className="p-4 space-y-3">
+                                    <div className="h-40 md:h-48 bg-gray-200"></div>
+                                    <div className="p-3 md:p-4 space-y-2 md:space-y-3">
                                         <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                                         <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                                     </div>
@@ -176,15 +178,15 @@ export default function Home() {
                         ))}
                     </div>
                 ) : filteredRestaurants.length === 0 ? (
-                    <Card>
-                        <CardContent className="py-12 text-center">
-                            <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Restaurants Found</h3>
-                            <p className="text-gray-500">Try adjusting your search or filters</p>
+                    <Card className="rounded-2xl">
+                        <CardContent className="py-8 md:py-12 text-center">
+                            <Search className="h-12 w-12 md:h-16 md:w-16 text-gray-300 mx-auto mb-3 md:mb-4" />
+                            <h3 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">No Restaurants Found</h3>
+                            <p className="text-sm md:text-base text-gray-500">Try adjusting your search or filters</p>
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {filteredRestaurants.map((restaurant) => (
                             <RestaurantCard key={restaurant.id} restaurant={restaurant} />
                         ))}

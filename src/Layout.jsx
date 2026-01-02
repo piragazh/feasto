@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,11 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare } from 'lucide-react';
+import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Layout({ children, currentPageName }) {
+    const location = useLocation();
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
 
@@ -46,9 +47,10 @@ export default function Layout({ children, currentPageName }) {
     };
 
     const hideHeader = ['Checkout'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
             <style>{`
                 :root {
                     --primary: 24 100% 50%;
@@ -61,17 +63,22 @@ export default function Layout({ children, currentPageName }) {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
                 }
+                @media (max-width: 768px) {
+                    body {
+                        overscroll-behavior-y: contain;
+                    }
+                }
             `}</style>
 
             {!hideHeader && (
-                <header className="bg-white border-b sticky top-0 z-50">
+                <header className="bg-white border-b sticky top-0 z-50 safe-area-top">
                     <div className="max-w-6xl mx-auto px-4">
-                        <div className="flex items-center justify-between h-16">
+                        <div className="flex items-center justify-between h-14 md:h-16">
                             <Link to={createPageUrl('Home')} className="flex items-center gap-2">
-                                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                                    <span className="text-white font-bold text-lg">F</span>
+                                <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                                    <span className="text-white font-bold text-base md:text-lg">F</span>
                                 </div>
-                                <span className="font-bold text-xl text-gray-900 hidden sm:block">Foodie</span>
+                                <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">Foodie</span>
                             </Link>
 
                             <nav className="hidden md:flex items-center gap-8">
@@ -109,23 +116,25 @@ export default function Layout({ children, currentPageName }) {
                                 )}
                             </nav>
 
-                            <div className="flex items-center gap-3">
-                                {user && <NotificationBell userEmail={user.email} />}
+                            <div className="flex items-center gap-2">
+                                <div className="hidden md:flex items-center gap-3">
+                                    {user && <NotificationBell userEmail={user.email} />}
 
-                                {cartCount > 0 && (
-                                    <Link to={createPageUrl('Checkout')}>
-                                        <Button variant="outline" className="relative rounded-full">
-                                            <ShoppingBag className="h-5 w-5" />
-                                            <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
-                                                {cartCount}
-                                            </span>
-                                        </Button>
-                                    </Link>
-                                )}
+                                    {cartCount > 0 && (
+                                        <Link to={createPageUrl('Checkout')}>
+                                            <Button variant="outline" className="relative rounded-full">
+                                                <ShoppingBag className="h-5 w-5" />
+                                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
+                                                    {cartCount}
+                                                </span>
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
 
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="rounded-full">
+                                        <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
                                             <Menu className="h-5 w-5 md:hidden" />
                                             <User className="h-5 w-5 hidden md:block" />
                                         </Button>
@@ -216,7 +225,69 @@ export default function Layout({ children, currentPageName }) {
                 </header>
             )}
 
-            <main>{children}</main>
+            <main className="min-h-screen">{children}</main>
+
+            {/* Mobile Bottom Navigation */}
+            {showBottomNav && (
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-bottom">
+                    <div className="flex items-center justify-around h-16 px-2">
+                        <Link 
+                            to={createPageUrl('Home')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
+                            <Home className="h-6 w-6" />
+                            <span className="text-xs font-medium">Home</span>
+                        </Link>
+                        
+                        <Link 
+                            to={createPageUrl('Orders')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'Orders' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
+                            <ShoppingBag className="h-6 w-6" />
+                            <span className="text-xs font-medium">Orders</span>
+                        </Link>
+
+                        <Link 
+                            to={createPageUrl('Checkout')} 
+                            className="flex flex-col items-center justify-center flex-1 gap-1 py-2 relative"
+                        >
+                            <div className={`relative ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600'}`}>
+                                <ShoppingBag className="h-6 w-6" />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                                        {cartCount}
+                                    </span>
+                                )}
+                            </div>
+                            <span className={`text-xs font-medium ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600'}`}>Cart</span>
+                        </Link>
+
+                        <Link 
+                            to={createPageUrl('Messages')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'Messages' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
+                            <MessageSquare className="h-6 w-6" />
+                            <span className="text-xs font-medium">Messages</span>
+                        </Link>
+                        
+                        <Link 
+                            to={createPageUrl('CustomerProfile')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'CustomerProfile' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
+                            <User className="h-6 w-6" />
+                            <span className="text-xs font-medium">Profile</span>
+                        </Link>
+                    </div>
+                </nav>
+            )}
         </div>
     );
 }
