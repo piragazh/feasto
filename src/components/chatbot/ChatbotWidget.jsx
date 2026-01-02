@@ -14,7 +14,7 @@ export default function ChatbotWidget() {
     const [messages, setMessages] = useState([
         {
             role: 'assistant',
-            content: 'Hi! I\'m your Foodie assistant. How can I help you today? I can answer questions about your orders, delivery times, restaurant hours, and refund policies.',
+            content: 'Hi! I\'m your MealDrop assistant. How can I help you today? I can answer questions about your orders, delivery times, restaurant hours, and refund policies.',
             timestamp: new Date().toISOString()
         }
     ]);
@@ -113,7 +113,7 @@ export default function ChatbotWidget() {
                                             <Bot className="h-6 w-6" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-lg">Foodie Assistant</CardTitle>
+                                            <CardTitle className="text-lg">MealDrop Assistant</CardTitle>
                                             <div className="flex items-center gap-1 text-xs">
                                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                                                 <span>Online</span>

@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
             : [];
 
         // Build context for the AI
-        const systemPrompt = `You are a helpful customer support chatbot for Foodie, a food delivery platform.
+        const systemPrompt = `You are a helpful customer support chatbot for MealDrop, a food delivery platform.
 
 Your capabilities:
 - Answer questions about order status, delivery times, and tracking
