@@ -32,7 +32,7 @@ export default function PersonalizedRecommendations({ restaurants }) {
     });
 
     useEffect(() => {
-        if (user && restaurants.length > 0 && !recommendations) {
+        if (user && restaurants && restaurants.length > 0 && !recommendations) {
             generateRecommendations();
         }
     }, [user, restaurants]);
@@ -41,14 +41,14 @@ export default function PersonalizedRecommendations({ restaurants }) {
         setIsGenerating(true);
         try {
             // Prepare order history
-            const orderHistory = orders.map(o => ({
+            const orderHistory = (orders || []).map(o => ({
                 restaurant: o.restaurant_name,
                 items: o.items?.map(i => i.name).join(', '),
                 total: o.total
             }));
 
             // Prepare review data
-            const reviewData = reviews.map(r => ({
+            const reviewData = (reviews || []).map(r => ({
                 rating: r.rating,
                 text: r.review_text
             }));
@@ -62,7 +62,7 @@ User Reviews:
 ${reviewData.length > 0 ? JSON.stringify(reviewData, null, 2) : 'No reviews yet'}
 
 Available Restaurants:
-${restaurants.map(r => `- ${r.name} (${r.cuisine_type}) - Rating: ${r.rating || 'N/A'}`).join('\n')}
+${(restaurants || []).map(r => `- ${r.name} (${r.cuisine_type}) - Rating: ${r.rating || 'N/A'}`).join('\n')}
 
 Provide recommendations as a JSON array with restaurant names and brief personalized reasons. Consider:
 - Cuisine preferences from order history
@@ -91,8 +91,8 @@ Return ONLY restaurant names that exist in the available list.`;
                 }
             });
 
-            const recommended = result.recommendations.map(rec => {
-                const restaurant = restaurants.find(r => 
+            const recommended = (result.recommendations || []).map(rec => {
+                const restaurant = (restaurants || []).find(r => 
                     r.name.toLowerCase() === rec.restaurant_name.toLowerCase()
                 );
                 return restaurant ? { ...restaurant, reason: rec.reason } : null;
@@ -106,7 +106,7 @@ Return ONLY restaurant names that exist in the available list.`;
         }
     };
 
-    if (!user || restaurants.length === 0) return null;
+    if (!user || !restaurants || restaurants.length === 0) return null;
 
     return (
         <div className="mb-12">
@@ -145,7 +145,7 @@ Return ONLY restaurant names that exist in the available list.`;
                         </div>
                     ))}
                 </div>
-            ) : recommendations.length === 0 ? (
+            ) : !recommendations || recommendations.length === 0 ? (
                 <Card>
                     <CardContent className="text-center py-8">
                         <p className="text-gray-500">

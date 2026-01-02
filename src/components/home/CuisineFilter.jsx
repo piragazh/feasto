@@ -11,7 +11,7 @@ export default function CuisineFilter({ selectedCuisine, setSelectedCuisine }) {
 
     const cuisines = [
         { name: 'All', emoji: '🍽️' },
-        ...cuisineTypes.map(ct => ({ name: ct.name, emoji: ct.icon || '🍽️' }))
+        ...(cuisineTypes || []).map(ct => ({ name: ct.name, emoji: ct.icon || '🍽️' }))
     ];
     return (
         <div className="py-8">
