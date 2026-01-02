@@ -11,6 +11,7 @@ import CommissionManagement from '@/components/superadmin/CommissionManagement';
 import SystemMonitoring from '@/components/superadmin/SystemMonitoring';
 import CuisineTypeManagement from '@/components/superadmin/CuisineTypeManagement';
 import DomainManagement from '@/components/superadmin/DomainManagement';
+import EnhancedAnalytics from '@/components/superadmin/EnhancedAnalytics';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
@@ -125,8 +126,8 @@ export default function SuperAdmin() {
                             Drivers
                         </Button>
                         <Button
-                            variant={activeTab === 'admin-dashboard' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('admin-dashboard')}
+                            variant={activeTab === 'analytics' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('analytics')}
                             className="flex items-center gap-2 text-white hover:bg-white/10"
                         >
                             <LayoutDashboard className="h-4 w-4" />
@@ -153,6 +154,7 @@ export default function SuperAdmin() {
                 {activeTab === 'monitoring' && <SystemMonitoring />}
                 {activeTab === 'cuisine' && <CuisineTypeManagement />}
                 {activeTab === 'domains' && <DomainManagement />}
+                {activeTab === 'analytics' && <EnhancedAnalytics />}
                 {activeTab === 'managers' && (
                     <iframe 
                         src={createPageUrl('ManageRestaurantManagers')} 
