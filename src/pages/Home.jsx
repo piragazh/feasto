@@ -147,7 +147,7 @@ export default function Home() {
 
                     <CuisineFilter
                         selectedCuisine={selectedCuisine}
-                        onCuisineSelect={setSelectedCuisine}
+                        setSelectedCuisine={setSelectedCuisine}
                     />
                 </div>
 
