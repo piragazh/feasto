@@ -16,8 +16,9 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     const queryClient = useQueryClient();
 
     const { data: messages = [] } = useQuery({
-        queryKey: ['chat-messages', conversation.id],
+        queryKey: ['chat-messages', conversation?.id],
         queryFn: () => base44.entities.ChatMessage.filter({ conversation_id: conversation.id }, 'created_date'),
+        enabled: !!conversation?.id,
         refetchInterval: 2000,
     });
 
@@ -31,6 +32,8 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     };
 
     const markMessagesAsRead = async () => {
+        if (!messages || messages.length === 0 || !conversation?.id) return;
+        
         const unreadMessages = messages.filter(m => 
             m.sender_email !== currentUser.email && 
             !m.read_by?.includes(currentUser.email)
@@ -43,7 +46,7 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
         }
 
         // Update conversation unread count
-        const newUnreadCount = { ...conversation.unread_count };
+        const newUnreadCount = { ...(conversation.unread_count || {}) };
         newUnreadCount[currentUser.email] = 0;
         await base44.entities.Conversation.update(conversation.id, {
             unread_count: newUnreadCount
@@ -57,8 +60,8 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
             const newMessage = await base44.entities.ChatMessage.create(messageData);
             
             // Update conversation
-            const unreadCount = { ...conversation.unread_count };
-            conversation.participants.forEach(p => {
+            const unreadCount = { ...(conversation.unread_count || {}) };
+            (conversation.participants || []).forEach(p => {
                 if (p !== currentUser.email) {
                     unreadCount[p] = (unreadCount[p] || 0) + 1;
                 }
@@ -136,7 +139,7 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
             </CardHeader>
             
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 ? (
+                {!messages || messages.length === 0 ? (
                     <div className="text-center py-12">
                         <p className="text-gray-500">No messages yet. Start the conversation!</p>
                     </div>

@@ -23,7 +23,7 @@ export default function NewConversationDialog({ open, onOpenChange, currentUser,
 
             // Check if conversation exists
             const existingConvos = await base44.entities.Conversation.list();
-            const existing = existingConvos.find(c =>
+            const existing = (existingConvos || []).find(c =>
                 c.participants?.includes(currentUser.email) &&
                 c.participants?.includes(restaurantEmail)
             );
