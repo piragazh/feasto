@@ -30,6 +30,8 @@ export default function Home() {
     }, [restaurants]);
 
     const checkCustomDomain = async () => {
+        if (!restaurants || restaurants.length === 0) return;
+        
         const currentDomain = window.location.hostname;
         
         // Skip check for localhost or main platform domain
@@ -89,7 +91,7 @@ export default function Home() {
         return (value * Math.PI) / 180;
     };
 
-    const filteredRestaurants = restaurants
+    const filteredRestaurants = (restaurants || [])
         .filter(r => {
             const matchesSearch = !searchQuery || 
                 r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
