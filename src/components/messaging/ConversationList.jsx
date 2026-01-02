@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { User, Store, Truck } from 'lucide-react';
 import moment from 'moment';
 
-export default function ConversationList({ conversations, selectedConversation, onSelectConversation, currentUser }) {
+export default function ConversationList({ conversations = [], selectedConversation, onSelectConversation, currentUser }) {
     const getParticipantInfo = (conversation) => {
         const otherParticipants = conversation.participants?.filter(p => p !== currentUser.email) || [];
         if (otherParticipants.length === 0) return { name: 'You', type: 'customer' };
@@ -21,7 +21,7 @@ export default function ConversationList({ conversations, selectedConversation, 
         }
     };
 
-    if (conversations.length === 0) {
+    if (!conversations || conversations.length === 0) {
         return (
             <div className="p-8 text-center">
                 <p className="text-gray-500 text-sm">No conversations yet</p>

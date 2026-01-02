@@ -43,7 +43,7 @@ export default function Messages() {
         refetchInterval: 3000,
     });
 
-    const filteredConversations = conversations.filter(c =>
+    const filteredConversations = (conversations || []).filter(c =>
         !searchQuery || 
         c.last_message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.participants?.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))
