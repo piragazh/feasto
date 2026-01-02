@@ -21,6 +21,79 @@ export default function EnhancedAnalytics() {
         end: new Date().toISOString().split('T')[0]
     });
     const [selectedRestaurant, setSelectedRestaurant] = useState('all');
+    const [quickFilter, setQuickFilter] = useState('custom');
+
+    const applyQuickFilter = (filter) => {
+        setQuickFilter(filter);
+        const end = new Date();
+        let start = new Date();
+
+        switch (filter) {
+            case 'week':
+                start.setDate(end.getDate() - 7);
+                break;
+            case 'month':
+                start.setMonth(end.getMonth() - 1);
+                break;
+            case 'year':
+                start.setFullYear(end.getFullYear() - 1);
+                break;
+            default:
+                return;
+        }
+
+        setDateRange({
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0]
+        });
+    };
+
+    const exportReport = () => {
+        const csvRows = [];
+        
+        // Header
+        csvRows.push('Restaurant Financial Report');
+        csvRows.push(`Period: ${dateRange.start} to ${dateRange.end}`);
+        csvRows.push(`Generated: ${new Date().toLocaleString()}`);
+        csvRows.push('');
+        
+        // Summary
+        csvRows.push('SUMMARY');
+        csvRows.push(`Total Revenue,£${metrics.totalRevenue.toFixed(2)}`);
+        csvRows.push(`Total Orders,${metrics.totalOrders}`);
+        csvRows.push(`Platform Commission,£${metrics.totalCommission.toFixed(2)}`);
+        csvRows.push(`Restaurant Earnings,£${metrics.totalRestaurantEarnings.toFixed(2)}`);
+        csvRows.push(`Average Order Value,£${metrics.avgOrderValue.toFixed(2)}`);
+        csvRows.push('');
+        
+        // Detailed breakdown
+        csvRows.push('RESTAURANT BREAKDOWN');
+        csvRows.push('Restaurant,Orders,Total Revenue,Commission Rate,Platform Commission,Restaurant Earnings,Avg Order Value');
+        
+        metrics.restaurantBreakdown.forEach(r => {
+            csvRows.push([
+                r.name,
+                r.orders,
+                `£${r.revenue.toFixed(2)}`,
+                r.commissionRate,
+                `£${r.commission.toFixed(2)}`,
+                `£${r.earnings.toFixed(2)}`,
+                `£${(r.revenue / r.orders).toFixed(2)}`
+            ].join(','));
+        });
+        
+        // Create and download
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `financial-report-${dateRange.start}-to-${dateRange.end}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    };
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['restaurants'],
@@ -137,41 +210,94 @@ export default function EnhancedAnalytics() {
             {/* Filters */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Filter className="h-5 w-5" />
-                        Filters
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                            <Filter className="h-5 w-5" />
+                            Filters
+                        </CardTitle>
+                        <Button 
+                            onClick={exportReport} 
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Export Report
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-4">
+                        {/* Quick Filters */}
                         <div>
-                            <Label>Start Date</Label>
-                            <Input
-                                type="date"
-                                value={dateRange.start}
-                                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                            />
+                            <Label className="mb-2 block">Quick Filter</Label>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={quickFilter === 'week' ? 'default' : 'outline'}
+                                    onClick={() => applyQuickFilter('week')}
+                                    size="sm"
+                                >
+                                    Last 7 Days
+                                </Button>
+                                <Button
+                                    variant={quickFilter === 'month' ? 'default' : 'outline'}
+                                    onClick={() => applyQuickFilter('month')}
+                                    size="sm"
+                                >
+                                    Last 30 Days
+                                </Button>
+                                <Button
+                                    variant={quickFilter === 'year' ? 'default' : 'outline'}
+                                    onClick={() => applyQuickFilter('year')}
+                                    size="sm"
+                                >
+                                    Last Year
+                                </Button>
+                                <Button
+                                    variant={quickFilter === 'custom' ? 'default' : 'outline'}
+                                    onClick={() => setQuickFilter('custom')}
+                                    size="sm"
+                                >
+                                    Custom Range
+                                </Button>
+                            </div>
                         </div>
-                        <div>
-                            <Label>End Date</Label>
-                            <Input
-                                type="date"
-                                value={dateRange.end}
-                                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <Label>Restaurant</Label>
-                            <select
-                                value={selectedRestaurant}
-                                onChange={(e) => setSelectedRestaurant(e.target.value)}
-                                className="w-full h-10 px-3 border rounded-md"
-                            >
-                                <option value="all">All Restaurants</option>
-                                {restaurants.map(r => (
-                                    <option key={r.id} value={r.id}>{r.name}</option>
-                                ))}
-                            </select>
+
+                        {/* Date Range */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label>Start Date</Label>
+                                <Input
+                                    type="date"
+                                    value={dateRange.start}
+                                    onChange={(e) => {
+                                        setQuickFilter('custom');
+                                        setDateRange({ ...dateRange, start: e.target.value });
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <Label>End Date</Label>
+                                <Input
+                                    type="date"
+                                    value={dateRange.end}
+                                    onChange={(e) => {
+                                        setQuickFilter('custom');
+                                        setDateRange({ ...dateRange, end: e.target.value });
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <Label>Restaurant</Label>
+                                <select
+                                    value={selectedRestaurant}
+                                    onChange={(e) => setSelectedRestaurant(e.target.value)}
+                                    className="w-full h-10 px-3 border rounded-md"
+                                >
+                                    <option value="all">All Restaurants</option>
+                                    {restaurants.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
