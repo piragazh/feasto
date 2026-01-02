@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 
 export default function Layout({ children, currentPageName }) {
     const location = useLocation();
@@ -227,7 +228,10 @@ export default function Layout({ children, currentPageName }) {
 
             <main className="min-h-screen">{children}</main>
 
-            {/* Mobile Bottom Navigation */}
+                {/* AI Chatbot Widget */}
+                <ChatbotWidget />
+
+                {/* Mobile Bottom Navigation */}
             {showBottomNav && (
                 <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-bottom">
                     <div className="flex items-center justify-around h-16 px-2">
