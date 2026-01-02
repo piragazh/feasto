@@ -16,6 +16,11 @@ import GroupOrderSection from '@/components/checkout/GroupOrderSection';
 import LocationPicker from '@/components/location/LocationPicker';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import StripePaymentForm from '@/components/checkout/StripePaymentForm';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
 export default function Checkout() {
     const navigate = useNavigate();
@@ -32,6 +37,8 @@ export default function Checkout() {
     const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
     const [zoneCheckComplete, setZoneCheckComplete] = useState(false);
     const [restaurant, setRestaurant] = useState(null);
+    const [clientSecret, setClientSecret] = useState('');
+    const [showStripeForm, setShowStripeForm] = useState(false);
     
     const [formData, setFormData] = useState({
         delivery_address: '',
@@ -102,6 +109,36 @@ export default function Checkout() {
             return;
         }
 
+        // If card payment, create payment intent and show Stripe form
+        if (paymentMethod === 'card') {
+            setIsSubmitting(true);
+            try {
+                const response = await base44.functions.invoke('createPaymentIntent', {
+                    amount: total,
+                    currency: 'gbp',
+                    metadata: {
+                        restaurant_id: restaurantId,
+                        restaurant_name: restaurantName
+                    }
+                });
+
+                if (response.data.clientSecret) {
+                    setClientSecret(response.data.clientSecret);
+                    setShowStripeForm(true);
+                }
+            } catch (error) {
+                toast.error('Failed to initialize payment. Please try again.');
+            } finally {
+                setIsSubmitting(false);
+            }
+            return;
+        }
+
+        // For cash and other methods, proceed with regular order creation
+        await createOrder();
+    };
+
+    const createOrder = async (paymentIntentId = null) => {
         setIsSubmitting(true);
 
         try {
@@ -124,7 +161,8 @@ export default function Checkout() {
                 is_scheduled: isScheduled,
                 scheduled_for: isScheduled ? scheduledFor : null,
                 is_group_order: !!groupOrderId,
-                group_order_id: groupOrderId
+                group_order_id: groupOrderId,
+                payment_intent_id: paymentIntentId
             };
 
             await base44.entities.Order.create(orderData);
@@ -154,6 +192,17 @@ export default function Checkout() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleStripeSuccess = async (paymentIntentId) => {
+        toast.success('Payment successful!');
+        await createOrder(paymentIntentId);
+    };
+
+    const handleStripeError = (errorMessage) => {
+        toast.error(errorMessage || 'Payment failed. Please try again.');
+        setShowStripeForm(false);
+        setClientSecret('');
     };
 
     if (orderPlaced) {
@@ -322,20 +371,37 @@ export default function Checkout() {
                                 onMethodChange={setPaymentMethod}
                             />
 
-                            <Button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                        Placing Order...
-                                    </>
-                                ) : (
-                                    `Place Order • £${total.toFixed(2)}`
-                                )}
-                            </Button>
+                            {showStripeForm && clientSecret && paymentMethod === 'card' ? (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Payment Details</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Elements stripe={stripePromise} options={{ clientSecret }}>
+                                            <StripePaymentForm
+                                                amount={total}
+                                                onSuccess={handleStripeSuccess}
+                                                onError={handleStripeError}
+                                            />
+                                        </Elements>
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                            {paymentMethod === 'card' ? 'Initializing Payment...' : 'Placing Order...'}
+                                        </>
+                                    ) : (
+                                        `Place Order • £${total.toFixed(2)}`
+                                    )}
+                                </Button>
+                            )}
                         </form>
                     </div>
 
