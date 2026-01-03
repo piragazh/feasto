@@ -13,8 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Percent, DollarSign, Calendar, Trash2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { createPageUrl } from '@/utils';
+import { useEffect } from 'react';
 
 export default function ManageCoupons() {
+    const [isChecking, setIsChecking] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCoupon, setEditingCoupon] = useState(null);
     const [formData, setFormData] = useState({
@@ -31,6 +34,33 @@ export default function ManageCoupons() {
     });
 
     const queryClient = useQueryClient();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const user = await base44.auth.me();
+                if (!user || user.role !== 'admin') {
+                    base44.auth.redirectToLogin();
+                    return;
+                }
+                setIsChecking(false);
+            } catch (e) {
+                base44.auth.redirectToLogin();
+            }
+        };
+        checkAuth();
+    }, []);
+
+    if (isChecking) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking access...</p>
+                </div>
+            </div>
+        );
+    }
 
     const { data: coupons = [], isLoading } = useQuery({
         queryKey: ['coupons'],
