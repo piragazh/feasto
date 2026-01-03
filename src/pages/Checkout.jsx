@@ -1,167 +1,239 @@
+// ============================================
+// CHECKOUT PAGE - Handles order placement and payment
+// ============================================
+// This page manages the entire checkout process including:
+// - Guest and authenticated user checkout
+// - Address and contact information collection
+// - Payment method selection (Cash, Card via Stripe)
+// - Order validation and submission
+// - Delivery zone checking
+
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useNavigate, Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
-import { calculateDeliveryDetails } from '@/components/checkout/DeliveryZoneCalculator';
-import { Button } from "@/components/ui/button";
+import { base44 } from '@/api/base44Client'; // SDK to interact with backend
+import { useNavigate, Link } from 'react-router-dom'; // Navigation tools
+import { createPageUrl } from '@/utils'; // Helper to create page URLs
+import { calculateDeliveryDetails } from '@/components/checkout/DeliveryZoneCalculator'; // Check delivery zones
+import { Button } from "@/components/ui/button"; // UI Components
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react';
-import CouponInput from '@/components/checkout/CouponInput';
-import PaymentMethods from '@/components/checkout/PaymentMethods';
-import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection';
-import GroupOrderSection from '@/components/checkout/GroupOrderSection';
-import LocationPicker from '@/components/location/LocationPicker';
-import { motion } from 'framer-motion';
-import { toast } from 'sonner';
-import { loadStripe } from '@stripe/stripe-js';
+import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react'; // Icons
+import CouponInput from '@/components/checkout/CouponInput'; // Coupon application component
+import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
+import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection'; // Schedule future orders
+import GroupOrderSection from '@/components/checkout/GroupOrderSection'; // Group order functionality
+import LocationPicker from '@/components/location/LocationPicker'; // Address autocomplete
+import { motion } from 'framer-motion'; // Animations
+import { toast } from 'sonner'; // Toast notifications
+import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 
+// Initialize Stripe with public key from environment variables
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
+// Main Checkout Component
 export default function Checkout() {
-    const navigate = useNavigate();
-    const [cart, setCart] = useState([]);
-    const [restaurantId, setRestaurantId] = useState(null);
-    const [restaurantName, setRestaurantName] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [orderPlaced, setOrderPlaced] = useState(false);
-    const [appliedCoupon, setAppliedCoupon] = useState(null);
-    const [isScheduled, setIsScheduled] = useState(false);
-    const [scheduledFor, setScheduledFor] = useState('');
-    const [groupOrderId, setGroupOrderId] = useState(null);
-    const [shareCode, setShareCode] = useState(null);
-    const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
-    const [zoneCheckComplete, setZoneCheckComplete] = useState(false);
-    const [restaurant, setRestaurant] = useState(null);
-    const [clientSecret, setClientSecret] = useState('');
-    const [showStripeForm, setShowStripeForm] = useState(false);
+    const navigate = useNavigate(); // Used to redirect after order placement
     
+    // ============================================
+    // STATE MANAGEMENT - Storing component data
+    // ============================================
+    
+    // Cart and Restaurant Information
+    const [cart, setCart] = useState([]); // Items in shopping cart
+    const [restaurantId, setRestaurantId] = useState(null); // ID of restaurant being ordered from
+    const [restaurantName, setRestaurantName] = useState(''); // Name of restaurant
+    const [restaurant, setRestaurant] = useState(null); // Full restaurant object
+    
+    // Order Status
+    const [isSubmitting, setIsSubmitting] = useState(false); // True when submitting order
+    const [orderPlaced, setOrderPlaced] = useState(false); // True when order successfully placed
+    
+    // Discounts and Special Orders
+    const [appliedCoupon, setAppliedCoupon] = useState(null); // Applied coupon details
+    const [isScheduled, setIsScheduled] = useState(false); // Is this a scheduled order?
+    const [scheduledFor, setScheduledFor] = useState(''); // When to deliver (if scheduled)
+    const [groupOrderId, setGroupOrderId] = useState(null); // Group order session ID
+    const [shareCode, setShareCode] = useState(null); // Code to share group order
+    
+    // Delivery Zone Information
+    const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null); // Delivery availability and fees
+    const [zoneCheckComplete, setZoneCheckComplete] = useState(false); // Has zone check finished?
+    
+    // Payment Processing (Stripe)
+    const [clientSecret, setClientSecret] = useState(''); // Stripe payment intent secret
+    const [showStripeForm, setShowStripeForm] = useState(false); // Show Stripe card form?
+    const [paymentMethod, setPaymentMethod] = useState('cash'); // Selected payment method
+    
+    // Form Data - Customer Information
     const [formData, setFormData] = useState({
-        guest_name: '',
-        guest_email: '',
-        door_number: '',
-        delivery_address: '',
-        phone: '',
-        notes: ''
+        guest_name: '', // Name (for guest checkout)
+        guest_email: '', // Email (for guest checkout)
+        door_number: '', // Door/flat number
+        delivery_address: '', // Street address
+        phone: '', // Contact phone number
+        notes: '' // Special delivery instructions
     });
-    const [deliveryCoordinates, setDeliveryCoordinates] = useState(null);
-    const [paymentMethod, setPaymentMethod] = useState('cash');
-    const [isGuest, setIsGuest] = useState(false);
+    const [deliveryCoordinates, setDeliveryCoordinates] = useState(null); // GPS coordinates for delivery
+    
+    // User Authentication Status
+    const [isGuest, setIsGuest] = useState(false); // Is user checking out as guest?
 
+    // ============================================
+    // INITIALIZATION - Runs when page loads
+    // ============================================
     useEffect(() => {
+        // Check if user is logged in or guest
         checkAuthStatus();
-        const savedCart = localStorage.getItem('cart');
-        const savedRestaurantId = localStorage.getItem('cartRestaurantId');
-        const savedRestaurantName = localStorage.getItem('cartRestaurantName');
-        const savedGroupOrderId = localStorage.getItem('groupOrderId');
-        const savedAddress = localStorage.getItem('userAddress');
-        const savedCoords = localStorage.getItem('userCoordinates');
         
+        // Load saved data from browser storage (localStorage)
+        const savedCart = localStorage.getItem('cart'); // Shopping cart items
+        const savedRestaurantId = localStorage.getItem('cartRestaurantId'); // Restaurant ID
+        const savedRestaurantName = localStorage.getItem('cartRestaurantName'); // Restaurant name
+        const savedGroupOrderId = localStorage.getItem('groupOrderId'); // Group order session
+        const savedAddress = localStorage.getItem('userAddress'); // Previously used address
+        const savedCoords = localStorage.getItem('userCoordinates'); // Address GPS coordinates
+        
+        // Restore cart if items exist
         if (savedCart) {
-            setCart(JSON.parse(savedCart));
+            setCart(JSON.parse(savedCart)); // Convert JSON string back to array
         }
+        
+        // Restore restaurant info
         if (savedRestaurantId) {
             setRestaurantId(savedRestaurantId);
-            loadRestaurantName(savedRestaurantId);
+            loadRestaurantName(savedRestaurantId); // Fetch full restaurant details
         }
+        
+        // Restore group order session
         if (savedGroupOrderId) {
             setGroupOrderId(savedGroupOrderId);
         }
+        
+        // Restore previously entered address
         if (savedAddress) {
             setFormData(prev => ({ ...prev, delivery_address: savedAddress }));
         }
+        
+        // Restore address coordinates
         if (savedCoords) {
             setDeliveryCoordinates(JSON.parse(savedCoords));
         }
-    }, []);
+    }, []); // Empty array means this runs once when component mounts
 
+    // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
         try {
             const authenticated = await base44.auth.isAuthenticated();
-            setIsGuest(!authenticated);
+            setIsGuest(!authenticated); // If not authenticated, they're a guest
         } catch (e) {
-            setIsGuest(true);
+            setIsGuest(true); // On error, assume guest
         }
     };
 
+    // Fetch restaurant details from database
     const loadRestaurantName = async (id) => {
         try {
+            // Query database for restaurant with matching ID
             const restaurants = await base44.entities.Restaurant.filter({ id });
             if (restaurants[0]) {
-                setRestaurantName(restaurants[0].name);
-                setRestaurant(restaurants[0]);
+                setRestaurantName(restaurants[0].name); // Store name
+                setRestaurant(restaurants[0]); // Store full restaurant object
             }
         } catch (e) {
-            console.error(e);
+            console.error(e); // Log any errors
         }
     };
 
+    // ============================================
+    // PRICE CALCULATIONS
+    // ============================================
+    
+    // Calculate subtotal: sum of all item prices × quantities
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Delivery fee: use zone-specific fee, or restaurant default, or £2.99
     const deliveryFee = deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99;
+    
+    // Discount from applied coupon (if any)
     const discount = appliedCoupon?.discount || 0;
+    
+    // Final total = subtotal + delivery - discount
     const total = subtotal + deliveryFee - discount;
 
+    // ============================================
+    // FORM SUBMISSION - When user clicks "Place Order"
+    // ============================================
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevent page reload
         
-        // Validate required fields
+        // ---- VALIDATION: Check Required Fields ----
+        
+        // For guest users, name and email are required
         if (isGuest && (!formData.guest_name || !formData.guest_email)) {
             toast.error('Please provide your name and email');
-            return;
+            return; // Stop submission
         }
         
+        // Door number, address, and phone are always required
         if (!formData.door_number || !formData.delivery_address || !formData.phone) {
             toast.error('Please fill in all required fields');
             return;
         }
 
-        // Validate UK phone number
+        // ---- VALIDATION: UK Phone Number Format ----
+        // Pattern matches: 07123456789, 07123 456789, +44 7123 456789
         const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
         if (!ukPhoneRegex.test(formData.phone.replace(/\s/g, ''))) {
             toast.error('Please enter a valid UK phone number');
             return;
         }
 
+        // ---- VALIDATION: Delivery Zone ----
+        // Check if delivery is available to this address
         if (deliveryZoneInfo && !deliveryZoneInfo.available) {
             toast.error('Delivery is not available to your location');
             return;
         }
 
+        // Check if order meets minimum value for delivery zone
         if (deliveryZoneInfo?.minOrderValue && subtotal < deliveryZoneInfo.minOrderValue) {
             toast.error(`Minimum order value for this area is £${deliveryZoneInfo.minOrderValue.toFixed(2)}`);
             return;
         }
 
-        // If card payment, create payment intent and show Stripe form
+        // ---- PAYMENT PROCESSING ----
+        
+        // For CARD payments: Initialize Stripe payment flow
         if (paymentMethod === 'card') {
-            setIsSubmitting(true);
+            setIsSubmitting(true); // Show loading state
             try {
+                // Call backend function to create Stripe payment intent
                 const response = await base44.functions.invoke('createPaymentIntent', {
-                    amount: total,
-                    currency: 'gbp',
+                    amount: total, // Total amount in pounds
+                    currency: 'gbp', // British Pounds
                     metadata: {
                         restaurant_id: restaurantId,
                         restaurant_name: restaurantName
                     }
                 });
 
+                // If successful, show Stripe payment form
                 if (response.data.clientSecret) {
-                    setClientSecret(response.data.clientSecret);
-                    setShowStripeForm(true);
+                    setClientSecret(response.data.clientSecret); // Store secret for Stripe
+                    setShowStripeForm(true); // Display card input form
                 }
             } catch (error) {
                 toast.error('Failed to initialize payment. Please try again.');
             } finally {
-                setIsSubmitting(false);
+                setIsSubmitting(false); // Hide loading state
             }
-            return;
+            return; // Stop here, wait for card payment
         }
 
-        // For cash and other methods, proceed with regular order creation
+        // For CASH and other methods: Create order immediately
         await createOrder();
     };
 

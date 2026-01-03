@@ -1,30 +1,53 @@
+// ============================================
+// AI CHATBOT BACKEND FUNCTION
+// ============================================
+// This function processes customer queries using AI and provides
+// intelligent responses about orders, restaurants, and policies.
+// It can automatically escalate complex issues to human support.
+
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Main function handler - Deno processes incoming HTTP requests
 Deno.serve(async (req) => {
     try {
+        // ---- AUTHENTICATION ----
+        // Create SDK client from the incoming request (includes user token)
         const base44 = createClientFromRequest(req);
+        
+        // Get the authenticated user making the request
         const user = await base44.auth.me();
 
+        // If no user is logged in, return error
         if (!user) {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // ---- PARSE REQUEST DATA ----
+        // Extract the message and conversation history from request body
         const { message, conversationHistory = [] } = await req.json();
 
+        // Validate that a message was provided
         if (!message) {
             return Response.json({ error: 'Message is required' }, { status: 400 });
         }
 
-        // Fetch user's recent orders
-        const orders = await base44.entities.Order.filter({ created_by: user.email }, '-created_date', 10);
+        // ---- FETCH USER CONTEXT ----
+        // Get user's recent orders to provide personalized responses
+        // Parameters: filter, sort order, limit
+        const orders = await base44.entities.Order.filter(
+            { created_by: user.email }, // Only this user's orders
+            '-created_date', // Sort by newest first (- means descending)
+            10 // Limit to 10 most recent orders
+        );
         
-        // Fetch restaurants for context
-        const restaurantIds = [...new Set(orders.map(o => o.restaurant_id))];
+        // Get restaurant information for the user's orders
+        const restaurantIds = [...new Set(orders.map(o => o.restaurant_id))]; // Unique restaurant IDs
         const restaurants = restaurantIds.length > 0 
-            ? await base44.entities.Restaurant.filter({ id: { $in: restaurantIds } })
-            : [];
+            ? await base44.entities.Restaurant.filter({ id: { $in: restaurantIds } }) // Fetch matching restaurants
+            : []; // Empty array if no orders
 
-        // Build context for the AI
+        // ---- BUILD AI CONTEXT ----
+        // Create a comprehensive prompt for the AI with user data and policies
         const systemPrompt = `You are a helpful customer support chatbot for MealDrop, a food delivery platform.
 
 Your capabilities:

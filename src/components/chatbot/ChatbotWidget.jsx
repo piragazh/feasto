@@ -1,85 +1,141 @@
+// ============================================
+// AI CHATBOT WIDGET - Floating chat interface
+// ============================================
+// This component provides a popup chat window where users can:
+// - Ask questions and get AI-powered responses
+// - Get help with orders, deliveries, and policies
+// - Escalate complex issues to human support
+
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Button } from "@/components/ui/button";
+import { base44 } from '@/api/base44Client'; // SDK to call backend
+import { Button } from "@/components/ui/button"; // UI Components
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, X, Send, Loader2, User, Bot, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import EscalationDialog from './EscalationDialog';
+import { MessageCircle, X, Send, Loader2, User, Bot, AlertCircle } from 'lucide-react'; // Icons
+import { motion, AnimatePresence } from 'framer-motion'; // Animations
+import { toast } from 'sonner'; // Notifications
+import EscalationDialog from './EscalationDialog'; // Popup for creating support tickets
 
 export default function ChatbotWidget() {
-    const [isOpen, setIsOpen] = useState(false);
+    // ============================================
+    // STATE MANAGEMENT
+    // ============================================
+    
+    // Chat window visibility
+    const [isOpen, setIsOpen] = useState(false); // Is chat popup open?
+    
+    // Conversation messages array
     const [messages, setMessages] = useState([
         {
-            role: 'assistant',
+            role: 'assistant', // Message from bot
             content: 'Hi! I\'m your MealDrop assistant. How can I help you today? I can answer questions about your orders, delivery times, restaurant hours, and refund policies.',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString() // When message was sent
         }
     ]);
-    const [inputMessage, setInputMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [showEscalation, setShowEscalation] = useState(false);
+    
+    // User input
+    const [inputMessage, setInputMessage] = useState(''); // Text being typed
+    
+    // Loading states
+    const [isLoading, setIsLoading] = useState(false); // Waiting for AI response?
+    
+    // Escalation to human support
+    const [showEscalation, setShowEscalation] = useState(false); // Show escalation dialog?
+    
+    // Reference to scroll to bottom of messages
     const messagesEndRef = useRef(null);
 
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Scroll chat to show latest message
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Auto-scroll when new messages arrive
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [messages]); // Runs whenever messages array changes
 
+    // ============================================
+    // SEND MESSAGE TO AI
+    // ============================================
     const handleSendMessage = async () => {
+        // Don't send if empty or already loading
         if (!inputMessage.trim() || isLoading) return;
 
+        // Create user message object
         const userMessage = {
-            role: 'user',
-            content: inputMessage,
+            role: 'user', // Message from customer
+            content: inputMessage, // Text they typed
             timestamp: new Date().toISOString()
         };
 
+        // Add user message to chat
         setMessages(prev => [...prev, userMessage]);
+        
+        // Clear input field
         setInputMessage('');
+        
+        // Show loading indicator
         setIsLoading(true);
 
         try {
+            // ---- CALL BACKEND FUNCTION ----
+            // Send message to AI chatbot backend
             const response = await base44.functions.invoke('chatbotQuery', {
-                message: inputMessage,
-                conversationHistory: messages
+                message: inputMessage, // Current message
+                conversationHistory: messages // Previous conversation
             });
 
+            // ---- PROCESS AI RESPONSE ----
+            // Create bot message object
             const botMessage = {
-                role: 'assistant',
-                content: response.data.response,
+                role: 'assistant', // Message from AI
+                content: response.data.response, // AI's answer
                 timestamp: response.data.timestamp,
-                needsEscalation: response.data.needsEscalation
+                needsEscalation: response.data.needsEscalation // Does this need human help?
             };
 
+            // Add bot response to chat
             setMessages(prev => [...prev, botMessage]);
 
+            // ---- CHECK FOR ESCALATION ----
+            // If AI says human support needed, show escalation dialog
             if (response.data.needsEscalation) {
                 setTimeout(() => {
-                    setShowEscalation(true);
-                }, 1000);
+                    setShowEscalation(true); // Open support ticket form
+                }, 1000); // Wait 1 second before showing
             }
         } catch (error) {
+            // ---- ERROR HANDLING ----
             toast.error('Failed to send message. Please try again.');
+            
+            // Show error message in chat
             const errorMessage = {
                 role: 'assistant',
                 content: 'I\'m having trouble connecting right now. Please try again or contact support directly.',
                 timestamp: new Date().toISOString(),
-                isError: true
+                isError: true // Flag as error for styling
             };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
+            // Hide loading indicator (runs whether success or error)
             setIsLoading(false);
         }
     };
 
+    // ============================================
+    // AFTER ESCALATION COMPLETE
+    // ============================================
     const handleEscalationComplete = () => {
+        // Close escalation dialog
         setShowEscalation(false);
+        
+        // Add confirmation message to chat
         const confirmMessage = {
             role: 'assistant',
             content: 'Your issue has been escalated to our support team. They\'ll get back to you shortly via email. Is there anything else I can help with?',
@@ -88,6 +144,10 @@ export default function ChatbotWidget() {
         setMessages(prev => [...prev, confirmMessage]);
     };
 
+    // ============================================
+    // QUICK QUESTION BUTTONS
+    // ============================================
+    // Pre-written questions users can click for instant answers
     const quickQuestions = [
         'Where is my order?',
         'How long until delivery?',
