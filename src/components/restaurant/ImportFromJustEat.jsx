@@ -54,19 +54,57 @@ export default function ImportFromJustEat({ restaurantId }) {
 
         setIsExtracting(true);
         try {
-            const response = await base44.functions.invoke('scrapeJustEat', { url });
+            const response = await base44.integrations.Core.InvokeLLM({
+                prompt: `Extract ALL menu items from this Just Eat restaurant page: ${url}
 
-            if (response.data.success && response.data.items && response.data.items.length > 0) {
-                const items = response.data.items;
-                setExtractedItems(items);
-                setSelectedItems(items.map((_, idx) => idx));
-                toast.success(`Successfully extracted ${items.length} menu items!`);
+Return a JSON object with an "items" array. Each item must have:
+- name: dish name (string)
+- description: description if available, otherwise empty string (string)
+- price: numeric price value only, no currency symbols (number)
+- category: menu section like "Starters", "Mains", "Pizza", etc. (string)
+- image_url: image URL if available, otherwise empty string (string)
+
+Make sure to extract EVERY menu item from ALL categories on the page.`,
+                add_context_from_internet: true,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        items: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    name: { type: "string" },
+                                    description: { type: "string" },
+                                    price: { type: "number" },
+                                    category: { type: "string" },
+                                    image_url: { type: "string" }
+                                },
+                                required: ["name", "price", "category"]
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (response.items && response.items.length > 0) {
+                const validItems = response.items.filter(item => 
+                    item.name && item.price > 0 && item.category
+                );
+                
+                if (validItems.length > 0) {
+                    setExtractedItems(validItems);
+                    setSelectedItems(validItems.map((_, idx) => idx));
+                    toast.success(`Extracted ${validItems.length} menu items!`);
+                } else {
+                    toast.error('No valid items found. Please try a different URL.');
+                }
             } else {
-                toast.error(response.data.error || 'No menu items found. Please check the URL and try again.');
+                toast.error('No menu items found. Make sure the URL is a Just Eat restaurant menu page.');
             }
         } catch (error) {
             console.error('Extraction error:', error);
-            toast.error('Failed to extract menu. Please verify the URL is a Just Eat restaurant menu page and try again.');
+            toast.error('Failed to extract menu. Please try again.');
         } finally {
             setIsExtracting(false);
         }
