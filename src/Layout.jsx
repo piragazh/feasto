@@ -76,9 +76,11 @@ export default function Layout({ children, currentPageName }) {
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
                             <Link to={createPageUrl('Home')} className="flex items-center gap-2">
-                                <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                                    <span className="text-white font-bold text-base md:text-lg">M</span>
-                                </div>
+                                <img 
+                                    src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&h=100&fit=crop" 
+                                    alt="MealDrop Logo" 
+                                    className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
+                                />
                                 <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">MealDrop</span>
                             </Link>
 
