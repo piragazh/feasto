@@ -73,12 +73,15 @@ export default function Restaurant() {
         enabled: !!restaurantId,
     });
 
-    const categories = ['all', ...new Set(menuItems.map(item => item.category).filter(Boolean))];
+    const categories = React.useMemo(() => {
+        const cats = [...new Set(menuItems.map(item => item.category).filter(Boolean))].sort();
+        return cats;
+    }, [menuItems]);
 
-    const filteredItems = React.useMemo(() => {
-        let items = activeCategory === 'all' 
-            ? menuItems 
-            : menuItems.filter(item => item.category === activeCategory);
+    const categoryRefs = React.useRef({});
+
+    const itemsByCategory = React.useMemo(() => {
+        let items = menuItems;
         
         if (menuSearchQuery) {
             items = items.filter(item => 
@@ -87,8 +90,29 @@ export default function Restaurant() {
             );
         }
         
-        return items;
-    }, [menuItems, activeCategory, menuSearchQuery]);
+        const grouped = {};
+        items.forEach(item => {
+            const cat = item.category || 'Other';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(item);
+        });
+        
+        return grouped;
+    }, [menuItems, menuSearchQuery]);
+
+    const scrollToCategory = (category) => {
+        const element = categoryRefs.current[category];
+        if (element) {
+            const offset = 180;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
+            
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     const handleItemClick = (item) => {
         // If item has customizations, open modal; otherwise add directly
@@ -437,20 +461,20 @@ export default function Restaurant() {
                     />
                 </div>
 
-                {categories.length > 1 && (
-                    <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-6">
-                        <TabsList className="bg-gray-100 p-1 h-auto flex-wrap">
+                {categories.length > 0 && (
+                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[136px] z-10 shadow-sm">
+                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                             {categories.map(cat => (
-                                <TabsTrigger
+                                <button
                                     key={cat}
-                                    value={cat}
-                                    className="capitalize data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                                    onClick={() => scrollToCategory(cat)}
+                                    className="px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all hover:bg-orange-50 hover:text-orange-600 bg-gray-100 text-gray-700"
                                 >
                                     {cat}
-                                </TabsTrigger>
+                                </button>
                             ))}
-                        </TabsList>
-                    </Tabs>
+                        </div>
+                    </div>
                 )}
 
                 {menuLoading ? (
@@ -459,14 +483,27 @@ export default function Restaurant() {
                             <Skeleton key={i} className="h-32 w-full rounded-2xl" />
                         ))}
                     </div>
-                ) : filteredItems.length === 0 ? (
+                ) : Object.keys(itemsByCategory).length === 0 ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-500">No items in this category</p>
+                        <p className="text-gray-500">No items found</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        {filteredItems.map(item => (
-                            <MenuItemCard key={item.id} item={item} onAddToCart={handleItemClick} />
+                    <div className="space-y-12">
+                        {Object.entries(itemsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, items]) => (
+                            <div 
+                                key={category} 
+                                ref={el => categoryRefs.current[category] = el}
+                                className="scroll-mt-48"
+                            >
+                                <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize sticky top-[200px] bg-gray-50 py-2 z-[5]">
+                                    {category}
+                                </h3>
+                                <div className="space-y-4">
+                                    {items.map(item => (
+                                        <MenuItemCard key={item.id} item={item} onAddToCart={handleItemClick} />
+                                    ))}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}
