@@ -14,7 +14,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const [isChecking, setIsChecking] = useState(true);
+    const [isAuthorized, setIsAuthorized] = useState(false);
 
     // Check authentication and admin role
     useEffect(() => {
@@ -23,17 +23,17 @@ export default function AdminDashboard() {
                 const user = await base44.auth.me();
                 if (!user || user.role !== 'admin') {
                     base44.auth.redirectToLogin(window.location.pathname);
+                    return;
                 }
+                setIsAuthorized(true);
             } catch (e) {
                 base44.auth.redirectToLogin(window.location.pathname);
-            } finally {
-                setIsChecking(false);
             }
         };
         checkAuth();
     }, []);
 
-    if (isChecking) {
+    if (!isAuthorized) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
