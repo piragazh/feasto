@@ -24,6 +24,18 @@ export default function ManageRestaurantManagers() {
 
     const queryClient = useQueryClient();
 
+    const { data: managers = [], isLoading } = useQuery({
+        queryKey: ['restaurant-managers'],
+        queryFn: () => base44.entities.RestaurantManager.list(),
+        enabled: !isChecking,
+    });
+
+    const { data: restaurants = [] } = useQuery({
+        queryKey: ['all-restaurants'],
+        queryFn: () => base44.entities.Restaurant.list(),
+        enabled: !isChecking,
+    });
+
     // Check authentication and admin role
     useEffect(() => {
         const checkAuth = async () => {
@@ -51,16 +63,6 @@ export default function ManageRestaurantManagers() {
             </div>
         );
     }
-
-    const { data: managers = [], isLoading } = useQuery({
-        queryKey: ['restaurant-managers'],
-        queryFn: () => base44.entities.RestaurantManager.list(),
-    });
-
-    const { data: restaurants = [] } = useQuery({
-        queryKey: ['all-restaurants'],
-        queryFn: () => base44.entities.Restaurant.list(),
-    });
 
     const createManagerMutation = useMutation({
         mutationFn: async (data) => {
