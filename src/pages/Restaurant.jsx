@@ -104,7 +104,8 @@ export default function Restaurant() {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
-            const offset = 240;
+            const isMobile = window.innerWidth < 768;
+            const offset = isMobile ? 140 : 140;
             const elementPosition = element.getBoundingClientRect().top;
             const offsetPosition = elementPosition + window.pageYOffset - offset;
             
@@ -118,7 +119,7 @@ export default function Restaurant() {
     // Scroll spy - update active category based on scroll position
     useEffect(() => {
         const handleScroll = () => {
-            const scrollPosition = window.scrollY + 250;
+            const scrollPosition = window.scrollY + 180;
             
             for (const category of Object.keys(categoryRefs.current).sort()) {
                 const element = categoryRefs.current[category];
@@ -519,12 +520,13 @@ export default function Restaurant() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {Object.entries(itemsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, items]) => (
+                        {Object.entries(itemsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, items], index) => (
                             <div 
                                 key={category} 
                                 ref={el => categoryRefs.current[category] = el}
+                                className={index === 0 ? 'pt-2' : ''}
                             >
-                                <h3 className="text-2xl font-bold text-gray-900 mb-6 capitalize pb-3 border-b pt-2">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-6 capitalize pb-3 border-b">
                                     {category}
                                 </h3>
                                 <div className="space-y-4">
