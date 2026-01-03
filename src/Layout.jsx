@@ -77,7 +77,7 @@ export default function Layout({ children, currentPageName }) {
                         <div className="flex items-center justify-between h-14 md:h-16">
                             <Link to={createPageUrl('Home')} className="flex items-center gap-2">
                                 <img 
-                                    src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&h=100&fit=crop" 
+                                    src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/mhghgy-project-page-1_cqsozw.png?w=100&h=100&fit=crop" 
                                     alt="MealDrop Logo" 
                                     className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
                                 />
