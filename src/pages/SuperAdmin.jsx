@@ -19,22 +19,30 @@ import { createPageUrl } from '@/utils';
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
 
-    const { data: user } = useQuery({
+    const { data: user, isLoading } = useQuery({
         queryKey: ['current-user'],
-        queryFn: () => base44.auth.me(),
+        queryFn: async () => {
+            try {
+                const userData = await base44.auth.me();
+                if (!userData || userData.role !== 'admin') {
+                    base44.auth.redirectToLogin();
+                    return null;
+                }
+                return userData;
+            } catch (error) {
+                base44.auth.redirectToLogin();
+                return null;
+            }
+        },
     });
 
-    // Check if user is admin
-    if (user && user.role !== 'admin') {
+    if (isLoading || !user) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <Card className="max-w-md w-full">
-                    <CardContent className="py-12 text-center">
-                        <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-                        <p className="text-gray-600">You don't have permission to access this page.</p>
-                    </CardContent>
-                </Card>
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking access...</p>
+                </div>
             </div>
         );
     }
