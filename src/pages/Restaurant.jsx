@@ -101,6 +101,8 @@ export default function Restaurant() {
         return grouped;
     }, [menuItems, menuSearchQuery]);
 
+    const categoryNavRef = React.useRef(null);
+
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
@@ -110,6 +112,20 @@ export default function Restaurant() {
             });
         }
     };
+
+    // Auto-scroll category nav to show active category
+    useEffect(() => {
+        if (activeCategoryScroll && categoryNavRef.current) {
+            const activeButton = categoryNavRef.current.querySelector(`[data-category="${activeCategoryScroll}"]`);
+            if (activeButton) {
+                activeButton.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest',
+                    inline: 'center'
+                });
+            }
+        }
+    }, [activeCategoryScroll]);
 
     // Scroll spy - update active category based on scroll position
     useEffect(() => {
@@ -485,12 +501,20 @@ export default function Restaurant() {
 
                 {categories.length > 0 && (
                     <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[56px] md:top-[64px] z-20 shadow-md">
-                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+                        <div 
+                            ref={categoryNavRef}
+                            className="flex items-center gap-2 overflow-x-auto pb-1"
+                            style={{
+                                scrollbarWidth: 'thin',
+                                scrollbarColor: '#f97316 #f3f4f6'
+                            }}
+                        >
                             {categories.map(cat => (
                                 <button
                                     key={cat}
+                                    data-category={cat}
                                     onClick={() => scrollToCategory(cat)}
-                                    className={`px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all ${
+                                    className={`px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all flex-shrink-0 ${
                                         activeCategoryScroll === cat
                                             ? 'bg-orange-500 text-white shadow-sm'
                                             : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-600'
