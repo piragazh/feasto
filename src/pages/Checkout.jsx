@@ -46,6 +46,7 @@ export default function Checkout() {
     const [restaurantId, setRestaurantId] = useState(null); // ID of restaurant being ordered from
     const [restaurantName, setRestaurantName] = useState(''); // Name of restaurant
     const [restaurant, setRestaurant] = useState(null); // Full restaurant object
+    const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
     
     // Order Status
     const [isSubmitting, setIsSubmitting] = useState(false); // True when submitting order
@@ -95,6 +96,7 @@ export default function Checkout() {
         const savedGroupOrderId = localStorage.getItem('groupOrderId'); // Group order session
         const savedAddress = localStorage.getItem('userAddress'); // Previously used address
         const savedCoords = localStorage.getItem('userCoordinates'); // Address GPS coordinates
+        const savedOrderType = localStorage.getItem('orderType') || 'delivery'; // Order type
         
         // Restore cart if items exist
         if (savedCart) {
@@ -121,6 +123,9 @@ export default function Checkout() {
         if (savedCoords) {
             setDeliveryCoordinates(JSON.parse(savedCoords));
         }
+
+        // Restore order type
+        setOrderType(savedOrderType);
     }, []); // Empty array means this runs once when component mounts
 
     // Check if user is authenticated or guest
@@ -154,8 +159,8 @@ export default function Checkout() {
     // Calculate subtotal: sum of all item prices × quantities
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // Delivery fee: use zone-specific fee, or restaurant default, or £2.99
-    const deliveryFee = deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99;
+    // Delivery fee: FREE for collection, otherwise use zone-specific or restaurant default
+    const deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99);
     
     // Discount from applied coupon (if any)
     const discount = appliedCoupon?.discount || 0;
@@ -253,12 +258,13 @@ export default function Checkout() {
                 coupon_code: appliedCoupon?.code,
                 total,
                 payment_method: paymentMethod,
+                order_type: orderType,
                 status: 'pending',
-                delivery_address: fullAddress,
-                delivery_coordinates: deliveryCoordinates,
+                delivery_address: orderType === 'delivery' ? fullAddress : restaurant?.address || 'Collection',
+                delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
                 phone: formData.phone,
                 notes: formData.notes,
-                estimated_delivery: isScheduled ? 'Scheduled' : '30-45 minutes',
+                estimated_delivery: isScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
                 is_scheduled: isScheduled,
                 scheduled_for: isScheduled ? scheduledFor : null,
                 is_group_order: !!groupOrderId,
@@ -289,6 +295,7 @@ export default function Checkout() {
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
             localStorage.removeItem('groupOrderId');
+            localStorage.removeItem('orderType');
             setOrderPlaced(true);
 
             setTimeout(() => {
@@ -348,15 +355,26 @@ export default function Checkout() {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <Link to={createPageUrl('Home')}>
-                        <Button size="icon" variant="ghost" className="rounded-full">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                    </Link>
-                    <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
+                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link to={createPageUrl('Home')}>
+                            <Button size="icon" variant="ghost" className="rounded-full">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                        </Link>
+                        <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className={`px-3 py-1.5 rounded-lg font-medium ${
+                            orderType === 'delivery' 
+                                ? 'bg-orange-100 text-orange-700' 
+                                : 'bg-blue-100 text-blue-700'
+                        }`}>
+                            {orderType === 'delivery' ? '🚚 Delivery' : '🏪 Collection'}
+                        </span>
+                    </div>
                 </div>
-            </div>
+                </div>
 
             <div className="max-w-4xl mx-auto px-4 py-8">
                 <div className="grid md:grid-cols-5 gap-8">
@@ -408,66 +426,82 @@ export default function Checkout() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
-                                    <div>
-                                        <Label htmlFor="door_number">Door Number / Flat *</Label>
-                                        <Input
-                                            id="door_number"
-                                            type="text"
-                                            placeholder="e.g., 42 or Flat 5B"
-                                            value={formData.door_number}
-                                            onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
-                                            className="h-12"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="address">Street Address *</Label>
-                                        <LocationPicker
-                                            onLocationSelect={async (locationData) => {
-                                                setFormData({ ...formData, delivery_address: locationData.address });
-                                                setDeliveryCoordinates(locationData.coordinates);
+                                    {orderType === 'delivery' ? (
+                                        <>
+                                            <div>
+                                                <Label htmlFor="door_number">Door Number / Flat *</Label>
+                                                <Input
+                                                    id="door_number"
+                                                    type="text"
+                                                    placeholder="e.g., 42 or Flat 5B"
+                                                    value={formData.door_number}
+                                                    onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
+                                                    className="h-12"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="address">Street Address *</Label>
+                                                <LocationPicker
+                                                    onLocationSelect={async (locationData) => {
+                                                        setFormData({ ...formData, delivery_address: locationData.address });
+                                                        setDeliveryCoordinates(locationData.coordinates);
 
-                                                if (locationData.coordinates && restaurantId) {
-                                                    setZoneCheckComplete(false);
-                                                    const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
-                                                    setDeliveryZoneInfo(zoneInfo);
-                                                    setZoneCheckComplete(true);
-                                                }
-                                            }}
-                                            className="[&>div]:h-12"
-                                        />
-                                    </div>
-                                    
-                                    {zoneCheckComplete && deliveryZoneInfo && (
-                                        <div className={`p-3 rounded-lg border ${
-                                            deliveryZoneInfo.available 
-                                                ? 'bg-green-50 border-green-200' 
-                                                : 'bg-red-50 border-red-200'
-                                        }`}>
-                                            {deliveryZoneInfo.available ? (
-                                                <div>
-                                                    <p className="text-sm font-medium text-green-800">
-                                                        ✓ Delivery available to {deliveryZoneInfo.zoneName}
-                                                    </p>
-                                                    <p className="text-xs text-green-700 mt-1">
-                                                        Fee: £{deliveryZoneInfo.deliveryFee.toFixed(2)} • 
-                                                        ETA: {deliveryZoneInfo.estimatedTime}
-                                                    </p>
-                                                    {deliveryZoneInfo.minOrderValue && (
-                                                        <p className="text-xs text-green-700">
-                                                            Min order: £{deliveryZoneInfo.minOrderValue.toFixed(2)}
+                                                        if (locationData.coordinates && restaurantId) {
+                                                            setZoneCheckComplete(false);
+                                                            const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
+                                                            setDeliveryZoneInfo(zoneInfo);
+                                                            setZoneCheckComplete(true);
+                                                        }
+                                                    }}
+                                                    className="[&>div]:h-12"
+                                                />
+                                            </div>
+
+                                            {zoneCheckComplete && deliveryZoneInfo && (
+                                                <div className={`p-3 rounded-lg border ${
+                                                    deliveryZoneInfo.available 
+                                                        ? 'bg-green-50 border-green-200' 
+                                                        : 'bg-red-50 border-red-200'
+                                                }`}>
+                                                    {deliveryZoneInfo.available ? (
+                                                        <div>
+                                                            <p className="text-sm font-medium text-green-800">
+                                                                ✓ Delivery available to {deliveryZoneInfo.zoneName}
+                                                            </p>
+                                                            <p className="text-xs text-green-700 mt-1">
+                                                                Fee: £{deliveryZoneInfo.deliveryFee.toFixed(2)} • 
+                                                                ETA: {deliveryZoneInfo.estimatedTime}
+                                                            </p>
+                                                            {deliveryZoneInfo.minOrderValue && (
+                                                                <p className="text-xs text-green-700">
+                                                                    Min order: £{deliveryZoneInfo.minOrderValue.toFixed(2)}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm font-medium text-red-800">
+                                                            ✗ {deliveryZoneInfo.message}
                                                         </p>
                                                     )}
                                                 </div>
-                                            ) : (
-                                                <p className="text-sm font-medium text-red-800">
-                                                    ✗ {deliveryZoneInfo.message}
-                                                </p>
                                             )}
+                                        </>
+                                    ) : (
+                                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p className="text-sm font-medium text-blue-900 mb-1">
+                                                🏪 Collection Order
+                                            </p>
+                                            <p className="text-xs text-blue-700">
+                                                Collect from: {restaurant?.address || 'Restaurant address'}
+                                            </p>
+                                            <p className="text-xs text-blue-700 mt-1">
+                                                Ready in: 15-20 minutes
+                                            </p>
                                         </div>
                                     )}
                                 </CardContent>
-                            </Card>
+                                </Card>
 
                             <Card>
                                 <CardHeader>
@@ -606,8 +640,8 @@ export default function Checkout() {
                                         <span>£{subtotal.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
-                                        <span>Delivery Fee</span>
-                                        <span>£{deliveryFee.toFixed(2)}</span>
+                                        <span>{orderType === 'collection' ? 'Collection Fee' : 'Delivery Fee'}</span>
+                                        <span>{orderType === 'collection' ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
                                     </div>
                                     {discount > 0 && (
                                         <div className="flex justify-between text-green-600">
