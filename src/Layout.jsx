@@ -3,55 +3,55 @@ import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger } from
-"@/components/ui/dropdown-menu";
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuSeparator, 
+    DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 
 export default function Layout({ children, currentPageName }) {
-  const location = useLocation();
-  const [user, setUser] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
+    const location = useLocation();
+    const [user, setUser] = useState(null);
+    const [cartCount, setCartCount] = useState(0);
 
-  useEffect(() => {
-    loadUser();
-    updateCartCount();
+    useEffect(() => {
+        loadUser();
+        updateCartCount();
+        
+        const interval = setInterval(updateCartCount, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
-    const interval = setInterval(updateCartCount, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    const loadUser = async () => {
+        try {
+            const userData = await base44.auth.me();
+            setUser(userData);
+        } catch (e) {
+            // User not logged in
+        }
+    };
 
-  const loadUser = async () => {
-    try {
-      const userData = await base44.auth.me();
-      setUser(userData);
-    } catch (e) {
+    const updateCartCount = () => {
+        const cart = localStorage.getItem('cart');
+        if (cart) {
+            const items = JSON.parse(cart);
+            const count = items.reduce((sum, item) => sum + item.quantity, 0);
+            setCartCount(count);
+        } else {
+            setCartCount(0);
+        }
+    };
 
-      // User not logged in
-    }};
+    const hideHeader = ['Checkout'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
 
-  const updateCartCount = () => {
-    const cart = localStorage.getItem('cart');
-    if (cart) {
-      const items = JSON.parse(cart);
-      const count = items.reduce((sum, item) => sum + item.quantity, 0);
-      setCartCount(count);
-    } else {
-      setCartCount(0);
-    }
-  };
-
-  const hideHeader = ['Checkout'].includes(currentPageName);
-  const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
-
-  return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
+    return (
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
             <style>{`
                 :root {
                     --primary: 24 100% 50%;
@@ -71,60 +71,60 @@ export default function Layout({ children, currentPageName }) {
                 }
             `}</style>
 
-            {!hideHeader &&
-      <header className="bg-white border-b sticky top-0 z-50 safe-area-top">
+            {!hideHeader && (
+                <header className="bg-white border-b sticky top-0 z-50 safe-area-top">
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
                             <Link to={createPageUrl('Home')} className="flex items-center gap-2">
-                                <img
-                src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/mhghgy-project-page-1_cqsozw.png?w=100&h=100&fit=crop"
-                alt="MealDrop Logo" className="w-15 h-15 md:w-10 md:h-10 rounded-xl object-cover" />
-
-
+                                <img 
+                                    src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png?w=100&h=100&fit=crop" 
+                                    alt="MealDrop Logo" 
+                                    className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
+                                />
                                 <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">MealDrop</span>
                             </Link>
 
                             <nav className="hidden md:flex items-center gap-8">
-                                <Link
-                to={createPageUrl('Home')}
-                className={`text-sm font-medium transition-colors ${
-                currentPageName === 'Home' ?
-                'text-orange-500' :
-                'text-gray-600 hover:text-gray-900'}`
-                }>
-
+                                <Link 
+                                    to={createPageUrl('Home')} 
+                                    className={`text-sm font-medium transition-colors ${
+                                        currentPageName === 'Home' 
+                                            ? 'text-orange-500' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
                                     Restaurants
                                 </Link>
-                                <Link
-                to={createPageUrl('Orders')}
-                className={`text-sm font-medium transition-colors ${
-                currentPageName === 'Orders' ?
-                'text-orange-500' :
-                'text-gray-600 hover:text-gray-900'}`
-                }>
-
+                                <Link 
+                                    to={createPageUrl('Orders')} 
+                                    className={`text-sm font-medium transition-colors ${
+                                        currentPageName === 'Orders' 
+                                            ? 'text-orange-500' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
                                     My Orders
                                 </Link>
-                                {user?.role === 'admin' &&
-              <Link
-                to={createPageUrl('ManageCoupons')}
-                className={`text-sm font-medium transition-colors ${
-                currentPageName === 'ManageCoupons' ?
-                'text-orange-500' :
-                'text-gray-600 hover:text-gray-900'}`
-                }>
-
+                                {user?.role === 'admin' && (
+                                    <Link 
+                                        to={createPageUrl('ManageCoupons')} 
+                                        className={`text-sm font-medium transition-colors ${
+                                            currentPageName === 'ManageCoupons' 
+                                                ? 'text-orange-500' 
+                                                : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                    >
                                         Coupons
                                     </Link>
-              }
+                                )}
                             </nav>
 
                             <div className="flex items-center gap-2">
                                 <div className="hidden md:flex items-center gap-3">
                                     {user && <NotificationBell userEmail={user.email} />}
 
-                                    {cartCount > 0 &&
-                <Link to={createPageUrl('Checkout')}>
+                                    {cartCount > 0 && (
+                                        <Link to={createPageUrl('Checkout')}>
                                             <Button variant="outline" className="relative rounded-full">
                                                 <ShoppingBag className="h-5 w-5" />
                                                 <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -132,7 +132,7 @@ export default function Layout({ children, currentPageName }) {
                                                 </span>
                                             </Button>
                                         </Link>
-                }
+                                    )}
                                 </div>
 
                                 <DropdownMenu>
@@ -168,8 +168,8 @@ export default function Layout({ children, currentPageName }) {
                                                         My Profile
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                {user?.role === 'admin' &&
-                    <>
+                                                {user?.role === 'admin' && (
+                                                <>
                                                     <DropdownMenuItem asChild>
                                                         <Link to={createPageUrl('SuperAdmin')} className="flex items-center gap-2">
                                                             <Home className="h-4 w-4" />
@@ -201,22 +201,22 @@ export default function Layout({ children, currentPageName }) {
                                                         </Link>
                                                     </DropdownMenuItem>
                                                 </>
-                    }
+                                            )}
                                             <DropdownMenuSeparator />
                                         </div>
-                                        {user &&
-                  <>
+                                        {user && (
+                                            <>
                                                 <div className="px-2 py-1.5">
                                                     <p className="text-sm font-medium">{user.full_name || 'User'}</p>
                                                     <p className="text-xs text-gray-500">{user.email}</p>
                                                 </div>
                                                 <DropdownMenuSeparator />
                                             </>
-                  }
-                                        <DropdownMenuItem
-                    onClick={() => base44.auth.logout()}
-                    className="text-red-600 cursor-pointer">
-
+                                        )}
+                                        <DropdownMenuItem 
+                                            onClick={() => base44.auth.logout()}
+                                            className="text-red-600 cursor-pointer"
+                                        >
                                             <LogOut className="h-4 w-4 mr-2" />
                                             Sign Out
                                         </DropdownMenuItem>
@@ -226,7 +226,7 @@ export default function Layout({ children, currentPageName }) {
                         </div>
                     </div>
                 </header>
-      }
+            )}
 
             <main className="min-h-screen">{children}</main>
 
@@ -234,66 +234,66 @@ export default function Layout({ children, currentPageName }) {
                 <ChatbotWidget />
 
                 {/* Mobile Bottom Navigation */}
-            {showBottomNav &&
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-bottom">
+            {showBottomNav && (
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-bottom">
                     <div className="flex items-center justify-around h-16 px-2">
-                        <Link
-            to={createPageUrl('Home')}
-            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-            currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-600'}`
-            }>
-
+                        <Link 
+                            to={createPageUrl('Home')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
                             <Home className="h-6 w-6" />
                             <span className="text-xs font-medium">Home</span>
                         </Link>
                         
-                        <Link
-            to={createPageUrl('Orders')}
-            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-            currentPageName === 'Orders' ? 'text-orange-500' : 'text-gray-600'}`
-            }>
-
+                        <Link 
+                            to={createPageUrl('Orders')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'Orders' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
                             <ShoppingBag className="h-6 w-6" />
                             <span className="text-xs font-medium">Orders</span>
                         </Link>
 
-                        <Link
-            to={createPageUrl('Checkout')}
-            className="flex flex-col items-center justify-center flex-1 gap-1 py-2 relative">
-
+                        <Link 
+                            to={createPageUrl('Checkout')} 
+                            className="flex flex-col items-center justify-center flex-1 gap-1 py-2 relative"
+                        >
                             <div className={`relative ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600'}`}>
                                 <ShoppingBag className="h-6 w-6" />
-                                {cartCount > 0 &&
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
                                         {cartCount}
                                     </span>
-              }
+                                )}
                             </div>
                             <span className={`text-xs font-medium ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600'}`}>Cart</span>
                         </Link>
 
-                        <Link
-            to={createPageUrl('Messages')}
-            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-            currentPageName === 'Messages' ? 'text-orange-500' : 'text-gray-600'}`
-            }>
-
+                        <Link 
+                            to={createPageUrl('Messages')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'Messages' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
                             <MessageSquare className="h-6 w-6" />
                             <span className="text-xs font-medium">Messages</span>
                         </Link>
                         
-                        <Link
-            to={createPageUrl('CustomerProfile')}
-            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-            currentPageName === 'CustomerProfile' ? 'text-orange-500' : 'text-gray-600'}`
-            }>
-
+                        <Link 
+                            to={createPageUrl('CustomerProfile')} 
+                            className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+                                currentPageName === 'CustomerProfile' ? 'text-orange-500' : 'text-gray-600'
+                            }`}
+                        >
                             <User className="h-6 w-6" />
                             <span className="text-xs font-medium">Profile</span>
                         </Link>
                     </div>
                 </nav>
-      }
-        </div>);
-
+            )}
+        </div>
+    );
 }
