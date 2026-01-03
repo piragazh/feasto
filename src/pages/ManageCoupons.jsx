@@ -35,6 +35,12 @@ export default function ManageCoupons() {
 
     const queryClient = useQueryClient();
 
+    const { data: coupons = [], isLoading } = useQuery({
+        queryKey: ['coupons'],
+        queryFn: () => base44.entities.Coupon.list('-created_date'),
+        enabled: !isChecking,
+    });
+
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -61,11 +67,6 @@ export default function ManageCoupons() {
             </div>
         );
     }
-
-    const { data: coupons = [], isLoading } = useQuery({
-        queryKey: ['coupons'],
-        queryFn: () => base44.entities.Coupon.list('-created_date'),
-    });
 
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.Coupon.create(data),
