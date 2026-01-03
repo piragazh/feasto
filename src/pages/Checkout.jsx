@@ -41,14 +41,19 @@ export default function Checkout() {
     const [showStripeForm, setShowStripeForm] = useState(false);
     
     const [formData, setFormData] = useState({
+        guest_name: '',
+        guest_email: '',
+        door_number: '',
         delivery_address: '',
         phone: '',
         notes: ''
     });
     const [deliveryCoordinates, setDeliveryCoordinates] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [isGuest, setIsGuest] = useState(false);
 
     useEffect(() => {
+        checkAuthStatus();
         const savedCart = localStorage.getItem('cart');
         const savedRestaurantId = localStorage.getItem('cartRestaurantId');
         const savedRestaurantName = localStorage.getItem('cartRestaurantName');
@@ -74,6 +79,15 @@ export default function Checkout() {
         }
     }, []);
 
+    const checkAuthStatus = async () => {
+        try {
+            const authenticated = await base44.auth.isAuthenticated();
+            setIsGuest(!authenticated);
+        } catch (e) {
+            setIsGuest(true);
+        }
+    };
+
     const loadRestaurantName = async (id) => {
         try {
             const restaurants = await base44.entities.Restaurant.filter({ id });
@@ -94,8 +108,21 @@ export default function Checkout() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!formData.delivery_address || !formData.phone) {
+        // Validate required fields
+        if (isGuest && (!formData.guest_name || !formData.guest_email)) {
+            toast.error('Please provide your name and email');
+            return;
+        }
+        
+        if (!formData.door_number || !formData.delivery_address || !formData.phone) {
             toast.error('Please fill in all required fields');
+            return;
+        }
+
+        // Validate UK phone number
+        const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
+        if (!ukPhoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+            toast.error('Please enter a valid UK phone number');
             return;
         }
 
@@ -142,6 +169,8 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
+            const fullAddress = `${formData.door_number}, ${formData.delivery_address}`;
+            
             const orderData = {
                 restaurant_id: restaurantId,
                 restaurant_name: restaurantName,
@@ -153,7 +182,7 @@ export default function Checkout() {
                 total,
                 payment_method: paymentMethod,
                 status: 'pending',
-                delivery_address: formData.delivery_address,
+                delivery_address: fullAddress,
                 delivery_coordinates: deliveryCoordinates,
                 phone: formData.phone,
                 notes: formData.notes,
@@ -164,6 +193,12 @@ export default function Checkout() {
                 group_order_id: groupOrderId,
                 payment_intent_id: paymentIntentId
             };
+
+            // Add guest info if not logged in
+            if (isGuest) {
+                orderData.guest_name = formData.guest_name;
+                orderData.guest_email = formData.guest_email;
+            }
 
             await base44.entities.Order.create(orderData);
 
@@ -256,6 +291,43 @@ export default function Checkout() {
                     {/* Form */}
                     <div className="md:col-span-3">
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {isGuest && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <User className="h-5 w-5 text-orange-500" />
+                                            Your Details
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <div>
+                                            <Label htmlFor="guest_name">Full Name *</Label>
+                                            <Input
+                                                id="guest_name"
+                                                type="text"
+                                                placeholder="John Smith"
+                                                value={formData.guest_name}
+                                                onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })}
+                                                className="h-12"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="guest_email">Email Address *</Label>
+                                            <Input
+                                                id="guest_email"
+                                                type="email"
+                                                placeholder="john@example.com"
+                                                value={formData.guest_email}
+                                                onChange={(e) => setFormData({ ...formData, guest_email: e.target.value })}
+                                                className="h-12"
+                                                required
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
@@ -264,20 +336,35 @@ export default function Checkout() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
-                                    <LocationPicker
-                                        onLocationSelect={async (locationData) => {
-                                            setFormData({ ...formData, delivery_address: locationData.address });
-                                            setDeliveryCoordinates(locationData.coordinates);
-                                            
-                                            if (locationData.coordinates && restaurantId) {
-                                                setZoneCheckComplete(false);
-                                                const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
-                                                setDeliveryZoneInfo(zoneInfo);
-                                                setZoneCheckComplete(true);
-                                            }
-                                        }}
-                                        className="[&>div]:h-12"
-                                    />
+                                    <div>
+                                        <Label htmlFor="door_number">Door Number / Flat *</Label>
+                                        <Input
+                                            id="door_number"
+                                            type="text"
+                                            placeholder="e.g., 42 or Flat 5B"
+                                            value={formData.door_number}
+                                            onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
+                                            className="h-12"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="address">Street Address *</Label>
+                                        <LocationPicker
+                                            onLocationSelect={async (locationData) => {
+                                                setFormData({ ...formData, delivery_address: locationData.address });
+                                                setDeliveryCoordinates(locationData.coordinates);
+
+                                                if (locationData.coordinates && restaurantId) {
+                                                    setZoneCheckComplete(false);
+                                                    const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
+                                                    setDeliveryZoneInfo(zoneInfo);
+                                                    setZoneCheckComplete(true);
+                                                }
+                                            }}
+                                            className="[&>div]:h-12"
+                                        />
+                                    </div>
                                     
                                     {zoneCheckComplete && deliveryZoneInfo && (
                                         <div className={`p-3 rounded-lg border ${
@@ -318,14 +405,17 @@ export default function Checkout() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
+                                    <Label htmlFor="phone">UK Mobile Number *</Label>
                                     <Input
+                                        id="phone"
                                         type="tel"
-                                        placeholder="Your phone number"
+                                        placeholder="07123 456789"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         className="h-12"
                                         required
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Format: 07XXX XXXXXX</p>
                                 </CardContent>
                             </Card>
 
