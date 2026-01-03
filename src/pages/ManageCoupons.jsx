@@ -41,33 +41,6 @@ export default function ManageCoupons() {
         enabled: !isChecking,
     });
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const user = await base44.auth.me();
-                if (!user || user.role !== 'admin') {
-                    base44.auth.redirectToLogin();
-                    return;
-                }
-                setIsChecking(false);
-            } catch (e) {
-                base44.auth.redirectToLogin();
-            }
-        };
-        checkAuth();
-    }, []);
-
-    if (isChecking) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Checking access...</p>
-                </div>
-            </div>
-        );
-    }
-
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.Coupon.create(data),
         onSuccess: () => {
@@ -99,6 +72,33 @@ export default function ManageCoupons() {
         },
         onError: () => toast.error('Failed to delete coupon')
     });
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const user = await base44.auth.me();
+                if (!user || user.role !== 'admin') {
+                    base44.auth.redirectToLogin();
+                    return;
+                }
+                setIsChecking(false);
+            } catch (e) {
+                base44.auth.redirectToLogin();
+            }
+        };
+        checkAuth();
+    }, []);
+
+    if (isChecking) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking access...</p>
+                </div>
+            </div>
+        );
+    }
 
     const resetForm = () => {
         setFormData({
