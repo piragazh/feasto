@@ -40,6 +40,7 @@ import PromotionManagement from '@/components/restaurant/PromotionManagement';
 import OrderBatching from '@/components/restaurant/OrderBatching';
 import OrderModification from '@/components/restaurant/OrderModification';
 import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
+import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -293,6 +294,10 @@ export default function RestaurantDashboard() {
                                 <MapPin className="h-4 w-4 mr-2" />
                                 Zones
                             </TabsTrigger>
+                            <TabsTrigger value="settings">
+                                <Settings className="h-4 w-4 mr-2" />
+                                Settings
+                            </TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -365,8 +370,12 @@ export default function RestaurantDashboard() {
                             } : null}
                         />
                     </TabsContent>
-                    </Tabs>
-                    </div>
-                    </div>
-                    );
-                    }
+
+                    <TabsContent value="settings">
+                        <RestaurantSettings restaurantId={restaurant.id} />
+                    </TabsContent>
+                </Tabs>
+            </div>
+        </div>
+    );
+}
