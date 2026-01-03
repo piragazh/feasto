@@ -31,6 +31,9 @@ export default function DomainManagement() {
             setSelectedRestaurant(null);
             setDomain('');
         },
+        onError: (error) => {
+            toast.error('Failed to save domain: ' + (error.message || 'Unknown error'));
+        }
     });
 
     const handleEdit = (restaurant) => {
