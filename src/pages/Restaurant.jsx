@@ -31,6 +31,9 @@ export default function Restaurant() {
     const [customizationModalOpen, setCustomizationModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [menuSearchQuery, setMenuSearchQuery] = useState('');
+    const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
+    const [showTimeWarning, setShowTimeWarning] = useState(false);
+    const [timeWarningMessage, setTimeWarningMessage] = useState('');
 
     // Load cart from localStorage
     useEffect(() => {
@@ -179,6 +182,68 @@ export default function Restaurant() {
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+    // Check if restaurant is open for delivery/collection
+    const checkOrderingAvailable = () => {
+        if (!restaurant) return { available: true, message: '' };
+
+        const now = new Date();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
+
+        let hours;
+        if (orderType === 'collection' && restaurant.collection_hours) {
+            hours = restaurant.collection_hours[dayName];
+        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+            hours = restaurant.delivery_hours[dayName];
+        } else {
+            hours = restaurant.opening_hours?.[dayName];
+        }
+
+        if (!hours || hours.closed) {
+            return {
+                available: false,
+                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} is not available on ${dayName}s`
+            };
+        }
+
+        const [openHour, openMin] = hours.open.split(':').map(Number);
+        const [closeHour, closeMin] = hours.close.split(':').map(Number);
+        const openTime = openHour * 60 + openMin;
+        const closeTime = closeHour * 60 + closeMin;
+
+        if (currentTime < openTime) {
+            return {
+                available: false,
+                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} starts at ${hours.open}`
+            };
+        }
+
+        if (currentTime > closeTime) {
+            return {
+                available: false,
+                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} closed at ${hours.close}`
+            };
+        }
+
+        return { available: true, message: '' };
+    };
+
+    const handleProceedToCheckout = () => {
+        const orderingCheck = checkOrderingAvailable();
+        
+        if (!orderingCheck.available) {
+            setTimeWarningMessage(orderingCheck.message);
+            setShowTimeWarning(true);
+            return;
+        }
+
+        // Save order type to localStorage
+        localStorage.setItem('orderType', orderType);
+        localStorage.setItem('cartRestaurantName', restaurant.name);
+        setCartOpen(false);
+        window.location.href = createPageUrl('Checkout');
+    };
+
     if (restaurantLoading) {
         return (
             <div className="min-h-screen bg-gray-50">
@@ -206,6 +271,36 @@ export default function Restaurant() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
+            {/* Order Type Selector */}
+            <div className="bg-white border-b sticky top-0 z-10">
+                <div className="max-w-4xl mx-auto px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setOrderType('delivery')}
+                            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+                                orderType === 'delivery'
+                                    ? 'bg-orange-500 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                            🚚 Delivery
+                        </button>
+                        {restaurant?.collection_enabled && (
+                            <button
+                                onClick={() => setOrderType('collection')}
+                                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+                                    orderType === 'collection'
+                                        ? 'bg-orange-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                🏪 Collection
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Hero */}
             <div className="relative h-72 md:h-80">
                 <img
@@ -410,7 +505,36 @@ export default function Restaurant() {
                 updateQuantity={updateQuantity}
                 removeFromCart={removeFromCart}
                 restaurantName={restaurant.name}
+                orderType={orderType}
+                onProceedToCheckout={handleProceedToCheckout}
             />
+
+            {/* Time Warning Dialog */}
+            {showTimeWarning && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+                    >
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Clock className="h-8 w-8 text-orange-500" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                {orderType === 'collection' ? 'Collection' : 'Delivery'} Unavailable
+                            </h3>
+                            <p className="text-gray-600 mb-6">{timeWarningMessage}</p>
+                            <Button
+                                onClick={() => setShowTimeWarning(false)}
+                                className="w-full bg-orange-500 hover:bg-orange-600"
+                            >
+                                Got it
+                            </Button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }
