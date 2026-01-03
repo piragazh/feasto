@@ -31,11 +31,11 @@ export default function ManageRestaurantManagers() {
                 const user = await base44.auth.me();
                 if (!user || user.role !== 'admin') {
                     base44.auth.redirectToLogin(window.location.pathname);
+                    return;
                 }
+                setIsChecking(false);
             } catch (e) {
                 base44.auth.redirectToLogin(window.location.pathname);
-            } finally {
-                setIsChecking(false);
             }
         };
         checkAuth();
