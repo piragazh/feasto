@@ -272,34 +272,7 @@ export default function Restaurant() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
             {/* Order Type Selector */}
-            <div className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-3">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setOrderType('delivery')}
-                            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
-                                orderType === 'delivery'
-                                    ? 'bg-orange-500 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                        >
-                            🚚 Delivery
-                        </button>
-                        {restaurant?.collection_enabled && (
-                            <button
-                                onClick={() => setOrderType('collection')}
-                                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
-                                    orderType === 'collection'
-                                        ? 'bg-orange-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                            >
-                                🏪 Collection
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+
 
             {/* Hero */}
             <div className="relative h-72 md:h-80">
