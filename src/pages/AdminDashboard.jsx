@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,36 @@ import {
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
+    const [isChecking, setIsChecking] = useState(true);
+
+    // Check authentication and admin role
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const user = await base44.auth.me();
+                if (!user || user.role !== 'admin') {
+                    base44.auth.redirectToLogin(window.location.pathname);
+                }
+            } catch (e) {
+                base44.auth.redirectToLogin(window.location.pathname);
+            } finally {
+                setIsChecking(false);
+            }
+        };
+        checkAuth();
+    }, []);
+
+    if (isChecking) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking access...</p>
+                </div>
+            </div>
+        );
+    }
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),

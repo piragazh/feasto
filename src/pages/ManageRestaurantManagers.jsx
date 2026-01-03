@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, UserCheck, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export default function ManageRestaurantManagers() {
+    const navigate = useNavigate();
+    const [isChecking, setIsChecking] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
@@ -20,6 +23,34 @@ export default function ManageRestaurantManagers() {
     });
 
     const queryClient = useQueryClient();
+
+    // Check authentication and admin role
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const user = await base44.auth.me();
+                if (!user || user.role !== 'admin') {
+                    base44.auth.redirectToLogin(window.location.pathname);
+                }
+            } catch (e) {
+                base44.auth.redirectToLogin(window.location.pathname);
+            } finally {
+                setIsChecking(false);
+            }
+        };
+        checkAuth();
+    }, []);
+
+    if (isChecking) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking access...</p>
+                </div>
+            </div>
+        );
+    }
 
     const { data: managers = [], isLoading } = useQuery({
         queryKey: ['restaurant-managers'],
