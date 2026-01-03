@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search } from 'lucide-react';
+import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import MealDealCard from '@/components/restaurant/MealDealCard';
@@ -102,6 +102,8 @@ export default function Restaurant() {
     }, [menuItems, menuSearchQuery]);
 
     const categoryNavRef = React.useRef(null);
+    const [showLeftArrow, setShowLeftArrow] = React.useState(false);
+    const [showRightArrow, setShowRightArrow] = React.useState(false);
 
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
@@ -110,6 +112,24 @@ export default function Restaurant() {
                 behavior: 'smooth', 
                 block: 'start'
             });
+        }
+    };
+
+    const scrollCategories = (direction) => {
+        if (categoryNavRef.current) {
+            const scrollAmount = 200;
+            categoryNavRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const checkScrollButtons = () => {
+        if (categoryNavRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = categoryNavRef.current;
+            setShowLeftArrow(scrollLeft > 0);
+            setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 5);
         }
     };
 
@@ -126,6 +146,19 @@ export default function Restaurant() {
             }
         }
     }, [activeCategoryScroll]);
+
+    useEffect(() => {
+        checkScrollButtons();
+        const nav = categoryNavRef.current;
+        if (nav) {
+            nav.addEventListener('scroll', checkScrollButtons);
+            window.addEventListener('resize', checkScrollButtons);
+            return () => {
+                nav.removeEventListener('scroll', checkScrollButtons);
+                window.removeEventListener('resize', checkScrollButtons);
+            };
+        }
+    }, [categories]);
 
     // Scroll spy - update active category based on scroll position
     useEffect(() => {
@@ -501,28 +534,44 @@ export default function Restaurant() {
 
                 {categories.length > 0 && (
                     <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[56px] md:top-[64px] z-20 shadow-md">
-                        <div 
-                            ref={categoryNavRef}
-                            className="flex items-center gap-2 overflow-x-auto pb-1"
-                            style={{
-                                scrollbarWidth: 'thin',
-                                scrollbarColor: '#f97316 #f3f4f6'
-                            }}
-                        >
-                            {categories.map(cat => (
+                        <div className="relative">
+                            {showLeftArrow && (
                                 <button
-                                    key={cat}
-                                    data-category={cat}
-                                    onClick={() => scrollToCategory(cat)}
-                                    className={`px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all flex-shrink-0 ${
-                                        activeCategoryScroll === cat
-                                            ? 'bg-orange-500 text-white shadow-sm'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-600'
-                                    }`}
+                                    onClick={() => scrollCategories('left')}
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50"
+                                    style={{ marginLeft: '-12px' }}
                                 >
-                                    {cat}
+                                    <ChevronLeft className="h-5 w-5 text-gray-700" />
                                 </button>
-                            ))}
+                            )}
+                            <div 
+                                ref={categoryNavRef}
+                                className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1"
+                            >
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        data-category={cat}
+                                        onClick={() => scrollToCategory(cat)}
+                                        className={`px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all flex-shrink-0 ${
+                                            activeCategoryScroll === cat
+                                                ? 'bg-orange-500 text-white shadow-sm'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                            {showRightArrow && (
+                                <button
+                                    onClick={() => scrollCategories('right')}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50"
+                                    style={{ marginRight: '-12px' }}
+                                >
+                                    <ChevronRight className="h-5 w-5 text-gray-700" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
