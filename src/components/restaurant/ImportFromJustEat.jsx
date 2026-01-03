@@ -54,96 +54,19 @@ export default function ImportFromJustEat({ restaurantId }) {
 
         setIsExtracting(true);
         try {
-            const response = await base44.integrations.Core.InvokeLLM({
-                prompt: `You are a professional web scraper for restaurant menus. Extract menu data from this Just Eat page: ${url}
+            const response = await base44.functions.invoke('scrapeJustEat', { url });
 
-CRITICAL EXTRACTION RULES:
-1. COMPLETENESS: Extract EVERY menu item visible on the page - check all sections, tabs, and categories
-2. DATA ACCURACY: 
-   - name: Exact dish name as shown (string)
-   - description: Full description text (string, empty if none exists)
-   - price: Clean numeric value only (number type: 12.99, 8.50, 15.00)
-   - category: Section heading like "Pizza", "Burgers", "Starters", "Mains", "Sides", "Desserts", "Drinks" (string)
-   - image_url: Complete URL starting with https:// (string, empty if no image)
-
-3. PRICE CLEANING:
-   - Remove all currency symbols (£, $)
-   - Remove text like "from", "starting at"
-   - Convert to number format: "£12.99" → 12.99
-   - Handle price ranges by taking the first/base price
-
-4. IMAGE EXTRACTION:
-   - Look for <img> tags with src attributes
-   - Check for CSS background-image URLs
-   - Extract full URLs (https://...)
-   - Validate image URLs are accessible
-
-5. CATEGORY GROUPING:
-   - Maintain original category structure from the page
-   - Use exact category names from page headings
-   - Ensure every item has a category assigned
-
-6. DATA VALIDATION:
-   - Every item MUST have: name, price, category
-   - Price MUST be a positive number
-   - Description and image_url can be empty strings
-
-OUTPUT FORMAT: Return JSON with "items" array containing all extracted menu items.`,
-                add_context_from_internet: true,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        items: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    name: { type: "string" },
-                                    description: { type: "string" },
-                                    price: { type: "number" },
-                                    category: { type: "string" },
-                                    image_url: { type: "string" }
-                                },
-                                required: ["name", "price", "category"]
-                            }
-                        }
-                    },
-                    required: ["items"]
-                }
-            });
-
-            if (response.items && response.items.length > 0) {
-                // Validate and clean extracted items
-                const validItems = response.items.filter(item => {
-                    const hasValidPrice = typeof item.price === 'number' && item.price > 0;
-                    const hasName = item.name && item.name.trim().length > 0;
-                    const hasCategory = item.category && item.category.trim().length > 0;
-                    return hasValidPrice && hasName && hasCategory;
-                }).map(item => ({
-                    ...item,
-                    description: item.description || '',
-                    image_url: item.image_url || '',
-                    price: parseFloat(item.price.toFixed(2))
-                }));
-
-                if (validItems.length > 0) {
-                    setExtractedItems(validItems);
-                    setSelectedItems(validItems.map((_, idx) => idx));
-                    toast.success(`Successfully extracted ${validItems.length} menu items!`);
-                    
-                    if (validItems.length < response.items.length) {
-                        toast.info(`${response.items.length - validItems.length} items were filtered out due to invalid data`);
-                    }
-                } else {
-                    toast.error('No valid menu items found. The extracted data was incomplete or invalid.');
-                }
+            if (response.data.success && response.data.items && response.data.items.length > 0) {
+                const items = response.data.items;
+                setExtractedItems(items);
+                setSelectedItems(items.map((_, idx) => idx));
+                toast.success(`Successfully extracted ${items.length} menu items!`);
             } else {
-                toast.error('No menu items found. Please check the URL - make sure it\'s a Just Eat restaurant menu page.');
+                toast.error(response.data.error || 'No menu items found. Please check the URL and try again.');
             }
         } catch (error) {
             console.error('Extraction error:', error);
-            const errorMessage = error.message || 'Unknown error occurred';
-            toast.error(`Failed to extract menu: ${errorMessage}. Try a different URL or check your internet connection.`);
+            toast.error('Failed to extract menu. Please verify the URL is a Just Eat restaurant menu page and try again.');
         } finally {
             setIsExtracting(false);
         }
