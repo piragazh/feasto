@@ -104,14 +104,9 @@ export default function Restaurant() {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
-            const isMobile = window.innerWidth < 768;
-            const offset = isMobile ? 140 : 140;
-            const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - offset;
-            
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
+            element.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start'
             });
         }
     };
@@ -524,7 +519,7 @@ export default function Restaurant() {
                             <div 
                                 key={category} 
                                 ref={el => categoryRefs.current[category] = el}
-                                className={index === 0 ? 'pt-2' : ''}
+                                style={{ scrollMarginTop: '180px' }}
                             >
                                 <h3 className="text-2xl font-bold text-gray-900 mb-6 capitalize pb-3 border-b">
                                     {category}
