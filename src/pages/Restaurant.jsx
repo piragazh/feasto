@@ -34,6 +34,7 @@ export default function Restaurant() {
     const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
     const [showTimeWarning, setShowTimeWarning] = useState(false);
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
+    const [activeCategoryScroll, setActiveCategoryScroll] = useState('');
 
     // Load cart from localStorage
     useEffect(() => {
@@ -103,7 +104,7 @@ export default function Restaurant() {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
-            const offset = 220;
+            const offset = 240;
             const elementPosition = element.getBoundingClientRect().top;
             const offsetPosition = elementPosition + window.pageYOffset - offset;
             
@@ -113,6 +114,31 @@ export default function Restaurant() {
             });
         }
     };
+
+    // Scroll spy - update active category based on scroll position
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollPosition = window.scrollY + 250;
+            
+            for (const category of Object.keys(categoryRefs.current).sort()) {
+                const element = categoryRefs.current[category];
+                if (element) {
+                    const offsetTop = element.offsetTop;
+                    const offsetBottom = offsetTop + element.offsetHeight;
+                    
+                    if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
+                        setActiveCategoryScroll(category);
+                        break;
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        handleScroll(); // Initial check
+        
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [itemsByCategory]);
 
     const handleItemClick = (item) => {
         // If item has customizations, open modal; otherwise add directly
@@ -462,13 +488,17 @@ export default function Restaurant() {
                 </div>
 
                 {categories.length > 0 && (
-                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[120px] md:top-[64px] z-20 shadow-sm">
-                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[56px] md:top-[64px] z-20 shadow-md">
+                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
                             {categories.map(cat => (
                                 <button
                                     key={cat}
                                     onClick={() => scrollToCategory(cat)}
-                                    className="px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all hover:bg-orange-50 hover:text-orange-600 bg-gray-100 text-gray-700"
+                                    className={`px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all ${
+                                        activeCategoryScroll === cat
+                                            ? 'bg-orange-500 text-white shadow-sm'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+                                    }`}
                                 >
                                     {cat}
                                 </button>
@@ -493,9 +523,8 @@ export default function Restaurant() {
                             <div 
                                 key={category} 
                                 ref={el => categoryRefs.current[category] = el}
-                                className="scroll-mt-[200px] md:scroll-mt-[140px]"
                             >
-                                <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-3 border-b">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-6 capitalize pb-3 border-b pt-2">
                                     {category}
                                 </h3>
                                 <div className="space-y-4">
