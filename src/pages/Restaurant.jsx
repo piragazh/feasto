@@ -320,16 +320,27 @@ export default function Restaurant() {
                 
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                     <div className="max-w-4xl mx-auto">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Badge className="bg-white/90 text-gray-800">{restaurant.cuisine_type}</Badge>
-                            {restaurant.special_offers && restaurant.special_offers.length > 0 && (
-                                <Badge className="bg-orange-500 text-white animate-pulse">
-                                    Special Offers Available
-                                </Badge>
+                        <div className="flex items-start gap-4 mb-3">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Badge className="bg-white/90 text-gray-800">{restaurant.cuisine_type}</Badge>
+                                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                                        <Badge className="bg-orange-500 text-white animate-pulse">
+                                            Special Offers Available
+                                        </Badge>
+                                    )}
+                                </div>
+                                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{restaurant.name}</h1>
+                            </div>
+                            {restaurant.logo_url && (
+                                <img 
+                                    src={restaurant.logo_url} 
+                                    alt={`${restaurant.name} logo`}
+                                    className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover bg-white border-2 border-white/20 shadow-lg"
+                                />
                             )}
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{restaurant.name}</h1>
-                        <div className="flex flex-wrap items-center gap-4 text-white/90">
+                        <div className="flex flex-wrap items-center gap-4 text-white/90 clear-both">
                             <div className="flex items-center gap-1">
                                 <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                                 <span className="font-semibold">{restaurant.rating?.toFixed(1) || '4.5'}</span>
