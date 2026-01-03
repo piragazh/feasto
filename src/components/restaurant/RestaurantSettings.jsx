@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -32,10 +32,12 @@ export default function RestaurantSettings({ restaurantId }) {
         delivery_fee: '',
         minimum_order: '',
         collection_enabled: false,
+        logo_url: '',
         opening_hours: {},
         delivery_hours: {},
         collection_hours: {}
     });
+    const [uploadingLogo, setUploadingLogo] = useState(false);
 
     React.useEffect(() => {
         if (restaurant) {
@@ -47,6 +49,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 delivery_fee: restaurant.delivery_fee || '',
                 minimum_order: restaurant.minimum_order || '',
                 collection_enabled: restaurant.collection_enabled || false,
+                logo_url: restaurant.logo_url || '',
                 opening_hours: restaurant.opening_hours || {},
                 delivery_hours: restaurant.delivery_hours || {},
                 collection_hours: restaurant.collection_hours || {}
@@ -65,6 +68,22 @@ export default function RestaurantSettings({ restaurantId }) {
         }
     });
 
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingLogo(true);
+        try {
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            setFormData({ ...formData, logo_url: file_url });
+            toast.success('Logo uploaded successfully');
+        } catch (error) {
+            toast.error('Failed to upload logo');
+        } finally {
+            setUploadingLogo(false);
+        }
+    };
+
     const handleSaveGeneral = () => {
         updateMutation.mutate({
             name: formData.name,
@@ -73,7 +92,8 @@ export default function RestaurantSettings({ restaurantId }) {
             phone: formData.phone,
             delivery_fee: parseFloat(formData.delivery_fee) || 0,
             minimum_order: parseFloat(formData.minimum_order) || 0,
-            collection_enabled: formData.collection_enabled
+            collection_enabled: formData.collection_enabled,
+            logo_url: formData.logo_url
         });
     };
 
@@ -160,6 +180,58 @@ export default function RestaurantSettings({ restaurantId }) {
                         <CardTitle>General Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <div>
+                            <Label>Restaurant Logo</Label>
+                            <div className="flex gap-4 items-start">
+                                {formData.logo_url && (
+                                    <img 
+                                        src={formData.logo_url} 
+                                        alt="Restaurant Logo" 
+                                        className="w-20 h-20 rounded-lg object-cover border"
+                                    />
+                                )}
+                                <div className="flex-1 space-y-2">
+                                    <div className="flex gap-2">
+                                        <label className="flex-1">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-full"
+                                                disabled={uploadingLogo}
+                                                asChild
+                                            >
+                                                <span>
+                                                    {uploadingLogo ? (
+                                                        <>
+                                                            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                                                            Uploading...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Upload className="h-4 w-4 mr-2" />
+                                                            Upload Logo
+                                                        </>
+                                                    )}
+                                                </span>
+                                            </Button>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleLogoUpload}
+                                                disabled={uploadingLogo}
+                                            />
+                                        </label>
+                                    </div>
+                                    <div className="text-xs text-gray-500">Or enter URL:</div>
+                                    <Input
+                                        placeholder="https://example.com/logo.png"
+                                        value={formData.logo_url}
+                                        onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                         <div>
                             <Label>Restaurant Name *</Label>
                             <Input
