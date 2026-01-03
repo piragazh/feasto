@@ -103,7 +103,7 @@ export default function Restaurant() {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
-            const offset = 180;
+            const offset = 220;
             const elementPosition = element.getBoundingClientRect().top;
             const offsetPosition = elementPosition + window.pageYOffset - offset;
             
@@ -462,7 +462,7 @@ export default function Restaurant() {
                 </div>
 
                 {categories.length > 0 && (
-                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[136px] z-10 shadow-sm">
+                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[120px] md:top-[64px] z-20 shadow-sm">
                         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                             {categories.map(cat => (
                                 <button
@@ -493,9 +493,9 @@ export default function Restaurant() {
                             <div 
                                 key={category} 
                                 ref={el => categoryRefs.current[category] = el}
-                                className="scroll-mt-48"
+                                className="scroll-mt-[200px] md:scroll-mt-[140px]"
                             >
-                                <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize sticky top-[200px] bg-gray-50 py-2 z-[5]">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-3 border-b">
                                     {category}
                                 </h3>
                                 <div className="space-y-4">
