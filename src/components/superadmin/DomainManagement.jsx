@@ -24,15 +24,25 @@ export default function DomainManagement() {
     const updateDomainMutation = useMutation({
         mutationFn: ({ id, custom_domain, domain_verified }) => 
             base44.entities.Restaurant.update(id, { custom_domain, domain_verified }),
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries(['all-restaurants']);
-            toast.success('Domain updated successfully');
+            
+            if (variables.custom_domain === null) {
+                toast.success('Domain removed successfully');
+            } else if (variables.domain_verified) {
+                toast.success('Domain verified successfully');
+            } else {
+                toast.success('Domain saved successfully. Don\'t forget to configure DNS!');
+            }
+            
             setShowDialog(false);
             setSelectedRestaurant(null);
             setDomain('');
         },
         onError: (error) => {
-            toast.error('Failed to save domain: ' + (error.message || 'Unknown error'));
+            console.error('Domain update error:', error);
+            const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error occurred';
+            toast.error(`Failed to update domain: ${errorMessage}`);
         }
     });
 
@@ -48,21 +58,57 @@ export default function DomainManagement() {
             return;
         }
 
-        // Basic domain validation
-        const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$/;
-        if (!domainRegex.test(domain)) {
-            toast.error('Please enter a valid domain (e.g., restaurant.com)');
+        // Remove protocol if user accidentally included it
+        let cleanDomain = domain.toLowerCase().trim()
+            .replace(/^https?:\/\//, '')
+            .replace(/\/$/, '');
+
+        // Comprehensive domain validation
+        const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?)*\.[a-zA-Z]{2,}$/;
+        if (!domainRegex.test(cleanDomain)) {
+            toast.error('Invalid domain format. Use: example.com or subdomain.example.com');
+            return;
+        }
+
+        // Check for localhost or IP addresses
+        if (cleanDomain.includes('localhost') || /^\d+\.\d+\.\d+\.\d+/.test(cleanDomain)) {
+            toast.error('Cannot use localhost or IP addresses as custom domain');
+            return;
+        }
+
+        // Check if domain is already used by another restaurant
+        const existingDomain = restaurants.find(r => 
+            r.id !== selectedRestaurant.id && 
+            r.custom_domain?.toLowerCase() === cleanDomain
+        );
+        if (existingDomain) {
+            toast.error(`Domain already assigned to ${existingDomain.name}`);
+            return;
+        }
+
+        // Check for invalid characters
+        if (cleanDomain.includes(' ') || cleanDomain.includes('_')) {
+            toast.error('Domain cannot contain spaces or underscores');
             return;
         }
 
         updateDomainMutation.mutate({
             id: selectedRestaurant.id,
-            custom_domain: domain,
+            custom_domain: cleanDomain,
             domain_verified: false
         });
     };
 
     const handleVerify = (restaurant) => {
+        if (!restaurant.custom_domain) {
+            toast.error('No domain configured to verify');
+            return;
+        }
+        
+        if (!confirm(`Verify domain "${restaurant.custom_domain}"? Make sure DNS is properly configured.`)) {
+            return;
+        }
+
         updateDomainMutation.mutate({
             id: restaurant.id,
             custom_domain: restaurant.custom_domain,
@@ -71,13 +117,20 @@ export default function DomainManagement() {
     };
 
     const handleRemove = (restaurant) => {
-        if (confirm(`Remove custom domain for ${restaurant.name}?`)) {
-            updateDomainMutation.mutate({
-                id: restaurant.id,
-                custom_domain: null,
-                domain_verified: false
-            });
+        if (!restaurant.custom_domain) {
+            toast.error('No domain to remove');
+            return;
         }
+
+        if (!confirm(`Remove custom domain "${restaurant.custom_domain}" from ${restaurant.name}? This action cannot be undone.`)) {
+            return;
+        }
+
+        updateDomainMutation.mutate({
+            id: restaurant.id,
+            custom_domain: null,
+            domain_verified: false
+        });
     };
 
     const copyDNSInstructions = () => {
@@ -95,8 +148,13 @@ export default function DomainManagement() {
 
 3. Wait for DNS propagation (can take up to 48 hours)`;
 
-        navigator.clipboard.writeText(instructions);
-        toast.success('DNS instructions copied to clipboard');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(instructions)
+                .then(() => toast.success('DNS instructions copied to clipboard'))
+                .catch(() => toast.error('Failed to copy to clipboard'));
+        } else {
+            toast.error('Clipboard not supported in this browser');
+        }
     };
 
     return (
