@@ -594,10 +594,10 @@ export default function Restaurant() {
                                 ref={el => categoryRefs.current[category] = el}
                                 style={{ scrollMarginTop: '180px' }}
                             >
-                                <h3 className="text-2xl font-bold text-gray-900 mb-6 capitalize pb-3 border-b">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
                                     {category}
                                 </h3>
-                                <div className="space-y-4">
+                                <div className="space-y-2">
                                     {items.map(item => (
                                         <MenuItemCard key={item.id} item={item} onAddToCart={handleItemClick} />
                                     ))}
