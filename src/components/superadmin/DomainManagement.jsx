@@ -174,14 +174,20 @@ Step 1: Log in to your domain registrar
 Step 2: Find DNS Settings
 Look for "DNS Management" or "DNS Settings" in your domain control panel
 
-Step 3: Add CNAME Record
-Create a new CNAME record with these values:
+Step 3: Choose ONE DNS Configuration Method
 
+OPTION A - CNAME Record (Recommended for subdomains):
 Type: CNAME
-Name/Host: @ (for root domain like example.com)
-         OR www (for www.example.com)
-         OR subdomain (for order.example.com)
+Name/Host: www (for www.example.com)
+         OR order (for order.example.com)
+         OR subdomain name
 Points to/Target: ${window.location.hostname}
+TTL: 3600 (or leave as default)
+
+OPTION B - A Record (For root domain):
+Type: A
+Name/Host: @ (for root domain like example.com)
+IP Address: [Contact administrator for server IP address]
 TTL: 3600 (or leave as default)
 
 Step 4: Save and Wait
@@ -192,7 +198,11 @@ Step 4: Save and Wait
 Step 5: Verify Domain
 Return to this page and click "Mark as Verified"
 
-Note: You cannot use IP addresses or localhost as custom domains.`;
+Notes:
+- Cannot use IP addresses or localhost as custom domains
+- CNAME works best for subdomains (www, order, etc.)
+- A Record required for root/apex domains
+- Contact support if you need the server IP address`;
 
                         navigator.clipboard.writeText(instructions).then(() => 
                             toast.success('Full DNS instructions copied to clipboard!')
@@ -223,18 +233,35 @@ Note: You cannot use IP addresses or localhost as custom domains.`;
                                 When a customer visits the custom domain, they'll see that restaurant's page as the landing page.
                             </p>
                             <div className="bg-white rounded-lg p-3 border border-blue-200">
-                                <p className="text-sm font-semibold text-blue-900 mb-2">CNAME Configuration Required:</p>
-                                <div className="space-y-1 text-sm text-blue-800">
-                                    <p>1. Go to your domain registrar's DNS settings (GoDaddy, Namecheap, Cloudflare, etc.)</p>
-                                    <p>2. Add a CNAME record:</p>
-                                    <div className="ml-4 bg-blue-50 p-2 rounded font-mono text-xs">
-                                        <div>Type: <strong>CNAME</strong></div>
-                                        <div>Name: <strong>@</strong> (for root domain) or <strong>order</strong> (for subdomain)</div>
-                                        <div>Target: <strong>{window.location.hostname}</strong></div>
-                                        <div>TTL: <strong>3600</strong></div>
+                                <p className="text-sm font-semibold text-blue-900 mb-2">DNS Configuration Options:</p>
+                                <div className="space-y-3 text-sm text-blue-800">
+                                    <p className="font-medium">1. Go to your domain registrar's DNS settings (GoDaddy, Namecheap, Cloudflare, etc.)</p>
+                                    <p className="font-medium">2. Choose ONE of the following options:</p>
+                                    
+                                    <div className="space-y-2">
+                                        <div className="border-l-4 border-blue-400 pl-3">
+                                            <p className="font-semibold text-blue-900 mb-1">Option A: CNAME Record (Recommended for subdomains)</p>
+                                            <div className="bg-blue-50 p-2 rounded font-mono text-xs">
+                                                <div>Type: <strong>CNAME</strong></div>
+                                                <div>Name: <strong>www</strong> or <strong>order</strong> (subdomain)</div>
+                                                <div>Target: <strong>{window.location.hostname}</strong></div>
+                                                <div>TTL: <strong>3600</strong></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="border-l-4 border-green-400 pl-3">
+                                            <p className="font-semibold text-green-900 mb-1">Option B: A Record (For root domain)</p>
+                                            <div className="bg-green-50 p-2 rounded font-mono text-xs">
+                                                <div>Type: <strong>A</strong></div>
+                                                <div>Name: <strong>@</strong> (root domain)</div>
+                                                <div>IP Address: <strong>[Contact support for IP]</strong></div>
+                                                <div>TTL: <strong>3600</strong></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p>3. Wait 10-60 minutes for DNS propagation</p>
-                                    <p>4. Return here and click "Mark as Verified"</p>
+                                    
+                                    <p className="font-medium">3. Save and wait 10-60 minutes for DNS propagation</p>
+                                    <p className="font-medium">4. Return here and click "Mark as Verified"</p>
                                 </div>
                             </div>
                         </div>
@@ -344,47 +371,93 @@ Note: You cannot use IP addresses or localhost as custom domains.`;
                                     Enter the domain without http:// or https://
                                 </p>
                             </div>
-                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-2">
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
                                 <p className="font-semibold text-orange-900 text-sm">⚠️ DNS Configuration Required</p>
-                                <div className="text-xs text-orange-800 space-y-1">
+                                <div className="text-xs text-orange-800 space-y-2">
                                     <p className="font-semibold">Step 1: Go to your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)</p>
-                                    <p className="font-semibold">Step 2: Add a CNAME record with these exact values:</p>
-                                    <div className="bg-white rounded p-2 font-mono text-xs border border-orange-200">
-                                        <div className="mb-1"><span className="text-gray-600">Type:</span> <strong className="text-orange-900">CNAME</strong></div>
-                                        <div className="mb-1"><span className="text-gray-600">Name/Host:</span> <strong className="text-orange-900">@</strong> or <strong className="text-orange-900">www</strong></div>
-                                        <div className="mb-1"><span className="text-gray-600">Points to:</span> <strong className="text-orange-900">{window.location.hostname}</strong></div>
-                                        <div><span className="text-gray-600">TTL:</span> <strong className="text-orange-900">3600</strong> (or default)</div>
+                                    <p className="font-semibold">Step 2: Choose ONE of these DNS configurations:</p>
+                                    
+                                    <div className="space-y-2">
+                                        <div className="bg-white rounded p-2 border border-orange-200">
+                                            <p className="font-semibold text-orange-900 mb-1">Option A: CNAME (Best for subdomains)</p>
+                                            <div className="font-mono text-xs space-y-0.5">
+                                                <div><span className="text-gray-600">Type:</span> <strong className="text-orange-900">CNAME</strong></div>
+                                                <div><span className="text-gray-600">Name:</span> <strong className="text-orange-900">www</strong> or <strong className="text-orange-900">order</strong></div>
+                                                <div><span className="text-gray-600">Points to:</span> <strong className="text-orange-900">{window.location.hostname}</strong></div>
+                                                <div><span className="text-gray-600">TTL:</span> <strong className="text-orange-900">3600</strong></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-white rounded p-2 border border-orange-200">
+                                            <p className="font-semibold text-orange-900 mb-1">Option B: A Record (For root domain)</p>
+                                            <div className="font-mono text-xs space-y-0.5">
+                                                <div><span className="text-gray-600">Type:</span> <strong className="text-orange-900">A</strong></div>
+                                                <div><span className="text-gray-600">Name:</span> <strong className="text-orange-900">@</strong></div>
+                                                <div><span className="text-gray-600">IP Address:</span> <strong className="text-red-600">[Contact admin for server IP]</strong></div>
+                                                <div><span className="text-gray-600">TTL:</span> <strong className="text-orange-900">3600</strong></div>
+                                            </div>
+                                        </div>
                                     </div>
+                                    
                                     <p className="font-semibold pt-1">Step 3: Save changes and wait 10-60 minutes for propagation</p>
                                     <p className="font-semibold">Step 4: Return here and click "Mark as Verified"</p>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                        const text = `CNAME Record Configuration:
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            const text = `CNAME Record (for subdomain):
 
 Type: CNAME
-Name: @ (or www)
+Name: www (or order)
 Points to: ${window.location.hostname}
 TTL: 3600`;
-                                        navigator.clipboard.writeText(text).then(() => 
-                                            toast.success('CNAME details copied!')
-                                        ).catch(() => {
-                                            const textarea = document.createElement('textarea');
-                                            textarea.value = text;
-                                            document.body.appendChild(textarea);
-                                            textarea.select();
-                                            document.execCommand('copy');
-                                            document.body.removeChild(textarea);
-                                            toast.success('CNAME details copied!');
-                                        });
-                                    }}
-                                    className="w-full"
-                                >
-                                    <Copy className="h-3 w-3 mr-2" />
-                                    Copy CNAME Details
-                                </Button>
+                                            navigator.clipboard.writeText(text).then(() => 
+                                                toast.success('CNAME details copied!')
+                                            ).catch(() => {
+                                                const textarea = document.createElement('textarea');
+                                                textarea.value = text;
+                                                document.body.appendChild(textarea);
+                                                textarea.select();
+                                                document.execCommand('copy');
+                                                document.body.removeChild(textarea);
+                                                toast.success('CNAME details copied!');
+                                            });
+                                        }}
+                                        className="flex-1"
+                                    >
+                                        <Copy className="h-3 w-3 mr-1" />
+                                        Copy CNAME
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            const text = `A Record (for root domain):
+
+Type: A
+Name: @
+IP Address: [Contact admin for server IP]
+TTL: 3600`;
+                                            navigator.clipboard.writeText(text).then(() => 
+                                                toast.success('A Record details copied!')
+                                            ).catch(() => {
+                                                const textarea = document.createElement('textarea');
+                                                textarea.value = text;
+                                                document.body.appendChild(textarea);
+                                                textarea.select();
+                                                document.execCommand('copy');
+                                                document.body.removeChild(textarea);
+                                                toast.success('A Record copied!');
+                                            });
+                                        }}
+                                        className="flex-1"
+                                    >
+                                        <Copy className="h-3 w-3 mr-1" />
+                                        Copy A Record
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}
