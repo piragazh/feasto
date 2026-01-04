@@ -25,6 +25,8 @@ export default function Restaurant() {
     const urlParams = new URLSearchParams(window.location.search);
     const restaurantId = urlParams.get('id');
     
+    console.log('Restaurant ID from URL:', restaurantId);
+    
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('all');
@@ -56,7 +58,9 @@ export default function Restaurant() {
     const { data: restaurant, isLoading: restaurantLoading } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
+            console.log('Fetching restaurant with ID:', restaurantId);
             const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            console.log('Found restaurants:', restaurants);
             return restaurants[0];
         },
         enabled: !!restaurantId,
