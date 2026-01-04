@@ -305,7 +305,7 @@ export default function Checkout() {
                 orderData.guest_email = formData.guest_email;
             }
 
-            await base44.entities.Order.create(orderData);
+            const newOrder = await base44.entities.Order.create(orderData);
 
             // Update group order status if applicable
             if (groupOrderId) {
@@ -317,6 +317,32 @@ export default function Checkout() {
                 await base44.entities.Coupon.update(appliedCoupon.id, {
                     usage_count: (appliedCoupon.usage_count || 0) + 1
                 });
+            }
+
+            // Send SMS confirmation to customer
+            try {
+                const orderNumber = orderType === 'collection' ? orderNumber : `#${newOrder.id.slice(-6)}`;
+                const customerMessage = orderType === 'collection'
+                    ? `Thank you for your order! Your collection order ${orderNumber} has been placed at ${restaurantName}. You'll receive updates via SMS. Show your order number when collecting.`
+                    : `Thank you for your order! Order ${orderNumber} from ${restaurantName} has been placed. You'll receive updates as your order is prepared and dispatched.`;
+
+                await base44.functions.invoke('sendSMS', {
+                    to: formData.phone,
+                    message: customerMessage
+                });
+            } catch (smsError) {
+                console.error('SMS notification failed:', smsError);
+                // Don't fail the order if SMS fails
+            }
+
+            // Notify restaurant of new order
+            try {
+                await base44.functions.invoke('notifyRestaurantNewOrder', {
+                    orderId: newOrder.id,
+                    restaurantName: restaurantName
+                });
+            } catch (notifyError) {
+                console.error('Restaurant notification failed:', notifyError);
             }
 
             localStorage.removeItem('cart');

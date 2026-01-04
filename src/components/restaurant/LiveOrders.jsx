@@ -61,25 +61,32 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             const order = orders.find(o => o.id === orderId);
             if (!order) return;
 
+            const orderLabel = order.order_type === 'collection' && order.order_number 
+                ? order.order_number 
+                : `#${order.id.slice(-6)}`;
+
             const statusMessages = {
-                confirmed: 'Your order has been confirmed and will be prepared shortly.',
-                preparing: 'Your order is being prepared.',
-                out_for_delivery: 'Your order is on its way!',
-                delivered: 'Your order has been delivered. Enjoy!',
-                cancelled: `Your order has been cancelled. Reason: ${rejectionReason || 'Restaurant unable to fulfill order'}`
+                confirmed: `Your order ${orderLabel} has been confirmed and will be prepared shortly. ✅`,
+                preparing: `Your order ${orderLabel} is being prepared. 👨‍🍳`,
+                out_for_delivery: `Your order ${orderLabel} is on its way! 🚗`,
+                ready_for_collection: `Your order ${orderLabel} is ready for collection! Please come to the restaurant to collect. 🏪`,
+                delivered: `Your order ${orderLabel} has been delivered. Enjoy your meal! 🎉`,
+                collected: `Thank you for collecting your order ${orderLabel}! Enjoy! 🎉`,
+                cancelled: `Your order ${orderLabel} has been cancelled. ${rejectionReason ? `Reason: ${rejectionReason}` : 'Please contact the restaurant for more details.'} ❌`
             };
 
-            const message = statusMessages[status] || 'Order status updated';
+            const message = statusMessages[status] || `Order ${orderLabel} status updated.`;
             
-            // SMS notification placeholder - requires backend functions
-            // await base44.integrations.Core.SendSMS({
-            //     to: order.phone,
-            //     message: `Order #${order.id.slice(-6)}: ${message}`
-            // });
+            // Send SMS notification via backend function
+            await base44.functions.invoke('sendSMS', {
+                to: order.phone,
+                message: message
+            });
             
-            console.log(`SMS would be sent to ${order.phone}: ${message}`);
+            console.log(`SMS sent to ${order.phone}: ${message}`);
         } catch (error) {
-            console.error('Notification error:', error);
+            console.error('SMS notification error:', error);
+            // Don't fail the status update if SMS fails
         }
     };
 
@@ -142,7 +149,9 @@ Provide only the time range (e.g., "25-30 min").`;
             confirmed: 'Order accepted',
             preparing: 'Preparing order',
             out_for_delivery: 'Order dispatched - Driver assigned',
-            delivered: 'Order delivered'
+            ready_for_collection: 'Order ready for collection',
+            delivered: 'Order delivered',
+            collected: 'Order collected'
         };
         toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
     };
