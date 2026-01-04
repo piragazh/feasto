@@ -183,16 +183,22 @@ export default function Checkout() {
         e.preventDefault(); // Prevent page reload
         
         // ---- VALIDATION: Check Required Fields ----
-        
+
         // For guest users, name and email are required
         if (isGuest && (!formData.guest_name || !formData.guest_email)) {
             toast.error('Please provide your name and email');
             return; // Stop submission
         }
-        
-        // Door number, address, and phone are always required
-        if (!formData.door_number || !formData.delivery_address || !formData.phone) {
-            toast.error('Please fill in all required fields');
+
+        // Phone is always required
+        if (!formData.phone) {
+            toast.error('Please provide your phone number');
+            return;
+        }
+
+        // For delivery, door number and address are required
+        if (orderType === 'delivery' && (!formData.door_number || !formData.delivery_address)) {
+            toast.error('Please provide your delivery address');
             return;
         }
 
@@ -204,17 +210,19 @@ export default function Checkout() {
             return;
         }
 
-        // ---- VALIDATION: Delivery Zone ----
-        // Check if delivery is available to this address
-        if (deliveryZoneInfo && !deliveryZoneInfo.available) {
-            toast.error('Delivery is not available to your location');
-            return;
-        }
+        // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
+        if (orderType === 'delivery') {
+            // Check if delivery is available to this address
+            if (deliveryZoneInfo && !deliveryZoneInfo.available) {
+                toast.error('Delivery is not available to your location');
+                return;
+            }
 
-        // Check if order meets minimum value for delivery zone
-        if (deliveryZoneInfo?.minOrderValue && subtotal < deliveryZoneInfo.minOrderValue) {
-            toast.error(`Minimum order value for this area is £${deliveryZoneInfo.minOrderValue.toFixed(2)}`);
-            return;
+            // Check if order meets minimum value for delivery zone
+            if (deliveryZoneInfo?.minOrderValue && subtotal < deliveryZoneInfo.minOrderValue) {
+                toast.error(`Minimum order value for this area is £${deliveryZoneInfo.minOrderValue.toFixed(2)}`);
+                return;
+            }
         }
 
         // ---- PAYMENT PROCESSING ----
@@ -261,7 +269,13 @@ export default function Checkout() {
         try {
             const fullAddress = `${formData.door_number}, ${formData.delivery_address}`;
             
+            // Generate order number for collection orders
+            const orderNumber = orderType === 'collection' 
+                ? `C-${Date.now().toString().slice(-6)}` 
+                : null;
+
             const orderData = {
+                order_number: orderNumber,
                 restaurant_id: restaurantId,
                 restaurant_name: restaurantName,
                 items: cart,
@@ -431,15 +445,15 @@ export default function Checkout() {
                                 </Card>
                             )}
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <MapPin className="h-5 w-5 text-orange-500" />
-                                        Delivery Address
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    {orderType === 'delivery' ? (
+                            {orderType === 'delivery' && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <MapPin className="h-5 w-5 text-orange-500" />
+                                            Delivery Address
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">{orderType === 'delivery' ? (
                                         <>
                                             <div>
                                                 <Label htmlFor="door_number">Door Number / Flat *</Label>
@@ -499,22 +513,37 @@ export default function Checkout() {
                                                     )}
                                                 </div>
                                             )}
-                                        </>
-                                    ) : (
-                                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <p className="text-sm font-medium text-blue-900 mb-1">
-                                                🏪 Collection Order
+                                            </>
+                                            ) : null}
+                                            </CardContent>
+                                            </Card>
+                                            )}
+
+                                            {orderType === 'collection' && (
+                                            <Card>
+                                            <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                            🏪 Collection Details
+                                            </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                                            <p className="text-sm font-medium text-blue-900">
+                                            Collect your order from:
                                             </p>
                                             <p className="text-xs text-blue-700">
-                                                Collect from: {restaurant?.address || 'Restaurant address'}
+                                            📍 {restaurant?.address || 'Restaurant address'}
                                             </p>
-                                            <p className="text-xs text-blue-700 mt-1">
-                                                Ready in: 15-20 minutes
+                                            <p className="text-xs text-blue-700">
+                                            ⏱️ Ready in: 15-20 minutes
                                             </p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                                </Card>
+                                            <p className="text-xs text-gray-500 mt-2">
+                                            You'll receive an order number with QR code after placing your order
+                                            </p>
+                                            </div>
+                                            </CardContent>
+                                            </Card>
+                                            )}
 
                             <Card>
                                 <CardHeader>

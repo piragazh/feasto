@@ -19,7 +19,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         queryKey: ['live-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ 
             restaurant_id: restaurantId,
-            status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery'] }
+            status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] }
         }, '-created_date'),
         refetchInterval: 3000,
     });
@@ -153,22 +153,36 @@ Provide only the time range (e.g., "25-30 min").`;
 
         // Create printable content
         const printWindow = window.open('', '', 'width=300,height=600');
+        const orderLabel = order.order_type === 'collection' && order.order_number 
+            ? order.order_number 
+            : `#${order.id.slice(-6)}`;
+        
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Order #${order.id.slice(-6)}</title>
+                    <title>Order ${orderLabel}</title>
                     <style>
                         body { font-family: monospace; width: 280px; margin: 10px; }
                         h2 { text-align: center; margin: 10px 0; }
                         .separator { border-top: 2px dashed #000; margin: 10px 0; }
                         .item { margin: 5px 0; }
                         .total { font-weight: bold; font-size: 16px; margin-top: 10px; }
+                        .collection-badge { 
+                            text-align: center; 
+                            background: #dbeafe; 
+                            padding: 5px; 
+                            font-weight: bold;
+                            border-radius: 4px;
+                            margin: 10px 0;
+                        }
                     </style>
                 </head>
                 <body>
                     <h2>KITCHEN ORDER</h2>
+                    ${order.order_type === 'collection' ? '<div class="collection-badge">🏪 COLLECTION ORDER</div>' : ''}
                     <div class="separator"></div>
-                    <p><strong>Order #:</strong> ${order.id.slice(-6)}</p>
+                    <p><strong>Order:</strong> ${orderLabel}</p>
+                    <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : 'DELIVERY'}</p>
                     <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
                     <div class="separator"></div>
                     <h3>ITEMS:</h3>
@@ -196,6 +210,7 @@ Provide only the time range (e.g., "25-30 min").`;
             confirmed: 'bg-blue-100 text-blue-800',
             preparing: 'bg-purple-100 text-purple-800',
             out_for_delivery: 'bg-orange-100 text-orange-800',
+            ready_for_collection: 'bg-green-100 text-green-800',
         };
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
@@ -229,8 +244,15 @@ Provide only the time range (e.g., "25-30 min").`;
                         <CardHeader>
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        Order #{order.id.slice(-6)}
+                                    <CardTitle className="flex items-center gap-2 flex-wrap">
+                                        {order.order_type === 'collection' && order.order_number ? (
+                                            <>
+                                                <span className="text-2xl font-bold text-blue-600">{order.order_number}</span>
+                                                <Badge className="bg-blue-100 text-blue-800">🏪 Collection</Badge>
+                                            </>
+                                        ) : (
+                                            <>Order #{order.id.slice(-6)}</>
+                                        )}
                                         <Badge className={getStatusColor(order.status)}>
                                             {order.status.replace('_', ' ')}
                                         </Badge>
@@ -242,6 +264,15 @@ Provide only the time range (e.g., "25-30 min").`;
                                 <div className="text-right">
                                     <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
                                     <p className="text-xs text-gray-500">{order.payment_method}</p>
+                                    {order.order_type === 'collection' && order.order_number && (
+                                        <div className="mt-2">
+                                            <img 
+                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${order.order_number}`}
+                                                alt="QR Code"
+                                                className="w-20 h-20 border-2 border-gray-200 rounded"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </CardHeader>
@@ -269,10 +300,12 @@ Provide only the time range (e.g., "25-30 min").`;
 
                             {/* Customer Info */}
                             <div className="space-y-2 text-sm">
-                                <div className="flex items-start gap-2">
-                                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                                    <span className="text-gray-700">{order.delivery_address}</span>
-                                </div>
+                                {order.order_type === 'delivery' && (
+                                    <div className="flex items-start gap-2">
+                                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                                        <span className="text-gray-700">{order.delivery_address}</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-2">
                                     <Phone className="h-4 w-4 text-gray-400" />
                                     <span className="text-gray-700">{order.phone}</span>
@@ -319,12 +352,23 @@ Provide only the time range (e.g., "25-30 min").`;
                                 )}
 
                                 {order.status === 'preparing' && (
-                                    <Button
-                                        onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
-                                        className="flex-1 bg-orange-600 hover:bg-orange-700"
-                                    >
-                                        Mark as Dispatched
-                                    </Button>
+                                    <>
+                                        {order.order_type === 'collection' ? (
+                                            <Button
+                                                onClick={() => handleStatusChange(order.id, 'ready_for_collection')}
+                                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                            >
+                                                Ready for Collection
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
+                                                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                                            >
+                                                Mark as Dispatched
+                                            </Button>
+                                        )}
+                                    </>
                                 )}
 
                                 {order.status === 'out_for_delivery' && (
@@ -333,6 +377,15 @@ Provide only the time range (e.g., "25-30 min").`;
                                         className="flex-1 bg-green-600 hover:bg-green-700"
                                     >
                                         Mark as Delivered
+                                    </Button>
+                                )}
+
+                                {order.status === 'ready_for_collection' && (
+                                    <Button
+                                        onClick={() => handleStatusChange(order.id, 'collected')}
+                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                    >
+                                        Mark as Collected
                                     </Button>
                                 )}
 
