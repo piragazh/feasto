@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 
 export default function RestaurantCard({ restaurant, distance }) {
     return (
-        <Link to={createPageUrl(`Restaurant?id=${restaurant.id}`)}>
+        <Link to={createPageUrl('Restaurant') + `?id=${restaurant.id}`}>
             <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
