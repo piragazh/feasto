@@ -31,7 +31,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 
 // Initialize Stripe with public key from environment variables
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLIC_KEY || '');
 
 // Main Checkout Component
 export default function Checkout() {
