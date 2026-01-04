@@ -114,10 +114,18 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                 <span>Subtotal</span>
                                 <span>£{subtotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span>{orderType === 'collection' ? 'Collection' : 'Delivery'} Fee</span>
-                                <span>{orderType === 'collection' ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
-                            </div>
+                            {orderType === 'delivery' && (
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Delivery Fee</span>
+                                    <span>£{deliveryFee.toFixed(2)}</span>
+                                </div>
+                            )}
+                            {orderType === 'collection' && (
+                                <div className="flex justify-between text-green-600 font-medium">
+                                    <span>🏪 Collection Savings</span>
+                                    <span>FREE</span>
+                                </div>
+                            )}
                             <div className="flex justify-between font-semibold text-lg pt-3 border-t">
                                 <span>Total</span>
                                 <span>£{total.toFixed(2)}</span>
