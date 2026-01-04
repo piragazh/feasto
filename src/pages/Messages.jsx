@@ -62,7 +62,7 @@ export default function Messages() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 <div className="mb-6">
                     <Link to={createPageUrl('Home')}>
                         <Button variant="ghost" className="mb-4">
@@ -72,13 +72,13 @@ export default function Messages() {
                     </Link>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Conversations List */}
-                    <Card className="lg:col-span-1">
-                        <CardHeader>
+                    <Card className="lg:col-span-1 h-[calc(100vh-200px)] sm:h-auto">
+                        <CardHeader className="p-4">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <MessageSquare className="h-5 w-5" />
+                                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                                    <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
                                     Messages
                                 </CardTitle>
                                 <Button
@@ -86,7 +86,7 @@ export default function Messages() {
                                     onClick={() => setShowNewConversation(true)}
                                     className="bg-orange-500 hover:bg-orange-600"
                                 >
-                                    <Plus className="h-4 w-4" />
+                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </Button>
                             </div>
                             <div className="relative mt-4">
@@ -110,7 +110,7 @@ export default function Messages() {
                     </Card>
 
                     {/* Chat Interface */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 min-h-[500px]">
                         {selectedConversation ? (
                             <ChatInterface
                                 conversation={selectedConversation}
@@ -118,13 +118,13 @@ export default function Messages() {
                                 onClose={() => setSelectedConversation(null)}
                             />
                         ) : (
-                            <Card>
-                                <CardContent className="py-24 text-center">
-                                    <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                            <Card className="hidden lg:block">
+                                <CardContent className="py-16 sm:py-24 text-center">
+                                    <MessageSquare className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">
                                         Select a conversation
                                     </h3>
-                                    <p className="text-gray-500">
+                                    <p className="text-sm sm:text-base text-gray-500">
                                         Choose a conversation from the list or start a new one
                                     </p>
                                 </CardContent>

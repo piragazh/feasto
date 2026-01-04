@@ -111,7 +111,7 @@ export default function Orders() {
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 {isLoading ? (
                     <div className="space-y-4">
                         {[1, 2, 3].map(i => (
@@ -130,7 +130,7 @@ export default function Orders() {
                         </Link>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                         {orders.filter(order => order && order.id && order.restaurant_name).map((order, index) => {
                             const status = statusConfig[order?.status] || statusConfig.pending;
                             const StatusIcon = status?.icon || Clock;
@@ -143,11 +143,11 @@ export default function Orders() {
                                     transition={{ delay: index * 0.05 }}
                                 >
                                     <Card className="overflow-hidden">
-                                        <CardContent className="p-6">
-                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                                        <CardContent className="p-4 sm:p-6">
+                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-4">
                                                <div>
-                                                   <div className="flex items-center gap-2 mb-1">
-                                                       <h3 className="font-semibold text-lg text-gray-900">
+                                                   <div className="flex items-center flex-wrap gap-2 mb-1">
+                                                       <h3 className="font-semibold text-base sm:text-lg text-gray-900">
                                                            {order?.restaurant_name || 'Restaurant'}
                                                        </h3>
                                                        {order?.is_scheduled && (
@@ -212,22 +212,22 @@ export default function Orders() {
                                                     {order?.status_history && <OrderStatusTimeline statusHistory={order.status_history} />}
 
                                                     {(order?.status !== 'delivered' && order?.status !== 'cancelled') && (
-                                                        <div className="border-t pt-4 space-y-2">
-                                                            <Link to={createPageUrl('TrackOrder') + '?id=' + (order?.id || '')}>
-                                                                <Button variant="outline" className="w-full">
-                                                                    <Navigation className="h-4 w-4 mr-2" />
-                                                                    Track Order
-                                                                </Button>
-                                                            </Link>
-                                                            <Button 
-                                                                variant="outline" 
-                                                                className="w-full"
-                                                                onClick={() => setMessagingOrder(order)}
-                                                            >
-                                                                <MessageSquare className="h-4 w-4 mr-2" />
-                                                                Message Restaurant
-                                                            </Button>
-                                                        </div>
+                                                       <div className="border-t pt-4 flex flex-col sm:flex-row gap-2">
+                                                           <Link to={createPageUrl('TrackOrder') + '?id=' + (order?.id || '')} className="flex-1">
+                                                               <Button variant="outline" className="w-full">
+                                                                   <Navigation className="h-4 w-4 mr-2" />
+                                                                   Track Order
+                                                               </Button>
+                                                           </Link>
+                                                           <Button 
+                                                               variant="outline" 
+                                                               className="flex-1"
+                                                               onClick={() => setMessagingOrder(order)}
+                                                           >
+                                                               <MessageSquare className="h-4 w-4 mr-2" />
+                                                               Message Restaurant
+                                                           </Button>
+                                                       </div>
                                                     )}
 
                                                     {order?.status === 'refund_requested' && (
@@ -259,7 +259,7 @@ export default function Orders() {
                                                     )}
 
                                                     {(order?.status === 'delivered' || order?.status === 'cancelled') && (
-                                                        <div className="border-t pt-4 flex gap-2 flex-wrap">
+                                                        <div className="border-t pt-4 flex flex-col sm:flex-row gap-2">
                                                             <Button
                                                                 onClick={() => reorderOrder(order)}
                                                                 variant="outline"
@@ -285,7 +285,7 @@ export default function Orders() {
                                                                     className="flex-1 text-orange-600"
                                                                 >
                                                                     <AlertCircle className="h-4 w-4 mr-2" />
-                                                                    Request Refund
+                                                                    Refund
                                                                 </Button>
                                                             )}
                                                         </div>

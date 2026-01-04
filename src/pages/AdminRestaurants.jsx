@@ -90,18 +90,18 @@ export default function AdminRestaurants() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="flex items-center justify-between mb-6">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Restaurant Management</h1>
-                        <p className="text-gray-600 mt-1">Manage all restaurants and their owners</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Restaurant Management</h1>
+                        <p className="text-sm sm:text-base text-gray-600 mt-1">Manage all restaurants and their owners</p>
                     </div>
                     <Button 
                         onClick={() => {
                             setEditingRestaurant(null);
                             setFormDialogOpen(true);
                         }}
-                        className="bg-orange-500 hover:bg-orange-600"
+                        className="bg-orange-500 hover:bg-orange-600 w-full sm:w-auto"
                     >
                         <Plus className="h-5 w-5 mr-2" />
                         Add Restaurant
@@ -169,54 +169,59 @@ export default function AdminRestaurants() {
                                         )}
                                     </div>
 
-                                    <div className="flex gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => {
-                                                setEditingRestaurant(restaurant);
-                                                setFormDialogOpen(true);
-                                            }}
-                                            className="flex-1"
-                                        >
-                                            <Edit className="h-4 w-4 mr-1" />
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => {
-                                                setAssigningRestaurant(restaurant);
-                                                setAssignDialogOpen(true);
-                                            }}
-                                            className="flex-1"
-                                        >
-                                            <User className="h-4 w-4 mr-1" />
-                                            Assign
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => 
-                                                toggleStatusMutation.mutate({ 
-                                                    id: restaurant.id, 
-                                                    is_open: !restaurant.is_open 
-                                                })
-                                            }
-                                        >
-                                            {restaurant.is_open ? 'Close' : 'Open'}
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() => {
-                                                if (confirm('Delete this restaurant? This cannot be undone.')) {
-                                                    deleteRestaurantMutation.mutate(restaurant.id);
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setEditingRestaurant(restaurant);
+                                                    setFormDialogOpen(true);
+                                                }}
+                                                className="flex-1"
+                                            >
+                                                <Edit className="h-4 w-4 sm:mr-1" />
+                                                <span className="hidden sm:inline">Edit</span>
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setAssigningRestaurant(restaurant);
+                                                    setAssignDialogOpen(true);
+                                                }}
+                                                className="flex-1"
+                                            >
+                                                <User className="h-4 w-4 sm:mr-1" />
+                                                <span className="hidden sm:inline">Assign</span>
+                                            </Button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => 
+                                                    toggleStatusMutation.mutate({ 
+                                                        id: restaurant.id, 
+                                                        is_open: !restaurant.is_open 
+                                                    })
                                                 }
-                                            }}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                                className="flex-1"
+                                            >
+                                                {restaurant.is_open ? 'Close' : 'Open'}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => {
+                                                    if (confirm('Delete this restaurant? This cannot be undone.')) {
+                                                        deleteRestaurantMutation.mutate(restaurant.id);
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

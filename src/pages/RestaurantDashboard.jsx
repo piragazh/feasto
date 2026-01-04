@@ -184,29 +184,32 @@ export default function RestaurantDashboard() {
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
-                                <UtensilsCrossed className="h-6 w-6 text-white" />
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
+                                <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900">{restaurant.name}</h1>
-                                <p className="text-sm text-gray-500">{user.email}</p>
+                            <div className="min-w-0">
+                                <h1 className="text-base sm:text-2xl font-bold text-gray-900 truncate">{restaurant.name}</h1>
+                                <p className="text-xs sm:text-sm text-gray-500 truncate">{user.email}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                             {pendingOrders.length > 0 && (
-                                <Badge className="bg-red-500 text-white px-3 py-1">
-                                    <Bell className="h-4 w-4 mr-1" />
-                                    {pendingOrders.length} New Orders
+                                <Badge className="bg-red-500 text-white px-2 sm:px-3 py-1 text-xs">
+                                    <Bell className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                    <span className="hidden sm:inline">{pendingOrders.length} New</span>
+                                    <span className="sm:hidden">{pendingOrders.length}</span>
                                 </Badge>
                             )}
                             <Button
                                 variant="ghost"
+                                size="icon"
                                 onClick={() => base44.auth.logout()}
+                                className="shrink-0"
                             >
-                                <LogOut className="h-5 w-5" />
+                                <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                             </Button>
                         </div>
                     </div>
@@ -214,89 +217,102 @@ export default function RestaurantDashboard() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto p-4">
+            <div className="max-w-7xl mx-auto p-3 sm:p-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <div className="flex flex-col gap-2 mb-6">
-                        <TabsList className="bg-white p-1 shadow-sm">
-                            <TabsTrigger value="orders" className="relative">
-                                <ShoppingBag className="h-4 w-4 mr-2" />
-                                Live Orders
+                    <div className="flex flex-col gap-2 mb-4 sm:mb-6">
+                        <TabsList className="bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
+                            <TabsTrigger value="orders" className="relative whitespace-nowrap text-xs sm:text-sm">
+                                <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Live Orders</span>
+                                <span className="sm:hidden">Orders</span>
                                 {pendingOrders.length > 0 && (
                                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                                         {pendingOrders.length}
                                     </span>
                                 )}
                             </TabsTrigger>
-                            <TabsTrigger value="menu">
-                                <UtensilsCrossed className="h-4 w-4 mr-2" />
-                                Menu Items
+                            <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm">
+                                <UtensilsCrossed className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Menu Items</span>
+                                <span className="sm:hidden">Menu</span>
                             </TabsTrigger>
-                            <TabsTrigger value="deals">
-                                Meal Deals
+                            <TabsTrigger value="deals" className="whitespace-nowrap text-xs sm:text-sm">
+                                <span className="hidden sm:inline">Meal Deals</span>
+                                <span className="sm:hidden">Deals</span>
                             </TabsTrigger>
-                            <TabsTrigger value="coupons">
+                            <TabsTrigger value="coupons" className="whitespace-nowrap text-xs sm:text-sm">
                                 Coupons
                             </TabsTrigger>
-                            <TabsTrigger value="history">
-                                <History className="h-4 w-4 mr-2" />
-                                Past Orders
+                            <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm">
+                                <History className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Past Orders</span>
+                                <span className="sm:hidden">History</span>
                             </TabsTrigger>
-                            <TabsTrigger value="messages" className="relative">
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Messages
+                            <TabsTrigger value="messages" className="relative whitespace-nowrap text-xs sm:text-sm">
+                                <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Messages</span>
+                                <span className="sm:hidden">Chat</span>
                                 {unreadMessagesCount > 0 && (
                                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
                                         {unreadMessagesCount}
                                     </span>
                                 )}
                             </TabsTrigger>
-                            <TabsTrigger value="reviews">
-                                <Star className="h-4 w-4 mr-2" />
-                                Reviews
+                            <TabsTrigger value="reviews" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Star className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Reviews</span>
+                                <span className="sm:hidden">⭐</span>
                             </TabsTrigger>
-                            <TabsTrigger value="analytics">
-                                <BarChart3 className="h-4 w-4 mr-2" />
-                                Analytics
+                            <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm">
+                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Analytics</span>
+                                <span className="sm:hidden">📊</span>
                             </TabsTrigger>
                         </TabsList>
                         
-                        <TabsList className="bg-white p-1 shadow-sm">
-                            <TabsTrigger value="drivers">
-                                <Navigation className="h-4 w-4 mr-2" />
-                                Drivers
+                        <TabsList className="bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
+                            <TabsTrigger value="drivers" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Navigation className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Drivers</span>
+                                <span className="sm:hidden">🚗</span>
                             </TabsTrigger>
-                            <TabsTrigger value="crm">
-                                <Users className="h-4 w-4 mr-2" />
+                            <TabsTrigger value="crm" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 CRM
                             </TabsTrigger>
-                            <TabsTrigger value="refunds" className="relative">
-                                <AlertCircle className="h-4 w-4 mr-2" />
-                                Refunds
+                            <TabsTrigger value="refunds" className="relative whitespace-nowrap text-xs sm:text-sm">
+                                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Refunds</span>
+                                <span className="sm:hidden">💰</span>
                                 {refundRequests.length > 0 && (
                                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
                                         {refundRequests.length}
                                     </span>
                                 )}
                             </TabsTrigger>
-                            <TabsTrigger value="promotions">
-                                <Tag className="h-4 w-4 mr-2" />
-                                Promotions
+                            <TabsTrigger value="promotions" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Tag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Promotions</span>
+                                <span className="sm:hidden">🏷️</span>
                             </TabsTrigger>
-                            <TabsTrigger value="batching">
-                                <ShoppingBag className="h-4 w-4 mr-2" />
-                                Order Batching
+                            <TabsTrigger value="batching" className="whitespace-nowrap text-xs sm:text-sm">
+                                <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Order Batching</span>
+                                <span className="sm:hidden">Batch</span>
                             </TabsTrigger>
-                            <TabsTrigger value="modifications">
-                                <Settings className="h-4 w-4 mr-2" />
-                                Modifications
+                            <TabsTrigger value="modifications" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Modifications</span>
+                                <span className="sm:hidden">Mods</span>
                             </TabsTrigger>
-                            <TabsTrigger value="zones">
-                                <MapPin className="h-4 w-4 mr-2" />
+                            <TabsTrigger value="zones" className="whitespace-nowrap text-xs sm:text-sm">
+                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 Zones
                             </TabsTrigger>
-                            <TabsTrigger value="settings">
-                                <Settings className="h-4 w-4 mr-2" />
-                                Settings
+                            <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Settings</span>
+                                <span className="sm:hidden">⚙️</span>
                             </TabsTrigger>
                         </TabsList>
                     </div>
