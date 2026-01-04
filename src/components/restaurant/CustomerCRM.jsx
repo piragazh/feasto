@@ -413,7 +413,7 @@ export default function CustomerCRM({ restaurantId }) {
                                         <SelectItem value="all">All</SelectItem>
                                         <SelectItem value="high">High (≥£300)</SelectItem>
                                         <SelectItem value="medium">Medium (£100-300)</SelectItem>
-                                        <SelectItem value="low">Low (<£100)</SelectItem>
+                                        <SelectItem value="low">Low (&lt;£100)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
