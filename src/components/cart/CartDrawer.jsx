@@ -6,22 +6,43 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, restaurantName, orderType = 'delivery', onProceedToCheckout }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, orderType = 'delivery', onProceedToCheckout }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : 2.99;
     const total = subtotal + deliveryFee;
+
+    const handleClearCart = () => {
+        if (confirm('Clear all items from cart?')) {
+            clearCart();
+        }
+    };
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
                 <SheetHeader className="p-6 border-b">
-                    <SheetTitle className="flex items-center gap-2">
-                        <ShoppingBag className="h-5 w-5" />
-                        Your Order
-                    </SheetTitle>
-                    {restaurantName && (
-                        <p className="text-sm text-gray-500">from {restaurantName}</p>
-                    )}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <SheetTitle className="flex items-center gap-2">
+                                <ShoppingBag className="h-5 w-5" />
+                                Your Order
+                            </SheetTitle>
+                            {restaurantName && (
+                                <p className="text-sm text-gray-500">from {restaurantName}</p>
+                            )}
+                        </div>
+                        {cart.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleClearCart}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Clear All
+                            </Button>
+                        )}
+                    </div>
                 </SheetHeader>
                 
                 <div className="flex-1 overflow-y-auto p-6">

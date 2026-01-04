@@ -274,6 +274,12 @@ export default function Restaurant() {
         setCart(prev => prev.filter(item => item.menu_item_id !== itemId));
     };
 
+    const clearCart = () => {
+        setCart([]);
+        localStorage.removeItem('cart');
+        localStorage.removeItem('cartRestaurantId');
+    };
+
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -653,6 +659,7 @@ export default function Restaurant() {
                 cart={cart}
                 updateQuantity={updateQuantity}
                 removeFromCart={removeFromCart}
+                clearCart={clearCart}
                 restaurantName={restaurant.name}
                 orderType={orderType}
                 onProceedToCheckout={handleProceedToCheckout}
