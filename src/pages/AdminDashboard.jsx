@@ -92,14 +92,14 @@ export default function AdminDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="flex items-center justify-between mb-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                        <p className="text-gray-600 mt-1">Platform-wide performance overview</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                        <p className="text-sm sm:text-base text-gray-600 mt-1">Platform-wide performance overview</p>
                     </div>
-                    <Link to={createPageUrl('AdminRestaurants')}>
-                        <Button className="bg-orange-500 hover:bg-orange-600">
+                    <Link to={createPageUrl('AdminRestaurants')} className="w-full sm:w-auto">
+                        <Button className="bg-orange-500 hover:bg-orange-600 w-full sm:w-auto">
                             <Building className="h-4 w-4 mr-2" />
                             Manage Restaurants
                         </Button>
@@ -107,64 +107,64 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-4 sm:pt-6">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-600">Total Revenue</span>
-                                <DollarSign className="h-5 w-5 text-green-500" />
+                                <span className="text-xs sm:text-sm text-gray-600">Total Revenue</span>
+                                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                             </div>
-                            <p className="text-3xl font-bold">£{totalRevenue.toFixed(2)}</p>
+                            <p className="text-2xl sm:text-3xl font-bold">£{totalRevenue.toFixed(2)}</p>
                             <p className="text-xs text-gray-500 mt-1">All time</p>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-4 sm:pt-6">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-600">Total Orders</span>
-                                <ShoppingBag className="h-5 w-5 text-blue-500" />
+                                <span className="text-xs sm:text-sm text-gray-600">Total Orders</span>
+                                <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                             </div>
-                            <p className="text-3xl font-bold">{totalOrders}</p>
+                            <p className="text-2xl sm:text-3xl font-bold">{totalOrders}</p>
                             <p className="text-xs text-gray-500 mt-1">Completed orders</p>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-4 sm:pt-6">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-600">Avg Order Value</span>
-                                <TrendingUp className="h-5 w-5 text-purple-500" />
+                                <span className="text-xs sm:text-sm text-gray-600">Avg Order Value</span>
+                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
                             </div>
-                            <p className="text-3xl font-bold">£{avgOrderValue.toFixed(2)}</p>
+                            <p className="text-2xl sm:text-3xl font-bold">£{avgOrderValue.toFixed(2)}</p>
                             <p className="text-xs text-gray-500 mt-1">Per order</p>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-4 sm:pt-6">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-600">Restaurants</span>
-                                <Building className="h-5 w-5 text-orange-500" />
+                                <span className="text-xs sm:text-sm text-gray-600">Restaurants</span>
+                                <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
                             </div>
-                            <p className="text-3xl font-bold">{restaurants.length}</p>
+                            <p className="text-2xl sm:text-3xl font-bold">{restaurants.length}</p>
                             <p className="text-xs text-gray-500 mt-1">Active restaurants</p>
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Charts */}
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Revenue by Restaurant (Top 10)</CardTitle>
+                            <CardTitle className="text-base sm:text-lg">Revenue by Restaurant (Top 10)</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
+                            <ResponsiveContainer width="100%" height={250}>
                                 <BarChart data={revenueByRestaurant}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} />
                                     <Tooltip />
                                     <Bar dataKey="revenue" fill="#f97316" name="Revenue (£)" />
                                 </BarChart>
@@ -174,14 +174,14 @@ export default function AdminDashboard() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Orders by Restaurant (Top 10)</CardTitle>
+                            <CardTitle className="text-base sm:text-lg">Orders by Restaurant (Top 10)</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
+                            <ResponsiveContainer width="100%" height={250}>
                                 <BarChart data={revenueByRestaurant}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} />
                                     <Tooltip />
                                     <Bar dataKey="orders" fill="#3b82f6" name="Orders" />
                                 </BarChart>
@@ -193,45 +193,45 @@ export default function AdminDashboard() {
                 {/* Restaurant Performance Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Restaurant Performance</CardTitle>
+                        <CardTitle className="text-base sm:text-lg">Restaurant Performance</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
+                    <CardContent className="px-0 sm:px-6">
+                        <div className="overflow-x-auto -mx-4 sm:mx-0">
+                            <table className="w-full min-w-[600px]">
                                 <thead>
                                     <tr className="border-b">
-                                        <th className="text-left py-3 px-4 font-semibold">Restaurant</th>
-                                        <th className="text-right py-3 px-4 font-semibold">Orders</th>
-                                        <th className="text-right py-3 px-4 font-semibold">Revenue</th>
-                                        <th className="text-right py-3 px-4 font-semibold">Avg Order</th>
-                                        <th className="text-right py-3 px-4 font-semibold">Rating</th>
-                                        <th className="text-right py-3 px-4 font-semibold">Status</th>
+                                        <th className="text-left py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Restaurant</th>
+                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Orders</th>
+                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Revenue</th>
+                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm hidden sm:table-cell">Avg Order</th>
+                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Rating</th>
+                                        <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {restaurantStats.map((restaurant) => (
                                         <tr key={restaurant.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-3 px-4">
+                                            <td className="py-2 sm:py-3 px-3 sm:px-4">
                                                 <div>
-                                                    <p className="font-semibold">{restaurant.name}</p>
+                                                    <p className="font-semibold text-xs sm:text-sm">{restaurant.name}</p>
                                                     <p className="text-xs text-gray-500">{restaurant.cuisine_type}</p>
                                                 </div>
                                             </td>
-                                            <td className="text-right py-3 px-4">{restaurant.orderCount}</td>
-                                            <td className="text-right py-3 px-4 font-semibold">
+                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">{restaurant.orderCount}</td>
+                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">
                                                 £{restaurant.revenue.toFixed(2)}
                                             </td>
-                                            <td className="text-right py-3 px-4">
+                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
                                                 £{restaurant.orderCount > 0 ? (restaurant.revenue / restaurant.orderCount).toFixed(2) : '0.00'}
                                             </td>
-                                            <td className="text-right py-3 px-4">
+                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                                    <span>{restaurant.avgRating > 0 ? restaurant.avgRating.toFixed(1) : 'N/A'}</span>
+                                                    <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
+                                                    <span className="text-xs sm:text-sm">{restaurant.avgRating > 0 ? restaurant.avgRating.toFixed(1) : 'N/A'}</span>
                                                 </div>
                                             </td>
-                                            <td className="text-right py-3 px-4">
-                                                <Badge variant={restaurant.is_open ? 'default' : 'secondary'}>
+                                            <td className="text-right py-2 sm:py-3 px-3 sm:px-4">
+                                                <Badge variant={restaurant.is_open ? 'default' : 'secondary'} className="text-xs">
                                                     {restaurant.is_open ? 'Open' : 'Closed'}
                                                 </Badge>
                                             </td>
