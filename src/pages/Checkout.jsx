@@ -31,7 +31,15 @@ import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 
 // Initialize Stripe with public key from environment variables
-const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLIC_KEY || '');
+// Note: Frontend env vars in Base44 need VITE_ prefix
+const stripePromise = (() => {
+    const publicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    if (!publicKey) {
+        console.warn('⚠️ VITE_STRIPE_PUBLIC_KEY not set. Add it in Dashboard > Settings > Secrets');
+        return null;
+    }
+    return loadStripe(publicKey);
+})();
 
 // Main Checkout Component
 export default function Checkout() {
@@ -213,6 +221,11 @@ export default function Checkout() {
         
         // For CARD payments: Initialize Stripe payment flow
         if (paymentMethod === 'card') {
+            if (!stripePromise) {
+                toast.error('Stripe is not configured. Please contact support or use Cash payment.');
+                return;
+            }
+
             setIsSubmitting(true); // Show loading state
             try {
                 // Call backend function to create Stripe payment intent
