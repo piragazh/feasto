@@ -38,32 +38,51 @@ export default function Restaurant() {
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
     const [activeCategoryScroll, setActiveCategoryScroll] = useState('');
 
-    // Load cart from localStorage
+    // Load cart from localStorage with error handling
     useEffect(() => {
-        const savedCart = localStorage.getItem('cart');
-        const savedRestaurantId = localStorage.getItem('cartRestaurantId');
-        if (savedCart && savedRestaurantId === restaurantId) {
-            setCart(JSON.parse(savedCart));
+        try {
+            const savedCart = localStorage.getItem('cart');
+            const savedRestaurantId = localStorage.getItem('cartRestaurantId');
+            if (savedCart && savedRestaurantId === restaurantId) {
+                const parsedCart = JSON.parse(savedCart);
+                if (Array.isArray(parsedCart)) {
+                    setCart(parsedCart);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading cart:', error);
+            localStorage.removeItem('cart');
+            toast.error('Cart data corrupted. Starting fresh.');
         }
     }, [restaurantId]);
 
-    // Save cart to localStorage
+    // Save cart to localStorage with error handling
     useEffect(() => {
-        localStorage.setItem('cart', JSON.stringify(cart));
-        if (restaurantId) {
-            localStorage.setItem('cartRestaurantId', restaurantId);
+        try {
+            localStorage.setItem('cart', JSON.stringify(cart));
+            if (restaurantId) {
+                localStorage.setItem('cartRestaurantId', restaurantId);
+            }
+        } catch (error) {
+            console.error('Error saving cart:', error);
+            toast.error('Unable to save cart. Storage may be full.');
         }
     }, [cart, restaurantId]);
 
-    const { data: restaurant, isLoading: restaurantLoading } = useQuery({
+    const { data: restaurant, isLoading: restaurantLoading, error: restaurantError } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
-            console.log('Fetching restaurant with ID:', restaurantId);
+            if (!restaurantId) {
+                throw new Error('No restaurant ID provided');
+            }
             const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
-            console.log('Found restaurants:', restaurants);
+            if (!restaurants || restaurants.length === 0) {
+                throw new Error('Restaurant not found');
+            }
             return restaurants[0];
         },
         enabled: !!restaurantId,
+        retry: 2,
     });
 
     const { data: menuItems = [], isLoading: menuLoading } = useQuery({
@@ -200,54 +219,83 @@ export default function Restaurant() {
     };
 
     const addToCartDirect = (item) => {
-        setCart(prev => {
-            const cartKey = `${item.id}`;
-            const existing = prev.find(i => i.menu_item_id === item.id && !i.customizations);
-            if (existing) {
-                return prev.map(i => 
-                    i.menu_item_id === item.id && !i.customizations
-                        ? { ...i, quantity: i.quantity + 1 }
-                        : i
-                );
+        try {
+            if (!item || !item.id || !item.name || item.price == null) {
+                toast.error('Invalid item data');
+                return;
             }
-            return [...prev, {
-                menu_item_id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: 1,
-                image_url: item.image_url
-            }];
-        });
-        toast.success(`${item.name} added to cart`);
+
+            if (!item.is_available) {
+                toast.error(`${item.name} is currently unavailable`);
+                return;
+            }
+
+            setCart(prev => {
+                const existing = prev.find(i => i.menu_item_id === item.id && !i.customizations);
+                if (existing) {
+                    return prev.map(i => 
+                        i.menu_item_id === item.id && !i.customizations
+                            ? { ...i, quantity: i.quantity + 1 }
+                            : i
+                    );
+                }
+                return [...prev, {
+                    menu_item_id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1,
+                    image_url: item.image_url
+                }];
+            });
+            toast.success(`${item.name} added to cart`);
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            toast.error('Failed to add item to cart');
+        }
     };
 
     const addToCartWithCustomizations = (itemData) => {
-        const customizationKey = JSON.stringify(itemData.customizations);
-        setCart(prev => {
-            const existing = prev.find(i => 
-                i.menu_item_id === itemData.id && 
-                JSON.stringify(i.customizations) === customizationKey
-            );
-            
-            if (existing) {
-                return prev.map(i => 
-                    i.menu_item_id === itemData.id && 
-                    JSON.stringify(i.customizations) === customizationKey
-                        ? { ...i, quantity: i.quantity + itemData.quantity }
-                        : i
-                );
+        try {
+            if (!itemData || !itemData.id || !itemData.name) {
+                toast.error('Invalid item data');
+                return;
             }
-            
-            return [...prev, {
-                menu_item_id: itemData.id,
-                name: itemData.name,
-                price: itemData.final_price,
-                quantity: itemData.quantity,
-                image_url: itemData.image_url,
-                customizations: itemData.customizations
-            }];
-        });
-        toast.success(`${itemData.name} added to cart`);
+
+            if (itemData.quantity < 1) {
+                toast.error('Quantity must be at least 1');
+                return;
+            }
+
+            const customizationKey = JSON.stringify(itemData.customizations || {});
+            setCart(prev => {
+                const existing = prev.find(i => 
+                    i.menu_item_id === itemData.id && 
+                    JSON.stringify(i.customizations || {}) === customizationKey
+                );
+                
+                if (existing) {
+                    return prev.map(i => 
+                        i.menu_item_id === itemData.id && 
+                        JSON.stringify(i.customizations || {}) === customizationKey
+                            ? { ...i, quantity: i.quantity + itemData.quantity }
+                            : i
+                    );
+                }
+                
+                return [...prev, {
+                    menu_item_id: itemData.id,
+                    name: itemData.name,
+                    price: itemData.final_price,
+                    quantity: itemData.quantity,
+                    image_url: itemData.image_url,
+                    customizations: itemData.customizations
+                }];
+            });
+            toast.success(`${itemData.name} added to cart`);
+        } catch (error) {
+            console.error('Error adding customized item:', error);
+            toast.error('Failed to add item to cart');
+        }
     };
 
     const addMealDealToCart = (deal) => {
@@ -334,19 +382,40 @@ export default function Restaurant() {
     };
 
     const handleProceedToCheckout = () => {
-        const orderingCheck = checkOrderingAvailable();
-        
-        if (!orderingCheck.available) {
-            setTimeWarningMessage(orderingCheck.message);
-            setShowTimeWarning(true);
-            return;
-        }
+        try {
+            if (cart.length === 0) {
+                toast.error('Your cart is empty');
+                return;
+            }
 
-        // Save order type to localStorage
-        localStorage.setItem('orderType', orderType);
-        localStorage.setItem('cartRestaurantName', restaurant.name);
-        setCartOpen(false);
-        window.location.href = createPageUrl('Checkout');
+            if (!restaurant) {
+                toast.error('Restaurant information unavailable');
+                return;
+            }
+
+            // Check minimum order
+            const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            if (restaurant.minimum_order && cartTotal < restaurant.minimum_order) {
+                toast.error(`Minimum order is £${restaurant.minimum_order.toFixed(2)}`);
+                return;
+            }
+
+            const orderingCheck = checkOrderingAvailable();
+            if (!orderingCheck.available) {
+                setTimeWarningMessage(orderingCheck.message);
+                setShowTimeWarning(true);
+                return;
+            }
+
+            // Save order type to localStorage
+            localStorage.setItem('orderType', orderType);
+            localStorage.setItem('cartRestaurantName', restaurant.name);
+            setCartOpen(false);
+            window.location.href = createPageUrl('Checkout');
+        } catch (error) {
+            console.error('Error proceeding to checkout:', error);
+            toast.error('Failed to proceed to checkout');
+        }
     };
 
     if (restaurantLoading) {
@@ -361,9 +430,23 @@ export default function Restaurant() {
         );
     }
 
-    if (!restaurant) {
+    if (restaurantError) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to load restaurant</h2>
+                    <p className="text-gray-600 mb-4">{restaurantError.message || 'Please try again later'}</p>
+                    <Link to={createPageUrl('Home')}>
+                        <Button>Go Back Home</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (!restaurantLoading && !restaurant) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Restaurant not found</h2>
                     <Link to={createPageUrl('Home')}>

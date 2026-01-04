@@ -6,20 +6,28 @@ import { motion } from 'framer-motion';
 
 export default function MenuItemCard({ item, onAddToCart }) {
     const hasCustomizations = item.customization_options?.length > 0;
+    const isAvailable = item.is_available !== false;
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group flex gap-4 p-4 bg-white rounded-2xl border border-gray-100 hover:border-orange-200 hover:shadow-lg transition-all duration-300"
+            className={`group flex gap-4 p-4 rounded-2xl border transition-all duration-300 ${
+                isAvailable 
+                    ? 'bg-white border-gray-100 hover:border-orange-200 hover:shadow-lg' 
+                    : 'bg-gray-50 border-gray-200 opacity-60'
+            }`}
         >
             <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    {item.is_popular && (
+                    {!isAvailable && (
+                        <Badge variant="destructive" className="text-xs">Unavailable</Badge>
+                    )}
+                    {item.is_popular && isAvailable && (
                         <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
                     )}
-                    {hasCustomizations && (
+                    {hasCustomizations && isAvailable && (
                         <Badge variant="outline" className="text-xs">Customizable</Badge>
                     )}
                 </div>
@@ -52,7 +60,8 @@ export default function MenuItemCard({ item, onAddToCart }) {
                         <Button
                             onClick={() => onAddToCart(item)}
                             size="icon"
-                            className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30"
+                            disabled={!isAvailable}
+                            className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Plus className="h-5 w-5" />
                         </Button>
@@ -61,7 +70,8 @@ export default function MenuItemCard({ item, onAddToCart }) {
                     <Button
                         onClick={() => onAddToCart(item)}
                         size="icon"
-                        className="h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30"
+                        disabled={!isAvailable}
+                        className="h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Plus className="h-5 w-5" />
                     </Button>

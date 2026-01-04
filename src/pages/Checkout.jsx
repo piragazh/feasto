@@ -267,7 +267,21 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
-            const fullAddress = `${formData.door_number}, ${formData.delivery_address}`;
+            // Validate cart
+            if (!cart || cart.length === 0) {
+                toast.error('Your cart is empty');
+                return;
+            }
+
+            // Validate restaurant
+            if (!restaurantId || !restaurantName) {
+                toast.error('Restaurant information missing');
+                return;
+            }
+
+            const fullAddress = orderType === 'delivery' 
+                ? `${formData.door_number}, ${formData.delivery_address}`
+                : restaurant?.address || 'Collection';
             
             // Generate order number for collection orders
             const orderNumber = orderType === 'collection' 
@@ -307,16 +321,28 @@ export default function Checkout() {
 
             const newOrder = await base44.entities.Order.create(orderData);
 
+            if (!newOrder || !newOrder.id) {
+                throw new Error('Order creation failed');
+            }
+
             // Update group order status if applicable
             if (groupOrderId) {
-                await base44.entities.GroupOrder.update(groupOrderId, { status: 'placed' });
+                try {
+                    await base44.entities.GroupOrder.update(groupOrderId, { status: 'placed' });
+                } catch (error) {
+                    console.error('Failed to update group order:', error);
+                }
             }
 
             // Increment coupon usage if applied
             if (appliedCoupon) {
-                await base44.entities.Coupon.update(appliedCoupon.id, {
-                    usage_count: (appliedCoupon.usage_count || 0) + 1
-                });
+                try {
+                    await base44.entities.Coupon.update(appliedCoupon.id, {
+                        usage_count: (appliedCoupon.usage_count || 0) + 1
+                    });
+                } catch (error) {
+                    console.error('Failed to update coupon usage:', error);
+                }
             }
 
             // Send SMS confirmation to customer
@@ -354,12 +380,14 @@ export default function Checkout() {
             setTimeout(() => {
                 navigate(createPageUrl('Orders'));
             }, 2000);
-        } catch (error) {
-            toast.error('Failed to place order. Please try again.');
-        } finally {
+            } catch (error) {
+            console.error('Order creation error:', error);
+            const errorMessage = error.message || 'Failed to place order';
+            toast.error(errorMessage + '. Please try again.');
+            } finally {
             setIsSubmitting(false);
-        }
-    };
+            }
+            };
 
     const handleStripeSuccess = async (paymentIntentId) => {
         toast.success('Payment successful!');
