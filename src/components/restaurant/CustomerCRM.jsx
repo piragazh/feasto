@@ -15,9 +15,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, TrendingUp, DollarSign, Mail, Search, Filter, Send, Star } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Mail, Search, Filter, Send, Star, Percent, Calendar, Leaf } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function CustomerCRM({ restaurantId }) {
     const [selectedSegment, setSelectedSegment] = useState('all');
@@ -26,6 +28,15 @@ export default function CustomerCRM({ restaurantId }) {
     const [messageDialog, setMessageDialog] = useState(false);
     const [messageContent, setMessageContent] = useState('');
     const [targetSegment, setTargetSegment] = useState(null);
+    const [offerType, setOfferType] = useState('message');
+    const [discountValue, setDiscountValue] = useState('');
+    const [offerTitle, setOfferTitle] = useState('');
+    const [advancedFilters, setAdvancedFilters] = useState({
+        orderFrequency: 'all',
+        spendingLevel: 'all',
+        dietaryPreference: 'all',
+        lastOrderDays: 'all'
+    });
     const queryClient = useQueryClient();
 
     const { data: orders = [], isLoading } = useQuery({
@@ -36,6 +47,11 @@ export default function CustomerCRM({ restaurantId }) {
     const { data: reviews = [] } = useQuery({
         queryKey: ['crm-reviews', restaurantId],
         queryFn: () => base44.entities.Review.filter({ restaurant_id: restaurantId }),
+    });
+
+    const { data: menuItems = [] } = useQuery({
+        queryKey: ['crm-menu', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
     });
 
     // Analyze customer data
@@ -61,10 +77,21 @@ export default function CustomerCRM({ restaurantId }) {
             customerData[email].totalSpent += order.total || 0;
             customerData[email].lastOrder = order.created_date;
             
-            // Track favorite items
+            // Track favorite items and dietary preferences
             order.items?.forEach(item => {
                 customerData[email].favoriteItems[item.name] = 
                     (customerData[email].favoriteItems[item.name] || 0) + item.quantity;
+                
+                // Detect dietary preferences from ordered items
+                const menuItem = menuItems.find(m => m.name === item.name);
+                if (menuItem) {
+                    if (menuItem.is_vegetarian) {
+                        customerData[email].vegetarianOrders = (customerData[email].vegetarianOrders || 0) + 1;
+                    }
+                    if (menuItem.is_spicy) {
+                        customerData[email].spicyOrders = (customerData[email].spicyOrders || 0) + 1;
+                    }
+                }
             });
         });
 
@@ -84,12 +111,57 @@ export default function CustomerCRM({ restaurantId }) {
             const daysSinceFirst = (new Date() - new Date(customer.firstOrder)) / (1000 * 60 * 60 * 24);
             const daysSinceLast = (new Date() - new Date(customer.lastOrder)) / (1000 * 60 * 60 * 24);
             
+            customer.daysSinceLast = daysSinceLast;
+            
             customer.avgRating = customer.reviews.length > 0
                 ? customer.reviews.reduce((sum, r) => sum + r.rating, 0) / customer.reviews.length
                 : null;
             
+            // Detect dietary preferences
+            const totalOrders = customer.orderCount;
+            const vegPercent = (customer.vegetarianOrders || 0) / totalOrders;
+            const spicyPercent = (customer.spicyOrders || 0) / totalOrders;
+            
+            if (vegPercent >= 0.7) {
+                customer.dietaryPreference = 'vegetarian';
+            } else if (spicyPercent >= 0.6) {
+                customer.dietaryPreference = 'spicy';
+            } else {
+                customer.dietaryPreference = 'none';
+            }
+            
+            // Determine spending level
+            if (customer.totalSpent >= 300) {
+                customer.spendingLevel = 'high';
+            } else if (customer.totalSpent >= 100) {
+                customer.spendingLevel = 'medium';
+            } else {
+                customer.spendingLevel = 'low';
+            }
+            
+            // Determine order frequency
+            const avgDaysBetweenOrders = daysSinceFirst / customer.orderCount;
+            if (avgDaysBetweenOrders <= 14) {
+                customer.orderFrequency = 'frequent';
+            } else if (avgDaysBetweenOrders <= 30) {
+                customer.orderFrequency = 'regular';
+            } else {
+                customer.orderFrequency = 'occasional';
+            }
+            
+            // Loyalty status based on multiple factors
+            if (customer.orderCount >= 15 && customer.totalSpent >= 300) {
+                customer.loyaltyStatus = 'platinum';
+            } else if (customer.orderCount >= 10 && customer.totalSpent >= 200) {
+                customer.loyaltyStatus = 'gold';
+            } else if (customer.orderCount >= 5 && customer.totalSpent >= 100) {
+                customer.loyaltyStatus = 'silver';
+            } else {
+                customer.loyaltyStatus = 'bronze';
+            }
+            
             // Determine segment
-            if (customer.orderCount >= 10 && customer.totalSpent >= 200) {
+            if (customer.loyaltyStatus === 'platinum' || customer.loyaltyStatus === 'gold') {
                 customer.segment = 'vip';
             } else if (customer.orderCount >= 5) {
                 customer.segment = 'frequent';
@@ -126,27 +198,51 @@ export default function CustomerCRM({ restaurantId }) {
         return customerAnalytics.customers.filter(customer => {
             const matchesSegment = selectedSegment === 'all' || customer.segment === selectedSegment;
             const matchesSearch = !searchQuery || customer.email.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesSegment && matchesSearch;
+            
+            // Advanced filters
+            const matchesFrequency = advancedFilters.orderFrequency === 'all' || customer.orderFrequency === advancedFilters.orderFrequency;
+            const matchesSpending = advancedFilters.spendingLevel === 'all' || customer.spendingLevel === advancedFilters.spendingLevel;
+            const matchesDietary = advancedFilters.dietaryPreference === 'all' || customer.dietaryPreference === advancedFilters.dietaryPreference;
+            
+            const matchesLastOrder = (() => {
+                if (advancedFilters.lastOrderDays === 'all') return true;
+                const days = parseInt(advancedFilters.lastOrderDays);
+                return customer.daysSinceLast <= days;
+            })();
+            
+            return matchesSegment && matchesSearch && matchesFrequency && matchesSpending && matchesDietary && matchesLastOrder;
         }).sort((a, b) => b.totalSpent - a.totalSpent);
-    }, [customerAnalytics.customers, selectedSegment, searchQuery]);
+    }, [customerAnalytics.customers, selectedSegment, searchQuery, advancedFilters]);
 
     const sendMessageMutation = useMutation({
-        mutationFn: async ({ emails, message }) => {
+        mutationFn: async ({ emails, message, offerData }) => {
             // In production, this would send actual emails via the SendEmail integration
+            const subject = offerData?.title || `Special Offer from Restaurant`;
+            let body = message;
+            
+            if (offerData?.type === 'discount') {
+                body = `${offerData.title}\n\n${message}\n\nDiscount: ${offerData.value}% off\n\nUse this offer on your next order!`;
+            } else if (offerData?.type === 'freeDelivery') {
+                body = `${offerData.title}\n\n${message}\n\nEnjoy FREE DELIVERY on your next order!`;
+            }
+            
             const promises = emails.map(email => 
                 base44.integrations.Core.SendEmail({
                     to: email,
-                    subject: `Special Offer from ${restaurantId}`,
-                    body: message
+                    subject,
+                    body
                 })
             );
             await Promise.all(promises);
         },
         onSuccess: () => {
-            toast.success('Messages sent successfully!');
+            toast.success('Promotional offers sent successfully!');
             setMessageDialog(false);
             setMessageContent('');
             setTargetSegment(null);
+            setOfferType('message');
+            setDiscountValue('');
+            setOfferTitle('');
         },
     });
 
@@ -163,9 +259,27 @@ export default function CustomerCRM({ restaurantId }) {
             toast.error('Please enter a message');
             return;
         }
+        
+        if (offerType !== 'message' && !offerTitle.trim()) {
+            toast.error('Please enter an offer title');
+            return;
+        }
+        
+        if (offerType === 'discount' && (!discountValue || discountValue <= 0)) {
+            toast.error('Please enter a valid discount percentage');
+            return;
+        }
+        
+        const offerData = offerType === 'message' ? null : {
+            type: offerType,
+            title: offerTitle,
+            value: discountValue
+        };
+        
         sendMessageMutation.mutate({
             emails: targetSegment.emails,
-            message: messageContent
+            message: messageContent,
+            offerData
         });
     };
 
@@ -233,7 +347,7 @@ export default function CustomerCRM({ restaurantId }) {
 
             {/* Segment Filters & Search */}
             <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 space-y-4">
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1">
                             <div className="relative">
@@ -264,6 +378,82 @@ export default function CustomerCRM({ restaurantId }) {
                                     {config.label} ({customerAnalytics.segments[key]})
                                 </Button>
                             ))}
+                        </div>
+                    </div>
+                    
+                    {/* Advanced Filters */}
+                    <div className="border-t pt-4">
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <Filter className="h-4 w-4" />
+                            Advanced Filters
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <Label className="text-xs">Order Frequency</Label>
+                                <Select value={advancedFilters.orderFrequency} onValueChange={(v) => setAdvancedFilters({...advancedFilters, orderFrequency: v})}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All</SelectItem>
+                                        <SelectItem value="frequent">Frequent (≤2 weeks)</SelectItem>
+                                        <SelectItem value="regular">Regular (2-4 weeks)</SelectItem>
+                                        <SelectItem value="occasional">Occasional (>1 month)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            <div>
+                                <Label className="text-xs">Spending Level</Label>
+                                <Select value={advancedFilters.spendingLevel} onValueChange={(v) => setAdvancedFilters({...advancedFilters, spendingLevel: v})}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All</SelectItem>
+                                        <SelectItem value="high">High (≥£300)</SelectItem>
+                                        <SelectItem value="medium">Medium (£100-300)</SelectItem>
+                                        <SelectItem value="low">Low (<£100)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            <div>
+                                <Label className="text-xs flex items-center gap-1">
+                                    <Leaf className="h-3 w-3" />
+                                    Dietary Preference
+                                </Label>
+                                <Select value={advancedFilters.dietaryPreference} onValueChange={(v) => setAdvancedFilters({...advancedFilters, dietaryPreference: v})}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All</SelectItem>
+                                        <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                                        <SelectItem value="spicy">Spicy Food</SelectItem>
+                                        <SelectItem value="none">No Preference</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            <div>
+                                <Label className="text-xs flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    Last Order
+                                </Label>
+                                <Select value={advancedFilters.lastOrderDays} onValueChange={(v) => setAdvancedFilters({...advancedFilters, lastOrderDays: v})}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Time</SelectItem>
+                                        <SelectItem value="7">Last 7 days</SelectItem>
+                                        <SelectItem value="30">Last 30 days</SelectItem>
+                                        <SelectItem value="60">Last 60 days</SelectItem>
+                                        <SelectItem value="90">Last 90 days</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -341,23 +531,29 @@ export default function CustomerCRM({ restaurantId }) {
                                                     View Details
                                                 </Button>
                                             </div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                <div>
-                                                    <p className="text-gray-500">Orders</p>
-                                                    <p className="font-semibold">{customer.orderCount}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-500">Total Spent</p>
-                                                    <p className="font-semibold text-green-600">£{customer.totalSpent.toFixed(2)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-500">Avg Order</p>
-                                                    <p className="font-semibold">£{customer.avgOrderValue.toFixed(2)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-500">Favorite</p>
-                                                    <p className="font-semibold text-xs truncate">{customer.favoriteItem}</p>
-                                                </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                                               <div>
+                                                   <p className="text-gray-500">Orders</p>
+                                                   <p className="font-semibold">{customer.orderCount}</p>
+                                               </div>
+                                               <div>
+                                                   <p className="text-gray-500">Total Spent</p>
+                                                   <p className="font-semibold text-green-600">£{customer.totalSpent.toFixed(2)}</p>
+                                               </div>
+                                               <div>
+                                                   <p className="text-gray-500">Loyalty</p>
+                                                   <Badge variant="outline" className="text-xs">
+                                                       {customer.loyaltyStatus}
+                                                   </Badge>
+                                               </div>
+                                               <div>
+                                                   <p className="text-gray-500">Diet Pref</p>
+                                                   <p className="font-semibold text-xs">{customer.dietaryPreference === 'none' ? '-' : customer.dietaryPreference}</p>
+                                               </div>
+                                               <div>
+                                                   <p className="text-gray-500">Favorite</p>
+                                                   <p className="font-semibold text-xs truncate">{customer.favoriteItem}</p>
+                                               </div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -453,9 +649,9 @@ export default function CustomerCRM({ restaurantId }) {
 
             {/* Message Dialog */}
             <Dialog open={messageDialog} onOpenChange={setMessageDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Send Targeted Message</DialogTitle>
+                        <DialogTitle>Send Targeted Promotional Offer</DialogTitle>
                         <DialogDescription>
                             {targetSegment && `Sending to ${targetSegment.count} customers in ${
                                 targetSegment.segment === 'all' ? 'all segments' : segmentConfig[targetSegment.segment]?.label
@@ -463,12 +659,75 @@ export default function CustomerCRM({ restaurantId }) {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <Textarea
-                            placeholder="Enter your promotional message..."
-                            value={messageContent}
-                            onChange={(e) => setMessageContent(e.target.value)}
-                            rows={6}
-                        />
+                        <div>
+                            <Label>Offer Type</Label>
+                            <Select value={offerType} onValueChange={setOfferType}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="message">Message Only</SelectItem>
+                                    <SelectItem value="discount">
+                                        <div className="flex items-center gap-2">
+                                            <Percent className="h-4 w-4" />
+                                            Percentage Discount
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="freeDelivery">
+                                        <div className="flex items-center gap-2">
+                                            🚚 Free Delivery
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        {offerType !== 'message' && (
+                            <>
+                                <div>
+                                    <Label>Offer Title</Label>
+                                    <Input
+                                        placeholder="e.g., Special Weekend Offer!"
+                                        value={offerTitle}
+                                        onChange={(e) => setOfferTitle(e.target.value)}
+                                    />
+                                </div>
+                                
+                                {offerType === 'discount' && (
+                                    <div>
+                                        <Label>Discount Percentage</Label>
+                                        <Input
+                                            type="number"
+                                            placeholder="e.g., 15"
+                                            value={discountValue}
+                                            onChange={(e) => setDiscountValue(e.target.value)}
+                                            min="0"
+                                            max="100"
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        )}
+                        
+                        <div>
+                            <Label>Message</Label>
+                            <Textarea
+                                placeholder="Enter your promotional message..."
+                                value={messageContent}
+                                onChange={(e) => setMessageContent(e.target.value)}
+                                rows={6}
+                            />
+                        </div>
+                        
+                        {offerType !== 'message' && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p className="text-sm font-semibold text-blue-900 mb-1">Preview:</p>
+                                <p className="text-xs text-blue-700">
+                                    {offerTitle || 'Offer Title'} - {offerType === 'discount' ? `${discountValue || '0'}% off` : 'Free Delivery'}
+                                </p>
+                            </div>
+                        )}
+                        
                         <div className="flex gap-2">
                             <Button onClick={() => setMessageDialog(false)} variant="outline" className="flex-1">
                                 Cancel
@@ -476,10 +735,10 @@ export default function CustomerCRM({ restaurantId }) {
                             <Button
                                 onClick={handleSendMessage}
                                 disabled={sendMessageMutation.isPending}
-                                className="flex-1"
+                                className="flex-1 bg-orange-500 hover:bg-orange-600"
                             >
                                 <Send className="h-4 w-4 mr-2" />
-                                Send Messages
+                                {sendMessageMutation.isPending ? 'Sending...' : 'Send Offer'}
                             </Button>
                         </div>
                     </div>
