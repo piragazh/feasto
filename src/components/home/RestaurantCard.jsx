@@ -6,8 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from 'framer-motion';
 
 export default function RestaurantCard({ restaurant, distance }) {
+    const restaurantUrl = `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
+    console.log('Restaurant card URL:', restaurantUrl, 'ID:', restaurant.id);
+    
     return (
-        <Link to={createPageUrl('Restaurant') + `?id=${restaurant.id}`}>
+        <Link to={restaurantUrl}>
             <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
