@@ -164,9 +164,52 @@ export default function DomainManagement() {
                     <h2 className="text-2xl font-bold">Domain Management</h2>
                     <p className="text-gray-600 text-sm">Configure custom domains for restaurants</p>
                 </div>
-                <Button onClick={copyDNSInstructions} variant="outline">
+                <Button 
+                    onClick={() => {
+                        const instructions = `DNS Configuration Guide for Custom Domain
+
+Step 1: Log in to your domain registrar
+(GoDaddy, Namecheap, Cloudflare, Google Domains, etc.)
+
+Step 2: Find DNS Settings
+Look for "DNS Management" or "DNS Settings" in your domain control panel
+
+Step 3: Add CNAME Record
+Create a new CNAME record with these values:
+
+Type: CNAME
+Name/Host: @ (for root domain like example.com)
+         OR www (for www.example.com)
+         OR subdomain (for order.example.com)
+Points to/Target: ${window.location.hostname}
+TTL: 3600 (or leave as default)
+
+Step 4: Save and Wait
+- Save your DNS changes
+- Wait 10-60 minutes for DNS propagation
+- Some registrars may take up to 48 hours
+
+Step 5: Verify Domain
+Return to this page and click "Mark as Verified"
+
+Note: You cannot use IP addresses or localhost as custom domains.`;
+
+                        navigator.clipboard.writeText(instructions).then(() => 
+                            toast.success('Full DNS instructions copied to clipboard!')
+                        ).catch(() => {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = instructions;
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                            toast.success('Instructions copied!');
+                        });
+                    }} 
+                    variant="outline"
+                >
                     <Copy className="h-4 w-4 mr-2" />
-                    Copy DNS Instructions
+                    Copy Full DNS Guide
                 </Button>
             </div>
 
@@ -174,14 +217,26 @@ export default function DomainManagement() {
                 <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
                         <Globe className="h-5 w-5 text-blue-600 mt-0.5" />
-                        <div>
-                            <h3 className="font-semibold text-blue-900 mb-1">How Custom Domains Work</h3>
-                            <p className="text-sm text-blue-800 mb-2">
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-blue-900 mb-2">How Custom Domains Work</h3>
+                            <p className="text-sm text-blue-800 mb-3">
                                 When a customer visits the custom domain, they'll see that restaurant's page as the landing page.
                             </p>
-                            <p className="text-sm text-blue-800">
-                                <strong>Setup:</strong> Restaurant owner needs to point their domain DNS to this platform's server.
-                            </p>
+                            <div className="bg-white rounded-lg p-3 border border-blue-200">
+                                <p className="text-sm font-semibold text-blue-900 mb-2">CNAME Configuration Required:</p>
+                                <div className="space-y-1 text-sm text-blue-800">
+                                    <p>1. Go to your domain registrar's DNS settings (GoDaddy, Namecheap, Cloudflare, etc.)</p>
+                                    <p>2. Add a CNAME record:</p>
+                                    <div className="ml-4 bg-blue-50 p-2 rounded font-mono text-xs">
+                                        <div>Type: <strong>CNAME</strong></div>
+                                        <div>Name: <strong>@</strong> (for root domain) or <strong>order</strong> (for subdomain)</div>
+                                        <div>Target: <strong>{window.location.hostname}</strong></div>
+                                        <div>TTL: <strong>3600</strong></div>
+                                    </div>
+                                    <p>3. Wait 10-60 minutes for DNS propagation</p>
+                                    <p>4. Return here and click "Mark as Verified"</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -289,17 +344,47 @@ export default function DomainManagement() {
                                     Enter the domain without http:// or https://
                                 </p>
                             </div>
-                            <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
-                                <p className="font-semibold text-gray-700">DNS Configuration Required:</p>
-                                <p className="text-gray-600">
-                                    1. Add CNAME record pointing to: <code className="bg-white px-1 py-0.5 rounded">{window.location.hostname}</code>
-                                </p>
-                                <p className="text-gray-600">
-                                    2. Wait for DNS propagation (up to 48 hours)
-                                </p>
-                                <p className="text-gray-600">
-                                    3. Return here to verify the domain
-                                </p>
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-2">
+                                <p className="font-semibold text-orange-900 text-sm">⚠️ DNS Configuration Required</p>
+                                <div className="text-xs text-orange-800 space-y-1">
+                                    <p className="font-semibold">Step 1: Go to your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)</p>
+                                    <p className="font-semibold">Step 2: Add a CNAME record with these exact values:</p>
+                                    <div className="bg-white rounded p-2 font-mono text-xs border border-orange-200">
+                                        <div className="mb-1"><span className="text-gray-600">Type:</span> <strong className="text-orange-900">CNAME</strong></div>
+                                        <div className="mb-1"><span className="text-gray-600">Name/Host:</span> <strong className="text-orange-900">@</strong> or <strong className="text-orange-900">www</strong></div>
+                                        <div className="mb-1"><span className="text-gray-600">Points to:</span> <strong className="text-orange-900">{window.location.hostname}</strong></div>
+                                        <div><span className="text-gray-600">TTL:</span> <strong className="text-orange-900">3600</strong> (or default)</div>
+                                    </div>
+                                    <p className="font-semibold pt-1">Step 3: Save changes and wait 10-60 minutes for propagation</p>
+                                    <p className="font-semibold">Step 4: Return here and click "Mark as Verified"</p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        const text = `CNAME Record Configuration:
+
+Type: CNAME
+Name: @ (or www)
+Points to: ${window.location.hostname}
+TTL: 3600`;
+                                        navigator.clipboard.writeText(text).then(() => 
+                                            toast.success('CNAME details copied!')
+                                        ).catch(() => {
+                                            const textarea = document.createElement('textarea');
+                                            textarea.value = text;
+                                            document.body.appendChild(textarea);
+                                            textarea.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(textarea);
+                                            toast.success('CNAME details copied!');
+                                        });
+                                    }}
+                                    className="w-full"
+                                >
+                                    <Copy className="h-3 w-3 mr-2" />
+                                    Copy CNAME Details
+                                </Button>
                             </div>
                         </div>
                     )}
