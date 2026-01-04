@@ -553,19 +553,30 @@ export default function Checkout() {
                                             </CardTitle>
                                             </CardHeader>
                                             <CardContent>
-                                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
-                                            <p className="text-sm font-medium text-blue-900">
-                                            Collect your order from:
-                                            </p>
-                                            <p className="text-xs text-blue-700">
-                                            📍 {restaurant?.address || 'Restaurant address'}
-                                            </p>
-                                            <p className="text-xs text-blue-700">
-                                            ⏱️ Ready in: 15-20 minutes
-                                            </p>
-                                            <p className="text-xs text-gray-500 mt-2">
-                                            You'll receive an order number with QR code after placing your order
-                                            </p>
+                                            <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-200 rounded-xl space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <span className="text-xl">🏪</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-green-900">FREE Collection</p>
+                                                    <p className="text-xs text-green-700">No delivery fee!</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2 pl-1">
+                                                <p className="text-xs text-gray-700 flex items-start gap-2">
+                                                    <span className="text-sm">📍</span>
+                                                    <span><strong>Pick up from:</strong><br/>{restaurant?.address || 'Restaurant address'}</span>
+                                                </p>
+                                                <p className="text-xs text-gray-700 flex items-center gap-2">
+                                                    <span className="text-sm">⏱️</span>
+                                                    <span><strong>Ready in:</strong> 15-20 minutes</span>
+                                                </p>
+                                                <p className="text-xs text-gray-700 flex items-start gap-2">
+                                                    <span className="text-sm">📱</span>
+                                                    <span>You'll receive an order number with QR code via SMS</span>
+                                                </p>
+                                            </div>
                                             </div>
                                             </CardContent>
                                             </Card>
@@ -707,10 +718,18 @@ export default function Checkout() {
                                         <span>Subtotal</span>
                                         <span>£{subtotal.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>{orderType === 'collection' ? 'Collection Fee' : 'Delivery Fee'}</span>
-                                        <span>{orderType === 'collection' ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
-                                    </div>
+                                    {orderType === 'delivery' && (
+                                        <div className="flex justify-between text-gray-600">
+                                            <span>Delivery Fee</span>
+                                            <span>£{deliveryFee.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {orderType === 'collection' && (
+                                        <div className="flex justify-between text-green-600 font-semibold">
+                                            <span>🏪 Collection Discount</span>
+                                            <span>FREE</span>
+                                        </div>
+                                    )}
                                     {discount > 0 && (
                                         <div className="flex justify-between text-green-600">
                                             <span>Discount ({appliedCoupon?.code})</span>

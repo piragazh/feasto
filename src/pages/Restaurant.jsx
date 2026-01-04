@@ -484,6 +484,7 @@ export default function Restaurant() {
                                 }`}
                             >
                                 🏪 Collection
+                                {orderType === 'collection' && <span className="ml-2 text-xs">FREE</span>}
                             </button>
                         )}
                     </div>
