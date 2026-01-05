@@ -383,9 +383,9 @@ export default function Checkout() {
                 console.error('Order creation error:', error);
                 const errorMessage = error?.message || 'Failed to place order. Please check your connection and try again.';
                 toast.error(errorMessage);
-                } finally {
+            } finally {
                 setIsSubmitting(false);
-                }
+            }
                 };
 
     const handleStripeSuccess = async (paymentIntentId) => {
