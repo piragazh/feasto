@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, orderType = 'delivery', onProceedToCheckout }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : 2.99;
     const total = subtotal + deliveryFee;
@@ -30,8 +30,8 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                             {restaurantName && (
                                 <p className="text-sm text-gray-500">from {restaurantName}</p>
                             )}
-                        </div>
-                        {cart.length > 0 && (
+                            </div>
+                            {cart.length > 0 && (
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -41,9 +41,37 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                 <Trash2 className="h-4 w-4 mr-1" />
                                 Clear All
                             </Button>
-                        )}
-                    </div>
-                </SheetHeader>
+                            )}
+                            </div>
+                            </SheetHeader>
+
+                            {/* Order Type Selector */}
+                            {cart.length > 0 && onOrderTypeChange && (
+                            <div className="px-6 pt-4 pb-2 bg-gray-50 border-b">
+                            <div className="flex gap-2">
+                            <button
+                                onClick={() => onOrderTypeChange('delivery')}
+                                className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+                                    orderType === 'delivery'
+                                        ? 'bg-orange-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                }`}
+                            >
+                                🚚 Delivery
+                            </button>
+                            <button
+                                onClick={() => onOrderTypeChange('collection')}
+                                className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+                                    orderType === 'collection'
+                                        ? 'bg-orange-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                }`}
+                            >
+                                🏪 Collection <span className="text-xs">FREE</span>
+                            </button>
+                            </div>
+                            </div>
+                            )}
                 
                 <div className="flex-1 overflow-y-auto p-6">
                     {cart.length === 0 ? (
