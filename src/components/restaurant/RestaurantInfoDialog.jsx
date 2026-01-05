@@ -1,0 +1,203 @@
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Clock, Truck, Store, Star, Award } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
+    if (!restaurant) return null;
+
+    const hasLocation = restaurant.latitude && restaurant.longitude;
+
+    return (
+        <Dialog open={open} onOpenChange={onClose}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Store className="h-5 w-5 text-orange-500" />
+                        Restaurant Information
+                    </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6 py-4">
+                    {/* Food Hygiene Rating */}
+                    {restaurant.food_hygiene_rating !== null && restaurant.food_hygiene_rating !== undefined && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div className="flex items-start gap-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Award className="h-5 w-5 text-green-600" />
+                                        <h3 className="font-semibold text-green-900">Food Hygiene Rating</h3>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-green-600 text-white text-3xl font-bold rounded-lg px-4 py-2">
+                                            {restaurant.food_hygiene_rating}
+                                        </div>
+                                        <div className="flex gap-1">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    className={`h-6 w-6 ${
+                                                        i < restaurant.food_hygiene_rating
+                                                            ? 'fill-green-500 text-green-500'
+                                                            : 'text-gray-300'
+                                                    }`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-green-700 mt-2">
+                                        {restaurant.food_hygiene_rating === 5 && 'Very Good - Hygiene standards are very good'}
+                                        {restaurant.food_hygiene_rating === 4 && 'Good - Hygiene standards are good'}
+                                        {restaurant.food_hygiene_rating === 3 && 'Generally Satisfactory - Hygiene standards are generally satisfactory'}
+                                        {restaurant.food_hygiene_rating < 3 && 'Improvement Necessary'}
+                                    </p>
+                                </div>
+                                {restaurant.food_hygiene_certificate_url && (
+                                    <a
+                                        href={restaurant.food_hygiene_certificate_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-shrink-0"
+                                    >
+                                        <img
+                                            src={restaurant.food_hygiene_certificate_url}
+                                            alt="Food Hygiene Certificate"
+                                            className="w-24 h-24 object-contain border rounded-lg bg-white cursor-pointer hover:scale-105 transition-transform"
+                                        />
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* About */}
+                    {restaurant.description && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-2">About</h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">{restaurant.description}</p>
+                        </div>
+                    )}
+
+                    {/* Location */}
+                    <div>
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-orange-500" />
+                            Location
+                        </h3>
+                        <p className="text-gray-600 text-sm mb-3">{restaurant.address}</p>
+                        
+                        {hasLocation && (
+                            <div className="h-64 rounded-lg overflow-hidden border">
+                                <MapContainer
+                                    center={[restaurant.latitude, restaurant.longitude]}
+                                    zoom={15}
+                                    style={{ height: '100%', width: '100%' }}
+                                    scrollWheelZoom={false}
+                                >
+                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <Marker position={[restaurant.latitude, restaurant.longitude]}>
+                                        <Popup>{restaurant.name}</Popup>
+                                    </Marker>
+                                </MapContainer>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Opening Hours */}
+                    {restaurant.opening_hours && Object.keys(restaurant.opening_hours).length > 0 && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-orange-500" />
+                                Opening Hours
+                            </h3>
+                            <div className="space-y-2">
+                                {DAYS.map((day) => {
+                                    const dayKey = day.toLowerCase();
+                                    const hours = restaurant.opening_hours[dayKey];
+                                    if (!hours) return null;
+
+                                    return (
+                                        <div key={day} className="flex justify-between text-sm border-b pb-2">
+                                            <span className="font-medium text-gray-700">{day}</span>
+                                            <span className="text-gray-600">
+                                                {hours.closed ? (
+                                                    <Badge variant="secondary">Closed</Badge>
+                                                ) : (
+                                                    `${hours.open} - ${hours.close}`
+                                                )}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Delivery Hours */}
+                    {restaurant.delivery_hours && Object.keys(restaurant.delivery_hours).length > 0 && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Truck className="h-5 w-5 text-orange-500" />
+                                Delivery Hours
+                            </h3>
+                            <div className="space-y-2">
+                                {DAYS.map((day) => {
+                                    const dayKey = day.toLowerCase();
+                                    const hours = restaurant.delivery_hours[dayKey];
+                                    if (!hours) return null;
+
+                                    return (
+                                        <div key={day} className="flex justify-between text-sm border-b pb-2">
+                                            <span className="font-medium text-gray-700">{day}</span>
+                                            <span className="text-gray-600">
+                                                {hours.closed ? (
+                                                    <Badge variant="secondary">No Delivery</Badge>
+                                                ) : (
+                                                    `${hours.open} - ${hours.close}`
+                                                )}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Collection Hours */}
+                    {restaurant.collection_enabled && restaurant.collection_hours && Object.keys(restaurant.collection_hours).length > 0 && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Store className="h-5 w-5 text-orange-500" />
+                                Collection Hours
+                            </h3>
+                            <div className="space-y-2">
+                                {DAYS.map((day) => {
+                                    const dayKey = day.toLowerCase();
+                                    const hours = restaurant.collection_hours[dayKey];
+                                    if (!hours) return null;
+
+                                    return (
+                                        <div key={day} className="flex justify-between text-sm border-b pb-2">
+                                            <span className="font-medium text-gray-700">{day}</span>
+                                            <span className="text-gray-600">
+                                                {hours.closed ? (
+                                                    <Badge variant="secondary">No Collection</Badge>
+                                                ) : (
+                                                    `${hours.open} - ${hours.close}`
+                                                )}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}

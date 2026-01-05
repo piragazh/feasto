@@ -18,6 +18,7 @@ import OpeningHours from '@/components/restaurant/OpeningHours';
 import SpecialOffers from '@/components/restaurant/SpecialOffers';
 import PopularItems from '@/components/restaurant/PopularItems';
 import ReviewsSection from '@/components/restaurant/ReviewsSection';
+import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -37,6 +38,7 @@ export default function Restaurant() {
     const [showTimeWarning, setShowTimeWarning] = useState(false);
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
     const [activeCategoryScroll, setActiveCategoryScroll] = useState('');
+    const [showInfoDialog, setShowInfoDialog] = useState(false);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
@@ -468,12 +470,20 @@ export default function Restaurant() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 
-                <div className="absolute top-4 left-4">
+                <div className="absolute top-4 left-4 flex gap-2">
                     <Link to={createPageUrl('Home')}>
                         <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                     </Link>
+                    <Button 
+                        size="icon" 
+                        variant="secondary" 
+                        className="rounded-full bg-white/90 hover:bg-white"
+                        onClick={() => setShowInfoDialog(true)}
+                    >
+                        <Info className="h-5 w-5" />
+                    </Button>
                 </div>
                 
                 <div className="absolute bottom-0 left-0 right-0 p-6">

@@ -33,11 +33,14 @@ export default function RestaurantSettings({ restaurantId }) {
         minimum_order: '',
         collection_enabled: false,
         logo_url: '',
+        food_hygiene_rating: '',
+        food_hygiene_certificate_url: '',
         opening_hours: {},
         delivery_hours: {},
         collection_hours: {}
     });
     const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingCertificate, setUploadingCertificate] = useState(false);
 
     React.useEffect(() => {
         if (restaurant) {
@@ -50,6 +53,8 @@ export default function RestaurantSettings({ restaurantId }) {
                 minimum_order: restaurant.minimum_order || '',
                 collection_enabled: restaurant.collection_enabled || false,
                 logo_url: restaurant.logo_url || '',
+                food_hygiene_rating: restaurant.food_hygiene_rating || '',
+                food_hygiene_certificate_url: restaurant.food_hygiene_certificate_url || '',
                 opening_hours: restaurant.opening_hours || {},
                 delivery_hours: restaurant.delivery_hours || {},
                 collection_hours: restaurant.collection_hours || {}
@@ -84,6 +89,22 @@ export default function RestaurantSettings({ restaurantId }) {
         }
     };
 
+    const handleCertificateUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingCertificate(true);
+        try {
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            setFormData({ ...formData, food_hygiene_certificate_url: file_url });
+            toast.success('Certificate uploaded successfully');
+        } catch (error) {
+            toast.error('Failed to upload certificate');
+        } finally {
+            setUploadingCertificate(false);
+        }
+    };
+
     const handleSaveGeneral = () => {
         updateMutation.mutate({
             name: formData.name,
@@ -93,7 +114,9 @@ export default function RestaurantSettings({ restaurantId }) {
             delivery_fee: parseFloat(formData.delivery_fee) || 0,
             minimum_order: parseFloat(formData.minimum_order) || 0,
             collection_enabled: formData.collection_enabled,
-            logo_url: formData.logo_url
+            logo_url: formData.logo_url,
+            food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
+            food_hygiene_certificate_url: formData.food_hygiene_certificate_url
         });
     };
 
@@ -294,6 +317,75 @@ export default function RestaurantSettings({ restaurantId }) {
                                 </p>
                             </div>
                         </div>
+
+                        <div className="border-t pt-4 space-y-4">
+                            <h3 className="font-semibold text-lg">Food Hygiene Information</h3>
+                            <div>
+                                <Label>Food Hygiene Rating (0-5)</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={formData.food_hygiene_rating}
+                                    onChange={(e) => setFormData({ ...formData, food_hygiene_rating: e.target.value })}
+                                    placeholder="Enter rating from 0 to 5"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Enter your official Food Standards Agency rating
+                                </p>
+                            </div>
+                            <div>
+                                <Label>Food Hygiene Certificate/Sticker</Label>
+                                <div className="flex gap-4 items-start">
+                                    {formData.food_hygiene_certificate_url && (
+                                        <img 
+                                            src={formData.food_hygiene_certificate_url} 
+                                            alt="Food Hygiene Certificate" 
+                                            className="w-32 h-32 rounded-lg object-contain border bg-gray-50"
+                                        />
+                                    )}
+                                    <div className="flex-1 space-y-2">
+                                        <label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-full"
+                                                disabled={uploadingCertificate}
+                                                asChild
+                                            >
+                                                <span>
+                                                    {uploadingCertificate ? (
+                                                        <>
+                                                            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                                                            Uploading...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Upload className="h-4 w-4 mr-2" />
+                                                            Upload Certificate
+                                                        </>
+                                                    )}
+                                                </span>
+                                            </Button>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleCertificateUpload}
+                                                disabled={uploadingCertificate}
+                                            />
+                                        </label>
+                                        <div className="text-xs text-gray-500">Or enter URL:</div>
+                                        <Input
+                                            placeholder="https://example.com/certificate.png"
+                                            value={formData.food_hygiene_certificate_url}
+                                            onChange={(e) => setFormData({ ...formData, food_hygiene_certificate_url: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <Button onClick={handleSaveGeneral} className="w-full" disabled={updateMutation.isPending}>
                             <Save className="h-4 w-4 mr-2" />
                             Save General Settings
