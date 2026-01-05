@@ -10,11 +10,11 @@ import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import Messages from './pages/Messages';
 import Orders from './pages/Orders';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Restaurant from './pages/Restaurant';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TrackOrder from './pages/TrackOrder';
-import PrivacyPolicy from './pages/PrivacyPolicy';
 import __Layout from './Layout.jsx';
 
 
@@ -31,11 +31,11 @@ export const PAGES = {
     "ManageRestaurantManagers": ManageRestaurantManagers,
     "Messages": Messages,
     "Orders": Orders,
+    "PrivacyPolicy": PrivacyPolicy,
     "Restaurant": Restaurant,
     "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
     "TrackOrder": TrackOrder,
-    "PrivacyPolicy": PrivacyPolicy,
 }
 
 export const pagesConfig = {

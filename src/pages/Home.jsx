@@ -24,34 +24,6 @@ export default function Home() {
         queryFn: () => base44.entities.Restaurant.list(),
     });
 
-    // Check for custom domain on mount
-    useEffect(() => {
-        checkCustomDomain();
-    }, [restaurants]);
-
-    const checkCustomDomain = async () => {
-        if (!restaurants || restaurants.length === 0) return;
-        
-        const currentDomain = window.location.hostname;
-        
-        // Skip check for localhost or main platform domain
-        if (currentDomain === 'localhost' || currentDomain.includes('base44')) {
-            return;
-        }
-
-        // Find restaurant with matching custom domain
-        const domainRestaurant = restaurants.find(r => 
-            r.custom_domain && 
-            r.domain_verified && 
-            r.custom_domain.toLowerCase() === currentDomain.toLowerCase()
-        );
-
-        if (domainRestaurant) {
-            // Redirect to restaurant page for custom domain
-            navigate(createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`, { replace: true });
-        }
-    };
-
     useEffect(() => {
         getUserLocation();
     }, []);

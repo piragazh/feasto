@@ -18,10 +18,12 @@ export default function Layout({ children, currentPageName }) {
     const location = useLocation();
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
+    const [customDomainChecked, setCustomDomainChecked] = useState(false);
 
     useEffect(() => {
         loadUser();
         updateCartCount();
+        checkCustomDomain();
         
         const interval = setInterval(updateCartCount, 1000);
         return () => clearInterval(interval);
@@ -44,6 +46,47 @@ export default function Layout({ children, currentPageName }) {
             setCartCount(count);
         } else {
             setCartCount(0);
+        }
+    };
+
+    const checkCustomDomain = async () => {
+        if (customDomainChecked) return;
+        
+        try {
+            const currentDomain = window.location.hostname;
+            
+            // Skip for localhost, IP addresses, or main platform domains
+            if (
+                currentDomain === 'localhost' || 
+                currentDomain.includes('base44') ||
+                /^\d+\.\d+\.\d+\.\d+$/.test(currentDomain) ||
+                currentDomain.includes('127.0.0.1')
+            ) {
+                setCustomDomainChecked(true);
+                return;
+            }
+
+            // Fetch all restaurants to check for custom domain match
+            const restaurants = await base44.entities.Restaurant.list();
+            
+            const domainRestaurant = restaurants.find(r => 
+                r.custom_domain && 
+                r.domain_verified && 
+                r.custom_domain.toLowerCase() === currentDomain.toLowerCase()
+            );
+
+            if (domainRestaurant) {
+                // If on custom domain, redirect to restaurant page if not already there
+                const restaurantUrl = createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`;
+                if (!window.location.pathname.includes('/Restaurant') || !window.location.search.includes(domainRestaurant.id)) {
+                    window.location.href = restaurantUrl;
+                }
+            }
+            
+            setCustomDomainChecked(true);
+        } catch (error) {
+            console.error('Custom domain check failed:', error);
+            setCustomDomainChecked(true);
         }
     };
 
