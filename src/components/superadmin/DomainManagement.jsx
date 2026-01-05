@@ -40,7 +40,6 @@ export default function DomainManagement() {
             setDomain('');
         },
         onError: (error) => {
-            console.error('Domain update error:', error);
             const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error occurred';
             toast.error(`Failed to update domain: ${errorMessage}`);
         }

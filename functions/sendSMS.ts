@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
         const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER');
 
         if (!accountSid || !authToken || !twilioPhone) {
-            console.log(`SMS would be sent to ${formattedPhone}: ${message}`);
+            // Twilio not configured - simulate SMS
             return Response.json({ 
                 success: true, 
                 message: 'SMS simulation (Twilio not configured)',
@@ -60,7 +60,6 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
             const error = await response.text();
-            console.error('Twilio error:', error);
             return Response.json({ 
                 error: 'Failed to send SMS', 
                 details: error 
@@ -75,7 +74,6 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('SMS error:', error);
         return Response.json({ 
             error: error.message || 'Failed to send SMS' 
         }, { status: 500 });

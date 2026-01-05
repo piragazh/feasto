@@ -249,7 +249,6 @@ export default function Restaurant() {
             });
             toast.success(`${item.name} added to cart`);
         } catch (error) {
-            console.error('Error adding to cart:', error);
             toast.error('Failed to add item to cart');
         }
     };
@@ -293,7 +292,6 @@ export default function Restaurant() {
             });
             toast.success(`${itemData.name} added to cart`);
         } catch (error) {
-            console.error('Error adding customized item:', error);
             toast.error('Failed to add item to cart');
         }
     };
@@ -413,7 +411,6 @@ export default function Restaurant() {
             setCartOpen(false);
             window.location.href = createPageUrl('Checkout');
         } catch (error) {
-            console.error('Error proceeding to checkout:', error);
             toast.error('Failed to proceed to checkout');
         }
     };

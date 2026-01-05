@@ -85,7 +85,7 @@ export default function Layout({ children, currentPageName }) {
             
             setCustomDomainChecked(true);
         } catch (error) {
-            console.error('Custom domain check failed:', error);
+            // Silently fail - don't disrupt user experience
             setCustomDomainChecked(true);
         }
     };

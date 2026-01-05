@@ -156,7 +156,7 @@ export default function Checkout() {
                 setRestaurant(restaurants[0]); // Store full restaurant object
             }
         } catch (e) {
-            console.error(e); // Log any errors
+            // Restaurant not found - continue without name
         }
     };
 
@@ -357,8 +357,7 @@ export default function Checkout() {
                     message: customerMessage
                 });
             } catch (smsError) {
-                console.error('SMS notification failed:', smsError);
-                // Don't fail the order if SMS fails
+                // SMS failed but order still placed - don't block user
             }
 
             // Notify restaurant of new order
@@ -368,7 +367,7 @@ export default function Checkout() {
                     restaurantName: restaurantName
                 });
             } catch (notifyError) {
-                console.error('Restaurant notification failed:', notifyError);
+                // Notification failed but order still placed
             }
 
             localStorage.removeItem('cart');
@@ -381,7 +380,6 @@ export default function Checkout() {
                 navigate(createPageUrl('Orders'));
             }, 2000);
             } catch (error) {
-            console.error('Order creation error:', error);
             const errorMessage = error.message || 'Failed to place order';
             toast.error(errorMessage + '. Please try again.');
             } finally {

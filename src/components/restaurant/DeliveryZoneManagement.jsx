@@ -78,12 +78,12 @@ function GeomanControl({ onDrawn, editingZone, mapKey }) {
                         try {
                             map.pm.removeControls();
                         } catch (e) {
-                            console.log('Controls already removed');
+                            // Controls already removed
                         }
                     }
                 };
             } catch (err) {
-                console.error('Failed to load geoman:', err);
+                // Geoman failed to load - map will still work without drawing tools
             }
         };
 

@@ -95,7 +95,6 @@ export default function RestaurantDashboard() {
                 toast.error('No restaurant assigned to this account. Please contact admin.');
             }
         } catch (e) {
-            console.error('Error loading restaurant:', e);
             toast.error('Error loading restaurant dashboard');
             base44.auth.redirectToLogin();
         }
