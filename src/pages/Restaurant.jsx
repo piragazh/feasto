@@ -466,16 +466,16 @@ export default function Restaurant() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 
-                <div className="absolute top-4 left-4 flex gap-2">
+                <div className="absolute top-4 left-4 flex gap-2 z-10">
                     <Link to={createPageUrl('Home')}>
-                        <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white">
+                        <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white shadow-lg">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                     </Link>
                     <Button 
                         size="icon" 
                         variant="secondary" 
-                        className="rounded-full bg-white/90 hover:bg-white"
+                        className="rounded-full bg-white/90 hover:bg-white shadow-lg"
                         onClick={() => setShowInfoDialog(true)}
                     >
                         <Info className="h-5 w-5" />

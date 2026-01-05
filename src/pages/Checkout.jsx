@@ -380,12 +380,13 @@ export default function Checkout() {
                 navigate(createPageUrl('Orders'));
             }, 2000);
             } catch (error) {
-            const errorMessage = error.message || 'Failed to place order';
-            toast.error(errorMessage + '. Please try again.');
-            } finally {
-            setIsSubmitting(false);
-            }
-            };
+                console.error('Order creation error:', error);
+                const errorMessage = error?.message || 'Failed to place order. Please check your connection and try again.';
+                toast.error(errorMessage);
+                } finally {
+                setIsSubmitting(false);
+                }
+                };
 
     const handleStripeSuccess = async (paymentIntentId) => {
         toast.success('Payment successful!');
@@ -436,11 +437,11 @@ export default function Checkout() {
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <Link to={createPageUrl('Home')}>
+                        <button onClick={() => window.history.back()}>
                             <Button size="icon" variant="ghost" className="rounded-full">
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
-                        </Link>
+                        </button>
                         <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
                     </div>
                     <div className="flex items-center gap-2 text-sm">

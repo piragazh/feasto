@@ -255,14 +255,24 @@ export default function Layout({ children, currentPageName }) {
                                                 </div>
                                                 <DropdownMenuSeparator />
                                             </>
-                                        )}
-                                        <DropdownMenuItem 
-                                            onClick={() => base44.auth.logout()}
-                                            className="text-red-600 cursor-pointer"
-                                        >
-                                            <LogOut className="h-4 w-4 mr-2" />
-                                            Sign Out
-                                        </DropdownMenuItem>
+                                            )}
+                                            {user ? (
+                                            <DropdownMenuItem 
+                                                onClick={() => base44.auth.logout()}
+                                                className="text-red-600 cursor-pointer"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-2" />
+                                                Sign Out
+                                            </DropdownMenuItem>
+                                            ) : (
+                                            <DropdownMenuItem 
+                                                onClick={() => base44.auth.redirectToLogin()}
+                                                className="cursor-pointer"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-2" />
+                                                Sign In
+                                            </DropdownMenuItem>
+                                            )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -273,12 +283,14 @@ export default function Layout({ children, currentPageName }) {
 
             <main className="min-h-screen">{children}</main>
 
-                {/* AI Chatbot Widget */}
-                <ChatbotWidget />
+                {/* AI Chatbot Widget - Hidden on mobile */}
+                <div className="hidden md:block">
+                    <ChatbotWidget />
+                </div>
 
                 {/* Mobile Bottom Navigation */}
-            {showBottomNav && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-bottom">
+                {showBottomNav && (
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 safe-area-bottom">
                     <div className="flex items-center justify-around h-16 px-2">
                         <Link 
                             to={createPageUrl('Home')} 
