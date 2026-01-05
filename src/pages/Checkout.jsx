@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react'; // Icons
+import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle, User } from 'lucide-react'; // Icons
 import CouponInput from '@/components/checkout/CouponInput'; // Coupon application component
 import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
 import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection'; // Schedule future orders
@@ -252,7 +252,8 @@ export default function Checkout() {
                     setShowStripeForm(true); // Display card input form
                 }
             } catch (error) {
-                toast.error('Failed to initialize payment. Please try again.');
+                console.error('Payment initialization error:', error);
+                toast.error('Failed to initialize payment: ' + (error?.message || 'Please try again'));
             } finally {
                 setIsSubmitting(false); // Hide loading state
             }
