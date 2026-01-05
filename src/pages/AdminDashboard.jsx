@@ -16,6 +16,24 @@ export default function AdminDashboard() {
     const navigate = useNavigate();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
+    const { data: restaurants = [] } = useQuery({
+        queryKey: ['all-restaurants'],
+        queryFn: () => base44.entities.Restaurant.list(),
+        enabled: isAuthorized,
+    });
+
+    const { data: orders = [] } = useQuery({
+        queryKey: ['all-orders'],
+        queryFn: () => base44.entities.Order.list('-created_date', 500),
+        enabled: isAuthorized,
+    });
+
+    const { data: reviews = [] } = useQuery({
+        queryKey: ['all-reviews'],
+        queryFn: () => base44.entities.Review.list(),
+        enabled: isAuthorized,
+    });
+
     // Check authentication and admin role
     useEffect(() => {
         const checkAuth = async () => {
@@ -43,20 +61,6 @@ export default function AdminDashboard() {
             </div>
         );
     }
-    const { data: restaurants = [] } = useQuery({
-        queryKey: ['all-restaurants'],
-        queryFn: () => base44.entities.Restaurant.list(),
-    });
-
-    const { data: orders = [] } = useQuery({
-        queryKey: ['all-orders'],
-        queryFn: () => base44.entities.Order.list('-created_date', 500),
-    });
-
-    const { data: reviews = [] } = useQuery({
-        queryKey: ['all-reviews'],
-        queryFn: () => base44.entities.Review.list(),
-    });
 
     // Calculate metrics
     const totalRevenue = orders
