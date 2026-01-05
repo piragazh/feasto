@@ -26,8 +26,6 @@ export default function Restaurant() {
     const urlParams = new URLSearchParams(window.location.search);
     const restaurantId = urlParams.get('id');
     
-    console.log('Restaurant ID from URL:', restaurantId);
-    
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('all');
@@ -52,7 +50,6 @@ export default function Restaurant() {
                 }
             }
         } catch (error) {
-            console.error('Error loading cart:', error);
             localStorage.removeItem('cart');
             toast.error('Cart data corrupted. Starting fresh.');
         }
@@ -66,7 +63,6 @@ export default function Restaurant() {
                 localStorage.setItem('cartRestaurantId', restaurantId);
             }
         } catch (error) {
-            console.error('Error saving cart:', error);
             toast.error('Unable to save cart. Storage may be full.');
         }
     }, [cart, restaurantId]);
@@ -759,9 +755,15 @@ export default function Restaurant() {
                 orderType={orderType}
                 onOrderTypeChange={setOrderType}
                 onProceedToCheckout={handleProceedToCheckout}
-            />
+                />
 
-            {/* Time Warning Dialog */}
+                <RestaurantInfoDialog
+                open={showInfoDialog}
+                onClose={() => setShowInfoDialog(false)}
+                restaurant={restaurant}
+                />
+
+                {/* Time Warning Dialog */}
             {showTimeWarning && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <motion.div
