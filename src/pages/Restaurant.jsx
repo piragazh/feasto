@@ -418,12 +418,19 @@ export default function Restaurant() {
         }
 
         // Save to localStorage
-        localStorage.setItem('orderType', orderType);
-        localStorage.setItem('cartRestaurantName', restaurant.name);
+        try {
+            localStorage.setItem('cart', JSON.stringify(cart));
+            localStorage.setItem('cartRestaurantId', restaurantId);
+            localStorage.setItem('orderType', orderType);
+            localStorage.setItem('cartRestaurantName', restaurant.name);
+        } catch (error) {
+            toast.error('Unable to save cart data');
+            return;
+        }
         
-        // Close drawer and navigate
+        // Close drawer and navigate using React Router
         setCartOpen(false);
-        window.location.href = createPageUrl('Checkout');
+        navigate(createPageUrl('Checkout'));
     };
 
     if (restaurantLoading) {
