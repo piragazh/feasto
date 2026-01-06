@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onValidateCheckout, collectionEnabled = false }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : 2.99;
     const total = subtotal + deliveryFee;
@@ -173,20 +173,16 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                 <span>£{total.toFixed(2)}</span>
                             </div>
                         </div>
-                        <Link to={createPageUrl('Checkout')} className="block">
-                            <Button 
-                                onClick={(e) => {
-                                    if (onValidateCheckout && !onValidateCheckout()) {
-                                        e.preventDefault();
-                                    } else {
-                                        onOpenChange(false);
-                                    }
-                                }}
-                                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
-                            >
-                                {orderType === 'collection' ? 'Schedule Collection' : 'Go to Checkout'}
-                            </Button>
-                        </Link>
+                        <Button 
+                            onClick={() => {
+                                if (onProceedToCheckout) {
+                                    onProceedToCheckout();
+                                }
+                            }}
+                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                        >
+                            {orderType === 'collection' ? 'Schedule Collection' : 'Go to Checkout'}
+                        </Button>
                     </div>
                 )}
             </SheetContent>
