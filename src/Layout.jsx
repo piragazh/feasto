@@ -20,6 +20,76 @@ export default function Layout({ children, currentPageName }) {
     const [cartCount, setCartCount] = useState(0);
     const [customDomainChecked, setCustomDomainChecked] = useState(false);
 
+    // SEO Meta Tags
+    useEffect(() => {
+        // Set title and meta tags
+        document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
+        
+        // Meta description
+        let metaDescription = document.querySelector('meta[name="description"]');
+        if (!metaDescription) {
+            metaDescription = document.createElement('meta');
+            metaDescription.name = 'description';
+            document.head.appendChild(metaDescription);
+        }
+        metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers. Download the MealDrop app for iOS and Android.';
+
+        // Keywords
+        let metaKeywords = document.querySelector('meta[name="keywords"]');
+        if (!metaKeywords) {
+            metaKeywords = document.createElement('meta');
+            metaKeywords.name = 'keywords';
+            document.head.appendChild(metaKeywords);
+        }
+        metaKeywords.content = 'food delivery, restaurant delivery, online food order, takeaway, food near me, delivery app';
+
+        // Open Graph tags
+        const ogTags = [
+            { property: 'og:title', content: 'MealDrop - Food Delivery' },
+            { property: 'og:description', content: 'Order food online from your favourite restaurants' },
+            { property: 'og:type', content: 'website' },
+            { property: 'og:url', content: window.location.href },
+            { property: 'og:image', content: 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
+        ];
+
+        ogTags.forEach(({ property, content }) => {
+            let tag = document.querySelector(`meta[property="${property}"]`);
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute('property', property);
+                document.head.appendChild(tag);
+            }
+            tag.content = content;
+        });
+
+        // Twitter Card tags
+        const twitterTags = [
+            { name: 'twitter:card', content: 'summary_large_image' },
+            { name: 'twitter:title', content: 'MealDrop - Food Delivery' },
+            { name: 'twitter:description', content: 'Order food online from your favourite restaurants' },
+            { name: 'twitter:image', content: 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
+        ];
+
+        twitterTags.forEach(({ name, content }) => {
+            let tag = document.querySelector(`meta[name="${name}"]`);
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.name = name;
+                document.head.appendChild(tag);
+            }
+            tag.content = content;
+        });
+
+        // Canonical URL
+        let canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) {
+            canonical = document.createElement('link');
+            canonical.rel = 'canonical';
+            document.head.appendChild(canonical);
+        }
+        canonical.href = window.location.href;
+    }, [location]);
+
     useEffect(() => {
         loadUser();
         updateCartCount();
@@ -91,7 +161,8 @@ export default function Layout({ children, currentPageName }) {
     };
 
     const hideHeader = ['Checkout'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'PrivacyPolicy', 'TermsOfService'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
@@ -287,6 +358,50 @@ export default function Layout({ children, currentPageName }) {
                 <div className="hidden md:block">
                     <ChatbotWidget />
                 </div>
+
+                {/* Footer */}
+                {!hideFooter && (
+                <footer className="bg-gray-900 text-gray-300 border-t border-gray-800 mt-auto">
+                    <div className="max-w-6xl mx-auto px-4 py-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div>
+                                <h3 className="text-white font-bold text-lg mb-4">MealDrop</h3>
+                                <p className="text-sm text-gray-400">
+                                    Your favourite restaurants, delivered to your door.
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="text-white font-semibold mb-4">Legal</h4>
+                                <ul className="space-y-2 text-sm">
+                                    <li>
+                                        <Link to={createPageUrl('PrivacyPolicy')} className="hover:text-white transition-colors">
+                                            Privacy Policy
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link to={createPageUrl('TermsOfService')} className="hover:text-white transition-colors">
+                                            Terms of Service
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 className="text-white font-semibold mb-4">Support</h4>
+                                <ul className="space-y-2 text-sm">
+                                    <li>
+                                        <Link to={createPageUrl('Messages')} className="hover:text-white transition-colors">
+                                            Contact Us
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-400">
+                            © {new Date().getFullYear()} MealDrop. All rights reserved.
+                        </div>
+                        </div>
+                        </footer>
+                        )}
 
                 {/* Mobile Bottom Navigation */}
                 {showBottomNav && (
