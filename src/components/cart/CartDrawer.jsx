@@ -10,9 +10,9 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : 2.99;
     
-    // Calculate small order surcharge
+    // Calculate small order surcharge (only for delivery orders)
     const minimumOrder = restaurant?.minimum_order || 0;
-    const smallOrderSurcharge = minimumOrder > 0 && subtotal < minimumOrder 
+    const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
         ? (minimumOrder - subtotal) 
         : 0;
     
