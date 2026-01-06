@@ -36,6 +36,22 @@ export default function AdminRestaurants() {
         enabled: !isChecking,
     });
 
+    const deleteRestaurantMutation = useMutation({
+        mutationFn: (id) => base44.entities.Restaurant.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-restaurants']);
+            toast.success('Restaurant deleted');
+        },
+    });
+
+    const toggleStatusMutation = useMutation({
+        mutationFn: ({ id, is_open }) => base44.entities.Restaurant.update(id, { is_open }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-restaurants']);
+            toast.success('Status updated');
+        },
+    });
+
     // Check authentication and admin role
     useEffect(() => {
         const checkAuth = async () => {
@@ -63,22 +79,6 @@ export default function AdminRestaurants() {
             </div>
         );
     }
-
-    const deleteRestaurantMutation = useMutation({
-        mutationFn: (id) => base44.entities.Restaurant.delete(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries(['admin-restaurants']);
-            toast.success('Restaurant deleted');
-        },
-    });
-
-    const toggleStatusMutation = useMutation({
-        mutationFn: ({ id, is_open }) => base44.entities.Restaurant.update(id, { is_open }),
-        onSuccess: () => {
-            queryClient.invalidateQueries(['admin-restaurants']);
-            toast.success('Status updated');
-        },
-    });
 
     const filteredRestaurants = restaurants.filter(r =>
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
