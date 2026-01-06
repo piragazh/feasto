@@ -38,16 +38,30 @@ export default function Restaurant() {
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
     const [activeCategoryScroll, setActiveCategoryScroll] = useState('');
     const [showInfoDialog, setShowInfoDialog] = useState(false);
+    const [showCartConflictDialog, setShowCartConflictDialog] = useState(false);
+    const [previousCartData, setPreviousCartData] = useState(null);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
         try {
             const savedCart = localStorage.getItem('cart');
             const savedRestaurantId = localStorage.getItem('cartRestaurantId');
-            if (savedCart && savedRestaurantId === restaurantId) {
+            const savedRestaurantName = localStorage.getItem('cartRestaurantName');
+            
+            if (savedCart && savedRestaurantId) {
                 const parsedCart = JSON.parse(savedCart);
-                if (Array.isArray(parsedCart)) {
-                    setCart(parsedCart);
+                if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+                    if (savedRestaurantId === restaurantId) {
+                        // Same restaurant - load cart
+                        setCart(parsedCart);
+                    } else {
+                        // Different restaurant - show conflict dialog
+                        setPreviousCartData({
+                            cart: parsedCart,
+                            restaurantName: savedRestaurantName || 'another restaurant'
+                        });
+                        setShowCartConflictDialog(true);
+                    }
                 }
             }
         } catch (error) {
