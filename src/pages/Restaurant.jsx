@@ -417,13 +417,6 @@ export default function Restaurant() {
             return;
         }
 
-        // Check minimum order
-        const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        if (restaurant.minimum_order && cartTotal < restaurant.minimum_order) {
-            toast.error(`Minimum order is £${restaurant.minimum_order.toFixed(2)}`);
-            return;
-        }
-
         // Save to localStorage
         localStorage.setItem('orderType', orderType);
         localStorage.setItem('cartRestaurantName', restaurant.name);
@@ -777,6 +770,7 @@ export default function Restaurant() {
                 onOrderTypeChange={setOrderType}
                 onProceedToCheckout={handleProceedToCheckout}
                 collectionEnabled={restaurant.collection_enabled}
+                restaurant={restaurant}
                 />
 
                 <RestaurantInfoDialog

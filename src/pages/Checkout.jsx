@@ -166,15 +166,21 @@ export default function Checkout() {
     
     // Calculate subtotal: sum of all item prices × quantities
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     // Delivery fee: FREE for collection, otherwise use zone-specific or restaurant default
     const deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99);
-    
+
+    // Small order surcharge: if subtotal is below minimum order, add the difference
+    const minimumOrder = restaurant?.minimum_order || 0;
+    const smallOrderSurcharge = minimumOrder > 0 && subtotal < minimumOrder 
+        ? (minimumOrder - subtotal) 
+        : 0;
+
     // Discount from applied coupon (if any)
     const discount = appliedCoupon?.discount || 0;
-    
-    // Final total = subtotal + delivery - discount
-    const total = subtotal + deliveryFee - discount;
+
+    // Final total = subtotal + delivery + surcharge - discount
+    const total = subtotal + deliveryFee + smallOrderSurcharge - discount;
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -218,11 +224,7 @@ export default function Checkout() {
                 return;
             }
 
-            // Check if order meets minimum value for delivery zone
-            if (deliveryZoneInfo?.minOrderValue && subtotal < deliveryZoneInfo.minOrderValue) {
-                toast.error(`Minimum order value for this area is £${deliveryZoneInfo.minOrderValue.toFixed(2)}`);
-                return;
-            }
+
         }
 
         // ---- PAYMENT PROCESSING ----
@@ -296,6 +298,7 @@ export default function Checkout() {
                 items: cart,
                 subtotal,
                 delivery_fee: deliveryFee,
+                small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
                 coupon_code: appliedCoupon?.code,
                 total,
@@ -758,6 +761,12 @@ export default function Checkout() {
                                             <span>FREE</span>
                                         </div>
                                     )}
+                                    {smallOrderSurcharge > 0 && (
+                                        <div className="flex justify-between text-orange-600">
+                                            <span>Small Order Fee</span>
+                                            <span>£{smallOrderSurcharge.toFixed(2)}</span>
+                                        </div>
+                                    )}
                                     {discount > 0 && (
                                         <div className="flex justify-between text-green-600">
                                             <span>Discount ({appliedCoupon?.code})</span>
@@ -768,6 +777,11 @@ export default function Checkout() {
                                         <span>Total</span>
                                         <span>£{total.toFixed(2)}</span>
                                     </div>
+                                    {smallOrderSurcharge > 0 && (
+                                        <div className="text-xs text-gray-500 pt-1">
+                                            * Minimum order: £{minimumOrder.toFixed(2)}
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
