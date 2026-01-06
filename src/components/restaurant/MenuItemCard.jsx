@@ -12,18 +12,25 @@ export default function MenuItemCard({ item, onAddToCart }) {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`group flex gap-4 p-4 rounded-2xl border transition-all duration-300 ${
+            className={`group flex gap-4 p-4 rounded-2xl border transition-all duration-300 relative ${
                 isAvailable 
                     ? 'bg-white border-gray-100 hover:border-orange-200 hover:shadow-lg' 
-                    : 'bg-gray-50 border-gray-200 opacity-60'
+                    : 'bg-gray-50 border-gray-200 opacity-70 grayscale'
             }`}
         >
+            {!isAvailable && (
+                <div className="absolute top-2 right-2 z-10">
+                    <Badge className="bg-red-500 text-white text-xs font-bold px-3 py-1">
+                        OUT OF STOCK
+                    </Badge>
+                </div>
+            )}
+            
             <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    {!isAvailable && (
-                        <Badge variant="destructive" className="text-xs">Unavailable</Badge>
-                    )}
+                    <h3 className={`font-semibold ${isAvailable ? 'text-gray-900' : 'text-gray-500'}`}>
+                        {item.name}
+                    </h3>
                     {item.is_popular && isAvailable && (
                         <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
                     )}
@@ -57,24 +64,31 @@ export default function MenuItemCard({ item, onAddToCart }) {
                             alt={item.name}
                             className="w-28 h-28 rounded-xl object-cover"
                         />
+                        {!isAvailable && (
+                            <div className="absolute inset-0 bg-gray-900/50 rounded-xl flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">UNAVAILABLE</span>
+                            </div>
+                        )}
+                        {isAvailable && (
+                            <Button
+                                onClick={() => onAddToCart(item)}
+                                size="icon"
+                                className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30"
+                            >
+                                <Plus className="h-5 w-5" />
+                            </Button>
+                        )}
+                    </div>
+                ) : (
+                    isAvailable && (
                         <Button
                             onClick={() => onAddToCart(item)}
                             size="icon"
-                            disabled={!isAvailable}
-                            className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30"
                         >
                             <Plus className="h-5 w-5" />
                         </Button>
-                    </div>
-                ) : (
-                    <Button
-                        onClick={() => onAddToCart(item)}
-                        size="icon"
-                        disabled={!isAvailable}
-                        className="h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Plus className="h-5 w-5" />
-                    </Button>
+                    )
                 )}
             </div>
         </motion.div>
