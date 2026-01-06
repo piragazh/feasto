@@ -780,6 +780,7 @@ export default function Restaurant() {
                 orderType={orderType}
                 onOrderTypeChange={setOrderType}
                 onProceedToCheckout={handleProceedToCheckout}
+                collectionEnabled={restaurant.collection_enabled}
                 />
 
                 <RestaurantInfoDialog

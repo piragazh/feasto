@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : 2.99;
     const total = subtotal + deliveryFee;
@@ -60,7 +60,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                 </SheetHeader>
 
                 {/* Order Type Selector */}
-                {cart.length > 0 && onOrderTypeChange && (
+                {cart.length > 0 && onOrderTypeChange && collectionEnabled && (
                     <div className="px-6 pt-4 pb-2 bg-gray-50 border-b">
                         <div className="flex gap-2">
                             <button
@@ -173,20 +173,12 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                 <span>£{total.toFixed(2)}</span>
                             </div>
                         </div>
-                        {onProceedToCheckout ? (
-                            <Button 
-                                onClick={onProceedToCheckout}
-                                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
-                            >
-                                {orderType === 'collection' ? 'Schedule Collection' : 'Go to Checkout'}
-                            </Button>
-                        ) : (
-                            <Link to={createPageUrl('Checkout')}>
-                                <Button className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg">
-                                    Go to Checkout
-                                </Button>
-                            </Link>
-                        )}
+                        <Button 
+                            onClick={onProceedToCheckout}
+                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                        >
+                            {orderType === 'collection' ? 'Schedule Collection' : 'Go to Checkout'}
+                        </Button>
                     </div>
                 )}
             </SheetContent>
