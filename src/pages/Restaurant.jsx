@@ -819,6 +819,45 @@ export default function Restaurant() {
                     </motion.div>
                 </div>
             )}
+
+            {/* Cart Conflict Dialog */}
+            {showCartConflictDialog && previousCartData && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+                    >
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <ShoppingBag className="h-8 w-8 text-orange-500" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                Replace cart?
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                                You have {previousCartData.cart.length} item{previousCartData.cart.length !== 1 ? 's' : ''} from {previousCartData.restaurantName}. 
+                                Starting a new order will clear your current cart.
+                            </p>
+                            <div className="space-y-2">
+                                <Button
+                                    onClick={handleStartNewCart}
+                                    className="w-full bg-orange-500 hover:bg-orange-600"
+                                >
+                                    Start New Order
+                                </Button>
+                                <Button
+                                    onClick={handleKeepOldCart}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    Keep Current Cart
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }
