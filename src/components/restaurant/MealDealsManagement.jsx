@@ -20,7 +20,9 @@ export default function MealDealsManagement({ restaurantId }) {
         image_url: '',
         original_price: '',
         deal_price: '',
+        deal_type: 'specific_items',
         items: [],
+        category_rules: [],
         is_active: true
     });
 
@@ -35,6 +37,16 @@ export default function MealDealsManagement({ restaurantId }) {
         queryKey: ['menu-items', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
     });
+
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return restaurants[0];
+        },
+    });
+
+    const categories = restaurant?.menu_categories || [];
 
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.MealDeal.create({ ...data, restaurant_id: restaurantId }),
@@ -69,7 +81,9 @@ export default function MealDealsManagement({ restaurantId }) {
             image_url: '',
             original_price: '',
             deal_price: '',
+            deal_type: 'specific_items',
             items: [],
+            category_rules: [],
             is_active: true
         });
         setEditingDeal(null);
@@ -84,7 +98,9 @@ export default function MealDealsManagement({ restaurantId }) {
             image_url: deal.image_url || '',
             original_price: deal.original_price?.toString() || '',
             deal_price: deal.deal_price.toString(),
+            deal_type: deal.deal_type || 'specific_items',
             items: deal.items || [],
+            category_rules: deal.category_rules || [],
             is_active: deal.is_active !== false
         });
         setDialogOpen(true);
@@ -149,69 +165,161 @@ export default function MealDealsManagement({ restaurantId }) {
                                 />
                             </div>
                             <div>
-                                <Label>Items in Deal</Label>
-                                <div className="space-y-2">
-                                    {formData.items.map((item, idx) => (
-                                        <div key={idx} className="flex gap-2">
-                                            <select
-                                                className="flex-1 px-3 py-2 border rounded-md"
-                                                value={item.menu_item_id}
-                                                onChange={(e) => {
-                                                    const menuItem = menuItems.find(m => m.id === e.target.value);
-                                                    const newItems = [...formData.items];
-                                                    newItems[idx] = {
-                                                        menu_item_id: e.target.value,
-                                                        name: menuItem?.name || '',
-                                                        quantity: item.quantity || 1
-                                                    };
-                                                    setFormData({ ...formData, items: newItems });
-                                                }}
-                                            >
-                                                <option value="">Select menu item</option>
-                                                {menuItems.map(m => (
-                                                    <option key={m.id} value={m.id}>{m.name} - £{m.price.toFixed(2)}</option>
-                                                ))}
-                                            </select>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                value={item.quantity}
-                                                onChange={(e) => {
-                                                    const newItems = [...formData.items];
-                                                    newItems[idx].quantity = parseInt(e.target.value) || 1;
-                                                    setFormData({ ...formData, items: newItems });
-                                                }}
-                                                className="w-20"
-                                                placeholder="Qty"
-                                            />
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => {
-                                                    const newItems = formData.items.filter((_, i) => i !== idx);
-                                                    setFormData({ ...formData, items: newItems });
-                                                }}
-                                            >
-                                                ×
-                                            </Button>
-                                        </div>
-                                    ))}
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                            setFormData({
-                                                ...formData,
-                                                items: [...formData.items, { menu_item_id: '', name: '', quantity: 1 }]
-                                            });
-                                        }}
-                                    >
-                                        Add Item
-                                    </Button>
-                                </div>
+                                <Label>Deal Type *</Label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-md"
+                                    value={formData.deal_type}
+                                    onChange={(e) => setFormData({ ...formData, deal_type: e.target.value })}
+                                >
+                                    <option value="specific_items">Specific Items (Fixed)</option>
+                                    <option value="category_based">Category Based (Customer Choice)</option>
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formData.deal_type === 'specific_items' 
+                                        ? 'Fixed items included in the deal' 
+                                        : 'Customer chooses items from categories (e.g., 2 Pizzas + 1 Drink)'}
+                                </p>
                             </div>
+
+                            {formData.deal_type === 'specific_items' ? (
+                                <div>
+                                    <Label>Items in Deal</Label>
+                                    <div className="space-y-2">
+                                        {formData.items.map((item, idx) => (
+                                            <div key={idx} className="flex gap-2">
+                                                <select
+                                                    className="flex-1 px-3 py-2 border rounded-md"
+                                                    value={item.menu_item_id}
+                                                    onChange={(e) => {
+                                                        const menuItem = menuItems.find(m => m.id === e.target.value);
+                                                        const newItems = [...formData.items];
+                                                        newItems[idx] = {
+                                                            menu_item_id: e.target.value,
+                                                            name: menuItem?.name || '',
+                                                            quantity: item.quantity || 1
+                                                        };
+                                                        setFormData({ ...formData, items: newItems });
+                                                    }}
+                                                >
+                                                    <option value="">Select menu item</option>
+                                                    {menuItems.map(m => (
+                                                        <option key={m.id} value={m.id}>{m.name} - £{m.price.toFixed(2)}</option>
+                                                    ))}
+                                                </select>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => {
+                                                        const newItems = [...formData.items];
+                                                        newItems[idx].quantity = parseInt(e.target.value) || 1;
+                                                        setFormData({ ...formData, items: newItems });
+                                                    }}
+                                                    className="w-20"
+                                                    placeholder="Qty"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        const newItems = formData.items.filter((_, i) => i !== idx);
+                                                        setFormData({ ...formData, items: newItems });
+                                                    }}
+                                                >
+                                                    ×
+                                                </Button>
+                                            </div>
+                                        ))}
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    items: [...formData.items, { menu_item_id: '', name: '', quantity: 1 }]
+                                                });
+                                            }}
+                                        >
+                                            Add Item
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <Label>Category Selection Rules</Label>
+                                    <div className="space-y-2">
+                                        {formData.category_rules.map((rule, idx) => (
+                                            <div key={idx} className="flex gap-2 items-start p-3 border rounded-lg">
+                                                <div className="flex-1 space-y-2">
+                                                    <select
+                                                        className="w-full px-3 py-2 border rounded-md"
+                                                        value={rule.category}
+                                                        onChange={(e) => {
+                                                            const newRules = [...formData.category_rules];
+                                                            newRules[idx].category = e.target.value;
+                                                            setFormData({ ...formData, category_rules: newRules });
+                                                        }}
+                                                    >
+                                                        <option value="">Select category</option>
+                                                        {categories.map(cat => (
+                                                            <option key={cat} value={cat}>{cat}</option>
+                                                        ))}
+                                                    </select>
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        value={rule.quantity}
+                                                        onChange={(e) => {
+                                                            const newRules = [...formData.category_rules];
+                                                            newRules[idx].quantity = parseInt(e.target.value) || 1;
+                                                            setFormData({ ...formData, category_rules: newRules });
+                                                        }}
+                                                        placeholder="Quantity"
+                                                    />
+                                                    <Input
+                                                        value={rule.label}
+                                                        onChange={(e) => {
+                                                            const newRules = [...formData.category_rules];
+                                                            newRules[idx].label = e.target.value;
+                                                            setFormData({ ...formData, category_rules: newRules });
+                                                        }}
+                                                        placeholder="Label (e.g., Choose 2 Pizzas)"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        const newRules = formData.category_rules.filter((_, i) => i !== idx);
+                                                        setFormData({ ...formData, category_rules: newRules });
+                                                    }}
+                                                >
+                                                    ×
+                                                </Button>
+                                            </div>
+                                        ))}
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    category_rules: [...formData.category_rules, { category: '', quantity: 1, label: '' }]
+                                                });
+                                            }}
+                                        >
+                                            Add Category Rule
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Example: Add "Pizza" category with quantity 2 and label "Choose 2 Pizzas"
+                                    </p>
+                                </div>
+                            )}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <Label>Original Price (£)</Label>
@@ -266,13 +374,24 @@ export default function MealDealsManagement({ restaurantId }) {
                                     />
                                 )}
                                 <div className="flex-1">
-                                    <h3 className="font-semibold mb-1">{deal.name}</h3>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h3 className="font-semibold">{deal.name}</h3>
+                                        {deal.deal_type === 'category_based' && (
+                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                                Choice
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-gray-600 mb-2 line-clamp-2">{deal.description}</p>
-                                    {deal.items?.length > 0 && (
+                                    {deal.deal_type === 'category_based' && deal.category_rules?.length > 0 ? (
+                                        <p className="text-xs text-gray-500 mb-2">
+                                            {deal.category_rules.map(rule => rule.label || `${rule.quantity}x ${rule.category}`).join(' + ')}
+                                        </p>
+                                    ) : deal.items?.length > 0 ? (
                                         <p className="text-xs text-gray-500 mb-2">
                                             {deal.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
                                         </p>
-                                    )}
+                                    ) : null}
                                     <div className="flex items-center gap-2 mb-2">
                                         {deal.original_price && (
                                             <span className="text-sm text-gray-400 line-through">
