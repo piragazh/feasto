@@ -73,14 +73,27 @@ export default function Restaurant() {
     // Save cart to localStorage with error handling
     useEffect(() => {
         try {
-            localStorage.setItem('cart', JSON.stringify(cart));
-            if (restaurantId) {
-                localStorage.setItem('cartRestaurantId', restaurantId);
+            if (cart.length > 0) {
+                localStorage.setItem('cart', JSON.stringify(cart));
+                if (restaurantId) {
+                    localStorage.setItem('cartRestaurantId', restaurantId);
+                }
             }
         } catch (error) {
             toast.error('Unable to save cart. Storage may be full.');
         }
     }, [cart, restaurantId]);
+
+    const handleKeepOldCart = () => {
+        setShowCartConflictDialog(false);
+        navigate(createPageUrl('Home'));
+    };
+
+    const handleStartNewCart = () => {
+        clearCart();
+        setShowCartConflictDialog(false);
+        toast.success('Started new cart');
+    };
 
     const { data: restaurant, isLoading: restaurantLoading, error: restaurantError } = useQuery({
         queryKey: ['restaurant', restaurantId],
