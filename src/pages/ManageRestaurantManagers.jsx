@@ -36,34 +36,6 @@ export default function ManageRestaurantManagers() {
         enabled: !isChecking,
     });
 
-    // Check authentication and admin role
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const user = await base44.auth.me();
-                if (!user || user.role !== 'admin') {
-                    base44.auth.redirectToLogin(window.location.pathname);
-                    return;
-                }
-                setIsChecking(false);
-            } catch (e) {
-                base44.auth.redirectToLogin(window.location.pathname);
-            }
-        };
-        checkAuth();
-    }, []);
-
-    if (isChecking) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Checking access...</p>
-                </div>
-            </div>
-        );
-    }
-
     const createManagerMutation = useMutation({
         mutationFn: async (data) => {
             // Invite user to the platform
@@ -94,6 +66,34 @@ export default function ManageRestaurantManagers() {
             toast.success('Manager removed');
         },
     });
+
+    // Check authentication and admin role
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const user = await base44.auth.me();
+                if (!user || user.role !== 'admin') {
+                    base44.auth.redirectToLogin(window.location.pathname);
+                    return;
+                }
+                setIsChecking(false);
+            } catch (e) {
+                base44.auth.redirectToLogin(window.location.pathname);
+            }
+        };
+        checkAuth();
+    }, []);
+
+    if (isChecking) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking access...</p>
+                </div>
+            </div>
+        );
+    }
 
     const resetForm = () => {
         setFormData({
