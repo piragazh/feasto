@@ -379,25 +379,36 @@ export default function Restaurant() {
     };
 
     const handleProceedToCheckout = () => {
+        console.log('Checkout clicked - starting validation...');
+        
         try {
             if (cart.length === 0) {
+                console.log('Cart is empty');
                 toast.error('Your cart is empty');
                 return;
             }
+            console.log('Cart has items:', cart.length);
 
             if (!restaurant) {
+                console.log('Restaurant not found');
                 toast.error('Restaurant information unavailable');
                 return;
             }
+            console.log('Restaurant:', restaurant.name);
 
             // Check minimum order
             const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            console.log('Cart total:', cartTotal, 'Min order:', restaurant.minimum_order);
+            
             if (restaurant.minimum_order && cartTotal < restaurant.minimum_order) {
                 toast.error(`Minimum order is £${restaurant.minimum_order.toFixed(2)}`);
                 return;
             }
 
+            console.log('Checking ordering availability...');
             const orderingCheck = checkOrderingAvailable();
+            console.log('Ordering check result:', orderingCheck);
+            
             if (!orderingCheck.available) {
                 setTimeWarningMessage(orderingCheck.message);
                 setShowTimeWarning(true);
@@ -405,10 +416,17 @@ export default function Restaurant() {
             }
 
             // Save order type to localStorage
+            console.log('Saving to localStorage - orderType:', orderType);
             localStorage.setItem('orderType', orderType);
             localStorage.setItem('cartRestaurantName', restaurant.name);
+            
+            console.log('Closing cart and navigating...');
             setCartOpen(false);
-            navigate(createPageUrl('Checkout'));
+            
+            // Use window.location for guaranteed navigation
+            const checkoutUrl = createPageUrl('Checkout');
+            console.log('Navigating to:', checkoutUrl);
+            window.location.href = checkoutUrl;
         } catch (error) {
             console.error('Checkout error:', error);
             toast.error('Failed to proceed to checkout: ' + (error?.message || 'Please try again'));
