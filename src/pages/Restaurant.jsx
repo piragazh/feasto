@@ -407,9 +407,10 @@ export default function Restaurant() {
             localStorage.setItem('orderType', orderType);
             localStorage.setItem('cartRestaurantName', restaurant.name);
             setCartOpen(false);
-            window.location.href = createPageUrl('Checkout');
+            navigate(createPageUrl('Checkout'));
         } catch (error) {
-            toast.error('Failed to proceed to checkout');
+            console.error('Checkout error:', error);
+            toast.error('Failed to proceed to checkout: ' + (error?.message || 'Please try again'));
         }
     };
 
