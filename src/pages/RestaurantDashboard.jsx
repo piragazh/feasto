@@ -51,6 +51,42 @@ export default function RestaurantDashboard() {
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [showOnboarding, setShowOnboarding] = useState(false);
 
+    const { data: pendingOrders = [] } = useQuery({
+        queryKey: ['pending-orders', restaurant?.id],
+        queryFn: () => base44.entities.Order.filter({ 
+            restaurant_id: restaurant.id, 
+            status: 'pending' 
+        }),
+        enabled: !!restaurant,
+        refetchInterval: 3000, // Check every 3 seconds
+    });
+
+    const { data: refundRequests = [] } = useQuery({
+        queryKey: ['refund-requests-count', restaurant?.id],
+        queryFn: () => base44.entities.Order.filter({ 
+            restaurant_id: restaurant.id, 
+            status: 'refund_requested' 
+        }),
+        enabled: !!restaurant,
+        refetchInterval: 5000,
+    });
+
+    const { data: orderMessages = [] } = useQuery({
+        queryKey: ['order-messages', restaurant?.id],
+        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id }),
+        enabled: !!restaurant,
+        refetchInterval: 5000,
+    });
+
+    const { data: restaurantMessages = [] } = useQuery({
+        queryKey: ['restaurant-messages', restaurant?.id],
+        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id }),
+        enabled: !!restaurant,
+        refetchInterval: 5000,
+    });
+
+    const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(msg => !msg.is_read).length;
+
     useEffect(() => {
         loadUserAndRestaurant();
         requestNotificationPermission();
@@ -105,42 +141,6 @@ export default function RestaurantDashboard() {
             await Notification.requestPermission();
         }
     };
-
-    const { data: pendingOrders = [] } = useQuery({
-        queryKey: ['pending-orders', restaurant?.id],
-        queryFn: () => base44.entities.Order.filter({ 
-            restaurant_id: restaurant.id, 
-            status: 'pending' 
-        }),
-        enabled: !!restaurant,
-        refetchInterval: 3000, // Check every 3 seconds
-    });
-
-    const { data: refundRequests = [] } = useQuery({
-        queryKey: ['refund-requests-count', restaurant?.id],
-        queryFn: () => base44.entities.Order.filter({ 
-            restaurant_id: restaurant.id, 
-            status: 'refund_requested' 
-        }),
-        enabled: !!restaurant,
-        refetchInterval: 5000,
-    });
-
-    const { data: orderMessages = [] } = useQuery({
-        queryKey: ['order-messages', restaurant?.id],
-        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id }),
-        enabled: !!restaurant,
-        refetchInterval: 5000,
-    });
-
-    const { data: restaurantMessages = [] } = useQuery({
-        queryKey: ['restaurant-messages', restaurant?.id],
-        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id }),
-        enabled: !!restaurant,
-        refetchInterval: 5000,
-    });
-
-    const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(msg => !msg.is_read).length;
 
     useEffect(() => {
         if (pendingOrders.length > newOrdersCount && newOrdersCount > 0) {
