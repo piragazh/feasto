@@ -36,7 +36,7 @@ export default function SuperAdmin() {
         },
     });
 
-    if (isLoading || !user) {
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
@@ -45,6 +45,10 @@ export default function SuperAdmin() {
                 </div>
             </div>
         );
+    }
+    
+    if (!user) {
+        return null;
     }
 
     return (
