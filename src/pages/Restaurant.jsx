@@ -406,8 +406,6 @@ export default function Restaurant() {
     };
 
     const handleProceedToCheckout = () => {
-        console.log('🛒 CHECKOUT BUTTON CLICKED');
-        
         // Basic validation
         if (!cart || cart.length === 0) {
             toast.error('Your cart is empty');
@@ -427,20 +425,16 @@ export default function Restaurant() {
         }
 
         // Save to localStorage
-        try {
-            localStorage.setItem('orderType', orderType);
-            localStorage.setItem('cartRestaurantName', restaurant.name);
-            console.log('✅ Saved to localStorage');
-        } catch (e) {
-            console.error('localStorage error:', e);
-        }
+        localStorage.setItem('orderType', orderType);
+        localStorage.setItem('cartRestaurantName', restaurant.name);
 
         // Close cart
         setCartOpen(false);
 
-        // Navigate
-        console.log('🚀 Navigating to checkout...');
-        navigate(createPageUrl('Checkout'));
+        // Small delay to ensure cart closes before navigation
+        setTimeout(() => {
+            navigate(createPageUrl('Checkout'));
+        }, 100);
     };
 
     if (restaurantLoading) {
