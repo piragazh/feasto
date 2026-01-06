@@ -45,23 +45,24 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                 )}
                             </div>
                             {cart.length > 0 && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleClearCart}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Clear All
-                            </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleClearCart}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Clear All
+                                </Button>
                             )}
-                            </div>
-                            </SheetHeader>
+                        </div>
+                    </div>
+                </SheetHeader>
 
-                            {/* Order Type Selector */}
-                            {cart.length > 0 && onOrderTypeChange && (
-                            <div className="px-6 pt-4 pb-2 bg-gray-50 border-b">
-                            <div className="flex gap-2">
+                {/* Order Type Selector */}
+                {cart.length > 0 && onOrderTypeChange && (
+                    <div className="px-6 pt-4 pb-2 bg-gray-50 border-b">
+                        <div className="flex gap-2">
                             <button
                                 onClick={() => onOrderTypeChange('delivery')}
                                 className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
@@ -82,9 +83,9 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                             >
                                 🏪 Collection <span className="text-xs">FREE</span>
                             </button>
-                            </div>
-                            </div>
-                            )}
+                        </div>
+                    </div>
+                )}
                 
                 <div className="flex-1 overflow-y-auto p-6">
                     {cart.length === 0 ? (
