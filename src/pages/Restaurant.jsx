@@ -251,7 +251,7 @@ export default function Restaurant() {
                 return;
             }
 
-            if (!item.is_available) {
+            if (item.is_available === false) {
                 toast.error(`${item.name} is currently unavailable`);
                 return;
             }
