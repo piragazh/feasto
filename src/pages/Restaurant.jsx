@@ -782,6 +782,7 @@ export default function Restaurant() {
                 removeFromCart={removeFromCart}
                 clearCart={clearCart}
                 restaurantName={restaurant.name}
+                restaurantId={restaurantId}
                 orderType={orderType}
                 onOrderTypeChange={setOrderType}
                 onProceedToCheckout={handleProceedToCheckout}

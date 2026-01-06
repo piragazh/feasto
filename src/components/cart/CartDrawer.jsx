@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : 2.99;
     const total = subtotal + deliveryFee;
@@ -21,15 +21,28 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
                 <SheetHeader className="p-6 border-b">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <SheetTitle className="flex items-center gap-2">
-                                <ShoppingBag className="h-5 w-5" />
-                                Your Order
-                            </SheetTitle>
-                            {restaurantName && (
-                                <p className="text-sm text-gray-500">from {restaurantName}</p>
-                            )}
+                    <div className="flex items-center gap-3">
+                        {restaurantId && (
+                            <Link to={createPageUrl('Restaurant') + `?id=${restaurantId}`}>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="rounded-full hover:bg-gray-100"
+                                    onClick={() => onOpenChange(false)}
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </Button>
+                            </Link>
+                        )}
+                        <div className="flex-1 flex items-center justify-between">
+                            <div>
+                                <SheetTitle className="flex items-center gap-2">
+                                    <ShoppingBag className="h-5 w-5" />
+                                    Your Order
+                                </SheetTitle>
+                                {restaurantName && (
+                                    <p className="text-sm text-gray-500">from {restaurantName}</p>
+                                )}
                             </div>
                             {cart.length > 0 && (
                             <Button
