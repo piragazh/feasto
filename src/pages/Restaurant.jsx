@@ -409,32 +409,26 @@ export default function Restaurant() {
         // Basic validation
         if (!cart || cart.length === 0) {
             toast.error('Your cart is empty');
-            return;
+            return false;
         }
 
         if (!restaurant || !restaurant.name) {
             toast.error('Restaurant information unavailable');
-            return;
+            return false;
         }
 
         // Check minimum order
         const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         if (restaurant.minimum_order && cartTotal < restaurant.minimum_order) {
             toast.error(`Minimum order is £${restaurant.minimum_order.toFixed(2)}`);
-            return;
+            return false;
         }
 
         // Save to localStorage
         localStorage.setItem('orderType', orderType);
         localStorage.setItem('cartRestaurantName', restaurant.name);
-
-        // Close cart
-        setCartOpen(false);
-
-        // Small delay to ensure cart closes before navigation
-        setTimeout(() => {
-            navigate(createPageUrl('Checkout'));
-        }, 100);
+        
+        return true;
     };
 
     if (restaurantLoading) {
@@ -779,7 +773,7 @@ export default function Restaurant() {
                 restaurantId={restaurantId}
                 orderType={orderType}
                 onOrderTypeChange={setOrderType}
-                onProceedToCheckout={handleProceedToCheckout}
+                onValidateCheckout={handleProceedToCheckout}
                 collectionEnabled={restaurant.collection_enabled}
                 />
 
