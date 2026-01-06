@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function Restaurant() {
+    const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
     const restaurantId = urlParams.get('id');
     
