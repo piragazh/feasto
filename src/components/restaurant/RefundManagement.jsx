@@ -30,24 +30,26 @@ export default function RefundManagement({ restaurantId }) {
         mutationFn: (orderId) => base44.entities.Order.update(orderId, {
             status: 'refunded',
             refund_amount: refundRequests.find(o => o.id === orderId)?.refund_requested_amount || 0,
+            refund_paid_by: 'restaurant',
             refund_approved_date: new Date().toISOString()
         }),
         onSuccess: () => {
             queryClient.invalidateQueries(['refund-requests']);
-            toast.success('Refund approved');
+            toast.success('Refund approved - Amount will be deducted from earnings');
             setViewDialog(null);
         },
     });
 
     const rejectMutation = useMutation({
         mutationFn: ({ orderId, reason }) => base44.entities.Order.update(orderId, {
-            status: 'delivered',
+            status: 'refund_rejected_by_restaurant',
+            refund_paid_by: 'restaurant',
             refund_rejection_reason: reason,
             refund_rejected_date: new Date().toISOString()
         }),
         onSuccess: () => {
             queryClient.invalidateQueries(['refund-requests']);
-            toast.success('Refund request rejected');
+            toast.success('Refund rejected - Escalated to platform for review');
             setViewDialog(null);
             setRejectReason('');
         },
