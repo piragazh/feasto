@@ -270,15 +270,24 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
+            // CRITICAL: Validate payment for card orders
+            if (paymentMethod === 'card' && !paymentIntentId) {
+                toast.error('Payment verification failed. Please try again.');
+                setIsSubmitting(false);
+                return;
+            }
+
             // Validate cart
             if (!cart || cart.length === 0) {
                 toast.error('Your cart is empty');
+                setIsSubmitting(false);
                 return;
             }
 
             // Validate restaurant
             if (!restaurantId || !restaurantName) {
                 toast.error('Restaurant information missing');
+                setIsSubmitting(false);
                 return;
             }
 
@@ -401,6 +410,7 @@ export default function Checkout() {
         toast.error(errorMessage || 'Payment failed. Please try again.');
         setShowStripeForm(false);
         setClientSecret('');
+        setIsSubmitting(false);
     };
 
     if (orderPlaced) {

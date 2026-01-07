@@ -28,12 +28,20 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
 
             if (error) {
                 onError(error.message);
-            } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-                onSuccess(paymentIntent.id);
+                setIsProcessing(false);
+            } else if (paymentIntent) {
+                if (paymentIntent.status === 'succeeded') {
+                    onSuccess(paymentIntent.id);
+                } else {
+                    onError(`Payment ${paymentIntent.status}. Please try again.`);
+                    setIsProcessing(false);
+                }
+            } else {
+                onError('Payment processing failed. Please try again.');
+                setIsProcessing(false);
             }
         } catch (err) {
-            onError(err.message);
-        } finally {
+            onError(err.message || 'Payment failed. Please try again.');
             setIsProcessing(false);
         }
     };
