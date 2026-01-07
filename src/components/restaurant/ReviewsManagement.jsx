@@ -167,6 +167,8 @@ export default function ReviewsManagement({ restaurantId }) {
                     ))}
                 </div>
             )}
-        </div>
+                </div>
+            </TabsContent>
+        </Tabs>
     );
 }
