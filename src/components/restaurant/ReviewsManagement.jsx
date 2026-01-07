@@ -3,12 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Star, MessageSquare } from 'lucide-react';
-import { format } from 'date-fns';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Star } from 'lucide-react';
 import { toast } from 'sonner';
+import ReviewModeration from './ReviewModeration';
 
 export default function ReviewsManagement({ restaurantId }) {
+    const [activeTab, setActiveTab] = useState('moderation');
     const [respondingTo, setRespondingTo] = useState(null);
     const [responseText, setResponseText] = useState('');
     const queryClient = useQueryClient();
@@ -44,7 +45,18 @@ export default function ReviewsManagement({ restaurantId }) {
     if (isLoading) return <div className="text-center py-4">Loading reviews...</div>;
 
     return (
-        <div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+                <TabsTrigger value="moderation">Review Moderation</TabsTrigger>
+                <TabsTrigger value="statistics">Statistics</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="moderation">
+                <ReviewModeration restaurantId={restaurantId} />
+            </TabsContent>
+
+            <TabsContent value="statistics">
+                <div>
             <div className="mb-6">
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-bold">Customer Reviews</h2>

@@ -9,7 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function ReviewsSection({ restaurantId }) {
     const { data: reviews = [], isLoading } = useQuery({
         queryKey: ['restaurant-reviews', restaurantId],
-        queryFn: () => base44.entities.Review.filter({ restaurant_id: restaurantId }, '-created_date', 50),
+        queryFn: async () => {
+            const allReviews = await base44.entities.Review.filter({ restaurant_id: restaurantId }, '-created_date', 50);
+            // Only show approved reviews (or reviews without moderation status for backward compatibility)
+            return allReviews.filter(r => !r.moderation_status || r.moderation_status === 'approved');
+        },
         enabled: !!restaurantId,
     });
 
