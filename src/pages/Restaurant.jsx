@@ -21,6 +21,7 @@ import PopularItems from '@/components/restaurant/PopularItems';
 import ReviewsSection from '@/components/restaurant/ReviewsSection';
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import ActivePromotionsBanner from '@/components/restaurant/ActivePromotionsBanner';
+import RestaurantProfileSection from '@/components/restaurant/RestaurantProfileSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -776,11 +777,16 @@ export default function Restaurant() {
                     onAddToCart={addCategoryDealToCart}
                 />
 
+                {/* Profile Section (About Us, Story, Awards, Social) */}
+                <div className="mt-12">
+                    <RestaurantProfileSection restaurant={restaurant} />
+                </div>
+
                 {/* Reviews Section */}
                 <div className="mt-12">
                     <ReviewsSection restaurantId={restaurantId} />
                 </div>
-            </div>
+                </div>
 
             {/* Floating Cart Button */}
             {cart.length > 0 && (

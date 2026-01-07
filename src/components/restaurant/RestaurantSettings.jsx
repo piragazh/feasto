@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
+import ProfileManagement from './ProfileManagement';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -164,13 +165,20 @@ export default function RestaurantSettings({ restaurantId }) {
 
     return (
         <div className="space-y-6">
-            <div className="flex gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-6">
                 <Button
                     variant={activeSection === 'general' ? 'default' : 'outline'}
                     onClick={() => setActiveSection('general')}
                 >
                     <Store className="h-4 w-4 mr-2" />
                     General Info
+                </Button>
+                <Button
+                    variant={activeSection === 'profile' ? 'default' : 'outline'}
+                    onClick={() => setActiveSection('profile')}
+                >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Profile & Story
                 </Button>
                 <Button
                     variant={activeSection === 'opening' ? 'default' : 'outline'}
@@ -196,6 +204,10 @@ export default function RestaurantSettings({ restaurantId }) {
                     </Button>
                 )}
             </div>
+
+            {activeSection === 'profile' && (
+                <ProfileManagement restaurantId={restaurantId} />
+            )}
 
             {activeSection === 'general' && (
                 <Card>
