@@ -24,7 +24,7 @@ export default function AdminDashboard() {
 
     const { data: orders = [] } = useQuery({
         queryKey: ['all-orders'],
-        queryFn: () => base44.entities.Order.list('-created_date', 500),
+        queryFn: () => base44.entities.Order.list('-created_date', 100),
         enabled: isAuthorized,
     });
 

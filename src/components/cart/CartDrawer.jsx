@@ -120,6 +120,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                 src={item.image_url}
                                                 alt={item.name}
                                                 className="w-16 h-16 rounded-lg object-cover"
+                                                loading="lazy"
                                             />
                                         )}
                                         <div className="flex-1">

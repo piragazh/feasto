@@ -46,7 +46,7 @@ export default function Orders() {
                 return [];
             }
         },
-        refetchInterval: 5000,
+        refetchInterval: 15000,
     });
 
     const { data: reviews = [] } = useQuery({

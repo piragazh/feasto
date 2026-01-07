@@ -652,6 +652,7 @@ export default function MenuManagement({ restaurantId }) {
                                     src={item.image_url}
                                     alt={item.name}
                                     className="w-full h-32 object-cover rounded-lg mb-3"
+                                    loading="lazy"
                                 />
                             )}
                             <div className="flex items-start justify-between mb-2">

@@ -23,6 +23,7 @@ export default function Home() {
     const { data: restaurants = [], isLoading } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
+        staleTime: 60000, // Cache for 1 minute
     });
 
     useEffect(() => {
