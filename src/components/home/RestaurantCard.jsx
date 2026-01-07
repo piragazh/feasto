@@ -2,17 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { Star, Clock, Bike, MapPin, Heart } from 'lucide-react';
+import { Star, Clock, Bike, MapPin, Heart, Tag } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { isWithinInterval } from 'date-fns';
 
 export default function RestaurantCard({ restaurant, distance, showFavoriteButton = true }) {
     const restaurantUrl = `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userEmail, setUserEmail] = useState(null);
+    
+    // Fetch active promotions for this restaurant
+    const { data: promotions = [] } = useQuery({
+        queryKey: ['restaurant-promotions', restaurant.id],
+        queryFn: async () => {
+            const promos = await base44.entities.Promotion.filter({ 
+                restaurant_id: restaurant.id,
+                is_active: true 
+            });
+            // Filter for currently active promotions
+            const now = new Date();
+            return promos.filter(p => {
+                const start = new Date(p.start_date);
+                const end = new Date(p.end_date);
+                return isWithinInterval(now, { start, end }) && 
+                       (!p.usage_limit || p.usage_count < p.usage_limit);
+            });
+        },
+    });
     
     useEffect(() => {
         checkFavoriteStatus();
@@ -107,10 +128,11 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                                 {restaurant.cuisine_type}
                             </Badge>
                         </div>
-                        {restaurant.delivery_fee === 0 && (
+                        {promotions.length > 0 && (
                             <div className="absolute top-2 md:top-3 right-2 md:right-3">
-                                <Badge className="bg-green-500 text-white hover:bg-green-600 font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
-                                    Free Delivery
+                                <Badge className="bg-orange-500 text-white hover:bg-orange-600 font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm animate-pulse">
+                                    <Tag className="h-3 w-3 mr-1 inline" />
+                                    {promotions.length} {promotions.length === 1 ? 'Deal' : 'Deals'}
                                 </Badge>
                             </div>
                         )}

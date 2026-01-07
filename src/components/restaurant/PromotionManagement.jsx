@@ -20,6 +20,7 @@ export default function PromotionManagement({ restaurantId }) {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
+        promotion_code: '',
         promotion_type: 'percentage_off',
         discount_value: 0,
         minimum_order: 0,
@@ -71,6 +72,7 @@ export default function PromotionManagement({ restaurantId }) {
         setFormData({
             name: '',
             description: '',
+            promotion_code: '',
             promotion_type: 'percentage_off',
             discount_value: 0,
             minimum_order: 0,
@@ -86,6 +88,7 @@ export default function PromotionManagement({ restaurantId }) {
         setFormData({
             name: promotion.name,
             description: promotion.description || '',
+            promotion_code: promotion.promotion_code || '',
             promotion_type: promotion.promotion_type,
             discount_value: promotion.discount_value,
             minimum_order: promotion.minimum_order || 0,
@@ -240,6 +243,8 @@ export default function PromotionManagement({ restaurantId }) {
                                                         <p className="font-medium">
                                                             {promotion.promotion_type === 'percentage_off' 
                                                                 ? `${promotion.discount_value}%`
+                                                                : promotion.promotion_type === 'buy_one_get_one' ? 'BOGO'
+                                                                : promotion.promotion_type === 'free_delivery' ? 'Free'
                                                                 : `£${promotion.discount_value}`}
                                                         </p>
                                                     </div>
@@ -257,6 +262,14 @@ export default function PromotionManagement({ restaurantId }) {
                                                         </p>
                                                     </div>
                                                 </div>
+                                                
+                                                {promotion.promotion_code && (
+                                                    <div className="mt-3 pt-3 border-t">
+                                                        <p className="text-sm text-gray-600">
+                                                            Promo Code: <span className="font-mono font-bold text-orange-600">{promotion.promotion_code}</span>
+                                                        </p>
+                                                    </div>
+                                                )}
 
                                                 {(promotion.total_revenue_generated > 0 || promotion.total_discount_given > 0) && (
                                                     <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-4 text-sm">
@@ -317,6 +330,18 @@ export default function PromotionManagement({ restaurantId }) {
                                         placeholder="e.g., Summer Sale 2024"
                                         required
                                     />
+                                </div>
+
+                                <div>
+                                    <Label>Promo Code (Optional)</Label>
+                                    <Input
+                                        value={formData.promotion_code}
+                                        onChange={(e) => setFormData({ ...formData, promotion_code: e.target.value.toUpperCase() })}
+                                        placeholder="e.g., SUMMER10"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Customers can enter this code at checkout
+                                    </p>
                                 </div>
 
                                 <div>

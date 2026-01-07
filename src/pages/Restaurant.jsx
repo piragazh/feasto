@@ -20,6 +20,7 @@ import SpecialOffers from '@/components/restaurant/SpecialOffers';
 import PopularItems from '@/components/restaurant/PopularItems';
 import ReviewsSection from '@/components/restaurant/ReviewsSection';
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
+import ActivePromotionsBanner from '@/components/restaurant/ActivePromotionsBanner';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -635,6 +636,9 @@ export default function Restaurant() {
                         <SpecialOffers offers={restaurant.special_offers} />
                     </div>
                 )}
+
+                {/* Active Promotions */}
+                <ActivePromotionsBanner restaurantId={restaurantId} />
 
                 {/* Opening Hours */}
                 <div className="mb-8">
