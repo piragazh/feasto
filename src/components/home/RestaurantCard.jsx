@@ -1,83 +1,159 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Star, Clock, Bike, MapPin } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { Star, Clock, Bike, MapPin, Heart } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
-export default function RestaurantCard({ restaurant, distance }) {
+export default function RestaurantCard({ restaurant, distance, showFavoriteButton = true }) {
     const restaurantUrl = `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
-    console.log('Restaurant card URL:', restaurantUrl, 'ID:', restaurant.id);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [userEmail, setUserEmail] = useState(null);
+    
+    useEffect(() => {
+        checkFavoriteStatus();
+    }, [restaurant.id]);
+
+    const checkFavoriteStatus = async () => {
+        try {
+            const authenticated = await base44.auth.isAuthenticated();
+            setIsAuthenticated(authenticated);
+            
+            if (authenticated) {
+                const user = await base44.auth.me();
+                setUserEmail(user.email);
+                
+                const favorites = await base44.entities.Favorite.filter({
+                    user_email: user.email,
+                    restaurant_id: restaurant.id
+                });
+                setIsFavorite(favorites.length > 0);
+            }
+        } catch (e) {
+            // Not authenticated
+        }
+    };
+
+    const toggleFavorite = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!isAuthenticated) {
+            toast.error('Please sign in to favorite restaurants');
+            base44.auth.redirectToLogin();
+            return;
+        }
+
+        try {
+            if (isFavorite) {
+                const favorites = await base44.entities.Favorite.filter({
+                    user_email: userEmail,
+                    restaurant_id: restaurant.id
+                });
+                if (favorites[0]) {
+                    await base44.entities.Favorite.delete(favorites[0].id);
+                    setIsFavorite(false);
+                    toast.success('Removed from favorites');
+                }
+            } else {
+                await base44.entities.Favorite.create({
+                    user_email: userEmail,
+                    restaurant_id: restaurant.id,
+                    restaurant_name: restaurant.name
+                });
+                setIsFavorite(true);
+                toast.success('Added to favorites');
+            }
+        } catch (error) {
+            toast.error('Failed to update favorites');
+        }
+    };
     
     return (
-        <Link to={restaurantUrl}>
-            <motion.div
-                whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl active:shadow-md transition-all duration-300 border border-gray-100"
-            >
-                <div className="relative h-40 md:h-48 overflow-hidden">
-                    <img
-                        src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
-                        alt={restaurant.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    {!restaurant.is_open && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-white font-semibold text-sm md:text-lg">Currently Closed</span>
-                        </div>
-                    )}
-                    <div className="absolute top-2 md:top-3 left-2 md:left-3">
-                        <Badge className="bg-white/95 text-gray-800 hover:bg-white font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
-                            {restaurant.cuisine_type}
-                        </Badge>
-                    </div>
-                    {restaurant.delivery_fee === 0 && (
-                        <div className="absolute top-2 md:top-3 right-2 md:right-3">
-                            <Badge className="bg-green-500 text-white hover:bg-green-600 font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
-                                Free Delivery
+        <div className="relative">
+            {showFavoriteButton && isAuthenticated && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleFavorite}
+                    className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white rounded-full shadow-md h-8 w-8 md:h-10 md:w-10"
+                >
+                    <Heart className={`h-4 w-4 md:h-5 md:w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+                </Button>
+            )}
+            <Link to={restaurantUrl}>
+                <motion.div
+                    whileHover={{ y: -4 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl active:shadow-md transition-all duration-300 border border-gray-100"
+                >
+                    <div className="relative h-40 md:h-48 overflow-hidden">
+                        <img
+                            src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
+                            alt={restaurant.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        {!restaurant.is_open && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <span className="text-white font-semibold text-sm md:text-lg">Currently Closed</span>
+                            </div>
+                        )}
+                        <div className="absolute top-2 md:top-3 left-2 md:left-3">
+                            <Badge className="bg-white/95 text-gray-800 hover:bg-white font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
+                                {restaurant.cuisine_type}
                             </Badge>
                         </div>
-                    )}
-                    {distance !== null && distance !== undefined && (
-                        <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
-                            <Badge className="bg-orange-500 text-white font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
-                                <MapPin className="h-3 w-3 mr-1 inline" />
-                                {distance.toFixed(1)} mi
-                            </Badge>
-                        </div>
-                    )}
-                </div>
-                
-                <div className="p-3 md:p-4">
-                    <div className="flex items-start justify-between mb-2 gap-2">
-                        <h3 className="font-semibold text-base md:text-lg text-gray-900 group-hover:text-orange-500 transition-colors line-clamp-1 flex-1">
-                            {restaurant.name}
-                        </h3>
-                        <div className="flex items-center gap-0.5 md:gap-1 bg-orange-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg whitespace-nowrap">
-                            <Star className="h-3 w-3 md:h-4 md:w-4 fill-orange-400 text-orange-400" />
-                            <span className="font-semibold text-xs md:text-sm text-gray-900">{restaurant.rating?.toFixed(1) || '4.5'}</span>
-                            <span className="text-gray-500 text-xs md:text-sm hidden sm:inline">({restaurant.review_count || 0})</span>
-                        </div>
-                    </div>
-                    
-                    <p className="text-gray-500 text-xs md:text-sm mb-2 md:mb-3 line-clamp-1">{restaurant.description}</p>
-                    
-                    <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
-                        <div className="flex items-center gap-1 md:gap-1.5">
-                            <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
-                            <span className="truncate">{restaurant.delivery_time || '25-35 min'}</span>
-                        </div>
-                        <div className="flex items-center gap-1 md:gap-1.5">
-                            <Bike className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
-                            <span>{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
-                        </div>
-                        {restaurant.minimum_order > 0 && (
-                            <span className="text-gray-400 hidden md:inline">Min £{restaurant.minimum_order}</span>
+                        {restaurant.delivery_fee === 0 && (
+                            <div className="absolute top-2 md:top-3 right-2 md:right-3">
+                                <Badge className="bg-green-500 text-white hover:bg-green-600 font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
+                                    Free Delivery
+                                </Badge>
+                            </div>
+                        )}
+                        {distance !== null && distance !== undefined && (
+                            <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
+                                <Badge className="bg-orange-500 text-white font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
+                                    <MapPin className="h-3 w-3 mr-1 inline" />
+                                    {distance.toFixed(1)} mi
+                                </Badge>
+                            </div>
                         )}
                     </div>
-                </div>
-            </motion.div>
-        </Link>
+                    
+                    <div className="p-3 md:p-4">
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                            <h3 className="font-semibold text-base md:text-lg text-gray-900 group-hover:text-orange-500 transition-colors line-clamp-1 flex-1">
+                                {restaurant.name}
+                            </h3>
+                            <div className="flex items-center gap-0.5 md:gap-1 bg-orange-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg whitespace-nowrap">
+                                <Star className="h-3 w-3 md:h-4 md:w-4 fill-orange-400 text-orange-400" />
+                                <span className="font-semibold text-xs md:text-sm text-gray-900">{restaurant.rating?.toFixed(1) || '4.5'}</span>
+                                <span className="text-gray-500 text-xs md:text-sm hidden sm:inline">({restaurant.review_count || 0})</span>
+                            </div>
+                        </div>
+                        
+                        <p className="text-gray-500 text-xs md:text-sm mb-2 md:mb-3 line-clamp-1">{restaurant.description}</p>
+                        
+                        <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
+                            <div className="flex items-center gap-1 md:gap-1.5">
+                                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
+                                <span className="truncate">{restaurant.delivery_time || '25-35 min'}</span>
+                            </div>
+                            <div className="flex items-center gap-1 md:gap-1.5">
+                                <Bike className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
+                                <span>{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
+                            </div>
+                            {restaurant.minimum_order > 0 && (
+                                <span className="text-gray-400 hidden md:inline">Min £{restaurant.minimum_order}</span>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            </Link>
+        </div>
     );
 }
