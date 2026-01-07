@@ -12,6 +12,7 @@ import CuisineFilter from '@/components/home/CuisineFilter';
 import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
 import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
 import RestaurantCard from '@/components/home/RestaurantCard';
+import EnhancedSearchBar from '@/components/home/EnhancedSearchBar';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -19,6 +20,14 @@ export default function Home() {
     const [selectedCuisine, setSelectedCuisine] = useState('');
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
+    const [menuItemSearch, setMenuItemSearch] = useState('');
+
+    // Fetch menu items for advanced search
+    const { data: allMenuItems = [] } = useQuery({
+        queryKey: ['allMenuItems'],
+        queryFn: () => base44.entities.MenuItem.list(),
+        staleTime: 300000,
+    });
 
     const { data: restaurants = [], isLoading } = useQuery({
         queryKey: ['restaurants'],
@@ -65,13 +74,47 @@ export default function Home() {
         return (value * Math.PI) / 180;
     };
 
+    const handleSearch = (searchData) => {
+        if (searchData.type === 'cuisine') {
+            setSelectedCuisine(searchData.value);
+            setSearchQuery('');
+            setMenuItemSearch('');
+        } else {
+            setSearchQuery(searchData.value);
+            // Check if search matches menu items
+            const matchingItems = allMenuItems.filter(item =>
+                item.name.toLowerCase().includes(searchData.value.toLowerCase()) ||
+                item.description?.toLowerCase().includes(searchData.value.toLowerCase())
+            );
+            if (matchingItems.length > 0) {
+                setMenuItemSearch(searchData.value);
+            } else {
+                setMenuItemSearch('');
+            }
+        }
+    };
+
+    // Get restaurant IDs that have matching menu items
+    const restaurantsWithMatchingItems = React.useMemo(() => {
+        if (!menuItemSearch) return [];
+        return [...new Set(
+            allMenuItems
+                .filter(item =>
+                    item.name.toLowerCase().includes(menuItemSearch.toLowerCase()) ||
+                    item.description?.toLowerCase().includes(menuItemSearch.toLowerCase())
+                )
+                .map(item => item.restaurant_id)
+        )];
+    }, [menuItemSearch, allMenuItems]);
+
     const filteredRestaurants = (restaurants || [])
         .filter(r => {
             const matchesSearch = !searchQuery || 
                 r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.cuisine_type?.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCuisine = !selectedCuisine || r.cuisine_type === selectedCuisine;
-            return matchesSearch && matchesCuisine;
+            const matchesMenuItem = !menuItemSearch || restaurantsWithMatchingItems.includes(r.id);
+            return matchesSearch && matchesCuisine && matchesMenuItem;
         })
         .map(r => {
             if (userLocation && r.latitude && r.longitude) {
@@ -99,15 +142,11 @@ export default function Home() {
                 {/* Search and Filters */}
                 <div className="mb-6 md:mb-8 space-y-3 md:space-y-4">
                     <div className="flex gap-2 md:gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-gray-400" />
-                            <Input
-                                placeholder="Search restaurants..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 md:pl-10 h-11 md:h-12 text-sm md:text-base rounded-xl"
-                            />
-                        </div>
+                        <EnhancedSearchBar
+                            onSearch={handleSearch}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                        />
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
@@ -135,10 +174,11 @@ export default function Home() {
                 {/* Restaurants List */}
                 <div className="mb-4 md:mb-6">
                     <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                        {selectedCuisine || searchQuery ? 'Results' : 'All Restaurants'}
+                        {selectedCuisine || searchQuery || menuItemSearch ? 'Search Results' : 'All Restaurants'}
                     </h2>
                     <p className="text-sm md:text-base text-gray-600">
-                        {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} available
+                        {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
+                        {menuItemSearch && ` with "${menuItemSearch}"`}
                     </p>
                 </div>
 
