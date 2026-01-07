@@ -163,7 +163,7 @@ export default function ChatbotWidget() {
                         initial={{ opacity: 0, y: 20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className="fixed bottom-24 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]"
+                        className="fixed bottom-20 md:bottom-24 right-2 md:right-4 z-50 w-[calc(100vw-16px)] md:w-96"
                     >
                         <Card className="shadow-2xl border-2">
                             <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
@@ -192,7 +192,7 @@ export default function ChatbotWidget() {
                             </CardHeader>
                             <CardContent className="p-0">
                                 {/* Messages */}
-                                <div className="h-96 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                                <div className="h-64 md:h-96 overflow-y-auto p-4 space-y-4 bg-gray-50">
                                     {messages.map((msg, idx) => (
                                         <div
                                             key={idx}
@@ -301,16 +301,16 @@ export default function ChatbotWidget() {
             <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="fixed bottom-6 right-4 z-50"
+                className="fixed bottom-24 md:bottom-6 right-4 md:right-4 z-50"
             >
                 <Button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-14 h-14 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
+                    className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
                 >
                     {isOpen ? (
-                        <X className="h-6 w-6" />
+                        <X className="h-5 w-5 md:h-6 md:w-6" />
                     ) : (
-                        <MessageCircle className="h-6 w-6" />
+                        <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
                     )}
                 </Button>
             </motion.div>
