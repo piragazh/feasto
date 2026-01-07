@@ -495,7 +495,7 @@ export default function Restaurant() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
+        <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
             {/* Order Type Selector */}
 
 
@@ -783,7 +783,7 @@ export default function Restaurant() {
                 <motion.div
                     initial={{ y: 100 }}
                     animate={{ y: 0 }}
-                    className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg"
+                    className="fixed bottom-0 left-0 right-0 p-4 pb-20 md:pb-4 bg-white border-t shadow-lg z-40"
                 >
                     <div className="max-w-4xl mx-auto">
                         <Button

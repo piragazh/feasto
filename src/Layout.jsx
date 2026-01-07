@@ -354,10 +354,8 @@ export default function Layout({ children, currentPageName }) {
 
             <main className="min-h-screen">{children}</main>
 
-                {/* AI Chatbot Widget - Hidden on mobile */}
-                <div className="hidden md:block">
-                    <ChatbotWidget />
-                </div>
+                {/* AI Chatbot Widget */}
+                <ChatbotWidget />
 
                 {/* Footer */}
                 {!hideFooter && (
