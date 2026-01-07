@@ -711,7 +711,7 @@ export default function Checkout() {
                             ) : (
                                 <Button
                                     type="submit"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || (paymentMethod === 'card' && showStripeForm)}
                                     className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
                                 >
                                     {isSubmitting ? (
@@ -719,6 +719,8 @@ export default function Checkout() {
                                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                                             {paymentMethod === 'card' ? 'Initializing Payment...' : 'Placing Order...'}
                                         </>
+                                    ) : paymentMethod === 'card' ? (
+                                        'Proceed to Payment'
                                     ) : (
                                         `Place Order • £${total.toFixed(2)}`
                                     )}
