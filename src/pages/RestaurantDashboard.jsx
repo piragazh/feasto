@@ -41,6 +41,7 @@ import OrderBatching from '@/components/restaurant/OrderBatching';
 import OrderModification from '@/components/restaurant/OrderModification';
 import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
 import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
+import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -294,6 +295,10 @@ export default function RestaurantDashboard() {
                                 <span className="hidden sm:inline">Promotions</span>
                                 <span className="sm:hidden">🏷️</span>
                             </TabsTrigger>
+                            <TabsTrigger value="ai-marketing" className="whitespace-nowrap text-xs sm:text-sm">
+                                <span className="hidden sm:inline">AI Marketing</span>
+                                <span className="sm:hidden">✨</span>
+                            </TabsTrigger>
                             <TabsTrigger value="batching" className="whitespace-nowrap text-xs sm:text-sm">
                                 <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Order Batching</span>
@@ -366,6 +371,10 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="promotions">
                         <PromotionManagement restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="ai-marketing">
+                        <AIMarketingAssistant restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="batching">
