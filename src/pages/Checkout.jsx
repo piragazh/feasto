@@ -195,10 +195,14 @@ export default function Checkout() {
             return;
         }
         
-        // CRITICAL: For card payments, ensure payment is completed
-        if (paymentMethod === 'card' && !paymentCompleted) {
-            // This will show Stripe form on first click
-            // Block if payment not completed
+        // CRITICAL: For card payments, ensure payment is completed BEFORE creating order
+        if (paymentMethod === 'card' && !paymentCompleted && !showStripeForm) {
+            // First click - will initialize payment below
+            // Don't return here, let it proceed to payment initialization
+        } else if (paymentMethod === 'card' && !paymentCompleted) {
+            // Payment not completed - block order creation
+            toast.error('Please complete your card payment first');
+            return;
         }
         
         // ---- VALIDATION: Check Required Fields ----
