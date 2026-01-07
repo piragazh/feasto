@@ -75,6 +75,7 @@ export default function Checkout() {
     const [clientSecret, setClientSecret] = useState(''); // Stripe payment intent secret
     const [showStripeForm, setShowStripeForm] = useState(false); // Show Stripe card form?
     const [paymentMethod, setPaymentMethod] = useState('cash'); // Selected payment method
+    const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
@@ -188,6 +189,18 @@ export default function Checkout() {
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevent page reload
         
+        // CRITICAL: Block submission if Stripe form is showing (waiting for payment)
+        if (showStripeForm && paymentMethod === 'card') {
+            toast.error('Please complete the payment above');
+            return;
+        }
+        
+        // CRITICAL: For card payments, ensure payment is completed
+        if (paymentMethod === 'card' && !paymentCompleted) {
+            // This will show Stripe form on first click
+            // Block if payment not completed
+        }
+        
         // ---- VALIDATION: Check Required Fields ----
 
         // For guest users, name and email are required
@@ -269,6 +282,16 @@ export default function Checkout() {
     };
 
     const createOrder = async (paymentIntentId = null) => {
+        // ABSOLUTE CRITICAL: Block any order creation if card was selected without payment
+        if (paymentMethod === 'card' && !paymentIntentId) {
+            toast.error('❌ Payment required. Please complete card payment first.');
+            setIsSubmitting(false);
+            setShowStripeForm(false);
+            setClientSecret('');
+            setPaymentCompleted(false);
+            return;
+        }
+        
         setIsSubmitting(true);
 
         try {
@@ -283,17 +306,9 @@ export default function Checkout() {
                     setIsSubmitting(false);
                     setShowStripeForm(false);
                     setClientSecret('');
+                    setPaymentCompleted(false);
                     return;
                 }
-            }
-            
-            // CRITICAL: Block card orders without payment
-            if (paymentMethod === 'card' && !paymentIntentId) {
-                toast.error('Payment required for card orders. Please complete payment first.');
-                setIsSubmitting(false);
-                setShowStripeForm(false);
-                setClientSecret('');
-                return;
             }
 
             // Validate cart
@@ -427,9 +442,12 @@ export default function Checkout() {
             setShowStripeForm(false);
             setClientSecret('');
             setIsSubmitting(false);
+            setPaymentCompleted(false);
             return;
         }
         
+        // Mark payment as completed
+        setPaymentCompleted(true);
         toast.success('Payment successful!');
         await createOrder(paymentIntentId);
     };
@@ -439,6 +457,7 @@ export default function Checkout() {
         setShowStripeForm(false);
         setClientSecret('');
         setIsSubmitting(false);
+        setPaymentCompleted(false);
     };
 
     if (orderPlaced) {
@@ -739,7 +758,7 @@ export default function Checkout() {
                             ) : (
                                 <Button
                                     type="submit"
-                                    disabled={isSubmitting || (paymentMethod === 'card' && showStripeForm)}
+                                    disabled={isSubmitting || (paymentMethod === 'card' && (showStripeForm || paymentCompleted))}
                                     className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
                                 >
                                     {isSubmitting ? (
@@ -747,8 +766,10 @@ export default function Checkout() {
                                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                                             {paymentMethod === 'card' ? 'Initializing Payment...' : 'Placing Order...'}
                                         </>
-                                    ) : paymentMethod === 'card' ? (
+                                    ) : paymentMethod === 'card' && !showStripeForm ? (
                                         'Proceed to Payment'
+                                    ) : paymentMethod === 'card' && showStripeForm ? (
+                                        'Complete Payment Above ↑'
                                     ) : (
                                         `Place Order • £${total.toFixed(2)}`
                                     )}
