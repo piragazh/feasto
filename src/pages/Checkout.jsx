@@ -285,9 +285,13 @@ export default function Checkout() {
             return; // Stop here, wait for card payment
         }
 
-        // For CASH and other methods: Create order immediately (but NOT for card!)
-        if (paymentMethod !== 'card') {
+        // For CASH and other methods: Create order immediately (but NOT if card was selected!)
+        // CRITICAL: Double-check payment method to prevent bypass
+        if (paymentMethod !== 'card' && paymentMethod !== 'apple_pay' && paymentMethod !== 'google_pay') {
             await createOrder();
+        } else if (paymentMethod !== 'card') {
+            // Apple Pay / Google Pay not yet implemented
+            toast.error('This payment method is not yet available. Please use card or cash.');
         }
     };
 
@@ -314,6 +318,13 @@ export default function Checkout() {
         try {
             // CRITICAL: Determine actual payment method based on paymentIntentId presence
             const actualPaymentMethod = paymentIntentId ? 'card' : paymentMethod;
+            
+            // CRITICAL: If no paymentIntentId, verify it's NOT a card payment
+            if (!paymentIntentId && (actualPaymentMethod === 'card' || actualPaymentMethod === 'apple_pay' || actualPaymentMethod === 'google_pay')) {
+                toast.error('❌ Online payment required but not completed.');
+                setIsSubmitting(false);
+                return;
+            }
             
             // CRITICAL: If paymentIntentId exists, this MUST be a card payment
             if (paymentIntentId) {
