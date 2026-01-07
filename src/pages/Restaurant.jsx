@@ -12,6 +12,7 @@ import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search, Chevro
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import MealDealCard from '@/components/restaurant/MealDealCard';
+import CategoryDealCustomizationModal from '@/components/restaurant/CategoryDealCustomizationModal';
 import CartDrawer from '@/components/cart/CartDrawer';
 import ImageGallery from '@/components/restaurant/ImageGallery';
 import OpeningHours from '@/components/restaurant/OpeningHours';
@@ -32,6 +33,8 @@ export default function Restaurant() {
     const [activeCategory, setActiveCategory] = useState('all');
     const [customizationModalOpen, setCustomizationModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [categoryDealModalOpen, setCategoryDealModalOpen] = useState(false);
+    const [selectedDeal, setSelectedDeal] = useState(null);
     const [menuSearchQuery, setMenuSearchQuery] = useState('');
     const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
     const [showTimeWarning, setShowTimeWarning] = useState(false);
@@ -334,6 +337,25 @@ export default function Restaurant() {
         toast.success(`${deal.name} added to cart`);
     };
 
+    const handleCustomizeDeal = (deal) => {
+        setSelectedDeal(deal);
+        setCategoryDealModalOpen(true);
+    };
+
+    const addCategoryDealToCart = (dealData) => {
+        setCart(prev => [...prev, {
+            menu_item_id: `deal_${dealData.deal_id}_${Date.now()}`,
+            name: dealData.deal_name,
+            price: dealData.deal_price,
+            quantity: dealData.quantity,
+            image_url: selectedDeal?.image_url,
+            is_deal: true,
+            is_category_deal: true,
+            selected_items: dealData.selected_items
+        }]);
+        toast.success(`${dealData.deal_name} added to cart`);
+    };
+
     const updateQuantity = (itemId, newQuantity) => {
         if (newQuantity < 1) {
             removeFromCart(itemId);
@@ -629,7 +651,12 @@ export default function Restaurant() {
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">🔥 Meal Deals</h2>
                         <div className="space-y-4">
                             {mealDeals.map(deal => (
-                                <MealDealCard key={deal.id} deal={deal} onAddToCart={addMealDealToCart} />
+                                <MealDealCard 
+                                    key={deal.id} 
+                                    deal={deal} 
+                                    onAddToCart={addMealDealToCart}
+                                    onCustomize={handleCustomizeDeal}
+                                />
                             ))}
                         </div>
                     </div>
@@ -732,6 +759,17 @@ export default function Restaurant() {
                         setSelectedItem(null);
                     }}
                     onAddToCart={addToCartWithCustomizations}
+                />
+
+                <CategoryDealCustomizationModal
+                    deal={selectedDeal}
+                    menuItems={menuItems}
+                    open={categoryDealModalOpen}
+                    onClose={() => {
+                        setCategoryDealModalOpen(false);
+                        setSelectedDeal(null);
+                    }}
+                    onAddToCart={addCategoryDealToCart}
                 />
 
                 {/* Reviews Section */}

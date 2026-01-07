@@ -124,6 +124,11 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                         )}
                                         <div className="flex-1">
                                             <h4 className="font-medium text-gray-900">{item.name}</h4>
+                                            {item.is_category_deal && item.selected_items && (
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    {item.selected_items.map(si => si.name).join(', ')}
+                                                </p>
+                                            )}
                                             <p className="text-orange-500 font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">

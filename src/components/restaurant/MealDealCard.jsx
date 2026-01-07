@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Percent } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function MealDealCard({ deal, onAddToCart }) {
-    const discount = Math.round(((deal.original_price - deal.deal_price) / deal.original_price) * 100);
+export default function MealDealCard({ deal, onAddToCart, onCustomize }) {
+    const discount = deal.original_price ? Math.round(((deal.original_price - deal.deal_price) / deal.original_price) * 100) : 0;
 
     return (
         <motion.div
@@ -42,19 +42,29 @@ export default function MealDealCard({ deal, onAddToCart }) {
                         </span>
                     </div>
 
-                    {deal.items?.length > 0 && (
+                    {deal.deal_type === 'category_based' && deal.category_rules?.length > 0 ? (
+                        <p className="text-xs text-gray-500 mb-3">
+                            {deal.category_rules.map(rule => rule.label || `${rule.quantity}x ${rule.category}`).join(' + ')}
+                        </p>
+                    ) : deal.items?.length > 0 ? (
                         <p className="text-xs text-gray-500 mb-3">
                             Includes: {deal.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
                         </p>
-                    )}
+                    ) : null}
 
                     <Button
-                        onClick={() => onAddToCart(deal)}
+                        onClick={() => {
+                            if (deal.deal_type === 'category_based' && onCustomize) {
+                                onCustomize(deal);
+                            } else {
+                                onAddToCart(deal);
+                            }
+                        }}
                         size="sm"
                         className="bg-orange-500 hover:bg-orange-600"
                     >
                         <Plus className="h-4 w-4 mr-1" />
-                        Add Deal
+                        {deal.deal_type === 'category_based' ? 'Customize Deal' : 'Add Deal'}
                     </Button>
                 </div>
             </div>
