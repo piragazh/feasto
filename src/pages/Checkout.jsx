@@ -272,15 +272,11 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
-            // CRITICAL: Validate payment for card orders - NO ORDER WITHOUT PAYMENT
-            if (paymentMethod === 'card') {
-                if (!paymentIntentId) {
-                    toast.error('Payment required for card orders. Please complete payment first.');
-                    setIsSubmitting(false);
-                    setShowStripeForm(false);
-                    setClientSecret('');
-                    return;
-                }
+            // CRITICAL: Determine actual payment method based on paymentIntentId presence
+            const actualPaymentMethod = paymentIntentId ? 'card' : paymentMethod;
+            
+            // CRITICAL: If paymentIntentId exists, this MUST be a card payment
+            if (paymentIntentId) {
                 // Verify payment intent is valid
                 if (typeof paymentIntentId !== 'string' || paymentIntentId.length < 10) {
                     toast.error('Invalid payment verification. Please try again.');
@@ -289,6 +285,15 @@ export default function Checkout() {
                     setClientSecret('');
                     return;
                 }
+            }
+            
+            // CRITICAL: Block card orders without payment
+            if (paymentMethod === 'card' && !paymentIntentId) {
+                toast.error('Payment required for card orders. Please complete payment first.');
+                setIsSubmitting(false);
+                setShowStripeForm(false);
+                setClientSecret('');
+                return;
             }
 
             // Validate cart
@@ -325,7 +330,7 @@ export default function Checkout() {
                 discount: discount,
                 coupon_code: appliedCoupon?.code,
                 total,
-                payment_method: paymentMethod,
+                payment_method: actualPaymentMethod,
                 order_type: orderType,
                 status: 'pending',
                 delivery_address: orderType === 'delivery' ? fullAddress : restaurant?.address || 'Collection',
@@ -416,6 +421,15 @@ export default function Checkout() {
                 };
 
     const handleStripeSuccess = async (paymentIntentId) => {
+        // Validate payment intent before proceeding
+        if (!paymentIntentId || typeof paymentIntentId !== 'string') {
+            toast.error('Invalid payment confirmation. Please try again.');
+            setShowStripeForm(false);
+            setClientSecret('');
+            setIsSubmitting(false);
+            return;
+        }
+        
         toast.success('Payment successful!');
         await createOrder(paymentIntentId);
     };
