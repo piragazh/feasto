@@ -15,7 +15,8 @@ import EnhancedAnalytics from '@/components/superadmin/EnhancedAnalytics';
 import EnhancedDriverManagement from '@/components/superadmin/EnhancedDriverManagement';
 import PlatformRefundOversight from '@/components/superadmin/PlatformRefundOversight';
 import PayoutManagement from '@/components/superadmin/PayoutManagement';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard } from 'lucide-react';
+import ReviewModeration from '@/components/restaurant/ReviewModeration';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
@@ -172,6 +173,14 @@ export default function SuperAdmin() {
                             <Store className="h-4 w-4" />
                             Admin Panel
                         </Button>
+                        <Button
+                            variant={activeTab === 'reviews' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('reviews')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Star className="h-4 w-4" />
+                            Reviews
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -189,6 +198,7 @@ export default function SuperAdmin() {
                 {activeTab === 'drivers' && <EnhancedDriverManagement />}
                 {activeTab === 'refunds' && <PlatformRefundOversight />}
                 {activeTab === 'payouts' && <PayoutManagement />}
+                {activeTab === 'reviews' && <ReviewModeration isAdmin={true} />}
                 {activeTab === 'managers' && (
                     <iframe 
                         src={createPageUrl('ManageRestaurantManagers')} 
