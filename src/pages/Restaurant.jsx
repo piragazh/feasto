@@ -320,8 +320,17 @@ export default function Restaurant() {
                     image_url: itemData.image_url,
                     customizations: itemData.customizations
                 }];
-            });
-            toast.success(`${itemData.name} added to cart`);
+                });
+                toast.success(`🛒 ${itemData.name} added to cart`, {
+                    duration: 2000,
+                    style: {
+                        background: '#10b981',
+                        color: '#fff',
+                        fontWeight: '600',
+                        padding: '16px',
+                        borderRadius: '12px'
+                    }
+                });
         } catch (error) {
             toast.error('Failed to add item to cart');
         }
@@ -335,8 +344,17 @@ export default function Restaurant() {
             quantity: 1,
             image_url: deal.image_url,
             is_deal: true
-        }]);
-        toast.success(`${deal.name} added to cart`);
+            }]);
+            toast.success(`🛒 ${deal.name} added to cart`, {
+            duration: 2000,
+            style: {
+                background: '#10b981',
+                color: '#fff',
+                fontWeight: '600',
+                padding: '16px',
+                borderRadius: '12px'
+            }
+            });
     };
 
     const handleCustomizeDeal = (deal) => {
@@ -354,8 +372,17 @@ export default function Restaurant() {
             is_deal: true,
             is_category_deal: true,
             selected_items: dealData.selected_items
-        }]);
-        toast.success(`${dealData.deal_name} added to cart`);
+            }]);
+            toast.success(`🛒 ${dealData.deal_name} added to cart`, {
+            duration: 2000,
+            style: {
+                background: '#10b981',
+                color: '#fff',
+                fontWeight: '600',
+                padding: '16px',
+                borderRadius: '12px'
+            }
+            });
     };
 
     const updateQuantity = (itemId, newQuantity) => {
