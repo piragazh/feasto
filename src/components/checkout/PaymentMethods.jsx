@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Wallet, DollarSign } from 'lucide-react';
 
-export default function PaymentMethods({ selectedMethod, onMethodChange }) {
+export default function PaymentMethods({ selectedMethod, onMethodChange, acceptsCash = true }) {
     const [isApplePayAvailable] = useState(
         typeof window !== 'undefined' && window.ApplePaySession && ApplePaySession.canMakePayments()
     );
@@ -76,18 +76,20 @@ export default function PaymentMethods({ selectedMethod, onMethodChange }) {
                         </div>
 
                         {/* Cash on Delivery */}
-                        <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="cash" id="cash" />
-                            <Label htmlFor="cash" className="flex items-center gap-3 cursor-pointer flex-1">
-                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                    <DollarSign className="h-5 w-5 text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="font-medium">Cash on Delivery</p>
-                                    <p className="text-sm text-gray-500">Pay when you receive your order</p>
-                                </div>
-                            </Label>
-                        </div>
+                        {acceptsCash && (
+                            <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <RadioGroupItem value="cash" id="cash" />
+                                <Label htmlFor="cash" className="flex items-center gap-3 cursor-pointer flex-1">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                        <DollarSign className="h-5 w-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">Cash on Delivery</p>
+                                        <p className="text-sm text-gray-500">Pay when you receive your order</p>
+                                    </div>
+                                </Label>
+                            </div>
+                        )}
                     </div>
                 </RadioGroup>
 

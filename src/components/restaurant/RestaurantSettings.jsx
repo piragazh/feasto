@@ -33,6 +33,7 @@ export default function RestaurantSettings({ restaurantId }) {
         delivery_fee: '',
         minimum_order: '',
         collection_enabled: false,
+        accepts_cash_on_delivery: true,
         logo_url: '',
         food_hygiene_rating: '',
         food_hygiene_certificate_url: '',
@@ -53,6 +54,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 delivery_fee: restaurant.delivery_fee || '',
                 minimum_order: restaurant.minimum_order || '',
                 collection_enabled: restaurant.collection_enabled || false,
+                accepts_cash_on_delivery: restaurant.accepts_cash_on_delivery !== false,
                 logo_url: restaurant.logo_url || '',
                 food_hygiene_rating: restaurant.food_hygiene_rating || '',
                 food_hygiene_certificate_url: restaurant.food_hygiene_certificate_url || '',
@@ -115,6 +117,7 @@ export default function RestaurantSettings({ restaurantId }) {
             delivery_fee: parseFloat(formData.delivery_fee) || 0,
             minimum_order: parseFloat(formData.minimum_order) || 0,
             collection_enabled: formData.collection_enabled,
+            accepts_cash_on_delivery: formData.accepts_cash_on_delivery,
             logo_url: formData.logo_url,
             food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
             food_hygiene_certificate_url: formData.food_hygiene_certificate_url
@@ -317,16 +320,30 @@ export default function RestaurantSettings({ restaurantId }) {
                                 />
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <Switch
-                                checked={formData.collection_enabled}
-                                onCheckedChange={(checked) => setFormData({ ...formData, collection_enabled: checked })}
-                            />
-                            <div>
-                                <Label className="text-sm font-semibold">Enable Collection/Pickup</Label>
-                                <p className="text-xs text-gray-600 mt-1">
-                                    Allow customers to collect orders from your restaurant
-                                </p>
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <Switch
+                                    checked={formData.collection_enabled}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, collection_enabled: checked })}
+                                />
+                                <div>
+                                    <Label className="text-sm font-semibold">Enable Collection/Pickup</Label>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        Allow customers to collect orders from your restaurant
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                                <Switch
+                                    checked={formData.accepts_cash_on_delivery}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, accepts_cash_on_delivery: checked })}
+                                />
+                                <div>
+                                    <Label className="text-sm font-semibold">Accept Cash on Delivery</Label>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        Allow customers to pay with cash when order is delivered
+                                    </p>
+                                </div>
                             </div>
                         </div>
 

@@ -742,6 +742,7 @@ export default function Checkout() {
                             <PaymentMethods
                                 selectedMethod={paymentMethod}
                                 onMethodChange={setPaymentMethod}
+                                acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                             />
 
                             {showStripeForm && clientSecret && paymentMethod === 'card' ? (
