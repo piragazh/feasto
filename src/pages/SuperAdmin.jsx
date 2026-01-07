@@ -13,7 +13,9 @@ import CuisineTypeManagement from '@/components/superadmin/CuisineTypeManagement
 import DomainManagement from '@/components/superadmin/DomainManagement';
 import EnhancedAnalytics from '@/components/superadmin/EnhancedAnalytics';
 import EnhancedDriverManagement from '@/components/superadmin/EnhancedDriverManagement';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe } from 'lucide-react';
+import PlatformRefundOversight from '@/components/superadmin/PlatformRefundOversight';
+import PayoutManagement from '@/components/superadmin/PayoutManagement';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
@@ -147,6 +149,22 @@ export default function SuperAdmin() {
                             Analytics
                         </Button>
                         <Button
+                            variant={activeTab === 'refunds' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('refunds')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Shield className="h-4 w-4" />
+                            Refunds
+                        </Button>
+                        <Button
+                            variant={activeTab === 'payouts' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('payouts')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <CreditCard className="h-4 w-4" />
+                            Payouts
+                        </Button>
+                        <Button
                             variant={activeTab === 'admin-restaurants' ? 'secondary' : 'ghost'}
                             onClick={() => setActiveTab('admin-restaurants')}
                             className="flex items-center gap-2 text-white hover:bg-white/10"
@@ -169,6 +187,8 @@ export default function SuperAdmin() {
                 {activeTab === 'domains' && <DomainManagement />}
                 {activeTab === 'analytics' && <EnhancedAnalytics />}
                 {activeTab === 'drivers' && <EnhancedDriverManagement />}
+                {activeTab === 'refunds' && <PlatformRefundOversight />}
+                {activeTab === 'payouts' && <PayoutManagement />}
                 {activeTab === 'managers' && (
                     <iframe 
                         src={createPageUrl('ManageRestaurantManagers')} 
