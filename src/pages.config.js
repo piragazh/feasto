@@ -17,6 +17,7 @@ import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
 import OrderHistory from './pages/OrderHistory';
+import Favorites from './pages/Favorites';
 import __Layout from './Layout.jsx';
 
 
@@ -40,6 +41,7 @@ export const PAGES = {
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
     "OrderHistory": OrderHistory,
+    "Favorites": Favorites,
 }
 
 export const pagesConfig = {

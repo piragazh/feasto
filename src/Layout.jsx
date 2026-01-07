@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell } from 'lucide-react';
+import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 
@@ -266,10 +266,16 @@ export default function Layout({ children, currentPageName }) {
                                             </DropdownMenuItem>
                                             <DropdownMenuItem asChild>
                                                 <Link to={createPageUrl('Orders')} className="flex items-center gap-2">
-                                                        <ShoppingBag className="h-4 w-4" />
-                                                        My Orders
-                                                    </Link>
-                                                </DropdownMenuItem>
+                                                    <ShoppingBag className="h-4 w-4" />
+                                                    My Orders
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem asChild>
+                                                <Link to={createPageUrl('Favorites')} className="flex items-center gap-2">
+                                                    <Heart className="h-4 w-4" />
+                                                    Favorites
+                                                </Link>
+                                            </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
                                                     <Link to={createPageUrl('Messages')} className="flex items-center gap-2">
                                                         <MessageSquare className="h-4 w-4" />

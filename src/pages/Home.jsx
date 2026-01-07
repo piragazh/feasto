@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import HeroSection from '@/components/home/HeroSection';
 import CuisineFilter from '@/components/home/CuisineFilter';
 import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
+import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
 import RestaurantCard from '@/components/home/RestaurantCard';
 
 export default function Home() {
@@ -124,6 +125,11 @@ export default function Home() {
                 </div>
 
                 <PersonalizedRecommendations />
+
+                {/* Featured Restaurants */}
+                {!selectedCuisine && !searchQuery && (
+                    <FeaturedRestaurants restaurants={restaurants} />
+                )}
 
                 {/* Restaurants List */}
                 <div className="mb-4 md:mb-6">
