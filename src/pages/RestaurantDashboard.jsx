@@ -33,6 +33,7 @@ import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
 import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
 import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
+import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import RefundManagement from '@/components/restaurant/RefundManagement';
@@ -354,7 +355,7 @@ export default function RestaurantDashboard() {
                     </TabsContent>
 
                     <TabsContent value="analytics">
-                        <AdvancedAnalytics restaurantId={restaurant.id} />
+                        <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="drivers">

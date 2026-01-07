@@ -4,11 +4,13 @@ import Checkout from './pages/Checkout';
 import CustomerProfile from './pages/CustomerProfile';
 import DriverApp from './pages/DriverApp';
 import DriverDashboard from './pages/DriverDashboard';
+import Favorites from './pages/Favorites';
 import GroupOrder from './pages/GroupOrder';
 import Home from './pages/Home';
 import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import Messages from './pages/Messages';
+import OrderHistory from './pages/OrderHistory';
 import Orders from './pages/Orders';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Restaurant from './pages/Restaurant';
@@ -16,8 +18,6 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import OrderHistory from './pages/OrderHistory';
-import Favorites from './pages/Favorites';
 import __Layout from './Layout.jsx';
 
 
@@ -28,11 +28,13 @@ export const PAGES = {
     "CustomerProfile": CustomerProfile,
     "DriverApp": DriverApp,
     "DriverDashboard": DriverDashboard,
+    "Favorites": Favorites,
     "GroupOrder": GroupOrder,
     "Home": Home,
     "ManageCoupons": ManageCoupons,
     "ManageRestaurantManagers": ManageRestaurantManagers,
     "Messages": Messages,
+    "OrderHistory": OrderHistory,
     "Orders": Orders,
     "PrivacyPolicy": PrivacyPolicy,
     "Restaurant": Restaurant,
@@ -40,8 +42,6 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "OrderHistory": OrderHistory,
-    "Favorites": Favorites,
 }
 
 export const pagesConfig = {
