@@ -189,6 +189,12 @@ export default function Checkout() {
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevent page reload
         
+        // CRITICAL: If card payment was initiated but not completed, block everything
+        if (clientSecret && !paymentCompleted) {
+            toast.error('Please complete your card payment or refresh the page to start over');
+            return;
+        }
+        
         // CRITICAL: Block submission if Stripe form is showing (waiting for payment)
         if (showStripeForm && paymentMethod === 'card') {
             toast.error('Please complete the payment above');
@@ -286,6 +292,13 @@ export default function Checkout() {
     };
 
     const createOrder = async (paymentIntentId = null) => {
+        // ABSOLUTE CRITICAL: Block any order creation if card payment was initiated but not completed
+        if (clientSecret && !paymentIntentId) {
+            toast.error('❌ Card payment was initiated. Please complete payment or refresh the page.');
+            setIsSubmitting(false);
+            return;
+        }
+
         // ABSOLUTE CRITICAL: Block any order creation if card was selected without payment
         if (paymentMethod === 'card' && !paymentIntentId) {
             toast.error('❌ Payment required. Please complete card payment first.');
@@ -741,7 +754,14 @@ export default function Checkout() {
 
                             <PaymentMethods
                                 selectedMethod={paymentMethod}
-                                onMethodChange={setPaymentMethod}
+                                onMethodChange={(method) => {
+                                    // Prevent changing payment method if card payment was initiated
+                                    if (clientSecret && !paymentCompleted) {
+                                        toast.error('Complete or cancel the current payment first');
+                                        return;
+                                    }
+                                    setPaymentMethod(method);
+                                }}
                                 acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                             />
 
