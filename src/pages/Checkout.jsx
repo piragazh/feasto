@@ -262,19 +262,33 @@ export default function Checkout() {
             return; // Stop here, wait for card payment
         }
 
-        // For CASH and other methods: Create order immediately
-        await createOrder();
+        // For CASH and other methods: Create order immediately (but NOT for card!)
+        if (paymentMethod !== 'card') {
+            await createOrder();
+        }
     };
 
     const createOrder = async (paymentIntentId = null) => {
         setIsSubmitting(true);
 
         try {
-            // CRITICAL: Validate payment for card orders
-            if (paymentMethod === 'card' && !paymentIntentId) {
-                toast.error('Payment verification failed. Please try again.');
-                setIsSubmitting(false);
-                return;
+            // CRITICAL: Validate payment for card orders - NO ORDER WITHOUT PAYMENT
+            if (paymentMethod === 'card') {
+                if (!paymentIntentId) {
+                    toast.error('Payment required for card orders. Please complete payment first.');
+                    setIsSubmitting(false);
+                    setShowStripeForm(false);
+                    setClientSecret('');
+                    return;
+                }
+                // Verify payment intent is valid
+                if (typeof paymentIntentId !== 'string' || paymentIntentId.length < 10) {
+                    toast.error('Invalid payment verification. Please try again.');
+                    setIsSubmitting(false);
+                    setShowStripeForm(false);
+                    setClientSecret('');
+                    return;
+                }
             }
 
             // Validate cart
