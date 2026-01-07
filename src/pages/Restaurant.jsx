@@ -277,8 +277,17 @@ export default function Restaurant() {
                     quantity: 1,
                     image_url: item.image_url
                 }];
-            });
-            toast.success(`${item.name} added to cart`);
+                });
+                toast.success(`🛒 ${item.name} added to cart`, {
+                duration: 2000,
+                style: {
+                    background: '#10b981',
+                    color: '#fff',
+                    fontWeight: '600',
+                    padding: '16px',
+                    borderRadius: '12px'
+                }
+                });
         } catch (error) {
             toast.error('Failed to add item to cart');
         }
