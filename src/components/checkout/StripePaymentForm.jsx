@@ -7,6 +7,7 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isFormComplete, setIsFormComplete] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -64,16 +65,23 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
                     🔒 Enter your card details below to complete payment
                 </p>
             </div>
-            <PaymentElement />
+            <PaymentElement 
+                onChange={(e) => setIsFormComplete(e.complete)}
+            />
             <Button
                 type="submit"
-                disabled={!stripe || !elements || isProcessing}
+                disabled={!stripe || !elements || isProcessing || !isFormComplete}
                 className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isProcessing ? (
                     <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                         Processing Payment...
+                    </>
+                ) : !isFormComplete ? (
+                    <>
+                        <CreditCard className="h-5 w-5 mr-2" />
+                        Enter Card Details
                     </>
                 ) : (
                     <>
