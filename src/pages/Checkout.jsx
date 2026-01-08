@@ -259,30 +259,36 @@ export default function Checkout() {
                 return;
             }
 
-            setIsSubmitting(true); // Show loading state
+            setIsSubmitting(true);
             try {
-                // Call backend function to create Stripe payment intent
+                console.log('Initializing Stripe payment for amount:', total);
+                
                 const response = await base44.functions.invoke('createPaymentIntent', {
-                    amount: total, // Total amount in pounds
-                    currency: 'gbp', // British Pounds
+                    amount: total,
+                    currency: 'gbp',
                     metadata: {
                         restaurant_id: restaurantId,
                         restaurant_name: restaurantName
                     }
                 });
 
-                // If successful, show Stripe payment form
-                if (response.data.clientSecret) {
-                    setClientSecret(response.data.clientSecret); // Store secret for Stripe
-                    setShowStripeForm(true); // Display card input form
+                console.log('Payment intent response:', response);
+
+                if (response?.data?.clientSecret) {
+                    setClientSecret(response.data.clientSecret);
+                    setShowStripeForm(true);
+                    toast.success('Payment form ready');
+                } else {
+                    console.error('No client secret in response:', response);
+                    toast.error('Payment initialization failed. Please try again.');
                 }
             } catch (error) {
                 console.error('Payment initialization error:', error);
-                toast.error('Failed to initialize payment: ' + (error?.message || 'Please try again'));
+                toast.error('Failed to initialize payment: ' + (error?.response?.data?.error || error?.message || 'Please try again'));
             } finally {
-                setIsSubmitting(false); // Hide loading state
+                setIsSubmitting(false);
             }
-            return; // Stop here, wait for card payment
+            return;
         }
 
         // For CASH and other methods: Create order immediately (but NOT if card was selected!)
