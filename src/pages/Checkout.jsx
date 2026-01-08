@@ -84,7 +84,7 @@ export default function Checkout() {
     // Payment Processing (Stripe)
     const [clientSecret, setClientSecret] = useState(''); // Stripe payment intent secret
     const [showStripeForm, setShowStripeForm] = useState(false); // Show Stripe card form?
-    const [paymentMethod, setPaymentMethod] = useState('cash'); // Selected payment method
+    const [paymentMethod, setPaymentMethod] = useState('card'); // Selected payment method (default: card)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
     
