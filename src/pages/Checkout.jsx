@@ -267,14 +267,18 @@ export default function Checkout() {
         
         // For CARD payments: Initialize Stripe payment flow
         if (paymentMethod === 'card') {
+            console.log('Entering card payment block');
+            console.log('stripePromise:', stripePromise);
             if (!stripePromise) {
                 toast.error('Stripe is not configured. Please contact support or use Cash payment.');
                 return;
             }
 
             setIsSubmitting(true);
+            console.log('Set isSubmitting to true');
             try {
                 console.log('Initializing Stripe payment for amount:', total);
+                console.log('About to call createPaymentIntent function');
                 
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
