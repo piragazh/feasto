@@ -38,13 +38,11 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                 return;
             }
             
-            // Confirm the payment
+            // Confirm the payment WITHOUT any redirects
             const { error, paymentIntent } = await stripe.confirmPayment({
                 elements,
-                redirect: 'if_required',
-                confirmParams: {
-                    // Ensure no redirect happens
-                }
+                redirect: 'never',
+                confirmParams: {}
             });
 
             if (error) {
