@@ -251,33 +251,12 @@ export default function Checkout() {
         
         console.log('=== CHECKOUT SUBMIT ===');
         console.log('Payment Method:', paymentMethod);
-        console.log('Is Guest:', isGuest);
-        console.log('Order Type:', orderType);
-        console.log('Form Data:', formData);
-        console.log('Client Secret:', clientSecret);
-        console.log('Show Stripe Form:', showStripeForm);
         console.log('Payment Completed:', paymentCompleted);
         
-        // CRITICAL: If card payment was initiated but not completed, block everything
-        if (clientSecret && !paymentCompleted) {
-            console.log('BLOCKED: Client secret exists but payment not completed');
-            toast.error('Please complete your card payment or refresh the page to start over');
-            return;
-        }
-        
-        // CRITICAL: Block submission if Stripe form is showing (waiting for payment)
-        if (showStripeForm && paymentMethod === 'card') {
-            console.log('BLOCKED: Stripe form showing');
-            toast.error('Please complete the payment above');
-            return;
-        }
-        
-        // CRITICAL: For card payments, ensure payment is completed BEFORE creating order
-        if (paymentMethod === 'card' && !paymentCompleted && !showStripeForm) {
-            console.log('PROCEEDING: Will initialize card payment');
-        } else if (paymentMethod === 'card' && !paymentCompleted) {
-            console.log('BLOCKED: Card selected but payment not completed');
-            toast.error('Please complete your card payment first');
+        // CRITICAL: Block ALL submissions when card is selected
+        if (paymentMethod === 'card') {
+            console.log('BLOCKED: Card payment selected - form submission not allowed');
+            toast.error('Please complete the card payment form below');
             return;
         }
         
@@ -323,23 +302,8 @@ export default function Checkout() {
         
         console.log('All validations passed, proceeding...');
 
-        // For CARD payments: Payment is handled by StripePaymentForm component
-        if (paymentMethod === 'card') {
-            if (!clientSecret || !showStripeForm) {
-                toast.error('Please wait for payment form to load');
-                return;
-            }
-            toast.info('Please complete payment below');
-            return;
-        }
-
         // For CASH: Create order immediately
-        if (paymentMethod === 'cash') {
-            await createOrder();
-        } else {
-            // Apple Pay / Google Pay not yet implemented
-            toast.error('This payment method is not yet available. Please use card or cash.');
-        }
+        await createOrder();
     };
 
     const createOrder = async (paymentIntentId = null) => {
