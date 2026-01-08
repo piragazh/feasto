@@ -67,7 +67,6 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
                 }
                 
                 setErrorMessage(msg);
-                onError(msg);
                 setIsProcessing(false);
             } else if (paymentIntent && paymentIntent.status === 'succeeded') {
                 // Payment successful
