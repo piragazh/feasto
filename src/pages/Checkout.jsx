@@ -262,14 +262,16 @@ export default function Checkout() {
         }
         
         console.log('All validations passed, proceeding...');
-
+        
         // ---- PAYMENT PROCESSING ----
+        console.log('PAYMENT PROCESSING SECTION - paymentMethod:', paymentMethod);
         
         // For CARD payments: Initialize Stripe payment flow
         if (paymentMethod === 'card') {
             console.log('Entering card payment block');
             console.log('stripePromise:', stripePromise);
             if (!stripePromise) {
+                console.log('ERROR: stripePromise is null');
                 toast.error('Stripe is not configured. Please contact support or use Cash payment.');
                 return;
             }
