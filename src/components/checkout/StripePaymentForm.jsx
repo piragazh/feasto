@@ -122,12 +122,7 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             <PaymentElement 
                 options={{
                     layout: 'tabs',
-                    paymentMethodOrder: ['card'],
-                    fields: {
-                        billingDetails: {
-                            address: 'never'
-                        }
-                    }
+                    paymentMethodOrder: ['card']
                 }}
                 onChange={(e) => {
                     setIsFormComplete(e.complete);
