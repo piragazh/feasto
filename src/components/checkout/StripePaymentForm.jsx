@@ -48,7 +48,14 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                 elements,
                 redirect: 'if_required',
                 confirmParams: {
-                    return_url: window.location.href
+                    return_url: window.location.href,
+                    payment_method_data: {
+                        billing_details: {
+                            address: {
+                                country: 'GB'
+                            }
+                        }
+                    }
                 }
             });
 
@@ -123,6 +130,11 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                 options={{
                     layout: 'tabs',
                     paymentMethodOrder: ['card'],
+                    fields: {
+                        billingDetails: {
+                            address: 'never'
+                        }
+                    },
                     terms: {
                         card: 'never'
                     }
