@@ -34,10 +34,14 @@ import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 // Note: Frontend env vars in Base44 need VITE_ prefix
 const stripePromise = (() => {
     const publicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    console.log('🔑 Attempting to load Stripe with key:', publicKey ? 'Key found' : 'Key not found');
+    console.log('🔑 All env vars:', import.meta.env);
     if (!publicKey) {
+        console.error('❌ VITE_STRIPE_PUBLIC_KEY not found in environment variables');
         console.warn('⚠️ VITE_STRIPE_PUBLIC_KEY not set. Add it in Dashboard > Settings > Secrets');
         return null;
     }
+    console.log('✅ Loading Stripe with public key');
     return loadStripe(publicKey);
 })();
 
