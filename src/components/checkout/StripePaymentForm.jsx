@@ -46,7 +46,7 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             });
 
             if (error) {
-                // Payment failed - show specific error
+                // Payment failed - STOP HERE, do NOT proceed
                 let msg = error.message || 'Payment failed. Please check your card details and try again.';
                 
                 // Provide more user-friendly messages for common errors
@@ -66,20 +66,29 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                 
                 setErrorMessage(msg);
                 setIsProcessing(false);
-            } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-                // Payment successful
+                // CRITICAL: Do NOT call onSuccess or any other callbacks - stay on this page
+                return;
+            }
+            
+            if (paymentIntent && paymentIntent.status === 'succeeded') {
+                // Payment successful - only NOW proceed
                 setErrorMessage('');
                 onSuccess(paymentIntent.id);
-            } else if (paymentIntent) {
-                // Payment in unexpected state
+                return;
+            }
+            
+            if (paymentIntent && paymentIntent.status !== 'succeeded') {
+                // Payment in unexpected state - STOP
                 const msg = `Payment ${paymentIntent.status}. Please try again.`;
                 setErrorMessage(msg);
                 setIsProcessing(false);
-            } else {
-                const msg = 'Payment processing failed. Please try again.';
-                setErrorMessage(msg);
-                setIsProcessing(false);
+                return;
             }
+            
+            // No paymentIntent at all - STOP
+            const msg = 'Payment processing failed. Please try again.';
+            setErrorMessage(msg);
+            setIsProcessing(false);
         } catch (err) {
             const msg = err.message || 'An error occurred. Please try again.';
             setErrorMessage(msg);
