@@ -148,6 +148,52 @@ export default function Checkout() {
         setOrderType(savedOrderType);
     }, []); // Empty array means this runs once when component mounts
 
+    // Check if user is authenticated or guest
+    const checkAuthStatus = async () => {
+        try {
+            const authenticated = await base44.auth.isAuthenticated();
+            setIsGuest(!authenticated); // If not authenticated, they're a guest
+        } catch (e) {
+            setIsGuest(true); // On error, assume guest
+        }
+    };
+
+    // Fetch restaurant details from database
+    const loadRestaurantName = async (id) => {
+        try {
+            // Query database for restaurant with matching ID
+            const restaurants = await base44.entities.Restaurant.filter({ id });
+            if (restaurants[0]) {
+                setRestaurantName(restaurants[0].name); // Store name
+                setRestaurant(restaurants[0]); // Store full restaurant object
+            }
+        } catch (e) {
+            // Restaurant not found - continue without name
+        }
+    };
+
+    // ============================================
+    // PRICE CALCULATIONS
+    // ============================================
+    
+    // Calculate subtotal: sum of all item prices × quantities
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Delivery fee: FREE for collection, otherwise use zone-specific or restaurant default
+    const deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99);
+
+    // Small order surcharge: if subtotal is below minimum order, add the difference (only for delivery)
+    const minimumOrder = restaurant?.minimum_order || 0;
+    const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
+        ? (minimumOrder - subtotal) 
+        : 0;
+
+    // Discount from applied coupon (if any)
+    const discount = appliedCoupon?.discount || 0;
+
+    // Final total = subtotal + delivery + surcharge - discount
+    const total = subtotal + deliveryFee + smallOrderSurcharge - discount;
+
     // Initialize payment intent when card payment is selected and form is valid
     useEffect(() => {
         const initPayment = async () => {
@@ -196,52 +242,6 @@ export default function Checkout() {
 
         initPayment();
     }, [paymentMethod, formData.phone, formData.door_number, formData.delivery_address, formData.guest_name, formData.guest_email, total]);
-
-    // Check if user is authenticated or guest
-    const checkAuthStatus = async () => {
-        try {
-            const authenticated = await base44.auth.isAuthenticated();
-            setIsGuest(!authenticated); // If not authenticated, they're a guest
-        } catch (e) {
-            setIsGuest(true); // On error, assume guest
-        }
-    };
-
-    // Fetch restaurant details from database
-    const loadRestaurantName = async (id) => {
-        try {
-            // Query database for restaurant with matching ID
-            const restaurants = await base44.entities.Restaurant.filter({ id });
-            if (restaurants[0]) {
-                setRestaurantName(restaurants[0].name); // Store name
-                setRestaurant(restaurants[0]); // Store full restaurant object
-            }
-        } catch (e) {
-            // Restaurant not found - continue without name
-        }
-    };
-
-    // ============================================
-    // PRICE CALCULATIONS
-    // ============================================
-    
-    // Calculate subtotal: sum of all item prices × quantities
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    // Delivery fee: FREE for collection, otherwise use zone-specific or restaurant default
-    const deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99);
-
-    // Small order surcharge: if subtotal is below minimum order, add the difference (only for delivery)
-    const minimumOrder = restaurant?.minimum_order || 0;
-    const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
-        ? (minimumOrder - subtotal) 
-        : 0;
-
-    // Discount from applied coupon (if any)
-    const discount = appliedCoupon?.discount || 0;
-
-    // Final total = subtotal + delivery + surcharge - discount
-    const total = subtotal + deliveryFee + smallOrderSurcharge - discount;
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
