@@ -12,7 +12,8 @@ export default function StripePaymentForm({ onSuccess, amount }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setErrorMessage(''); // Clear previous errors
+        e.stopPropagation();
+        setErrorMessage('');
 
         if (!stripe || !elements) {
             const msg = 'Payment system not ready. Please wait a moment.';
@@ -42,7 +43,9 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             const { error, paymentIntent } = await stripe.confirmPayment({
                 elements,
                 redirect: 'never',
-                confirmParams: {}
+                confirmParams: {
+                    return_url: window.location.href
+                }
             });
 
             if (error) {
