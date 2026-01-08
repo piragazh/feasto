@@ -125,6 +125,10 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                     paymentMethodOrder: ['card'],
                     terms: {
                         card: 'never'
+                    },
+                    wallets: {
+                        applePay: 'never',
+                        googlePay: 'never'
                     }
                 }}
                 onChange={(e) => {
