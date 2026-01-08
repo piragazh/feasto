@@ -492,19 +492,10 @@ export default function Checkout() {
     };
 
     const handleStripeError = (errorMessage) => {
-        // Show error but keep form visible so user can retry
-        toast.error(errorMessage || 'Payment failed. Please try again.', {
-            duration: 5000,
-            style: {
-                background: '#ef4444',
-                color: '#fff',
-                fontWeight: '600',
-                padding: '16px',
-                borderRadius: '12px'
-            }
-        });
+        // Keep form visible and allow immediate retry - don't reset any form state
         setIsSubmitting(false);
         setPaymentCompleted(false);
+        // Error is already shown in the payment form itself
     };
 
     if (orderPlaced) {
