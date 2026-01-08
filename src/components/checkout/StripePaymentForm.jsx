@@ -8,12 +8,23 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMessage(''); // Clear previous errors
 
         if (!stripe || !elements) {
-            onError('Payment system not ready. Please wait a moment.');
+            const msg = 'Payment system not ready. Please wait a moment.';
+            setErrorMessage(msg);
+            onError(msg);
+            return;
+        }
+
+        if (!isFormComplete) {
+            const msg = 'Please complete all card details before submitting.';
+            setErrorMessage(msg);
+            onError(msg);
             return;
         }
 
@@ -23,7 +34,9 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
             // First, validate the form is complete
             const { error: submitError } = await elements.submit();
             if (submitError) {
-                onError(submitError.message || 'Please complete all payment fields');
+                const msg = submitError.message || 'Please complete all payment fields correctly';
+                setErrorMessage(msg);
+                onError(msg);
                 setIsProcessing(false);
                 return;
             }
@@ -38,22 +51,47 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
             });
 
             if (error) {
-                // Payment failed or was incomplete
-                onError(error.message || 'Payment failed. Please check your card details and try again.');
+                // Payment failed - show specific error
+                let msg = error.message || 'Payment failed. Please check your card details and try again.';
+                
+                // Provide more user-friendly messages for common errors
+                if (error.type === 'card_error') {
+                    if (error.code === 'card_declined') {
+                        msg = 'Your card was declined. Please try a different card or contact your bank.';
+                    } else if (error.code === 'insufficient_funds') {
+                        msg = 'Insufficient funds. Please use a different payment method.';
+                    } else if (error.code === 'expired_card') {
+                        msg = 'Your card has expired. Please use a different card.';
+                    } else if (error.code === 'incorrect_cvc') {
+                        msg = 'Incorrect security code (CVC). Please check and try again.';
+                    } else if (error.code === 'incorrect_number') {
+                        msg = 'Invalid card number. Please check and try again.';
+                    }
+                }
+                
+                setErrorMessage(msg);
+                onError(msg);
                 setIsProcessing(false);
             } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-                // Payment successful - pass the payment intent ID to create order
+                // Payment successful
+                setErrorMessage('');
                 onSuccess(paymentIntent.id);
             } else if (paymentIntent) {
                 // Payment in unexpected state
-                onError(`Payment ${paymentIntent.status}. Please try again.`);
+                const msg = `Payment ${paymentIntent.status}. Please try again.`;
+                setErrorMessage(msg);
+                onError(msg);
                 setIsProcessing(false);
             } else {
-                onError('Payment processing failed. Please try again.');
+                const msg = 'Payment processing failed. Please try again.';
+                setErrorMessage(msg);
+                onError(msg);
                 setIsProcessing(false);
             }
         } catch (err) {
-            onError(err.message || 'An error occurred. Please try again.');
+            const msg = err.message || 'An error occurred. Please try again.';
+            setErrorMessage(msg);
+            onError(msg);
             setIsProcessing(false);
         }
     };
@@ -65,8 +103,20 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
                     🔒 Enter your card details below to complete payment
                 </p>
             </div>
+            
+            {errorMessage && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-800 font-medium">
+                        ❌ {errorMessage}
+                    </p>
+                </div>
+            )}
+            
             <PaymentElement 
-                onChange={(e) => setIsFormComplete(e.complete)}
+                onChange={(e) => {
+                    setIsFormComplete(e.complete);
+                    if (e.complete) setErrorMessage(''); // Clear error when form becomes complete
+                }}
             />
             <Button
                 type="submit"
