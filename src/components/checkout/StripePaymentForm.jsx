@@ -43,11 +43,13 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                 return false;
             }
             
-            console.log('🔵 Confirming payment (no redirect)...');
+            console.log('🔵 Confirming payment (if_required redirect)...');
             const result = await stripe.confirmPayment({
                 elements,
-                redirect: 'never',
-                confirmParams: {}
+                redirect: 'if_required',
+                confirmParams: {
+                    return_url: window.location.href
+                }
             });
 
             console.log('🔵 Payment result:', result);
