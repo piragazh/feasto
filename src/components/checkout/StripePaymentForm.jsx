@@ -17,14 +17,12 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
         if (!stripe || !elements) {
             const msg = 'Payment system not ready. Please wait a moment.';
             setErrorMessage(msg);
-            onError(msg);
             return;
         }
 
         if (!isFormComplete) {
             const msg = 'Please complete all card details before submitting.';
             setErrorMessage(msg);
-            onError(msg);
             return;
         }
 
@@ -36,7 +34,6 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
             if (submitError) {
                 const msg = submitError.message || 'Please complete all payment fields correctly';
                 setErrorMessage(msg);
-                onError(msg);
                 setIsProcessing(false);
                 return;
             }
@@ -80,18 +77,15 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
                 // Payment in unexpected state
                 const msg = `Payment ${paymentIntent.status}. Please try again.`;
                 setErrorMessage(msg);
-                onError(msg);
                 setIsProcessing(false);
             } else {
                 const msg = 'Payment processing failed. Please try again.';
                 setErrorMessage(msg);
-                onError(msg);
                 setIsProcessing(false);
             }
         } catch (err) {
             const msg = err.message || 'An error occurred. Please try again.';
             setErrorMessage(msg);
-            onError(msg);
             setIsProcessing(false);
         }
     };
