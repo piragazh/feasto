@@ -318,9 +318,6 @@ export default function Checkout() {
         if (paymentMethod === 'card' && !paymentIntentId) {
             toast.error('❌ Payment required. Please complete card payment first.');
             setIsSubmitting(false);
-            setShowStripeForm(false);
-            setClientSecret('');
-            setPaymentCompleted(false);
             return;
         }
         
@@ -343,9 +340,6 @@ export default function Checkout() {
                 if (typeof paymentIntentId !== 'string' || paymentIntentId.length < 10) {
                     toast.error('Invalid payment verification. Please try again.');
                     setIsSubmitting(false);
-                    setShowStripeForm(false);
-                    setClientSecret('');
-                    setPaymentCompleted(false);
                     return;
                 }
             }
@@ -478,8 +472,6 @@ export default function Checkout() {
         // Validate payment intent before proceeding
         if (!paymentIntentId || typeof paymentIntentId !== 'string') {
             toast.error('Invalid payment confirmation. Please try again.');
-            setShowStripeForm(false);
-            setClientSecret('');
             setIsSubmitting(false);
             setPaymentCompleted(false);
             return;
