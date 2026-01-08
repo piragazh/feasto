@@ -778,7 +778,15 @@ export default function Checkout() {
                                     </CardHeader>
                                     <CardContent>
                                         {stripePromise ? (
-                                            <Elements stripe={stripePromise} options={{ clientSecret }}>
+                                            <Elements 
+                                                stripe={stripePromise} 
+                                                options={{ 
+                                                    clientSecret,
+                                                    appearance: {
+                                                        theme: 'stripe'
+                                                    }
+                                                }}
+                                            >
                                                 <StripePaymentForm
                                                     amount={total}
                                                     onSuccess={handleStripeSuccess}

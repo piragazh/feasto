@@ -104,6 +104,15 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             )}
             
             <PaymentElement 
+                options={{
+                    layout: 'tabs',
+                    paymentMethodOrder: ['card'],
+                    fields: {
+                        billingDetails: {
+                            address: 'never'
+                        }
+                    }
+                }}
                 onChange={(e) => {
                     setIsFormComplete(e.complete);
                     if (e.complete) setErrorMessage(''); // Clear error when form becomes complete
