@@ -12,35 +12,55 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
         e.preventDefault();
 
         if (!stripe || !elements) {
+            console.log('Stripe or Elements not ready');
             return;
         }
 
         setIsProcessing(true);
+        console.log('Starting payment confirmation...');
 
         try {
+            // First, validate the form
+            const { error: submitError } = await elements.submit();
+            if (submitError) {
+                console.error('Form validation error:', submitError);
+                onError(submitError.message);
+                setIsProcessing(false);
+                return;
+            }
+
+            console.log('Form validated, confirming payment...');
+            
             const { error, paymentIntent } = await stripe.confirmPayment({
                 elements,
                 confirmParams: {
-                    return_url: window.location.origin,
+                    return_url: window.location.href,
                 },
                 redirect: 'if_required'
             });
 
+            console.log('Payment confirmation result:', { error, paymentIntent });
+
             if (error) {
+                console.error('Payment error:', error);
                 onError(error.message);
                 setIsProcessing(false);
             } else if (paymentIntent) {
+                console.log('Payment intent status:', paymentIntent.status);
                 if (paymentIntent.status === 'succeeded') {
+                    console.log('✅ Payment succeeded!');
                     onSuccess(paymentIntent.id);
                 } else {
                     onError(`Payment ${paymentIntent.status}. Please try again.`);
                     setIsProcessing(false);
                 }
             } else {
+                console.error('No error and no payment intent');
                 onError('Payment processing failed. Please try again.');
                 setIsProcessing(false);
             }
         } catch (err) {
+            console.error('Payment exception:', err);
             onError(err.message || 'Payment failed. Please try again.');
             setIsProcessing(false);
         }
