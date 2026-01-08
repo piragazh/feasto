@@ -3,7 +3,7 @@ import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 
-export default function StripePaymentForm({ onSuccess, onError, amount }) {
+export default function StripePaymentForm({ onSuccess, amount }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);

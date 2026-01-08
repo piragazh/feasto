@@ -491,12 +491,7 @@ export default function Checkout() {
         await createOrder(paymentIntentId);
     };
 
-    const handleStripeError = (errorMessage) => {
-        // Keep form visible and allow immediate retry - don't reset any form state
-        setIsSubmitting(false);
-        setPaymentCompleted(false);
-        // Error is already shown in the payment form itself
-    };
+
 
     if (orderPlaced) {
         return (
@@ -795,7 +790,6 @@ export default function Checkout() {
                                                 <StripePaymentForm
                                                     amount={total}
                                                     onSuccess={handleStripeSuccess}
-                                                    onError={handleStripeError}
                                                 />
                                             </Elements>
                                         ) : (
