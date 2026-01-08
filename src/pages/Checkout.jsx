@@ -30,18 +30,29 @@ import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 
-// Initialize Stripe with public key from environment variables
-// Note: Frontend env vars in Base44 need VITE_ prefix
+// Initialize Stripe with public key
+// IMPORTANT: Replace this with your actual Stripe public key
+// Get it from: https://dashboard.stripe.com/test/apikeys
+const STRIPE_PUBLIC_KEY = 'pk_test_your_key_here'; // TODO: Replace with actual key
+
 const stripePromise = (() => {
-    const publicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-    console.log('🔑 Attempting to load Stripe with key:', publicKey ? 'Key found' : 'Key not found');
-    console.log('🔑 All env vars:', import.meta.env);
-    if (!publicKey) {
-        console.error('❌ VITE_STRIPE_PUBLIC_KEY not found in environment variables');
-        console.warn('⚠️ VITE_STRIPE_PUBLIC_KEY not set. Add it in Dashboard > Settings > Secrets');
+    // Try environment variable first (for production)
+    let publicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    
+    // Fallback to hardcoded key (for development)
+    if (!publicKey && STRIPE_PUBLIC_KEY !== 'pk_test_your_key_here') {
+        publicKey = STRIPE_PUBLIC_KEY;
+    }
+    
+    console.log('🔑 Stripe public key status:', publicKey ? 'Found' : 'Not found');
+    
+    if (!publicKey || publicKey === 'pk_test_your_key_here') {
+        console.error('❌ Stripe public key not configured');
+        console.error('Please set VITE_STRIPE_PUBLIC_KEY environment variable or update STRIPE_PUBLIC_KEY in Checkout.js');
         return null;
     }
-    console.log('✅ Loading Stripe with public key');
+    
+    console.log('✅ Loading Stripe');
     return loadStripe(publicKey);
 })();
 
