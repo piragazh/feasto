@@ -9,98 +9,101 @@ export default function StripePaymentForm({ onSuccess, amount }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const formRef = React.useRef(null);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        console.log('🔵 Payment form submitted');
         setErrorMessage('');
 
         if (!stripe || !elements) {
-            const msg = 'Payment system not ready. Please wait a moment.';
-            setErrorMessage(msg);
-            return;
+            console.log('🔴 Stripe not ready');
+            setErrorMessage('Payment system not ready. Please wait a moment.');
+            return false;
         }
 
         if (!isFormComplete) {
-            const msg = 'Please complete all card details before submitting.';
-            setErrorMessage(msg);
-            return;
+            console.log('🔴 Form incomplete');
+            setErrorMessage('Please complete all card details before submitting.');
+            return false;
         }
 
         setIsProcessing(true);
 
         try {
-            // First, validate the form is complete
+            console.log('🔵 Submitting payment elements...');
             const { error: submitError } = await elements.submit();
             if (submitError) {
-                const msg = submitError.message || 'Please complete all payment fields correctly';
-                setErrorMessage(msg);
+                console.log('🔴 Submit error:', submitError);
+                setErrorMessage(submitError.message || 'Please complete all payment fields correctly');
                 setIsProcessing(false);
-                return;
+                return false;
             }
             
-            // Confirm the payment WITHOUT any redirects
-            const { error, paymentIntent } = await stripe.confirmPayment({
+            console.log('🔵 Confirming payment (no redirect)...');
+            const result = await stripe.confirmPayment({
                 elements,
                 redirect: 'never',
-                confirmParams: {
-                    return_url: window.location.href
-                }
+                confirmParams: {}
             });
 
-            if (error) {
-                // Payment failed - STOP HERE, do NOT proceed
-                let msg = error.message || 'Payment failed. Please check your card details and try again.';
+            console.log('🔵 Payment result:', result);
+
+            if (result.error) {
+                console.log('🔴 Payment error:', result.error);
+                let msg = result.error.message || 'Payment failed. Please check your card details and try again.';
                 
-                // Provide more user-friendly messages for common errors
-                if (error.type === 'card_error') {
-                    if (error.code === 'card_declined') {
+                if (result.error.type === 'card_error') {
+                    if (result.error.code === 'card_declined') {
                         msg = 'Your card was declined. Please try a different card or contact your bank.';
-                    } else if (error.code === 'insufficient_funds') {
+                    } else if (result.error.code === 'insufficient_funds') {
                         msg = 'Insufficient funds. Please use a different payment method.';
-                    } else if (error.code === 'expired_card') {
+                    } else if (result.error.code === 'expired_card') {
                         msg = 'Your card has expired. Please use a different card.';
-                    } else if (error.code === 'incorrect_cvc') {
+                    } else if (result.error.code === 'incorrect_cvc') {
                         msg = 'Incorrect security code (CVC). Please check and try again.';
-                    } else if (error.code === 'incorrect_number') {
+                    } else if (result.error.code === 'incorrect_number') {
                         msg = 'Invalid card number. Please check and try again.';
                     }
                 }
                 
                 setErrorMessage(msg);
                 setIsProcessing(false);
-                // CRITICAL: Do NOT call onSuccess or any other callbacks - stay on this page
-                return;
+                return false;
             }
             
-            if (paymentIntent && paymentIntent.status === 'succeeded') {
-                // Payment successful - only NOW proceed
+            if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+                console.log('✅ Payment succeeded:', result.paymentIntent.id);
                 setErrorMessage('');
-                onSuccess(paymentIntent.id);
-                return;
+                onSuccess(result.paymentIntent.id);
+                return true;
             }
             
-            if (paymentIntent && paymentIntent.status !== 'succeeded') {
-                // Payment in unexpected state - STOP
-                const msg = `Payment ${paymentIntent.status}. Please try again.`;
-                setErrorMessage(msg);
+            if (result.paymentIntent) {
+                console.log('🔴 Unexpected payment status:', result.paymentIntent.status);
+                setErrorMessage(`Payment ${result.paymentIntent.status}. Please try again.`);
                 setIsProcessing(false);
-                return;
+                return false;
             }
             
-            // No paymentIntent at all - STOP
-            const msg = 'Payment processing failed. Please try again.';
-            setErrorMessage(msg);
+            console.log('🔴 No payment intent returned');
+            setErrorMessage('Payment processing failed. Please try again.');
             setIsProcessing(false);
+            return false;
         } catch (err) {
-            const msg = err.message || 'An error occurred. Please try again.';
-            setErrorMessage(msg);
+            console.log('🔴 Exception:', err);
+            setErrorMessage(err.message || 'An error occurred. Please try again.');
             setIsProcessing(false);
+            return false;
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
                     🔒 Enter your card details below to complete payment
