@@ -9,7 +9,6 @@ export default function StripePaymentForm({ onSuccess, amount }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const formRef = React.useRef(null);
 
     const handleSubmit = async (e) => {
         if (e) {
@@ -103,7 +102,7 @@ export default function StripePaymentForm({ onSuccess, amount }) {
     };
 
     return (
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
                     🔒 Enter your card details below to complete payment
@@ -130,11 +129,12 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                 }}
                 onChange={(e) => {
                     setIsFormComplete(e.complete);
-                    if (e.complete) setErrorMessage(''); // Clear error when form becomes complete
+                    if (e.complete) setErrorMessage('');
                 }}
             />
             <Button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={!stripe || !elements || isProcessing || !isFormComplete}
                 className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -158,6 +158,6 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             <p className="text-xs text-gray-500 text-center">
                 Your payment is secured by Stripe
             </p>
-        </form>
+        </div>
     );
 }
