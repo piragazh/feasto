@@ -187,26 +187,36 @@ export default function Checkout() {
     // FORM SUBMISSION - When user clicks "Place Order"
     // ============================================
     const handleSubmit = async (e) => {
-        e.preventDefault(); // Prevent page reload
+        e.preventDefault();
+        
+        console.log('=== CHECKOUT SUBMIT ===');
+        console.log('Payment Method:', paymentMethod);
+        console.log('Is Guest:', isGuest);
+        console.log('Order Type:', orderType);
+        console.log('Form Data:', formData);
+        console.log('Client Secret:', clientSecret);
+        console.log('Show Stripe Form:', showStripeForm);
+        console.log('Payment Completed:', paymentCompleted);
         
         // CRITICAL: If card payment was initiated but not completed, block everything
         if (clientSecret && !paymentCompleted) {
+            console.log('BLOCKED: Client secret exists but payment not completed');
             toast.error('Please complete your card payment or refresh the page to start over');
             return;
         }
         
         // CRITICAL: Block submission if Stripe form is showing (waiting for payment)
         if (showStripeForm && paymentMethod === 'card') {
+            console.log('BLOCKED: Stripe form showing');
             toast.error('Please complete the payment above');
             return;
         }
         
         // CRITICAL: For card payments, ensure payment is completed BEFORE creating order
         if (paymentMethod === 'card' && !paymentCompleted && !showStripeForm) {
-            // First click - will initialize payment below
-            // Don't return here, let it proceed to payment initialization
+            console.log('PROCEEDING: Will initialize card payment');
         } else if (paymentMethod === 'card' && !paymentCompleted) {
-            // Payment not completed - block order creation
+            console.log('BLOCKED: Card selected but payment not completed');
             toast.error('Please complete your card payment first');
             return;
         }
@@ -215,40 +225,43 @@ export default function Checkout() {
 
         // For guest users, name and email are required
         if (isGuest && (!formData.guest_name || !formData.guest_email)) {
+            console.log('BLOCKED: Guest name/email missing');
             toast.error('Please provide your name and email');
-            return; // Stop submission
+            return;
         }
 
         // Phone is always required
         if (!formData.phone) {
+            console.log('BLOCKED: Phone missing');
             toast.error('Please provide your phone number');
             return;
         }
 
         // For delivery, door number and address are required
         if (orderType === 'delivery' && (!formData.door_number || !formData.delivery_address)) {
+            console.log('BLOCKED: Delivery address missing');
             toast.error('Please provide your delivery address');
             return;
         }
 
         // ---- VALIDATION: UK Phone Number Format ----
-        // Pattern matches: 07123456789, 07123 456789, +44 7123 456789
         const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
         if (!ukPhoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+            console.log('BLOCKED: Invalid phone format');
             toast.error('Please enter a valid UK phone number');
             return;
         }
 
         // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
         if (orderType === 'delivery') {
-            // Check if delivery is available to this address
             if (deliveryZoneInfo && !deliveryZoneInfo.available) {
+                console.log('BLOCKED: Delivery not available');
                 toast.error('Delivery is not available to your location');
                 return;
             }
-
-
         }
+        
+        console.log('All validations passed, proceeding...');
 
         // ---- PAYMENT PROCESSING ----
         
