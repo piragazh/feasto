@@ -30,26 +30,18 @@ import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 
-// Initialize Stripe - fetch public key from backend
-let stripePromise = null;
-const initializeStripe = async () => {
-    if (stripePromise) return stripePromise;
-    
-    try {
-        const response = await base44.functions.invoke('getStripePublicKey');
-        if (response?.data?.publicKey) {
-            console.log('✅ Stripe public key loaded');
-            stripePromise = loadStripe(response.data.publicKey);
-            return stripePromise;
-        } else {
-            console.error('❌ No public key in response');
-            return null;
-        }
-    } catch (error) {
-        console.error('❌ Failed to load Stripe key:', error);
-        return null;
-    }
-};
+// PASTE YOUR STRIPE PUBLIC KEY HERE (starts with pk_test_ or pk_live_)
+// Get it from: https://dashboard.stripe.com/test/apikeys
+const STRIPE_PUBLIC_KEY = 'pk_test_51QZlD0FJ19PNJ7Ou5hENM1Z90IHAjlxOL2OOMj1EL2VHHSo3B2UkzIvl8tZdxHOTj4e6Cf0E8b2qCh4E9zVzv3Ro00g8PvAh0l';
+
+// Initialize Stripe
+const stripePromise = STRIPE_PUBLIC_KEY && STRIPE_PUBLIC_KEY.startsWith('pk_') 
+    ? loadStripe(STRIPE_PUBLIC_KEY)
+    : null;
+
+if (!stripePromise) {
+    console.error('❌ Stripe public key not configured properly');
+}
 
 // Main Checkout Component
 export default function Checkout() {
@@ -279,14 +271,11 @@ export default function Checkout() {
         // For CARD payments: Initialize Stripe payment flow
         if (paymentMethod === 'card') {
             console.log('Entering card payment block');
+            console.log('stripePromise:', stripePromise);
 
-            // Initialize Stripe if not already done
-            const stripe = await initializeStripe();
-            console.log('Stripe initialized:', stripe ? 'Success' : 'Failed');
-
-            if (!stripe) {
-                console.log('ERROR: Failed to initialize Stripe');
-                toast.error('Payment system unavailable. Please try again or use Cash payment.');
+            if (!stripePromise) {
+                console.log('ERROR: Stripe not initialized');
+                toast.error('Payment system unavailable. Please contact support or use Cash payment.');
                 return;
             }
 
