@@ -86,6 +86,7 @@ export default function Checkout() {
     const [showStripeForm, setShowStripeForm] = useState(false); // Show Stripe card form?
     const [paymentMethod, setPaymentMethod] = useState('cash'); // Selected payment method
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
+    const [initializingPayment, setInitializingPayment] = useState(false);
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
@@ -146,6 +147,55 @@ export default function Checkout() {
         // Restore order type
         setOrderType(savedOrderType);
     }, []); // Empty array means this runs once when component mounts
+
+    // Initialize payment intent when card payment is selected and form is valid
+    useEffect(() => {
+        const initPayment = async () => {
+            if (paymentMethod !== 'card') {
+                setClientSecret('');
+                setShowStripeForm(false);
+                return;
+            }
+
+            if (clientSecret || initializingPayment) return;
+
+            // Basic validation before initializing payment
+            if (!formData.phone) return;
+            if (orderType === 'delivery' && (!formData.door_number || !formData.delivery_address)) return;
+            if (isGuest && (!formData.guest_name || !formData.guest_email)) return;
+
+            setInitializingPayment(true);
+            try {
+                const stripe = await initializeStripe();
+                if (!stripe) {
+                    toast.error('Payment system unavailable');
+                    setInitializingPayment(false);
+                    return;
+                }
+
+                const response = await base44.functions.invoke('createPaymentIntent', {
+                    amount: total,
+                    currency: 'gbp',
+                    metadata: {
+                        restaurant_id: restaurantId,
+                        restaurant_name: restaurantName
+                    }
+                });
+
+                if (response?.data?.clientSecret) {
+                    setClientSecret(response.data.clientSecret);
+                    setShowStripeForm(true);
+                }
+            } catch (error) {
+                console.error('Payment init error:', error);
+                toast.error('Failed to initialize payment');
+            } finally {
+                setInitializingPayment(false);
+            }
+        };
+
+        initPayment();
+    }, [paymentMethod, formData.phone, formData.door_number, formData.delivery_address, formData.guest_name, formData.guest_email, total]);
 
     // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
@@ -272,63 +322,21 @@ export default function Checkout() {
         }
         
         console.log('All validations passed, proceeding...');
-        
-        // ---- PAYMENT PROCESSING ----
-        console.log('PAYMENT PROCESSING SECTION - paymentMethod:', paymentMethod);
-        
-        // For CARD payments: Initialize Stripe payment flow
+
+        // For CARD payments: Payment is handled by StripePaymentForm component
         if (paymentMethod === 'card') {
-            console.log('Entering card payment block');
-
-            // Initialize Stripe if not already done
-            const stripe = await initializeStripe();
-            console.log('Stripe initialized:', stripe ? 'Success' : 'Failed');
-
-            if (!stripe) {
-                console.log('ERROR: Failed to initialize Stripe');
-                toast.error('Payment system unavailable. Please contact support or use Cash payment.');
+            if (!clientSecret || !showStripeForm) {
+                toast.error('Please wait for payment form to load');
                 return;
             }
-
-            setIsSubmitting(true);
-            console.log('Set isSubmitting to true');
-            try {
-                console.log('Initializing Stripe payment for amount:', total);
-                console.log('About to call createPaymentIntent function');
-                
-                const response = await base44.functions.invoke('createPaymentIntent', {
-                    amount: total,
-                    currency: 'gbp',
-                    metadata: {
-                        restaurant_id: restaurantId,
-                        restaurant_name: restaurantName
-                    }
-                });
-
-                console.log('Payment intent response:', response);
-
-                if (response?.data?.clientSecret) {
-                    setClientSecret(response.data.clientSecret);
-                    setShowStripeForm(true);
-                    toast.success('Payment form ready');
-                } else {
-                    console.error('No client secret in response:', response);
-                    toast.error('Payment initialization failed. Please try again.');
-                }
-            } catch (error) {
-                console.error('Payment initialization error:', error);
-                toast.error('Failed to initialize payment: ' + (error?.response?.data?.error || error?.message || 'Please try again'));
-            } finally {
-                setIsSubmitting(false);
-            }
+            toast.info('Please complete payment below');
             return;
         }
 
-        // For CASH and other methods: Create order immediately (but NOT if card was selected!)
-        // CRITICAL: Double-check payment method to prevent bypass
-        if (paymentMethod !== 'card' && paymentMethod !== 'apple_pay' && paymentMethod !== 'google_pay') {
+        // For CASH: Create order immediately
+        if (paymentMethod === 'cash') {
             await createOrder();
-        } else if (paymentMethod !== 'card') {
+        } else {
             // Apple Pay / Google Pay not yet implemented
             toast.error('This payment method is not yet available. Please use card or cash.');
         }
@@ -805,39 +813,18 @@ export default function Checkout() {
                             <PaymentMethods
                                 selectedMethod={paymentMethod}
                                 onMethodChange={(method) => {
-                                    // Prevent changing payment method if card payment was initiated
-                                    if (clientSecret && !paymentCompleted) {
-                                        toast.error('Complete or cancel the current payment first');
-                                        return;
-                                    }
                                     setPaymentMethod(method);
+                                    setClientSecret('');
+                                    setShowStripeForm(false);
+                                    setPaymentCompleted(false);
                                 }}
                                 acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                             />
 
-                            {!showStripeForm && (
-                                <Button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                            {paymentMethod === 'card' ? 'Initializing Payment...' : 'Placing Order...'}
-                                        </>
-                                    ) : paymentMethod === 'card' ? (
-                                        'Proceed to Payment'
-                                    ) : (
-                                        `Place Order • £${total.toFixed(2)}`
-                                    )}
-                                </Button>
-                                )}
-
-                                {showStripeForm && clientSecret && paymentMethod === 'card' && (
+                            {paymentMethod === 'card' && showStripeForm && clientSecret ? (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Payment Details</CardTitle>
+                                        <CardTitle>💳 Payment Details</CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         {stripePromise ? (
@@ -856,7 +843,27 @@ export default function Checkout() {
                                         )}
                                     </CardContent>
                                 </Card>
-                                )}
+                            ) : paymentMethod === 'card' && initializingPayment ? (
+                                <div className="text-center py-8">
+                                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-500 mb-2" />
+                                    <p className="text-sm text-gray-500">Preparing payment form...</p>
+                                </div>
+                            ) : paymentMethod !== 'card' ? (
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                            Placing Order...
+                                        </>
+                                    ) : (
+                                        `Place Order • £${total.toFixed(2)}`
+                                    )}
+                                </Button>
+                            ) : null}
                         </form>
                     </div>
 
