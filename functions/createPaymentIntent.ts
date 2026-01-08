@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
             currency: currency,
             automatic_payment_methods: {
                 enabled: true,
+                allow_redirects: 'never'
             },
             metadata: {
                 user_email: user?.email || 'guest',
