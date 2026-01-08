@@ -815,7 +815,26 @@ export default function Checkout() {
                                 acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                             />
 
-                            {showStripeForm && clientSecret && paymentMethod === 'card' ? (
+                            {!showStripeForm && (
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                            {paymentMethod === 'card' ? 'Initializing Payment...' : 'Placing Order...'}
+                                        </>
+                                    ) : paymentMethod === 'card' ? (
+                                        'Proceed to Payment'
+                                    ) : (
+                                        `Place Order • £${total.toFixed(2)}`
+                                    )}
+                                </Button>
+                                )}
+
+                                {showStripeForm && clientSecret && paymentMethod === 'card' && (
                                 <Card>
                                     <CardHeader>
                                         <CardTitle>Payment Details</CardTitle>
@@ -837,26 +856,7 @@ export default function Checkout() {
                                         )}
                                     </CardContent>
                                 </Card>
-                            ) : (
-                                <Button
-                                    type="submit"
-                                    disabled={isSubmitting || (paymentMethod === 'card' && (showStripeForm || paymentCompleted))}
-                                    className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                            {paymentMethod === 'card' ? 'Initializing Payment...' : 'Placing Order...'}
-                                        </>
-                                    ) : paymentMethod === 'card' && !showStripeForm ? (
-                                        'Proceed to Payment'
-                                    ) : paymentMethod === 'card' && showStripeForm ? (
-                                        'Complete Payment Above ↑'
-                                    ) : (
-                                        `Place Order • £${total.toFixed(2)}`
-                                    )}
-                                </Button>
-                            )}
+                                )}
                         </form>
                     </div>
 
