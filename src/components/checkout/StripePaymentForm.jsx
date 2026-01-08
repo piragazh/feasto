@@ -12,64 +12,63 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
         e.preventDefault();
 
         if (!stripe || !elements) {
-            console.log('Stripe or Elements not ready');
+            onError('Payment system not ready. Please wait a moment.');
             return;
         }
 
         setIsProcessing(true);
-        console.log('Starting payment confirmation...');
 
         try {
-            // First, validate the form
+            // First, validate the form is complete
             const { error: submitError } = await elements.submit();
             if (submitError) {
-                console.error('Form validation error:', submitError);
-                onError(submitError.message);
+                onError(submitError.message || 'Please complete all payment fields');
                 setIsProcessing(false);
                 return;
             }
-
-            console.log('Form validated, confirming payment...');
             
+            // Confirm the payment
             const { error, paymentIntent } = await stripe.confirmPayment({
                 elements,
-                redirect: 'if_required'
+                redirect: 'if_required',
+                confirmParams: {
+                    // Ensure no redirect happens
+                }
             });
 
-            console.log('Payment confirmation result:', { error, paymentIntent });
-
             if (error) {
-                console.error('Payment error:', error);
-                onError(error.message);
+                // Payment failed or was incomplete
+                onError(error.message || 'Payment failed. Please check your card details and try again.');
                 setIsProcessing(false);
+            } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                // Payment successful - pass the payment intent ID to create order
+                onSuccess(paymentIntent.id);
             } else if (paymentIntent) {
-                console.log('Payment intent status:', paymentIntent.status);
-                if (paymentIntent.status === 'succeeded') {
-                    console.log('✅ Payment succeeded!');
-                    onSuccess(paymentIntent.id);
-                } else {
-                    onError(`Payment ${paymentIntent.status}. Please try again.`);
-                    setIsProcessing(false);
-                }
+                // Payment in unexpected state
+                onError(`Payment ${paymentIntent.status}. Please try again.`);
+                setIsProcessing(false);
             } else {
-                console.error('No error and no payment intent');
                 onError('Payment processing failed. Please try again.');
                 setIsProcessing(false);
             }
         } catch (err) {
-            console.error('Payment exception:', err);
-            onError(err.message || 'Payment failed. Please try again.');
+            onError(err.message || 'An error occurred. Please try again.');
             setIsProcessing(false);
         }
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-blue-800">
+                    🔒 Enter your card details below to complete payment
+                </p>
+            </div>
             <PaymentElement />
             <Button
                 type="submit"
-                disabled={!stripe || isProcessing}
-                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                disabled={!stripe || !elements || isProcessing}
+                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isProcessing ? (
                     <>
@@ -83,6 +82,9 @@ export default function StripePaymentForm({ onSuccess, onError, amount }) {
                     </>
                 )}
             </Button>
+            <p className="text-xs text-gray-500 text-center">
+                Your payment is secured by Stripe
+            </p>
         </form>
     );
 }
