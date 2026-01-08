@@ -6,10 +6,13 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        
+        // Allow both authenticated and guest users to create payment intents
+        let user = null;
+        try {
+            user = await base44.auth.me();
+        } catch (e) {
+            // Guest user - continue without authentication
         }
 
         const { amount, currency = 'gbp', metadata = {} } = await req.json();
@@ -26,7 +29,7 @@ Deno.serve(async (req) => {
                 enabled: true,
             },
             metadata: {
-                user_email: user.email,
+                user_email: user?.email || 'guest',
                 ...metadata
             }
         });
