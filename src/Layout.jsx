@@ -166,6 +166,7 @@ export default function Layout({ children, currentPageName }) {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
+            <Toaster position="top-center" richColors />
             <style>{`
                 :root {
                     --primary: 24 100% 50%;
