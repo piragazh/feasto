@@ -115,14 +115,9 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             
             <PaymentElement 
                 options={{
-                    layout: 'tabs',
-                    paymentMethodOrder: ['apple_pay', 'google_pay', 'card'],
+                    layout: 'accordion',
                     terms: {
                         card: 'never'
-                    },
-                    wallets: {
-                        applePay: 'auto',
-                        googlePay: 'auto'
                     }
                 }}
                 onChange={(e) => {
