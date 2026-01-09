@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import React, { useState, useEffect } from 'react';
+import { PaymentElement, useStripe, useElements, PaymentRequestButtonElement } from '@stripe/react-stripe-js';
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 
@@ -9,6 +9,65 @@ export default function StripePaymentForm({ onSuccess, amount }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [paymentRequest, setPaymentRequest] = useState(null);
+
+    useEffect(() => {
+        if (!stripe) return;
+
+        const pr = stripe.paymentRequest({
+            country: 'GB',
+            currency: 'gbp',
+            total: {
+                label: 'Order Total',
+                amount: Math.round(amount * 100),
+            },
+            requestPayerName: true,
+            requestPayerEmail: true,
+        });
+
+        pr.canMakePayment().then(result => {
+            if (result) {
+                console.log('✅ Digital wallet available:', result);
+                setPaymentRequest(pr);
+            }
+        });
+
+        pr.on('paymentmethod', async (e) => {
+            console.log('🔵 Digital wallet payment method received');
+            setIsProcessing(true);
+            
+            try {
+                const { error: submitError } = await elements.submit();
+                if (submitError) {
+                    e.complete('fail');
+                    setErrorMessage(submitError.message);
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const result = await stripe.confirmPayment({
+                    elements,
+                    redirect: 'if_required',
+                    confirmParams: {
+                        payment_method: e.paymentMethod.id,
+                    }
+                });
+
+                if (result.error) {
+                    e.complete('fail');
+                    setErrorMessage(result.error.message);
+                    setIsProcessing(false);
+                } else if (result.paymentIntent?.status === 'succeeded') {
+                    e.complete('success');
+                    onSuccess(result.paymentIntent.id);
+                }
+            } catch (err) {
+                e.complete('fail');
+                setErrorMessage(err.message);
+                setIsProcessing(false);
+            }
+        });
+    }, [stripe, amount, elements, onSuccess]);
 
     const handleSubmit = async (e) => {
         if (e) {
@@ -99,6 +158,31 @@ export default function StripePaymentForm({ onSuccess, amount }) {
 
     return (
         <div className="space-y-4">
+            {paymentRequest && (
+                <div className="mb-6">
+                    <PaymentRequestButtonElement 
+                        options={{ 
+                            paymentRequest,
+                            style: {
+                                paymentRequestButton: {
+                                    type: 'default',
+                                    theme: 'dark',
+                                    height: '56px'
+                                }
+                            }
+                        }} 
+                    />
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="bg-white px-4 text-gray-500">Or pay with card</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
                     🔒 Enter your card details below to complete payment
