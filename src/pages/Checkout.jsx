@@ -771,7 +771,7 @@ export default function Checkout() {
                                 acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                             />
 
-                            {paymentMethod === 'card' && showStripeForm && clientSecret ? (
+                            {(paymentMethod === 'card') && showStripeForm && clientSecret ? (
                                 <Card>
                                     <CardHeader>
                                         <CardTitle>💳 Payment Details</CardTitle>
@@ -801,12 +801,12 @@ export default function Checkout() {
                                         )}
                                     </CardContent>
                                 </Card>
-                            ) : paymentMethod === 'card' && initializingPayment ? (
+                            ) : (paymentMethod === 'card') && initializingPayment ? (
                                 <div className="text-center py-8">
                                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-500 mb-2" />
                                     <p className="text-sm text-gray-500">Preparing payment form...</p>
                                 </div>
-                            ) : paymentMethod !== 'card' ? (
+                            ) : paymentMethod === 'cash' ? (
                                 <Button
                                     type="submit"
                                     disabled={isSubmitting}
