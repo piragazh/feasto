@@ -122,7 +122,7 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             <PaymentElement 
                 options={{
                     layout: 'tabs',
-                    paymentMethodOrder: ['card'],
+                    paymentMethodOrder: ['apple_pay', 'google_pay', 'card'],
                     terms: {
                         card: 'never'
                     }
