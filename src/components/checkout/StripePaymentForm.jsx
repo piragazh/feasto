@@ -25,12 +25,6 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             return false;
         }
 
-        if (!isFormComplete) {
-            console.log('🔴 Form incomplete');
-            setErrorMessage('Please complete all card details before submitting.');
-            return false;
-        }
-
         setIsProcessing(true);
 
         try {
@@ -125,28 +119,30 @@ export default function StripePaymentForm({ onSuccess, amount }) {
                     paymentMethodOrder: ['apple_pay', 'google_pay', 'card'],
                     terms: {
                         card: 'never'
+                    },
+                    wallets: {
+                        applePay: 'auto',
+                        googlePay: 'auto'
                     }
                 }}
                 onChange={(e) => {
                     setIsFormComplete(e.complete);
                     if (e.complete) setErrorMessage('');
                 }}
+                onReady={() => {
+                    console.log('✅ Payment Element ready');
+                }}
             />
             <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!stripe || !elements || isProcessing || !isFormComplete}
+                disabled={!stripe || !elements || isProcessing}
                 className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isProcessing ? (
                     <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                         Processing Payment...
-                    </>
-                ) : !isFormComplete ? (
-                    <>
-                        <CreditCard className="h-5 w-5 mr-2" />
-                        Enter Card Details
                     </>
                 ) : (
                     <>
