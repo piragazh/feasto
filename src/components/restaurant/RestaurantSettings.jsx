@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 
@@ -37,12 +37,15 @@ export default function RestaurantSettings({ restaurantId }) {
         logo_url: '',
         food_hygiene_rating: '',
         food_hygiene_certificate_url: '',
+        seo_keywords: [],
+        seo_description: '',
         opening_hours: {},
         delivery_hours: {},
         collection_hours: {}
     });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingCertificate, setUploadingCertificate] = useState(false);
+    const [newKeyword, setNewKeyword] = useState('');
 
     React.useEffect(() => {
         if (restaurant) {
@@ -58,6 +61,8 @@ export default function RestaurantSettings({ restaurantId }) {
                 logo_url: restaurant.logo_url || '',
                 food_hygiene_rating: restaurant.food_hygiene_rating || '',
                 food_hygiene_certificate_url: restaurant.food_hygiene_certificate_url || '',
+                seo_keywords: restaurant.seo_keywords || [],
+                seo_description: restaurant.seo_description || '',
                 opening_hours: restaurant.opening_hours || {},
                 delivery_hours: restaurant.delivery_hours || {},
                 collection_hours: restaurant.collection_hours || {}
@@ -120,7 +125,29 @@ export default function RestaurantSettings({ restaurantId }) {
             accepts_cash_on_delivery: formData.accepts_cash_on_delivery,
             logo_url: formData.logo_url,
             food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
-            food_hygiene_certificate_url: formData.food_hygiene_certificate_url
+            food_hygiene_certificate_url: formData.food_hygiene_certificate_url,
+            seo_keywords: formData.seo_keywords,
+            seo_description: formData.seo_description
+        });
+    };
+
+    const addKeyword = () => {
+        if (!newKeyword.trim()) return;
+        if (formData.seo_keywords.includes(newKeyword.trim())) {
+            toast.error('Keyword already added');
+            return;
+        }
+        setFormData({ 
+            ...formData, 
+            seo_keywords: [...formData.seo_keywords, newKeyword.trim()] 
+        });
+        setNewKeyword('');
+    };
+
+    const removeKeyword = (keyword) => {
+        setFormData({
+            ...formData,
+            seo_keywords: formData.seo_keywords.filter(k => k !== keyword)
         });
     };
 
@@ -344,6 +371,58 @@ export default function RestaurantSettings({ restaurantId }) {
                                         Allow customers to pay with cash when order is delivered
                                     </p>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="border-t pt-4 space-y-4">
+                            <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Search className="h-5 w-5 text-blue-500" />
+                                SEO Settings
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                Improve your restaurant's visibility in Google search results. Great for custom domains!
+                            </p>
+                            <div>
+                                <Label>SEO Meta Description</Label>
+                                <Textarea
+                                    value={formData.seo_description}
+                                    onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
+                                    placeholder="e.g., Best Italian pizza in London. Fresh ingredients, authentic recipes. Order online for fast delivery!"
+                                    rows={3}
+                                    maxLength={160}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formData.seo_description.length}/160 characters - This appears in Google search results
+                                </p>
+                            </div>
+                            <div>
+                                <Label>SEO Keywords</Label>
+                                <div className="flex gap-2 mb-2">
+                                    <Input
+                                        value={newKeyword}
+                                        onChange={(e) => setNewKeyword(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                                        placeholder="e.g., best pizza London, Italian restaurant"
+                                    />
+                                    <Button type="button" onClick={addKeyword}>Add</Button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {formData.seo_keywords.map((keyword, idx) => (
+                                        <div key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                                            {keyword}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeKeyword(keyword)}
+                                                className="hover:text-blue-900"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Add keywords customers might search for (e.g., "best pizza near me", "authentic Italian", "halal food London")
+                                </p>
                             </div>
                         </div>
 

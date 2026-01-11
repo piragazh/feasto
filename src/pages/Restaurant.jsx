@@ -544,6 +544,101 @@ export default function Restaurant() {
         );
     }
 
+    // SEO Meta Tags
+    useEffect(() => {
+        if (!restaurant) return;
+
+        // Title
+        document.title = `${restaurant.name} - ${restaurant.cuisine_type} Food Delivery | MealDrop`;
+
+        // Meta description
+        let metaDescription = document.querySelector('meta[name="description"]');
+        if (!metaDescription) {
+            metaDescription = document.createElement('meta');
+            metaDescription.name = 'description';
+            document.head.appendChild(metaDescription);
+        }
+        metaDescription.content = restaurant.seo_description || 
+            `Order from ${restaurant.name} on MealDrop. ${restaurant.description || `Delicious ${restaurant.cuisine_type} food delivered to your door.`} ⭐ ${restaurant.rating?.toFixed(1)} rating. Delivery in ${restaurant.delivery_time || '30-45 min'}.`;
+
+        // Keywords
+        let metaKeywords = document.querySelector('meta[name="keywords"]');
+        if (!metaKeywords) {
+            metaKeywords = document.createElement('meta');
+            metaKeywords.name = 'keywords';
+            document.head.appendChild(metaKeywords);
+        }
+        const keywords = [
+            restaurant.name,
+            restaurant.cuisine_type,
+            `${restaurant.cuisine_type} delivery`,
+            `${restaurant.cuisine_type} near me`,
+            restaurant.address ? `restaurant ${restaurant.address.split(',')[0]}` : '',
+            ...(restaurant.seo_keywords || [])
+        ].filter(Boolean).join(', ');
+        metaKeywords.content = keywords;
+
+        // Open Graph tags
+        const ogTags = [
+            { property: 'og:title', content: `${restaurant.name} - ${restaurant.cuisine_type} Food Delivery` },
+            { property: 'og:description', content: metaDescription.content },
+            { property: 'og:type', content: 'restaurant' },
+            { property: 'og:url', content: window.location.href },
+            { property: 'og:image', content: restaurant.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
+        ];
+
+        ogTags.forEach(({ property, content }) => {
+            let tag = document.querySelector(`meta[property="${property}"]`);
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute('property', property);
+                document.head.appendChild(tag);
+            }
+            tag.content = content;
+        });
+
+        // Structured Data (JSON-LD for Google)
+        let structuredDataScript = document.querySelector('script[type="application/ld+json"]');
+        if (!structuredDataScript) {
+            structuredDataScript = document.createElement('script');
+            structuredDataScript.type = 'application/ld+json';
+            document.head.appendChild(structuredDataScript);
+        }
+        structuredDataScript.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Restaurant",
+            "name": restaurant.name,
+            "image": restaurant.image_url,
+            "description": restaurant.description,
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": restaurant.address
+            },
+            "servesCuisine": restaurant.cuisine_type,
+            "priceRange": "£",
+            "aggregateRating": restaurant.rating ? {
+                "@type": "AggregateRating",
+                "ratingValue": restaurant.rating,
+                "reviewCount": restaurant.review_count || 0
+            } : undefined,
+            "openingHoursSpecification": restaurant.opening_hours ? Object.entries(restaurant.opening_hours).map(([day, hours]) => ({
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": day.charAt(0).toUpperCase() + day.slice(1),
+                "opens": hours.open,
+                "closes": hours.close
+            })) : undefined
+        });
+
+        // Canonical URL
+        let canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) {
+            canonical = document.createElement('link');
+            canonical.rel = 'canonical';
+            document.head.appendChild(canonical);
+        }
+        canonical.href = window.location.href;
+    }, [restaurant]);
+
     return (
         <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
             {/* Order Type Selector */}
