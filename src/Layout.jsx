@@ -20,6 +20,7 @@ export default function Layout({ children, currentPageName }) {
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
     const [customDomainChecked, setCustomDomainChecked] = useState(false);
+    const [isRestaurantManager, setIsRestaurantManager] = useState(false);
 
     // SEO Meta Tags
     useEffect(() => {
@@ -104,6 +105,10 @@ export default function Layout({ children, currentPageName }) {
         try {
             const userData = await base44.auth.me();
             setUser(userData);
+            
+            // Check if user is a restaurant manager
+            const managers = await base44.entities.RestaurantManager.filter({ user_email: userData.email });
+            setIsRestaurantManager(managers && managers.length > 0);
         } catch (e) {
             // User not logged in
         }
@@ -290,6 +295,14 @@ export default function Layout({ children, currentPageName }) {
                                                         My Profile
                                                     </Link>
                                                 </DropdownMenuItem>
+                                                {isRestaurantManager && (
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={createPageUrl('RestaurantDashboard')} className="flex items-center gap-2">
+                                                            <Home className="h-4 w-4" />
+                                                            Restaurant Dashboard
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                )}
                                                 {user?.role === 'admin' && (
                                                 <>
                                                     <DropdownMenuItem asChild>
