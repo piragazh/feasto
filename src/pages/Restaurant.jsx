@@ -431,93 +431,7 @@ export default function Restaurant() {
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-    // Check if restaurant is open for delivery/collection
-    const checkOrderingAvailable = () => {
-        if (!restaurant) return { available: true, message: '' };
-
-        const now = new Date();
-        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
-        const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
-
-        let hours;
-        if (orderType === 'collection' && restaurant.collection_hours) {
-            hours = restaurant.collection_hours[dayName];
-        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
-            hours = restaurant.delivery_hours[dayName];
-        } else {
-            hours = restaurant.opening_hours?.[dayName];
-        }
-
-        if (!hours || hours.closed) {
-            return {
-                available: false,
-                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} is not available on ${dayName}s`
-            };
-        }
-
-        const [openHour, openMin] = hours.open.split(':').map(Number);
-        const [closeHour, closeMin] = hours.close.split(':').map(Number);
-        const openTime = openHour * 60 + openMin;
-        const closeTime = closeHour * 60 + closeMin;
-
-        if (currentTime < openTime) {
-            return {
-                available: false,
-                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} starts at ${hours.open}`
-            };
-        }
-
-        if (currentTime > closeTime) {
-            return {
-                available: false,
-                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} closed at ${hours.close}`
-            };
-        }
-
-        return { available: true, message: '' };
-    };
-
-    const handleProceedToCheckout = () => {
-        // Basic validation
-        if (!cart || cart.length === 0) {
-            toast.error('Your cart is empty');
-            return;
-        }
-
-        if (!restaurant || !restaurant.name) {
-            toast.error('Restaurant information unavailable');
-            return;
-        }
-
-        // Save to localStorage
-        try {
-            localStorage.setItem('cart', JSON.stringify(cart));
-            localStorage.setItem('cartRestaurantId', restaurantId);
-            localStorage.setItem('orderType', orderType);
-            localStorage.setItem('cartRestaurantName', restaurant.name);
-        } catch (error) {
-            toast.error('Unable to save cart data');
-            return;
-        }
-        
-        // Close drawer and navigate using React Router
-        setCartOpen(false);
-        navigate(createPageUrl('Checkout'));
-    };
-
-    if (restaurantLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50">
-                <Skeleton className="h-72 w-full" />
-                <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
-                    <Skeleton className="h-10 w-1/2" />
-                    <Skeleton className="h-6 w-3/4" />
-                </div>
-            </div>
-        );
-    }
-
-    // SEO Meta Tags
+    // SEO Meta Tags - must be before any conditional returns
     useEffect(() => {
         if (!restaurant) return;
 
@@ -630,6 +544,92 @@ export default function Restaurant() {
             console.error('SEO meta tags error:', error);
         }
     }, [restaurant]);
+
+    // Check if restaurant is open for delivery/collection
+    const checkOrderingAvailable = () => {
+        if (!restaurant) return { available: true, message: '' };
+
+        const now = new Date();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
+
+        let hours;
+        if (orderType === 'collection' && restaurant.collection_hours) {
+            hours = restaurant.collection_hours[dayName];
+        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+            hours = restaurant.delivery_hours[dayName];
+        } else {
+            hours = restaurant.opening_hours?.[dayName];
+        }
+
+        if (!hours || hours.closed) {
+            return {
+                available: false,
+                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} is not available on ${dayName}s`
+            };
+        }
+
+        const [openHour, openMin] = hours.open.split(':').map(Number);
+        const [closeHour, closeMin] = hours.close.split(':').map(Number);
+        const openTime = openHour * 60 + openMin;
+        const closeTime = closeHour * 60 + closeMin;
+
+        if (currentTime < openTime) {
+            return {
+                available: false,
+                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} starts at ${hours.open}`
+            };
+        }
+
+        if (currentTime > closeTime) {
+            return {
+                available: false,
+                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} closed at ${hours.close}`
+            };
+        }
+
+        return { available: true, message: '' };
+    };
+
+    const handleProceedToCheckout = () => {
+        // Basic validation
+        if (!cart || cart.length === 0) {
+            toast.error('Your cart is empty');
+            return;
+        }
+
+        if (!restaurant || !restaurant.name) {
+            toast.error('Restaurant information unavailable');
+            return;
+        }
+
+        // Save to localStorage
+        try {
+            localStorage.setItem('cart', JSON.stringify(cart));
+            localStorage.setItem('cartRestaurantId', restaurantId);
+            localStorage.setItem('orderType', orderType);
+            localStorage.setItem('cartRestaurantName', restaurant.name);
+        } catch (error) {
+            toast.error('Unable to save cart data');
+            return;
+        }
+        
+        // Close drawer and navigate using React Router
+        setCartOpen(false);
+        navigate(createPageUrl('Checkout'));
+    };
+
+    if (restaurantLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <Skeleton className="h-72 w-full" />
+                <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+                    <Skeleton className="h-10 w-1/2" />
+                    <Skeleton className="h-6 w-3/4" />
+                </div>
+            </div>
+        );
+    }
 
     if (restaurantError) {
         return (
