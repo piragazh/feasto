@@ -38,6 +38,7 @@ export default function Restaurant() {
     const [categoryDealModalOpen, setCategoryDealModalOpen] = useState(false);
     const [selectedDeal, setSelectedDeal] = useState(null);
     const [menuSearchQuery, setMenuSearchQuery] = useState('');
+    const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
     const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
     const [showTimeWarning, setShowTimeWarning] = useState(false);
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
@@ -134,6 +135,17 @@ export default function Restaurant() {
     }, [menuItems]);
 
     const categoryRefs = React.useRef({});
+
+    const searchSuggestions = React.useMemo(() => {
+        if (!menuSearchQuery || menuSearchQuery.length < 2) return [];
+        
+        return menuItems
+            .filter(item => 
+                item.name?.toLowerCase().includes(menuSearchQuery.toLowerCase()) ||
+                item.description?.toLowerCase().includes(menuSearchQuery.toLowerCase())
+            )
+            .slice(0, 5);
+    }, [menuItems, menuSearchQuery]);
 
     const itemsByCategory = React.useMemo(() => {
         let items = menuItems;
@@ -708,14 +720,51 @@ export default function Restaurant() {
 
                 {/* Menu Search */}
                 <div className="mb-6 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
                     <Input
                         type="text"
                         placeholder="Search menu items..."
                         value={menuSearchQuery}
-                        onChange={(e) => setMenuSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setMenuSearchQuery(e.target.value);
+                            setShowSearchSuggestions(true);
+                        }}
+                        onFocus={() => setShowSearchSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
                         className="pl-12 h-12 bg-white border-gray-200"
                     />
+
+                    {/* Search Suggestions Dropdown */}
+                    {showSearchSuggestions && searchSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
+                            {searchSuggestions.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setMenuSearchQuery(item.name);
+                                        setShowSearchSuggestions(false);
+                                        const category = item.category;
+                                        setTimeout(() => scrollToCategory(category), 100);
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                                >
+                                    {item.image_url && (
+                                        <img 
+                                            src={item.image_url} 
+                                            alt={item.name}
+                                            className="w-12 h-12 rounded-lg object-cover"
+                                        />
+                                    )}
+                                    <div className="flex-1 text-left">
+                                        <p className="font-medium text-gray-900">{item.name}</p>
+                                        <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                                        <p className="text-sm font-semibold text-orange-500 mt-1">£{item.price.toFixed(2)}</p>
+                                    </div>
+                                    <div className="text-xs text-gray-400 capitalize">{item.category}</div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {categories.length > 0 && (
