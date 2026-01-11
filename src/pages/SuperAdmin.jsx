@@ -15,6 +15,7 @@ import EnhancedAnalytics from '@/components/superadmin/EnhancedAnalytics';
 import EnhancedDriverManagement from '@/components/superadmin/EnhancedDriverManagement';
 import PlatformRefundOversight from '@/components/superadmin/PlatformRefundOversight';
 import PayoutManagement from '@/components/superadmin/PayoutManagement';
+import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManagement';
 import ReviewModeration from '@/components/restaurant/ReviewModeration';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star } from 'lucide-react';
 import { createPageUrl } from '@/utils';
@@ -188,6 +189,7 @@ export default function SuperAdmin() {
             {/* Content */}
             <div className="max-w-7xl mx-auto px-4 py-8">
                 {activeTab === 'overview' && <SystemOverview />}
+                {activeTab === 'orders' && <OrderHistoryManagement />}
                 {activeTab === 'restaurants' && <RestaurantManagement />}
                 {activeTab === 'messages' && <MessagingCenter />}
                 {activeTab === 'commission' && <CommissionManagement />}
