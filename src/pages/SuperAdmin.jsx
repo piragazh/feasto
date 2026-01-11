@@ -79,6 +79,14 @@ export default function SuperAdmin() {
                             Overview
                         </Button>
                         <Button
+                            variant={activeTab === 'orders' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('orders')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Store className="h-4 w-4" />
+                            Order History
+                        </Button>
+                        <Button
                             variant={activeTab === 'restaurants' ? 'secondary' : 'ghost'}
                             onClick={() => setActiveTab('restaurants')}
                             className="flex items-center gap-2 text-white hover:bg-white/10"
