@@ -517,33 +517,6 @@ export default function Restaurant() {
         );
     }
 
-    if (restaurantError) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="text-center max-w-md">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to load restaurant</h2>
-                    <p className="text-gray-600 mb-4">{restaurantError.message || 'Please try again later'}</p>
-                    <Link to={createPageUrl('Home')}>
-                        <Button>Go Back Home</Button>
-                    </Link>
-                </div>
-            </div>
-        );
-    }
-
-    if (!restaurantLoading && !restaurant) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Restaurant not found</h2>
-                    <Link to={createPageUrl('Home')}>
-                        <Button>Go Back Home</Button>
-                    </Link>
-                </div>
-            </div>
-        );
-    }
-
     // SEO Meta Tags
     useEffect(() => {
         if (!restaurant) return;
@@ -657,6 +630,33 @@ export default function Restaurant() {
             console.error('SEO meta tags error:', error);
         }
     }, [restaurant]);
+
+    if (restaurantError) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to load restaurant</h2>
+                    <p className="text-gray-600 mb-4">{restaurantError.message || 'Please try again later'}</p>
+                    <Link to={createPageUrl('Home')}>
+                        <Button>Go Back Home</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (!restaurantLoading && !restaurant) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Restaurant not found</h2>
+                    <Link to={createPageUrl('Home')}>
+                        <Button>Go Back Home</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
