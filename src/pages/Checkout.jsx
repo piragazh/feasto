@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle, User } from 'lucide-react'; // Icons
 import CouponInput from '@/components/checkout/CouponInput'; // Coupon application component
+import PromotionCodeInput from '@/components/checkout/PromotionCodeInput'; // Promotion code application
 import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
 import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection'; // Schedule future orders
 import GroupOrderSection from '@/components/checkout/GroupOrderSection'; // Group order functionality
@@ -72,6 +73,7 @@ export default function Checkout() {
     
     // Discounts and Special Orders
     const [appliedCoupon, setAppliedCoupon] = useState(null); // Applied coupon details
+    const [appliedPromotion, setAppliedPromotion] = useState(null); // Applied promotion details
     const [isScheduled, setIsScheduled] = useState(false); // Is this a scheduled order?
     const [scheduledFor, setScheduledFor] = useState(''); // When to deliver (if scheduled)
     const [groupOrderId, setGroupOrderId] = useState(null); // Group order session ID
@@ -188,8 +190,10 @@ export default function Checkout() {
         ? (minimumOrder - subtotal) 
         : 0;
 
-    // Discount from applied coupon (if any)
-    const discount = appliedCoupon?.discount || 0;
+    // Discount from applied coupon or promotion (if any)
+    const couponDiscount = appliedCoupon?.discount || 0;
+    const promotionDiscount = appliedPromotion?.discount || 0;
+    const discount = couponDiscount + promotionDiscount;
 
     // Final total = subtotal + delivery + surcharge - discount
     const total = subtotal + deliveryFee + smallOrderSurcharge - discount;
@@ -377,6 +381,7 @@ export default function Checkout() {
                 small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
                 coupon_code: appliedCoupon?.code,
+                promotion_code: appliedPromotion?.promotion_code,
                 total,
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
@@ -422,6 +427,19 @@ export default function Checkout() {
                     });
                 } catch (error) {
                     console.error('Failed to update coupon usage:', error);
+                }
+            }
+
+            // Increment promotion usage and update stats if applied
+            if (appliedPromotion) {
+                try {
+                    await base44.entities.Promotion.update(appliedPromotion.id, {
+                        usage_count: (appliedPromotion.usage_count || 0) + 1,
+                        total_revenue_generated: (appliedPromotion.total_revenue_generated || 0) + total,
+                        total_discount_given: (appliedPromotion.total_discount_given || 0) + promotionDiscount
+                    });
+                } catch (error) {
+                    console.error('Failed to update promotion usage:', error);
                 }
             }
 
@@ -760,6 +778,19 @@ export default function Checkout() {
                                 </CardContent>
                             </Card>
 
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Have a Promotion Code?</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <PromotionCodeInput
+                                        restaurantId={restaurantId}
+                                        subtotal={subtotal}
+                                        onPromotionApply={setAppliedPromotion}
+                                    />
+                                </CardContent>
+                            </Card>
+
                             <PaymentMethods
                                 selectedMethod={paymentMethod}
                                 onMethodChange={(method) => {
@@ -881,10 +912,16 @@ export default function Checkout() {
                                             <span>£{smallOrderSurcharge.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    {discount > 0 && (
+                                    {couponDiscount > 0 && (
                                         <div className="flex justify-between text-green-600">
-                                            <span>Discount ({appliedCoupon?.code})</span>
-                                            <span>-£{discount.toFixed(2)}</span>
+                                            <span>Coupon ({appliedCoupon?.code})</span>
+                                            <span>-£{couponDiscount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {promotionDiscount > 0 && (
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Promotion ({appliedPromotion?.promotion_code})</span>
+                                            <span>-£{promotionDiscount.toFixed(2)}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
