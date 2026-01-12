@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 
@@ -41,6 +41,7 @@ export default function RestaurantSettings({ restaurantId }) {
         seo_description: '',
         loyalty_program_enabled: true,
         loyalty_points_multiplier: 1,
+        theme_primary_color: '#f97316',
         opening_hours: {},
         delivery_hours: {},
         collection_hours: {}
@@ -67,6 +68,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 seo_description: restaurant.seo_description || '',
                 loyalty_program_enabled: restaurant.loyalty_program_enabled !== false,
                 loyalty_points_multiplier: restaurant.loyalty_points_multiplier || 1,
+                theme_primary_color: restaurant.theme_primary_color || '#f97316',
                 opening_hours: restaurant.opening_hours || {},
                 delivery_hours: restaurant.delivery_hours || {},
                 collection_hours: restaurant.collection_hours || {}
@@ -133,7 +135,8 @@ export default function RestaurantSettings({ restaurantId }) {
             seo_keywords: formData.seo_keywords,
             seo_description: formData.seo_description,
             loyalty_program_enabled: formData.loyalty_program_enabled,
-            loyalty_points_multiplier: formData.loyalty_points_multiplier
+            loyalty_points_multiplier: formData.loyalty_points_multiplier,
+            theme_primary_color: formData.theme_primary_color
         });
     };
 
@@ -460,6 +463,40 @@ export default function RestaurantSettings({ restaurantId }) {
                                     </p>
                                 </div>
                             )}
+                        </div>
+
+                        <div className="border-t pt-4 space-y-4">
+                            <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Palette className="h-5 w-5 text-purple-500" />
+                                Theme & Branding
+                            </h3>
+                            <div>
+                                <Label>Primary Theme Color</Label>
+                                <div className="flex gap-4 items-center">
+                                    <Input
+                                        type="color"
+                                        value={formData.theme_primary_color}
+                                        onChange={(e) => setFormData({ ...formData, theme_primary_color: e.target.value })}
+                                        className="h-12 w-20 cursor-pointer"
+                                    />
+                                    <div className="flex-1">
+                                        <Input
+                                            type="text"
+                                            value={formData.theme_primary_color}
+                                            onChange={(e) => setFormData({ ...formData, theme_primary_color: e.target.value })}
+                                            placeholder="#f97316"
+                                            className="font-mono"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Customize your restaurant's theme color for a unique look
+                                        </p>
+                                    </div>
+                                    <div 
+                                        className="w-12 h-12 rounded-lg border-2 shadow-sm"
+                                        style={{ backgroundColor: formData.theme_primary_color }}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <div className="border-t pt-4 space-y-4">
