@@ -882,7 +882,7 @@ export default function Restaurant() {
                 </div>
 
                 {categories.length > 0 && (
-                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-[56px] md:top-[64px] z-20 shadow-md">
+                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-14 z-20 shadow-md">
                         <div className="relative">
                             {showLeftArrow && (
                                 <button
