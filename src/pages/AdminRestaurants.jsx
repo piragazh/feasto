@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Building, User, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, User, Search, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 import RestaurantFormDialog from '@/components/admin/RestaurantFormDialog';
 import AssignOwnerDialog from '@/components/admin/AssignOwnerDialog';
 import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function AdminRestaurants() {
     const navigate = useNavigate();
@@ -171,7 +172,16 @@ export default function AdminRestaurants() {
                                         )}
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row gap-2">
+                                    <div className="flex flex-col gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
+                                            className="w-full bg-orange-50 hover:bg-orange-100 border-orange-300"
+                                        >
+                                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                                            Open Dashboard
+                                        </Button>
                                         <div className="flex gap-2">
                                             <Button
                                                 size="sm"
