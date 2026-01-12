@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
     Building, DollarSign, ShoppingBag, TrendingUp, Star, 
-    Users, ArrowUpRight, BarChart3 
+    Users, ArrowUpRight, BarChart3, LayoutDashboard 
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -210,6 +210,7 @@ export default function AdminDashboard() {
                                         <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm hidden sm:table-cell">Avg Order</th>
                                         <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Rating</th>
                                         <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Status</th>
+                                        <th className="text-center py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -238,6 +239,17 @@ export default function AdminDashboard() {
                                                 <Badge variant={restaurant.is_open ? 'default' : 'secondary'} className="text-xs">
                                                     {restaurant.is_open ? 'Open' : 'Closed'}
                                                 </Badge>
+                                            </td>
+                                            <td className="text-center py-2 sm:py-3 px-3 sm:px-4">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
+                                                    className="h-7 text-xs"
+                                                >
+                                                    <LayoutDashboard className="h-3 w-3 mr-1" />
+                                                    Dashboard
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))}
