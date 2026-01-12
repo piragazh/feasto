@@ -660,6 +660,34 @@ export default function Restaurant() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
+            {restaurant?.theme_primary_color && (
+                <style>{`
+                    :root {
+                        --primary: ${restaurant.theme_primary_color};
+                    }
+                    .bg-orange-500 {
+                        background-color: ${restaurant.theme_primary_color} !important;
+                    }
+                    .text-orange-500 {
+                        color: ${restaurant.theme_primary_color} !important;
+                    }
+                    .border-orange-300 {
+                        border-color: ${restaurant.theme_primary_color}60 !important;
+                    }
+                    .bg-orange-50 {
+                        background-color: ${restaurant.theme_primary_color}10 !important;
+                    }
+                    .hover\\:bg-orange-100:hover {
+                        background-color: ${restaurant.theme_primary_color}20 !important;
+                    }
+                    .hover\\:bg-orange-600:hover {
+                        background-color: ${restaurant.theme_primary_color}dd !important;
+                    }
+                    .hover\\:text-orange-600:hover {
+                        color: ${restaurant.theme_primary_color} !important;
+                    }
+                `}</style>
+            )}
             {/* Order Type Selector */}
 
 
