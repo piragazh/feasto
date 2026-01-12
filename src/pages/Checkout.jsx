@@ -371,10 +371,16 @@ export default function Checkout() {
                 ? `C-${Date.now().toString().slice(-6)}` 
                 : null;
 
+            // Calculate loyalty points
+            const earnLoyalty = restaurant?.loyalty_program_enabled !== false;
+            const pointsMultiplier = restaurant?.loyalty_points_multiplier || 1;
+            const pointsToEarn = earnLoyalty ? Math.floor(total * pointsMultiplier) : 0;
+
             const orderData = {
                 order_number: orderNumber,
                 restaurant_id: restaurantId,
                 restaurant_name: restaurantName,
+                loyalty_points_earned: pointsToEarn,
                 items: cart,
                 subtotal,
                 delivery_fee: deliveryFee,
@@ -928,6 +934,12 @@ export default function Checkout() {
                                         <span>Total</span>
                                         <span>£{total.toFixed(2)}</span>
                                     </div>
+                                    {restaurant?.loyalty_program_enabled !== false && (
+                                        <div className="flex justify-between text-orange-600 text-sm pt-2">
+                                            <span>🎁 You'll earn</span>
+                                            <span className="font-semibold">{Math.floor(total * (restaurant?.loyalty_points_multiplier || 1))} points</span>
+                                        </div>
+                                    )}
                                     {smallOrderSurcharge > 0 && (
                                         <div className="text-xs text-gray-500 pt-1">
                                             * Minimum order: £{minimumOrder.toFixed(2)}
