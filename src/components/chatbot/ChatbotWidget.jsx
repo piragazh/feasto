@@ -85,10 +85,17 @@ export default function ChatbotWidget() {
 
         try {
             // ---- CALL BACKEND FUNCTION ----
+            // Get current context from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const restaurantId = urlParams.get('id');
+            const currentPage = window.location.pathname.split('/').pop();
+            
             // Send message to AI chatbot backend
             const response = await base44.functions.invoke('chatbotQuery', {
                 message: inputMessage, // Current message
-                conversationHistory: messages // Previous conversation
+                conversationHistory: messages, // Previous conversation
+                restaurantId, // Current restaurant being viewed
+                currentPage // Current page context
             });
 
             // ---- PROCESS AI RESPONSE ----

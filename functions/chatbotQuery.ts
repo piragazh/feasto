@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
         // ---- PARSE REQUEST DATA ----
         // Extract the message and conversation history from request body
-        const { message, conversationHistory = [] } = await req.json();
+        const { message, conversationHistory = [], restaurantId, currentPage } = await req.json();
 
         // Validate that a message was provided
         if (!message) {
@@ -45,6 +45,18 @@ Deno.serve(async (req) => {
         const restaurants = restaurantIds.length > 0 
             ? await base44.entities.Restaurant.filter({ id: { $in: restaurantIds } }) // Fetch matching restaurants
             : []; // Empty array if no orders
+        
+        // Get current restaurant being viewed (if any)
+        let currentRestaurant = null;
+        let currentRestaurantMenuItems = [];
+        if (restaurantId) {
+            const currentRestaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            if (currentRestaurants.length > 0) {
+                currentRestaurant = currentRestaurants[0];
+                // Get menu items for this restaurant
+                currentRestaurantMenuItems = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
+            }
+        }
 
         // ---- BUILD AI CONTEXT ----
         // Create a comprehensive prompt for the AI with user data and policies
@@ -59,6 +71,25 @@ Your capabilities:
 Current customer information:
 - Email: ${user.email}
 - Name: ${user.full_name}
+
+${currentRestaurant ? `
+CURRENT CONTEXT - User is viewing this restaurant:
+Restaurant: ${currentRestaurant.name}
+Cuisine: ${currentRestaurant.cuisine_type}
+Rating: ${currentRestaurant.rating?.toFixed(1)} (${currentRestaurant.review_count || 0} reviews)
+Delivery fee: £${currentRestaurant.delivery_fee?.toFixed(2)}
+Delivery time: ${currentRestaurant.delivery_time}
+Minimum order: £${currentRestaurant.minimum_order || 0}
+Address: ${currentRestaurant.address || 'Not specified'}
+${currentRestaurant.opening_hours ? `Opening hours: ${JSON.stringify(currentRestaurant.opening_hours)}` : ''}
+${currentRestaurant.collection_enabled ? 'Collection available' : 'Delivery only'}
+
+Menu items available (${currentRestaurantMenuItems.length} items):
+${currentRestaurantMenuItems.slice(0, 10).map(item => `- ${item.name}: £${item.price?.toFixed(2)}${item.description ? ` - ${item.description}` : ''}${item.is_available === false ? ' (Currently unavailable)' : ''}`).join('\n')}
+${currentRestaurantMenuItems.length > 10 ? `... and ${currentRestaurantMenuItems.length - 10} more items` : ''}
+
+IMPORTANT: When answering questions about menu items, prices, opening hours, or delivery options, use the information about ${currentRestaurant.name} provided above.
+` : ''}
 
 Recent orders:
 ${orders.map(o => `- Order #${o.id.slice(-8)} from ${o.restaurant_name} (Status: ${o.status}, Total: £${o.total?.toFixed(2)}, Date: ${new Date(o.created_date).toLocaleDateString()})`).join('\n')}
