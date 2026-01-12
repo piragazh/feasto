@@ -12,8 +12,11 @@ import {
     MessageSquare,
     CheckCircle,
     Clock,
-    DollarSign
+    DollarSign,
+    LayoutDashboard
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import {
     Dialog,
@@ -26,6 +29,7 @@ export default function RestaurantManagement() {
     const [searchQuery, setSearchQuery] = useState('');
     const [onboardingDialog, setOnboardingDialog] = useState(null);
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
@@ -113,6 +117,14 @@ export default function RestaurantManagement() {
                                 </div>
                                 
                                 <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
+                                    >
+                                        <LayoutDashboard className="h-4 w-4 mr-1" />
+                                        Dashboard
+                                    </Button>
                                     <Button
                                         size="sm"
                                         variant="outline"
