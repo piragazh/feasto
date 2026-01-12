@@ -39,6 +39,8 @@ export default function RestaurantSettings({ restaurantId }) {
         food_hygiene_certificate_url: '',
         seo_keywords: [],
         seo_description: '',
+        loyalty_program_enabled: true,
+        loyalty_points_multiplier: 1,
         opening_hours: {},
         delivery_hours: {},
         collection_hours: {}
@@ -63,6 +65,8 @@ export default function RestaurantSettings({ restaurantId }) {
                 food_hygiene_certificate_url: restaurant.food_hygiene_certificate_url || '',
                 seo_keywords: restaurant.seo_keywords || [],
                 seo_description: restaurant.seo_description || '',
+                loyalty_program_enabled: restaurant.loyalty_program_enabled !== false,
+                loyalty_points_multiplier: restaurant.loyalty_points_multiplier || 1,
                 opening_hours: restaurant.opening_hours || {},
                 delivery_hours: restaurant.delivery_hours || {},
                 collection_hours: restaurant.collection_hours || {}
@@ -127,7 +131,9 @@ export default function RestaurantSettings({ restaurantId }) {
             food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
             food_hygiene_certificate_url: formData.food_hygiene_certificate_url,
             seo_keywords: formData.seo_keywords,
-            seo_description: formData.seo_description
+            seo_description: formData.seo_description,
+            loyalty_program_enabled: formData.loyalty_program_enabled,
+            loyalty_points_multiplier: formData.loyalty_points_multiplier
         });
     };
 
@@ -424,6 +430,36 @@ export default function RestaurantSettings({ restaurantId }) {
                                     Add keywords customers might search for (e.g., "best pizza near me", "authentic Italian", "halal food London")
                                 </p>
                             </div>
+                        </div>
+
+                        <div className="border-t pt-4 space-y-4">
+                            <h3 className="font-semibold text-lg">Loyalty Program</h3>
+                            <div className="flex items-center justify-between p-4 border rounded-lg">
+                                <div>
+                                    <p className="font-medium">Participate in Loyalty Program</p>
+                                    <p className="text-sm text-gray-500">Customers earn points when ordering from you</p>
+                                </div>
+                                <Switch
+                                    checked={formData.loyalty_program_enabled !== false}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, loyalty_program_enabled: checked })}
+                                />
+                            </div>
+                            {formData.loyalty_program_enabled !== false && (
+                                <div>
+                                    <Label>Points Multiplier</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.1"
+                                        min="0.5"
+                                        max="5"
+                                        value={formData.loyalty_points_multiplier || 1}
+                                        onChange={(e) => setFormData({ ...formData, loyalty_points_multiplier: parseFloat(e.target.value) })}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Customers earn {formData.loyalty_points_multiplier || 1} points per £1 spent
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="border-t pt-4 space-y-4">
