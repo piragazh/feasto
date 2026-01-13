@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Flame, Leaf } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function MenuItemCard({ item, onAddToCart }) {
+export default function MenuItemCard({ item, promotion, onAddToCart }) {
     const hasCustomizations = item.customization_options?.length > 0;
     const isAvailable = item.is_available !== false;
 
