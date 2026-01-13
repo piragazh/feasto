@@ -25,9 +25,12 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Store className="h-5 w-5 text-orange-500" />
-                        Restaurant Information
+                    <DialogTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Store className="h-5 w-5 text-orange-500" />
+                            Restaurant Information
+                        </div>
+                        <span className="text-xs text-gray-400 font-normal">ID: {restaurant.id}</span>
                     </DialogTitle>
                 </DialogHeader>
 

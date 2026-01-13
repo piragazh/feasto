@@ -800,23 +800,30 @@ export default function Restaurant() {
             {/* Info Bar */}
             <div className="bg-white border-b">
                 <div className="max-w-4xl mx-auto px-4 py-4">
-                    <div className="flex items-center gap-6 text-sm text-gray-600">
-                        {restaurant.address && (
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-gray-400" />
-                                <span>{restaurant.address}</span>
-                            </div>
-                        )}
-                        {restaurant.minimum_order > 0 && (
-                            <div className="flex items-center gap-2">
-                                <Info className="h-4 w-4 text-gray-400" />
-                                <span>Min. order £{restaurant.minimum_order}</span>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-2 text-xs">
-                            <Info className="h-4 w-4 text-gray-400" />
-                            <span className="text-gray-400">ID: {restaurant.id}</span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-6 text-sm text-gray-600">
+                            {restaurant.address && (
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-gray-400" />
+                                    <span>{restaurant.address}</span>
+                                </div>
+                            )}
+                            {restaurant.minimum_order > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                    <span>Min. order £{restaurant.minimum_order}</span>
+                                </div>
+                            )}
                         </div>
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setShowInfoDialog(true)}
+                            className="flex items-center gap-2"
+                        >
+                            <Info className="h-4 w-4" />
+                            Restaurant Info
+                        </Button>
                     </div>
                 </div>
             </div>
