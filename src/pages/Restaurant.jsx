@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { isWithinInterval } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,6 +130,12 @@ export default function Restaurant() {
         enabled: !!restaurantId,
     });
 
+    const { data: promotions = [] } = useQuery({
+        queryKey: ['promotions', restaurantId],
+        queryFn: () => base44.entities.Promotion.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
     const categories = React.useMemo(() => {
         const cats = [...new Set(menuItems.map(item => item.category).filter(Boolean))].sort();
         return cats;
@@ -251,6 +258,23 @@ export default function Restaurant() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [itemsByCategory]);
 
+    const getActivePromotionForItem = (itemId) => {
+        const now = new Date();
+        return promotions.find(promo => {
+            if (!promo.is_active) return false;
+            if (!promo.applicable_items?.includes(itemId)) return false;
+            if (!['buy_one_get_one', 'buy_two_get_one'].includes(promo.promotion_type)) return false;
+            
+            const start = new Date(promo.start_date);
+            const end = new Date(promo.end_date);
+            if (!isWithinInterval(now, { start, end })) return false;
+            
+            if (promo.usage_limit && promo.usage_count >= promo.usage_limit) return false;
+            
+            return true;
+        });
+    };
+
     const handleItemClick = (item) => {
         // If item has customizations, open modal; otherwise add directly
         if (item.customization_options?.length > 0) {
@@ -273,12 +297,27 @@ export default function Restaurant() {
                 return;
             }
 
+            // Check for active BOGO promotions
+            const activePromotion = getActivePromotionForItem(item.id);
+            let quantityToAdd = 1;
+            let promoMessage = '';
+
+            if (activePromotion) {
+                if (activePromotion.promotion_type === 'buy_one_get_one') {
+                    quantityToAdd = 2;
+                    promoMessage = ' - Buy 1 Get 1 Free! 🎉';
+                } else if (activePromotion.promotion_type === 'buy_two_get_one') {
+                    quantityToAdd = 3;
+                    promoMessage = ' - Buy 2 Get 1 Free! 🎉';
+                }
+            }
+
             setCart(prev => {
                 const existing = prev.find(i => i.menu_item_id === item.id && !i.customizations);
                 if (existing) {
                     return prev.map(i => 
                         i.menu_item_id === item.id && !i.customizations
-                            ? { ...i, quantity: i.quantity + 1 }
+                            ? { ...i, quantity: i.quantity + quantityToAdd }
                             : i
                     );
                 }
@@ -286,14 +325,14 @@ export default function Restaurant() {
                     menu_item_id: item.id,
                     name: item.name,
                     price: item.price,
-                    quantity: 1,
+                    quantity: quantityToAdd,
                     image_url: item.image_url
                 }];
                 });
-                toast.success(`🛒 ${item.name} added to cart`, {
-                duration: 2000,
+                toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
+                duration: 3000,
                 style: {
-                    background: '#10b981',
+                    background: activePromotion ? '#8b5cf6' : '#10b981',
                     color: '#fff',
                     fontWeight: '600',
                     padding: '16px',
@@ -976,7 +1015,12 @@ export default function Restaurant() {
                                 </h3>
                                 <div className="space-y-2">
                                     {items.map(item => (
-                                        <MenuItemCard key={item.id} item={item} onAddToCart={handleItemClick} />
+                                        <MenuItemCard 
+                                            key={item.id} 
+                                            item={item} 
+                                            promotion={getActivePromotionForItem(item.id)}
+                                            onAddToCart={handleItemClick} 
+                                        />
                                     ))}
                                 </div>
                             </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Flame, Leaf } from 'lucide-react';
+import { Plus, Flame, Leaf, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function MenuItemCard({ item, promotion, onAddToCart }) {
@@ -31,6 +31,12 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                     <h3 className={`font-semibold ${isAvailable ? 'text-gray-900' : 'text-gray-500'}`}>
                         {item.name}
                     </h3>
+                    {promotion && isAvailable && (
+                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs gap-1 animate-pulse">
+                            <Gift className="h-3 w-3" />
+                            {promotion.promotion_type === 'buy_one_get_one' ? 'BOGO' : 'B2G1'}
+                        </Badge>
+                    )}
                     {item.is_popular && isAvailable && (
                         <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
                     )}
