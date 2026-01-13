@@ -71,8 +71,8 @@ export default function Checkout() {
     const [orderPlaced, setOrderPlaced] = useState(false); // True when order successfully placed
     
     // Discounts and Special Orders
-    const [appliedCoupon, setAppliedCoupon] = useState(null); // Applied coupon details
-    const [appliedPromotion, setAppliedPromotion] = useState(null); // Applied promotion details
+    const [appliedCoupons, setAppliedCoupons] = useState([]); // Applied coupons array
+    const [appliedPromotions, setAppliedPromotions] = useState([]); // Applied promotions array
     const [isScheduled, setIsScheduled] = useState(false); // Is this a scheduled order?
     const [scheduledFor, setScheduledFor] = useState(''); // When to deliver (if scheduled)
     const [groupOrderId, setGroupOrderId] = useState(null); // Group order session ID
@@ -215,9 +215,9 @@ export default function Checkout() {
         ? (minimumOrder - subtotal) 
         : 0;
 
-    // Discount from applied coupon or promotion (if any)
-    const couponDiscount = appliedCoupon?.discount || 0;
-    const promotionDiscount = appliedPromotion?.discount || 0;
+    // Discount from applied coupons and promotions
+    const couponDiscount = appliedCoupons.reduce((sum, c) => sum + (c.discount || 0), 0);
+    const promotionDiscount = appliedPromotions.reduce((sum, p) => sum + (p.discount || 0), 0);
     const discount = couponDiscount + promotionDiscount;
 
     // Final total = subtotal + delivery + surcharge - discount
@@ -422,8 +422,8 @@ export default function Checkout() {
                 delivery_fee: deliveryFee,
                 small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
-                coupon_code: appliedCoupon?.code,
-                promotion_code: appliedPromotion?.promotion_code,
+                coupon_codes: appliedCoupons.map(c => c.code).join(', '),
+                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name).join(', '),
                 total,
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
@@ -461,24 +461,24 @@ export default function Checkout() {
                 }
             }
 
-            // Increment coupon usage if applied
-            if (appliedCoupon) {
+            // Increment coupon usage for all applied coupons
+            for (const coupon of appliedCoupons) {
                 try {
-                    await base44.entities.Coupon.update(appliedCoupon.id, {
-                        usage_count: (appliedCoupon.usage_count || 0) + 1
+                    await base44.entities.Coupon.update(coupon.id, {
+                        usage_count: (coupon.usage_count || 0) + 1
                     });
                 } catch (error) {
                     console.error('Failed to update coupon usage:', error);
                 }
             }
 
-            // Increment promotion usage and update stats if applied
-            if (appliedPromotion) {
+            // Increment promotion usage and update stats for all applied promotions
+            for (const promo of appliedPromotions) {
                 try {
-                    await base44.entities.Promotion.update(appliedPromotion.id, {
-                        usage_count: (appliedPromotion.usage_count || 0) + 1,
-                        total_revenue_generated: (appliedPromotion.total_revenue_generated || 0) + total,
-                        total_discount_given: (appliedPromotion.total_discount_given || 0) + promotionDiscount
+                    await base44.entities.Promotion.update(promo.id, {
+                        usage_count: (promo.usage_count || 0) + 1,
+                        total_revenue_generated: (promo.total_revenue_generated || 0) + total,
+                        total_discount_given: (promo.total_discount_given || 0) + promo.discount
                     });
                 } catch (error) {
                     console.error('Failed to update promotion usage:', error);
@@ -847,8 +847,8 @@ export default function Checkout() {
                                     <DiscountCodeInput
                                         restaurantId={restaurantId}
                                         subtotal={subtotal}
-                                        onCouponApply={setAppliedCoupon}
-                                        onPromotionApply={setAppliedPromotion}
+                                        onCouponApply={setAppliedCoupons}
+                                        onPromotionApply={setAppliedPromotions}
                                     />
                                 </CardContent>
                             </Card>
@@ -974,18 +974,18 @@ export default function Checkout() {
                                             <span>£{smallOrderSurcharge.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    {couponDiscount > 0 && (
-                                        <div className="flex justify-between text-green-600">
-                                            <span>Coupon ({appliedCoupon?.code})</span>
-                                            <span>-£{couponDiscount.toFixed(2)}</span>
+                                    {appliedCoupons.map((coupon) => (
+                                        <div key={coupon.id} className="flex justify-between text-green-600">
+                                            <span>Coupon ({coupon.code})</span>
+                                            <span>-£{coupon.discount.toFixed(2)}</span>
                                         </div>
-                                    )}
-                                    {promotionDiscount > 0 && (
-                                        <div className="flex justify-between text-green-600">
-                                            <span>Promotion ({appliedPromotion?.promotion_code})</span>
-                                            <span>-£{promotionDiscount.toFixed(2)}</span>
+                                    ))}
+                                    {appliedPromotions.map((promo) => (
+                                        <div key={promo.id} className="flex justify-between text-green-600">
+                                            <span>Promo ({promo.name})</span>
+                                            <span>-£{promo.discount.toFixed(2)}</span>
                                         </div>
-                                    )}
+                                    ))}
                                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
                                         <span>Total</span>
                                         <span>£{total.toFixed(2)}</span>

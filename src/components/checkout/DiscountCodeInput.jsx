@@ -10,8 +10,8 @@ import { useEffect } from 'react';
 export default function DiscountCodeInput({ restaurantId, subtotal, onCouponApply, onPromotionApply }) {
     const [code, setCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
-    const [appliedCoupon, setAppliedCoupon] = useState(null);
-    const [appliedPromotion, setAppliedPromotion] = useState(null);
+    const [appliedCoupons, setAppliedCoupons] = useState([]);
+    const [appliedPromotions, setAppliedPromotions] = useState([]);
     const [autoPromotions, setAutoPromotions] = useState([]);
 
     // Auto-apply promotions without code
@@ -46,27 +46,11 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
 
                 setAutoPromotions(validPromotions);
 
-                // Auto-apply best promotion
-                if (validPromotions.length > 0 && !appliedPromotion && !appliedCoupon) {
-                    const bestPromo = validPromotions.reduce((best, current) => {
-                        let currentDiscount = 0;
-                        if (current.promotion_type === 'percentage_off') {
-                            currentDiscount = (subtotal * current.discount_value) / 100;
-                        } else if (current.promotion_type === 'fixed_amount_off') {
-                            currentDiscount = current.discount_value;
-                        }
-
-                        let bestDiscount = 0;
-                        if (best.promotion_type === 'percentage_off') {
-                            bestDiscount = (subtotal * best.discount_value) / 100;
-                        } else if (best.promotion_type === 'fixed_amount_off') {
-                            bestDiscount = best.discount_value;
-                        }
-
-                        return currentDiscount > bestDiscount ? current : best;
-                    });
-
-                    await validatePromotion(bestPromo);
+                // Auto-apply all valid promotions
+                if (validPromotions.length > 0 && appliedPromotions.length === 0) {
+                    for (const promo of validPromotions) {
+                        await validatePromotion(promo, true);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to check auto promotions:', error);
@@ -121,6 +105,12 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
     };
 
     const validateCoupon = async (coupon) => {
+        // Check if already applied
+        if (appliedCoupons.find(c => c.id === coupon.id)) {
+            toast.error('This coupon is already applied');
+            return;
+        }
+
         if (!coupon.is_active) {
             toast.error('This coupon is no longer active');
             return;
@@ -162,28 +152,35 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
             discount = coupon.discount_value;
         }
 
-        setAppliedCoupon({ ...coupon, discount });
-        onCouponApply({ ...coupon, discount });
+        const newCoupon = { ...coupon, discount };
+        setAppliedCoupons(prev => [...prev, newCoupon]);
+        onCouponApply([...appliedCoupons, newCoupon]);
         toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
     };
 
-    const validatePromotion = async (promotion) => {
+    const validatePromotion = async (promotion, isAuto = false) => {
+        // Check if already applied
+        if (appliedPromotions.find(p => p.id === promotion.id)) {
+            if (!isAuto) toast.error('This promotion is already applied');
+            return;
+        }
+
         const now = new Date();
         const start = new Date(promotion.start_date);
         const end = new Date(promotion.end_date);
         
         if (!isWithinInterval(now, { start, end })) {
-            toast.error('This promotion has expired');
+            if (!isAuto) toast.error('This promotion has expired');
             return;
         }
 
         if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) {
-            toast.error('This promotion has reached its usage limit');
+            if (!isAuto) toast.error('This promotion has reached its usage limit');
             return;
         }
 
         if (promotion.minimum_order && subtotal < promotion.minimum_order) {
-            toast.error(`Minimum order of £${promotion.minimum_order.toFixed(2)} required`);
+            if (!isAuto) toast.error(`Minimum order of £${promotion.minimum_order.toFixed(2)} required`);
             return;
         }
 
@@ -194,81 +191,108 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
             discount = promotion.discount_value;
         }
 
-        setAppliedPromotion({ ...promotion, discount });
-        onPromotionApply({ ...promotion, discount });
-        toast.success(`Promotion "${promotion.name}" applied!`);
+        const newPromotion = { ...promotion, discount };
+        setAppliedPromotions(prev => [...prev, newPromotion]);
+        onPromotionApply([...appliedPromotions, newPromotion]);
+        if (!isAuto) toast.success(`Promotion "${promotion.name}" applied!`);
     };
 
-    const removeDiscount = () => {
-        setAppliedCoupon(null);
-        setAppliedPromotion(null);
-        setCode('');
-        onCouponApply(null);
-        onPromotionApply(null);
+    const removeDiscount = (type, id) => {
+        if (type === 'coupon') {
+            const updated = appliedCoupons.filter(c => c.id !== id);
+            setAppliedCoupons(updated);
+            onCouponApply(updated);
+        } else {
+            const updated = appliedPromotions.filter(p => p.id !== id);
+            setAppliedPromotions(updated);
+            onPromotionApply(updated);
+        }
         toast.success('Discount removed');
     };
 
-    const appliedDiscount = appliedCoupon || appliedPromotion;
+    const allAppliedDiscounts = [...appliedCoupons, ...appliedPromotions];
 
     return (
         <div className="space-y-3">
-            {appliedDiscount ? (
-                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <Check className="h-5 w-5 text-green-600" />
+            {/* Applied Discounts List */}
+            {allAppliedDiscounts.length > 0 && (
+                <div className="space-y-2">
+                    {appliedCoupons.map((coupon) => (
+                        <div key={coupon.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Check className="h-4 w-4 text-green-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-green-900 text-sm">{coupon.code}</p>
+                                    <p className="text-xs text-green-700">
+                                        {coupon.description || `Saved £${coupon.discount.toFixed(2)}`}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeDiscount('coupon', coupon.id)}
+                                className="text-green-600 hover:text-green-800 h-8 w-8"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
-                        <div>
-                            <p className="font-semibold text-green-900">
-                                {appliedCoupon ? appliedCoupon.code : appliedPromotion.name}
-                            </p>
-                            <p className="text-sm text-green-700">
-                                {appliedCoupon 
-                                    ? (appliedCoupon.description || `Saved £${appliedCoupon.discount.toFixed(2)}`)
-                                    : `Saved £${appliedPromotion.discount.toFixed(2)}`
-                                }
-                            </p>
+                    ))}
+                    {appliedPromotions.map((promo) => (
+                        <div key={promo.id} className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Tag className="h-4 w-4 text-orange-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-orange-900 text-sm">{promo.name}</p>
+                                    <p className="text-xs text-orange-700">Saved £{promo.discount.toFixed(2)}</p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeDiscount('promotion', promo.id)}
+                                className="text-orange-600 hover:text-orange-800 h-8 w-8"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={removeDiscount}
-                        className="text-green-600 hover:text-green-800"
-                    >
-                        <X className="h-5 w-5" />
-                    </Button>
-                </div>
-            ) : (
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            placeholder="Enter coupon or promo code"
-                            value={code}
-                            onChange={(e) => setCode(e.target.value.toUpperCase())}
-                            onKeyPress={(e) => e.key === 'Enter' && validateCode()}
-                            className="pl-10 h-12 uppercase"
-                            disabled={isValidating}
-                        />
-                    </div>
-                    <Button
-                        onClick={validateCode}
-                        disabled={isValidating || !code.trim()}
-                        className="h-12 px-6"
-                        variant="outline"
-                    >
-                        {isValidating ? (
-                            <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Checking...
-                            </>
-                        ) : (
-                            'Apply'
-                        )}
-                    </Button>
+                    ))}
                 </div>
             )}
+
+            {/* Input to add more discounts */}
+            <div className="flex gap-2">
+                <div className="relative flex-1">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                        placeholder="Add another code"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        onKeyPress={(e) => e.key === 'Enter' && validateCode()}
+                        className="pl-10 h-12 uppercase"
+                        disabled={isValidating}
+                    />
+                </div>
+                <Button
+                    onClick={validateCode}
+                    disabled={isValidating || !code.trim()}
+                    className="h-12 px-6"
+                    variant="outline"
+                >
+                    {isValidating ? (
+                        <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Checking...
+                        </>
+                    ) : (
+                        'Apply'
+                    )}
+                </Button>
+            </div>
         </div>
     );
 }
