@@ -196,6 +196,114 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                             </div>
                         </div>
                     )}
+
+                    {/* Gallery Photos */}
+                    {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Award className="h-5 w-5 text-orange-500" />
+                                Gallery
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {restaurant.gallery_images.map((image, idx) => (
+                                    <img
+                                        key={idx}
+                                        src={image}
+                                        alt={`${restaurant.name} photo ${idx + 1}`}
+                                        className="w-full h-32 object-cover rounded-lg border hover:scale-105 transition-transform cursor-pointer"
+                                        onClick={() => window.open(image, '_blank')}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Awards & Certifications */}
+                    {restaurant.awards_certifications && restaurant.awards_certifications.length > 0 && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Trophy className="h-5 w-5 text-orange-500" />
+                                Awards & Certifications
+                            </h3>
+                            <div className="space-y-4">
+                                {restaurant.awards_certifications.map((award, idx) => (
+                                    <div key={idx} className="flex gap-4 p-4 border rounded-lg bg-gray-50">
+                                        {award.image_url && (
+                                            <img
+                                                src={award.image_url}
+                                                alt={award.title}
+                                                className="w-20 h-20 object-contain border rounded bg-white"
+                                            />
+                                        )}
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900">{award.title}</h4>
+                                            {award.issuer && (
+                                                <p className="text-sm text-gray-600">
+                                                    {award.issuer} {award.year && `• ${award.year}`}
+                                                </p>
+                                            )}
+                                            {award.description && (
+                                                <p className="text-sm text-gray-500 mt-1">{award.description}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Social Media */}
+                    {restaurant.social_media && Object.values(restaurant.social_media).some(url => url) && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-3">Follow Us</h3>
+                            <div className="flex flex-wrap gap-3">
+                                {restaurant.social_media.facebook && (
+                                    <a
+                                        href={restaurant.social_media.facebook}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Facebook className="h-5 w-5 text-blue-600" />
+                                        <span className="text-sm font-medium">Facebook</span>
+                                    </a>
+                                )}
+                                {restaurant.social_media.instagram && (
+                                    <a
+                                        href={restaurant.social_media.instagram}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Instagram className="h-5 w-5 text-pink-600" />
+                                        <span className="text-sm font-medium">Instagram</span>
+                                    </a>
+                                )}
+                                {restaurant.social_media.twitter && (
+                                    <a
+                                        href={restaurant.social_media.twitter}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Twitter className="h-5 w-5 text-blue-400" />
+                                        <span className="text-sm font-medium">Twitter</span>
+                                    </a>
+                                )}
+                                {restaurant.social_media.website && (
+                                    <a
+                                        href={restaurant.social_media.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Globe className="h-5 w-5 text-gray-600" />
+                                        <span className="text-sm font-medium">Website</span>
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>
