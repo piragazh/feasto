@@ -7,6 +7,7 @@ import DriverDashboard from './pages/DriverDashboard';
 import Favorites from './pages/Favorites';
 import GroupOrder from './pages/GroupOrder';
 import Home from './pages/Home';
+import LoyaltyProgram from './pages/LoyaltyProgram';
 import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import Messages from './pages/Messages';
@@ -18,7 +19,6 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import LoyaltyProgram from './pages/LoyaltyProgram';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +32,7 @@ export const PAGES = {
     "Favorites": Favorites,
     "GroupOrder": GroupOrder,
     "Home": Home,
+    "LoyaltyProgram": LoyaltyProgram,
     "ManageCoupons": ManageCoupons,
     "ManageRestaurantManagers": ManageRestaurantManagers,
     "Messages": Messages,
@@ -43,7 +44,6 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "LoyaltyProgram": LoyaltyProgram,
 }
 
 export const pagesConfig = {

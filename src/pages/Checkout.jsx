@@ -103,6 +103,9 @@ export default function Checkout() {
     
     // User Authentication Status
     const [isGuest, setIsGuest] = useState(false); // Is user checking out as guest?
+    const [emailChecked, setEmailChecked] = useState(false);
+    const [emailExists, setEmailExists] = useState(false);
+    const [checkingEmail, setCheckingEmail] = useState(false);
 
     // ============================================
     // INITIALIZATION - Runs when page loads
@@ -157,6 +160,28 @@ export default function Checkout() {
             setIsGuest(!authenticated); // If not authenticated, they're a guest
         } catch (e) {
             setIsGuest(true); // On error, assume guest
+        }
+    };
+
+    const checkEmailExists = async (email) => {
+        if (!email || !email.includes('@')) return;
+        
+        setCheckingEmail(true);
+        try {
+            const users = await base44.entities.User.filter({ email: email.toLowerCase() });
+            setEmailExists(users && users.length > 0);
+            setEmailChecked(true);
+        } catch (error) {
+            setEmailExists(false);
+            setEmailChecked(false);
+        } finally {
+            setCheckingEmail(false);
+        }
+    };
+
+    const handleEmailBlur = () => {
+        if (formData.guest_email && !emailChecked) {
+            checkEmailExists(formData.guest_email);
         }
     };
 
@@ -580,12 +605,55 @@ export default function Checkout() {
                             {isGuest && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <User className="h-5 w-5 text-orange-500" />
-                                            Your Details
-                                        </CardTitle>
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="flex items-center gap-2">
+                                                <User className="h-5 w-5 text-orange-500" />
+                                                Your Details
+                                            </CardTitle>
+                                            <Button
+                                                type="button"
+                                                variant="link"
+                                                onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                                                className="text-orange-500 hover:text-orange-600 text-sm h-auto p-0"
+                                            >
+                                                Already registered? Sign in
+                                            </Button>
+                                        </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
+                                        <div>
+                                            <Label htmlFor="guest_email">Email Address *</Label>
+                                            <Input
+                                                id="guest_email"
+                                                type="email"
+                                                placeholder="john@example.com"
+                                                value={formData.guest_email}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, guest_email: e.target.value });
+                                                    setEmailChecked(false);
+                                                    setEmailExists(false);
+                                                }}
+                                                onBlur={handleEmailBlur}
+                                                className="h-12"
+                                                required
+                                            />
+                                            {checkingEmail && (
+                                                <p className="text-xs text-gray-500 mt-1">Checking...</p>
+                                            )}
+                                            {emailChecked && emailExists && (
+                                                <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                                    <p className="text-sm text-orange-800 mb-2">This email is already registered!</p>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                                                        size="sm"
+                                                        className="bg-orange-500 hover:bg-orange-600 text-white h-9"
+                                                    >
+                                                        Sign in to continue
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
                                         <div>
                                             <Label htmlFor="guest_name">Full Name *</Label>
                                             <Input
@@ -594,18 +662,6 @@ export default function Checkout() {
                                                 placeholder="John Smith"
                                                 value={formData.guest_name}
                                                 onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })}
-                                                className="h-12"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="guest_email">Email Address *</Label>
-                                            <Input
-                                                id="guest_email"
-                                                type="email"
-                                                placeholder="john@example.com"
-                                                value={formData.guest_email}
-                                                onChange={(e) => setFormData({ ...formData, guest_email: e.target.value })}
                                                 className="h-12"
                                                 required
                                             />
