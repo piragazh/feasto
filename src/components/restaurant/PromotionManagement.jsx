@@ -97,6 +97,8 @@ export default function PromotionManagement({ restaurantId }) {
             is_active: promotion.is_active,
             usage_limit: promotion.usage_limit || null
         });
+        // Switch to create tab to show the form
+        document.querySelector('[value="create"]')?.click();
     };
 
     const handleSubmit = (e) => {

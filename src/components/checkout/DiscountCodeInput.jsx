@@ -5,12 +5,76 @@ import { Button } from "@/components/ui/button";
 import { Tag, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { isWithinInterval } from 'date-fns';
+import { useEffect } from 'react';
 
 export default function DiscountCodeInput({ restaurantId, subtotal, onCouponApply, onPromotionApply }) {
     const [code, setCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [appliedPromotion, setAppliedPromotion] = useState(null);
+    const [autoPromotions, setAutoPromotions] = useState([]);
+
+    // Auto-apply promotions without code
+    useEffect(() => {
+        if (!restaurantId) return;
+        
+        const checkAutoPromotions = async () => {
+            try {
+                const promotions = await base44.entities.Promotion.filter({
+                    restaurant_id: restaurantId,
+                    is_active: true
+                });
+
+                const now = new Date();
+                const validPromotions = promotions.filter(p => {
+                    // Only promotions without codes
+                    if (p.promotion_code) return false;
+
+                    // Check date range
+                    const start = new Date(p.start_date);
+                    const end = new Date(p.end_date);
+                    if (!isWithinInterval(now, { start, end })) return false;
+
+                    // Check usage limit
+                    if (p.usage_limit && p.usage_count >= p.usage_limit) return false;
+
+                    // Check minimum order
+                    if (p.minimum_order && subtotal < p.minimum_order) return false;
+
+                    return true;
+                });
+
+                setAutoPromotions(validPromotions);
+
+                // Auto-apply best promotion
+                if (validPromotions.length > 0 && !appliedPromotion && !appliedCoupon) {
+                    const bestPromo = validPromotions.reduce((best, current) => {
+                        let currentDiscount = 0;
+                        if (current.promotion_type === 'percentage_off') {
+                            currentDiscount = (subtotal * current.discount_value) / 100;
+                        } else if (current.promotion_type === 'fixed_amount_off') {
+                            currentDiscount = current.discount_value;
+                        }
+
+                        let bestDiscount = 0;
+                        if (best.promotion_type === 'percentage_off') {
+                            bestDiscount = (subtotal * best.discount_value) / 100;
+                        } else if (best.promotion_type === 'fixed_amount_off') {
+                            bestDiscount = best.discount_value;
+                        }
+
+                        return currentDiscount > bestDiscount ? current : best;
+                    });
+
+                    await validatePromotion(bestPromo);
+                }
+            } catch (error) {
+                console.error('Failed to check auto promotions:', error);
+            }
+        };
+
+        checkAutoPromotions();
+    }, [restaurantId, subtotal]);
 
     const validateCode = async () => {
         if (!code.trim()) {
