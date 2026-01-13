@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,7 @@ export default function PromotionManagement({ restaurantId }) {
         promotion_type: 'percentage_off',
         discount_value: 0,
         minimum_order: 0,
+        applicable_items: [],
         start_date: '',
         end_date: '',
         is_active: true,
@@ -40,6 +41,12 @@ export default function PromotionManagement({ restaurantId }) {
     const { data: orders = [] } = useQuery({
         queryKey: ['promotion-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
+    });
+
+    const { data: menuItems = [] } = useQuery({
+        queryKey: ['menuItems', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
     });
 
     const createPromotionMutation = useMutation({
@@ -78,6 +85,7 @@ export default function PromotionManagement({ restaurantId }) {
             promotion_type: 'percentage_off',
             discount_value: 0,
             minimum_order: 0,
+            applicable_items: [],
             start_date: '',
             end_date: '',
             is_active: true,
@@ -94,6 +102,7 @@ export default function PromotionManagement({ restaurantId }) {
             promotion_type: promotion.promotion_type,
             discount_value: promotion.discount_value || 0,
             minimum_order: promotion.minimum_order || 0,
+            applicable_items: promotion.applicable_items || [],
             start_date: promotion.start_date ? format(new Date(promotion.start_date), "yyyy-MM-dd'T'HH:mm") : '',
             end_date: promotion.end_date ? format(new Date(promotion.end_date), "yyyy-MM-dd'T'HH:mm") : '',
             is_active: promotion.is_active,
@@ -135,6 +144,7 @@ export default function PromotionManagement({ restaurantId }) {
         percentage_off: Percent,
         fixed_amount_off: DollarSign,
         buy_one_get_one: Gift,
+        buy_two_get_one: Gift,
         free_delivery: Truck
     };
 
@@ -247,6 +257,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                             {promotion.promotion_type === 'percentage_off' 
                                                                 ? `${promotion.discount_value}%`
                                                                 : promotion.promotion_type === 'buy_one_get_one' ? 'BOGO'
+                                                                : promotion.promotion_type === 'buy_two_get_one' ? 'B2G1'
                                                                 : promotion.promotion_type === 'free_delivery' ? 'Free'
                                                                 : `£${promotion.discount_value}`}
                                                         </p>
@@ -369,13 +380,50 @@ export default function PromotionManagement({ restaurantId }) {
                                         <SelectContent>
                                             <SelectItem value="percentage_off">Percentage Off</SelectItem>
                                             <SelectItem value="fixed_amount_off">Fixed Amount Off</SelectItem>
-                                            <SelectItem value="buy_one_get_one">Buy One Get One</SelectItem>
+                                            <SelectItem value="buy_one_get_one">Buy One Get One Free</SelectItem>
+                                            <SelectItem value="buy_two_get_one">Buy Two Get One Free</SelectItem>
                                             <SelectItem value="free_delivery">Free Delivery</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                {formData.promotion_type !== 'free_delivery' && (
+                                {(formData.promotion_type === 'buy_one_get_one' || formData.promotion_type === 'buy_two_get_one') && (
+                                    <div>
+                                        <Label>Applicable Items *</Label>
+                                        <p className="text-xs text-gray-500 mb-2">Select which items this promotion applies to</p>
+                                        <div className="border rounded-lg p-3 max-h-64 overflow-y-auto space-y-2">
+                                            {menuItems.length === 0 ? (
+                                                <p className="text-sm text-gray-500 text-center py-4">No menu items found</p>
+                                            ) : (
+                                                menuItems.map(item => (
+                                                    <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData.applicable_items.includes(item.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setFormData({ 
+                                                                        ...formData, 
+                                                                        applicable_items: [...formData.applicable_items, item.id] 
+                                                                    });
+                                                                } else {
+                                                                    setFormData({ 
+                                                                        ...formData, 
+                                                                        applicable_items: formData.applicable_items.filter(id => id !== item.id) 
+                                                                    });
+                                                                }
+                                                            }}
+                                                            className="rounded"
+                                                        />
+                                                        <span className="text-sm">{item.name} - £{item.price.toFixed(2)}</span>
+                                                    </label>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {formData.promotion_type !== 'free_delivery' && formData.promotion_type !== 'buy_one_get_one' && formData.promotion_type !== 'buy_two_get_one' && (
                                     <div>
                                         <Label>
                                             Discount Value * ({formData.promotion_type === 'percentage_off' ? '%' : '£'})

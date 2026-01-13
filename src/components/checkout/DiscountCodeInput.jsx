@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { isWithinInterval } from 'date-fns';
 import { useEffect } from 'react';
 
-export default function DiscountCodeInput({ restaurantId, subtotal, onCouponApply, onPromotionApply }) {
+export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = [], onCouponApply, onPromotionApply }) {
     const [code, setCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [appliedCoupons, setAppliedCoupons] = useState([]);
@@ -49,7 +49,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
                 // Auto-apply all valid promotions
                 if (validPromotions.length > 0 && appliedPromotions.length === 0) {
                     for (const promo of validPromotions) {
-                        await validatePromotion(promo, true);
+                        await validatePromotion(promo, true, cartItems);
                     }
                 }
             } catch (error) {
@@ -89,7 +89,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
             });
 
             if (promotions.length > 0) {
-                await validatePromotion(promotions[0]);
+                await validatePromotion(promotions[0], false, cartItems);
                 setIsValidating(false);
                 return;
             }
@@ -158,7 +158,38 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
         toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
     };
 
-    const validatePromotion = async (promotion, isAuto = false) => {
+    const calculateBogoDiscount = (promotion, cartItems) => {
+        if (!promotion.applicable_items || promotion.applicable_items.length === 0) {
+            return 0;
+        }
+
+        // Get cart items that match the promotion
+        const eligibleItems = cartItems.filter(item => 
+            promotion.applicable_items.includes(item.menu_item_id)
+        );
+
+        if (eligibleItems.length === 0) return 0;
+
+        let totalDiscount = 0;
+
+        if (promotion.promotion_type === 'buy_one_get_one') {
+            // For each eligible item, give free items based on quantity
+            eligibleItems.forEach(item => {
+                const freeItems = Math.floor(item.quantity / 2);
+                totalDiscount += freeItems * item.price;
+            });
+        } else if (promotion.promotion_type === 'buy_two_get_one') {
+            // For each eligible item, give free items based on quantity
+            eligibleItems.forEach(item => {
+                const freeItems = Math.floor(item.quantity / 3);
+                totalDiscount += freeItems * item.price;
+            });
+        }
+
+        return totalDiscount;
+    };
+
+    const validatePromotion = async (promotion, isAuto = false, cartItems = []) => {
         // Check if already applied
         if (appliedPromotions.find(p => p.id === promotion.id)) {
             if (!isAuto) toast.error('This promotion is already applied');
@@ -189,12 +220,18 @@ export default function DiscountCodeInput({ restaurantId, subtotal, onCouponAppl
             discount = (subtotal * promotion.discount_value) / 100;
         } else if (promotion.promotion_type === 'fixed_amount_off') {
             discount = promotion.discount_value;
+        } else if (promotion.promotion_type === 'buy_one_get_one' || promotion.promotion_type === 'buy_two_get_one') {
+            discount = calculateBogoDiscount(promotion, cartItems);
+            if (discount === 0 && !isAuto) {
+                toast.error('No eligible items in cart for this promotion');
+                return;
+            }
         }
 
         const newPromotion = { ...promotion, discount };
         setAppliedPromotions(prev => [...prev, newPromotion]);
         onPromotionApply([...appliedPromotions, newPromotion]);
-        if (!isAuto) toast.success(`Promotion "${promotion.name}" applied!`);
+        if (!isAuto) toast.success(`Promotion "${promotion.name}" applied! Saved £${discount.toFixed(2)}`);
     };
 
     const removeDiscount = (type, id) => {

@@ -847,6 +847,7 @@ export default function Checkout() {
                                     <DiscountCodeInput
                                         restaurantId={restaurantId}
                                         subtotal={subtotal}
+                                        cartItems={cart}
                                         onCouponApply={setAppliedCoupons}
                                         onPromotionApply={setAppliedPromotions}
                                     />
