@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 
 export default function PromotionManagement({ restaurantId }) {
     const [editingPromotion, setEditingPromotion] = useState(null);
+    const [activeTab, setActiveTab] = useState('manage');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -69,6 +70,7 @@ export default function PromotionManagement({ restaurantId }) {
 
     const resetForm = () => {
         setEditingPromotion(null);
+        setActiveTab('manage');
         setFormData({
             name: '',
             description: '',
@@ -90,15 +92,14 @@ export default function PromotionManagement({ restaurantId }) {
             description: promotion.description || '',
             promotion_code: promotion.promotion_code || '',
             promotion_type: promotion.promotion_type,
-            discount_value: promotion.discount_value,
+            discount_value: promotion.discount_value || 0,
             minimum_order: promotion.minimum_order || 0,
             start_date: promotion.start_date ? format(new Date(promotion.start_date), "yyyy-MM-dd'T'HH:mm") : '',
             end_date: promotion.end_date ? format(new Date(promotion.end_date), "yyyy-MM-dd'T'HH:mm") : '',
             is_active: promotion.is_active,
             usage_limit: promotion.usage_limit || null
         });
-        // Switch to create tab to show the form
-        document.querySelector('[value="create"]')?.click();
+        setActiveTab('create');
     };
 
     const handleSubmit = (e) => {
@@ -195,7 +196,7 @@ export default function PromotionManagement({ restaurantId }) {
                 </Card>
             </div>
 
-            <Tabs defaultValue="manage">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
                     <TabsTrigger value="manage">Manage Promotions</TabsTrigger>
                     <TabsTrigger value="create">Create New</TabsTrigger>
