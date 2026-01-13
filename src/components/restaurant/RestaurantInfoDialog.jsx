@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, Truck, Store, Star, Award } from 'lucide-react';
+import { MapPin, Clock, Truck, Store, Star, Award, Facebook, Instagram, Twitter, Globe, Trophy } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
