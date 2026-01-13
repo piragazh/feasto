@@ -19,8 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle, User } from 'lucide-react'; // Icons
-import CouponInput from '@/components/checkout/CouponInput'; // Coupon application component
-import PromotionCodeInput from '@/components/checkout/PromotionCodeInput'; // Promotion code application
+import DiscountCodeInput from '@/components/checkout/DiscountCodeInput'; // Discount code application
 import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
 import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection'; // Schedule future orders
 import GroupOrderSection from '@/components/checkout/GroupOrderSection'; // Group order functionality
@@ -89,6 +88,7 @@ export default function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState('card'); // Selected payment method (default: card)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
+    const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
@@ -331,7 +331,18 @@ export default function Checkout() {
         
         console.log('All validations passed, proceeding...');
 
-        // For CASH: Create order immediately
+        // For CASH: Show confirmation dialog
+        if (paymentMethod === 'cash') {
+            setShowCashConfirmation(true);
+            return;
+        }
+
+        // For other payment methods: Create order immediately
+        await createOrder();
+    };
+
+    const confirmCashOrder = async () => {
+        setShowCashConfirmation(false);
         await createOrder();
     };
 
@@ -829,25 +840,14 @@ export default function Checkout() {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Have a Coupon?</CardTitle>
+                                    <CardTitle>Discount Code</CardTitle>
+                                    <p className="text-xs text-gray-500 mt-1">Enter a coupon or promo code</p>
                                 </CardHeader>
                                 <CardContent>
-                                    <CouponInput
+                                    <DiscountCodeInput
                                         restaurantId={restaurantId}
                                         subtotal={subtotal}
                                         onCouponApply={setAppliedCoupon}
-                                    />
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Have a Promotion Code?</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <PromotionCodeInput
-                                        restaurantId={restaurantId}
-                                        subtotal={subtotal}
                                         onPromotionApply={setAppliedPromotion}
                                     />
                                 </CardContent>
@@ -1007,6 +1007,56 @@ export default function Checkout() {
                     </div>
                 </div>
             </div>
+
+            {/* Cash Confirmation Dialog */}
+            {showCashConfirmation && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+                    >
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-3xl">💵</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                Confirm Cash Payment
+                            </h3>
+                            <p className="text-gray-600 mb-2">
+                                You'll pay <span className="font-bold text-orange-500">£{total.toFixed(2)}</span> in cash when your order arrives.
+                            </p>
+                            <p className="text-sm text-gray-500 mb-6">
+                                Please have the exact amount ready or small change.
+                            </p>
+                            <div className="space-y-2">
+                                <Button
+                                    onClick={confirmCashOrder}
+                                    disabled={isSubmitting}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white h-12"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                            Placing Order...
+                                        </>
+                                    ) : (
+                                        'Confirm Order'
+                                    )}
+                                </Button>
+                                <Button
+                                    onClick={() => setShowCashConfirmation(false)}
+                                    variant="outline"
+                                    disabled={isSubmitting}
+                                    className="w-full h-12"
+                                >
+                                    Go Back
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }
