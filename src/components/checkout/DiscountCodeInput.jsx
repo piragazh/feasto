@@ -160,15 +160,25 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
 
     const calculateBogoDiscount = (promotion, cartItems) => {
         if (!promotion.applicable_items || promotion.applicable_items.length === 0) {
+            console.log('No applicable items for promotion:', promotion.name);
             return 0;
         }
+
+        console.log('Calculating BOGO discount for promotion:', promotion.name);
+        console.log('Applicable items:', promotion.applicable_items);
+        console.log('Cart items:', cartItems);
 
         // Get cart items that match the promotion
         const eligibleItems = cartItems.filter(item => 
             promotion.applicable_items.includes(item.menu_item_id)
         );
 
-        if (eligibleItems.length === 0) return 0;
+        console.log('Eligible items found:', eligibleItems);
+
+        if (eligibleItems.length === 0) {
+            console.log('No eligible items found in cart');
+            return 0;
+        }
 
         let totalDiscount = 0;
 
@@ -176,16 +186,21 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             // For each eligible item, give free items based on quantity
             eligibleItems.forEach(item => {
                 const freeItems = Math.floor(item.quantity / 2);
-                totalDiscount += freeItems * item.price;
+                const itemDiscount = freeItems * item.price;
+                console.log(`BOGO - Item: ${item.name}, Qty: ${item.quantity}, Free: ${freeItems}, Discount: £${itemDiscount}`);
+                totalDiscount += itemDiscount;
             });
         } else if (promotion.promotion_type === 'buy_two_get_one') {
             // For each eligible item, give free items based on quantity
             eligibleItems.forEach(item => {
                 const freeItems = Math.floor(item.quantity / 3);
-                totalDiscount += freeItems * item.price;
+                const itemDiscount = freeItems * item.price;
+                console.log(`B2G1 - Item: ${item.name}, Qty: ${item.quantity}, Free: ${freeItems}, Discount: £${itemDiscount}`);
+                totalDiscount += itemDiscount;
             });
         }
 
+        console.log('Total BOGO discount calculated:', totalDiscount);
         return totalDiscount;
     };
 
