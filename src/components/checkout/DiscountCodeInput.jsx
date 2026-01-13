@@ -159,11 +159,50 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
     };
 
     const calculateBogoDiscount = (promotion, cartItems) => {
-        // BOGO/B2G1 promotions are already applied at cart level
-        // The extra items are already added to the cart
-        // We should NOT calculate a separate discount
-        // Instead, we just return 0 to indicate discount is already built-in
-        return 0;
+        if (!promotion.applicable_items || promotion.applicable_items.length === 0) {
+            return 0;
+        }
+
+        console.log('=== BOGO DISCOUNT CALCULATION ===');
+        console.log('Promotion:', promotion.name, promotion.promotion_type);
+        console.log('Applicable item IDs:', promotion.applicable_items);
+        console.log('Cart items:', cartItems);
+
+        // Get cart items that match the promotion
+        const eligibleItems = cartItems.filter(item => 
+            promotion.applicable_items.includes(item.menu_item_id)
+        );
+
+        console.log('Eligible items in cart:', eligibleItems);
+
+        if (eligibleItems.length === 0) {
+            console.log('No eligible items found');
+            return 0;
+        }
+
+        let totalDiscount = 0;
+
+        eligibleItems.forEach(item => {
+            console.log(`Processing item: ${item.name}`);
+            console.log(`- Quantity: ${item.quantity}`);
+            console.log(`- Price per item: £${item.price}`);
+            
+            let freeItems = 0;
+            if (promotion.promotion_type === 'buy_one_get_one') {
+                freeItems = Math.floor(item.quantity / 2);
+            } else if (promotion.promotion_type === 'buy_two_get_one') {
+                freeItems = Math.floor(item.quantity / 3);
+            }
+            
+            const itemDiscount = freeItems * item.price;
+            console.log(`- Free items: ${freeItems}`);
+            console.log(`- Discount: £${itemDiscount}`);
+            
+            totalDiscount += itemDiscount;
+        });
+
+        console.log('TOTAL BOGO DISCOUNT:', totalDiscount);
+        return totalDiscount;
     };
 
     const validatePromotion = async (promotion, isAuto = false, cartItems = []) => {
