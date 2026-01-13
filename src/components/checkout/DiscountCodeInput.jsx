@@ -153,8 +153,9 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
         }
 
         const newCoupon = { ...coupon, discount };
-        setAppliedCoupons(prev => [...prev, newCoupon]);
-        onCouponApply([...appliedCoupons, newCoupon]);
+        const updatedCoupons = [...appliedCoupons, newCoupon];
+        setAppliedCoupons(updatedCoupons);
+        onCouponApply(updatedCoupons);
         toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
     };
 
@@ -245,8 +246,9 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
         }
 
         const newPromotion = { ...promotion, discount };
-        setAppliedPromotions(prev => [...prev, newPromotion]);
-        onPromotionApply([...appliedPromotions, newPromotion]);
+        const updatedPromotions = [...appliedPromotions, newPromotion];
+        setAppliedPromotions(updatedPromotions);
+        onPromotionApply(updatedPromotions);
         if (!isAuto) toast.success(`Promotion "${promotion.name}" applied! Saved £${discount.toFixed(2)}`);
     };
 
