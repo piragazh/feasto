@@ -982,9 +982,9 @@ export default function Checkout() {
                                         </div>
                                     ))}
                                     {appliedPromotions.map((promo) => (
-                                        <div key={promo.id} className="flex justify-between text-green-600">
+                                        <div key={promo.id} className="flex justify-between text-purple-600">
                                             <span>Promo ({promo.name})</span>
-                                            <span>-£{promo.discount.toFixed(2)}</span>
+                                            <span>-£{(promo.discount || 0).toFixed(2)}</span>
                                         </div>
                                     ))}
                                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
