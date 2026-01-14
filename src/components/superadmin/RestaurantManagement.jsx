@@ -57,7 +57,10 @@ export default function RestaurantManagement() {
     );
 
     const getOnboardingLink = (token) => {
-        return `${window.location.origin}${window.location.pathname}#/RestaurantOnboarding?token=${token}`;
+        if (!token) return '';
+        const path = window.location.pathname || '';
+        const basePath = path.split('#')[0] || '';
+        return `${window.location.origin}${basePath}#/RestaurantOnboarding?token=${token}`;
     };
 
     const copyToClipboard = (text) => {
@@ -161,8 +164,9 @@ export default function RestaurantManagement() {
                             {onboardingDialog && getOnboardingLink(onboardingDialog.token)}
                         </div>
                         <Button
-                            onClick={() => copyToClipboard(getOnboardingLink(onboardingDialog.token))}
+                            onClick={() => onboardingDialog?.token && copyToClipboard(getOnboardingLink(onboardingDialog.token))}
                             className="w-full"
+                            disabled={!onboardingDialog?.token}
                         >
                             <Copy className="h-4 w-4 mr-2" />
                             Copy Link
