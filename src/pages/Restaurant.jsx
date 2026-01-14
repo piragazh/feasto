@@ -264,37 +264,27 @@ export default function Restaurant() {
     // Scroll spy - update active category based on scroll position
      useEffect(() => {
          const handleScroll = () => {
-             const scrollOffset = 200;
+             const scrollPosition = window.scrollY + 200;
              
-             let closestCategory = null;
-             let closestDistance = Infinity;
-
-             // Find the category section closest to current viewport
              for (const category of categories) {
                  const element = categoryRefs.current[category];
                  if (element) {
-                     const rect = element.getBoundingClientRect();
-                     // Use distance from top of viewport
-                     if (rect.top >= -rect.height && rect.top <= scrollOffset) {
-                         const distance = scrollOffset - rect.top;
-                         if (distance < closestDistance) {
-                             closestDistance = distance;
-                             closestCategory = category;
-                         }
+                     const offsetTop = element.offsetTop;
+                     const offsetBottom = offsetTop + element.offsetHeight;
+                     
+                     if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
+                         setActiveCategoryScroll(category);
+                         break;
                      }
                  }
-             }
-
-             if (closestCategory && closestCategory !== activeCategoryScroll) {
-                 setActiveCategoryScroll(closestCategory);
              }
          };
 
          window.addEventListener('scroll', handleScroll);
-         handleScroll(); // Initial check
+         handleScroll();
 
          return () => window.removeEventListener('scroll', handleScroll);
-     }, [categories, activeCategoryScroll]);
+     }, [categories]);
 
     const getActivePromotionForItem = (itemId) => {
         const now = new Date();
