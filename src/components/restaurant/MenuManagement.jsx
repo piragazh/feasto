@@ -9,10 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -120,8 +121,10 @@ export default function MenuManagement({ restaurantId }) {
     const removeCategoryMutation = useMutation({
         mutationFn: (categoryName) => {
             const currentCategories = restaurant?.menu_categories || [];
+            const currentOrder = restaurant?.category_order || [];
             return base44.entities.Restaurant.update(restaurantId, {
-                menu_categories: currentCategories.filter(c => c !== categoryName)
+                menu_categories: currentCategories.filter(c => c !== categoryName),
+                category_order: currentOrder.filter(c => c !== categoryName)
             });
         },
         onSuccess: () => {
@@ -129,6 +132,42 @@ export default function MenuManagement({ restaurantId }) {
             toast.success('Category removed');
         },
     });
+
+    const reorderCategoriesMutation = useMutation({
+        mutationFn: (newOrder) => {
+            return base44.entities.Restaurant.update(restaurantId, {
+                category_order: newOrder
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant']);
+            toast.success('Category order updated');
+        },
+    });
+
+    const handleDragEnd = (result) => {
+        if (!result.destination) return;
+
+        const orderedCategories = getOrderedCategories();
+        const reordered = Array.from(orderedCategories);
+        const [removed] = reordered.splice(result.source.index, 1);
+        reordered.splice(result.destination.index, 0, removed);
+
+        reorderCategoriesMutation.mutate(reordered);
+    };
+
+    const getOrderedCategories = () => {
+        const currentOrder = restaurant?.category_order || [];
+        const allCategories = restaurant?.menu_categories || [];
+        
+        // Start with ordered categories
+        const ordered = currentOrder.filter(cat => allCategories.includes(cat));
+        
+        // Add any new categories not in the order yet
+        const unordered = allCategories.filter(cat => !currentOrder.includes(cat));
+        
+        return [...ordered, ...unordered];
+    };
 
     const bulkDeleteMutation = useMutation({
         mutationFn: async (itemIds) => {
@@ -185,7 +224,7 @@ export default function MenuManagement({ restaurantId }) {
         }
     };
 
-    const categories = restaurant?.menu_categories || [];
+    const categories = getOrderedCategories();
     
     const filteredMenuItems = menuItems.filter(item => {
         const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
@@ -250,7 +289,10 @@ export default function MenuManagement({ restaurantId }) {
             <Card>
                 <CardContent className="pt-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Menu Categories</h3>
+                        <div>
+                            <h3 className="text-lg font-semibold">Menu Categories</h3>
+                            <p className="text-sm text-gray-500">Drag to reorder how categories appear on your menu</p>
+                        </div>
                         <Button 
                             size="sm" 
                             variant="outline"
@@ -260,41 +302,65 @@ export default function MenuManagement({ restaurantId }) {
                             Add Category
                         </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {categories.length === 0 ? (
-                            <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
-                        ) : (
-                            categories.map((category) => (
-                                <Badge key={category} variant="secondary" className="text-sm py-1 px-3 flex items-center gap-2">
-                                    {category}
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            onClick={() => {
-                                                setEditingCategory(category);
-                                                setNewCategoryName(category);
-                                                setCategoryDialogOpen(true);
-                                            }}
-                                            className="text-gray-500 hover:text-blue-600"
-                                            title="Edit category"
-                                        >
-                                            <Edit className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                if (confirm(`Remove category "${category}"?`)) {
-                                                    removeCategoryMutation.mutate(category);
-                                                }
-                                            }}
-                                            className="text-gray-500 hover:text-red-600"
-                                            title="Remove category"
-                                        >
-                                            ×
-                                        </button>
+                    {categories.length === 0 ? (
+                        <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
+                    ) : (
+                        <DragDropContext onDragEnd={handleDragEnd}>
+                            <Droppable droppableId="categories" direction="horizontal">
+                                {(provided) => (
+                                    <div 
+                                        {...provided.droppableProps}
+                                        ref={provided.innerRef}
+                                        className="flex flex-wrap gap-2"
+                                    >
+                                        {categories.map((category, index) => (
+                                            <Draggable key={category} draggableId={category} index={index}>
+                                                {(provided, snapshot) => (
+                                                    <div
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
+                                                    >
+                                                        <Badge variant="secondary" className="text-sm py-1.5 px-3 flex items-center gap-2">
+                                                            <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                                                <GripVertical className="h-4 w-4 text-gray-400" />
+                                                            </div>
+                                                            {category}
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingCategory(category);
+                                                                        setNewCategoryName(category);
+                                                                        setCategoryDialogOpen(true);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-blue-600"
+                                                                    title="Edit category"
+                                                                >
+                                                                    <Edit className="h-3 w-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (confirm(`Remove category "${category}"?`)) {
+                                                                            removeCategoryMutation.mutate(category);
+                                                                        }
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-600"
+                                                                    title="Remove category"
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            </div>
+                                                        </Badge>
+                                                    </div>
+                                                )}
+                                            </Draggable>
+                                        ))}
+                                        {provided.placeholder}
                                     </div>
-                                </Badge>
-                            ))
-                        )}
-                    </div>
+                                )}
+                            </Droppable>
+                        </DragDropContext>
+                    )}
                 </CardContent>
             </Card>
             
