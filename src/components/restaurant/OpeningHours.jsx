@@ -86,9 +86,9 @@ export default function OpeningHours({ openingHours, isOpen }) {
                             >
                                 <span className="capitalize">{day}</span>
                                 <span>
-                                    {hours?.closed ? (
+                                    {!hours || hours.closed === true ? (
                                         'Closed'
-                                    ) : hours?.open && hours?.close ? (
+                                    ) : (hours.open && hours.close) ? (
                                         `${formatTime(hours.open)} - ${formatTime(hours.close)}`
                                     ) : (
                                         'Not set'
