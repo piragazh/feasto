@@ -137,24 +137,28 @@ export default function Restaurant() {
     });
 
     const categories = React.useMemo(() => {
+        // Get category order - use exact case matching with actual menu item categories
         const categoryOrder = restaurant?.category_order || [];
         const allCategories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
         
-        // Create case-insensitive lookup for matching
+        // Create map of lowercase to actual category name from menu items
         const categoryMap = {};
         allCategories.forEach(cat => {
             categoryMap[cat.toLowerCase()] = cat;
         });
         
-        // Start with ordered categories that exist in menu items (case-insensitive match)
+        // Map the stored order to actual menu item category names
         const ordered = categoryOrder
-            .map(cat => categoryMap[cat.toLowerCase()])
-            .filter(Boolean);
+            .map(savedCat => {
+                // Find the actual category name in menu items (case-insensitive)
+                return categoryMap[savedCat.toLowerCase()] || savedCat;
+            })
+            .filter(cat => allCategories.includes(cat));
         
         // Add any categories not in the order yet (sorted alphabetically)
-        const orderedLower = ordered.map(c => c.toLowerCase());
+        const orderedSet = new Set(ordered);
         const unordered = allCategories
-            .filter(cat => !orderedLower.includes(cat.toLowerCase()))
+            .filter(cat => !orderedSet.has(cat))
             .sort();
         
         return [...ordered, ...unordered];
