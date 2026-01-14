@@ -253,6 +253,11 @@ export default function MenuManagement({ restaurantId }) {
 
     const handleEdit = (item) => {
         setEditingItem(item);
+        // Ensure meal_customizations are properly loaded
+        const customizations = (item.customization_options || []).map(opt => ({
+            ...opt,
+            meal_customizations: opt.meal_customizations || []
+        }));
         setFormData({
             name: item.name,
             description: item.description || '',
@@ -263,7 +268,7 @@ export default function MenuManagement({ restaurantId }) {
             is_vegetarian: item.is_vegetarian || false,
             is_spicy: item.is_spicy || false,
             is_available: item.is_available !== false,
-            customization_options: item.customization_options || []
+            customization_options: customizations
         });
         setDialogOpen(true);
     };
