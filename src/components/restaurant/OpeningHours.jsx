@@ -79,6 +79,9 @@ export default function OpeningHours({ openingHours, isOpen }) {
                         const hours = openingHours[day];
                         const isToday = day === today;
                         
+                        const openFormatted = formatTime(hours?.open);
+                        const closeFormatted = formatTime(hours?.close);
+                        
                         return (
                             <div 
                                 key={day}
@@ -88,8 +91,8 @@ export default function OpeningHours({ openingHours, isOpen }) {
                                 <span>
                                     {!hours || hours.closed === true ? (
                                         'Closed'
-                                    ) : (hours.open && hours.close) ? (
-                                        `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+                                    ) : (openFormatted && closeFormatted) ? (
+                                        `${openFormatted} - ${closeFormatted}`
                                     ) : (
                                         'Not set'
                                     )}
