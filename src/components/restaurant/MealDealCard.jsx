@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Percent } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function MealDealCard({ deal, onAddToCart, onCustomize }) {
+export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustomization }) {
     const discount = deal.original_price ? Math.round(((deal.original_price - deal.deal_price) / deal.original_price) * 100) : 0;
+    const hasFixedItems = deal.items?.length > 0;
+    const hasCategoryRules = deal.category_rules?.length > 0;
 
     return (
         <motion.div
@@ -31,17 +33,20 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize }) {
                         </Badge>
                     </div>
                     
-                    <p className="text-gray-600 text-xs mb-2 line-clamp-1">{deal.description}</p>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{deal.description}</p>
                     
-                    {deal.deal_type === 'category_based' && deal.category_rules?.length > 0 ? (
-                        <p className="text-xs text-gray-500 mb-2 line-clamp-1">
-                            {deal.category_rules.map(rule => rule.label || `${rule.quantity}x ${rule.category}`).join(' + ')}
-                        </p>
-                    ) : deal.items?.length > 0 ? (
-                        <p className="text-xs text-gray-500 mb-2 line-clamp-1">
-                            {deal.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
-                        </p>
-                    ) : null}
+                    <div className="text-xs text-gray-500 mb-2 space-y-1">
+                        {hasFixedItems && (
+                            <div className="line-clamp-1">
+                                <span className="font-medium">Includes:</span> {deal.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
+                            </div>
+                        )}
+                        {hasCategoryRules && (
+                            <div className="line-clamp-1">
+                                <span className="font-medium">Choose:</span> {deal.category_rules.map(rule => rule.label || `${rule.quantity}x ${rule.category}`).join(' + ')}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
@@ -55,7 +60,7 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize }) {
                         
                         <Button
                             onClick={() => {
-                                if (deal.deal_type === 'category_based' && onCustomize) {
+                                if (hasCategoryRules && onCustomize) {
                                     onCustomize(deal);
                                 } else {
                                     onAddToCart(deal);
@@ -65,7 +70,7 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize }) {
                             className="bg-orange-500 hover:bg-orange-600 h-8"
                         >
                             <Plus className="h-4 w-4 mr-1" />
-                            {deal.deal_type === 'category_based' ? 'Customize' : 'Add'}
+                            {hasCategoryRules ? 'Customize' : 'Add'}
                         </Button>
                     </div>
                 </div>
