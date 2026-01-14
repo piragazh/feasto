@@ -39,6 +39,7 @@ export default function Orders() {
         queryFn: async () => {
             try {
                 const user = await base44.auth.me();
+                if (!user?.email) return [];
                 const result = await base44.entities.Order.filter({ created_by: user.email }, '-created_date');
                 return (result || []).filter(order => order && order.id && order.restaurant_name);
             } catch (e) {
@@ -46,14 +47,19 @@ export default function Orders() {
                 return [];
             }
         },
-        refetchInterval: 15000,
+        refetchInterval: 30000,
     });
 
     const { data: reviews = [] } = useQuery({
         queryKey: ['user-reviews'],
         queryFn: async () => {
-            const user = await base44.auth.me();
-            return base44.entities.Review.filter({ created_by: user.email });
+            try {
+                const user = await base44.auth.me();
+                if (!user?.email) return [];
+                return base44.entities.Review.filter({ created_by: user.email });
+            } catch (e) {
+                return [];
+            }
         },
     });
 
