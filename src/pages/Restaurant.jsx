@@ -268,24 +268,29 @@ export default function Restaurant() {
     // Scroll spy - update active category based on scroll position
      useEffect(() => {
          const handleScroll = () => {
-             const scrollPosition = window.scrollY + 180;
-             let foundCategory = null;
-             let maxTop = -Infinity;
+             const scrollOffset = 200;
+             
+             let closestCategory = null;
+             let closestDistance = Infinity;
 
-             // Check all rendered category sections and find the one closest to viewport
+             // Find the category section closest to current viewport
              for (const category of categories) {
                  const element = categoryRefs.current[category];
                  if (element) {
-                     const offsetTop = element.offsetTop;
-                     if (offsetTop <= scrollPosition && offsetTop > maxTop) {
-                         maxTop = offsetTop;
-                         foundCategory = category;
+                     const rect = element.getBoundingClientRect();
+                     // Use distance from top of viewport
+                     if (rect.top >= -rect.height && rect.top <= scrollOffset) {
+                         const distance = scrollOffset - rect.top;
+                         if (distance < closestDistance) {
+                             closestDistance = distance;
+                             closestCategory = category;
+                         }
                      }
                  }
              }
 
-             if (foundCategory) {
-                 setActiveCategoryScroll(foundCategory);
+             if (closestCategory && closestCategory !== activeCategoryScroll) {
+                 setActiveCategoryScroll(closestCategory);
              }
          };
 
@@ -293,7 +298,7 @@ export default function Restaurant() {
          handleScroll(); // Initial check
 
          return () => window.removeEventListener('scroll', handleScroll);
-     }, [categories]);
+     }, [categories, activeCategoryScroll]);
 
     const getActivePromotionForItem = (itemId) => {
         const now = new Date();
