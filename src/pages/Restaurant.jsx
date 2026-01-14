@@ -263,30 +263,34 @@ export default function Restaurant() {
     }, [categories]);
 
     // Scroll spy - update active category based on scroll position
-    useEffect(() => {
-        const handleScroll = () => {
-            const scrollPosition = window.scrollY + 180;
+     useEffect(() => {
+         const handleScroll = () => {
+             const scrollPosition = window.scrollY + 180;
+             let foundCategory = null;
+             let maxTop = -Infinity;
 
-            // Use categories array order instead of sorting refs
-            for (const category of categories) {
-                const element = categoryRefs.current[category];
-                if (element) {
-                    const offsetTop = element.offsetTop;
-                    const offsetBottom = offsetTop + element.offsetHeight;
+             // Check all rendered category sections and find the one closest to viewport
+             for (const category of categories) {
+                 const element = categoryRefs.current[category];
+                 if (element) {
+                     const offsetTop = element.offsetTop;
+                     if (offsetTop <= scrollPosition && offsetTop > maxTop) {
+                         maxTop = offsetTop;
+                         foundCategory = category;
+                     }
+                 }
+             }
 
-                    if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
-                        setActiveCategoryScroll(category);
-                        break;
-                    }
-                }
-            }
-        };
+             if (foundCategory) {
+                 setActiveCategoryScroll(foundCategory);
+             }
+         };
 
-        window.addEventListener('scroll', handleScroll);
-        handleScroll(); // Initial check
+         window.addEventListener('scroll', handleScroll);
+         handleScroll(); // Initial check
 
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [categories]);
+         return () => window.removeEventListener('scroll', handleScroll);
+     }, [categories]);
 
     const getActivePromotionForItem = (itemId) => {
         const now = new Date();
