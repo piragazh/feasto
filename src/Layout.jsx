@@ -264,81 +264,79 @@ export default function Layout({ children, currentPageName }) {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-56">
-                                        <div className="md:hidden">
-                                            <DropdownMenuItem asChild>
-                                                <Link to={createPageUrl('Home')} className="flex items-center gap-2">
-                                                    <Home className="h-4 w-4" />
-                                                    Restaurants
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem asChild>
-                                                <Link to={createPageUrl('Orders')} className="flex items-center gap-2">
-                                                    <ShoppingBag className="h-4 w-4" />
-                                                    My Orders
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem asChild>
-                                                <Link to={createPageUrl('Favorites')} className="flex items-center gap-2">
-                                                    <Heart className="h-4 w-4" />
-                                                    Favorites
-                                                </Link>
-                                            </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link to={createPageUrl('Messages')} className="flex items-center gap-2">
-                                                        <MessageSquare className="h-4 w-4" />
-                                                        Messages
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link to={createPageUrl('CustomerProfile')} className="flex items-center gap-2">
-                                                        <User className="h-4 w-4" />
-                                                        My Profile
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                {isRestaurantManager && (
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={createPageUrl('RestaurantDashboard')} className="flex items-center gap-2">
-                                                            <Home className="h-4 w-4" />
-                                                            Restaurant Dashboard
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {user?.role === 'admin' && (
-                                                <>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={createPageUrl('SuperAdmin')} className="flex items-center gap-2">
-                                                            <Home className="h-4 w-4" />
-                                                            Super Admin Panel
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={createPageUrl('AdminDashboard')} className="flex items-center gap-2">
-                                                            <Home className="h-4 w-4" />
-                                                            Admin Dashboard
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={createPageUrl('AdminRestaurants')} className="flex items-center gap-2">
-                                                            <Home className="h-4 w-4" />
-                                                            Manage Restaurants
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={createPageUrl('ManageCoupons')} className="flex items-center gap-2">
-                                                            <Tag className="h-4 w-4" />
-                                                            Manage Coupons
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={createPageUrl('ManageRestaurantManagers')} className="flex items-center gap-2">
-                                                            <User className="h-4 w-4" />
-                                                            Restaurant Managers
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
-                                            <DropdownMenuSeparator />
-                                        </div>
+                                       <DropdownMenuItem asChild className="md:hidden">
+                                           <Link to={createPageUrl('Home')} className="flex items-center gap-2">
+                                               <Home className="h-4 w-4" />
+                                               Restaurants
+                                           </Link>
+                                       </DropdownMenuItem>
+                                       <DropdownMenuItem asChild className="md:hidden">
+                                           <Link to={createPageUrl('Orders')} className="flex items-center gap-2">
+                                               <ShoppingBag className="h-4 w-4" />
+                                               My Orders
+                                           </Link>
+                                       </DropdownMenuItem>
+                                       <DropdownMenuItem asChild>
+                                           <Link to={createPageUrl('Favorites')} className="flex items-center gap-2">
+                                               <Heart className="h-4 w-4" />
+                                               Favorites
+                                           </Link>
+                                       </DropdownMenuItem>
+                                       <DropdownMenuItem asChild>
+                                           <Link to={createPageUrl('Messages')} className="flex items-center gap-2">
+                                               <MessageSquare className="h-4 w-4" />
+                                               Messages
+                                           </Link>
+                                       </DropdownMenuItem>
+                                       <DropdownMenuItem asChild>
+                                           <Link to={createPageUrl('CustomerProfile')} className="flex items-center gap-2">
+                                               <User className="h-4 w-4" />
+                                               My Profile
+                                           </Link>
+                                       </DropdownMenuItem>
+                                       {isRestaurantManager && (
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('RestaurantDashboard')} className="flex items-center gap-2">
+                                                   <Home className="h-4 w-4" />
+                                                   Restaurant Dashboard
+                                               </Link>
+                                           </DropdownMenuItem>
+                                       )}
+                                       {user?.role === 'admin' && (
+                                       <>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('SuperAdmin')} className="flex items-center gap-2">
+                                                   <Home className="h-4 w-4" />
+                                                   Super Admin Panel
+                                               </Link>
+                                           </DropdownMenuItem>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('AdminDashboard')} className="flex items-center gap-2">
+                                                   <Home className="h-4 w-4" />
+                                                   Admin Dashboard
+                                               </Link>
+                                           </DropdownMenuItem>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('AdminRestaurants')} className="flex items-center gap-2">
+                                                   <Home className="h-4 w-4" />
+                                                   Manage Restaurants
+                                               </Link>
+                                           </DropdownMenuItem>
+                                           <DropdownMenuItem asChild className="md:hidden">
+                                               <Link to={createPageUrl('ManageCoupons')} className="flex items-center gap-2">
+                                                   <Tag className="h-4 w-4" />
+                                                   Manage Coupons
+                                               </Link>
+                                           </DropdownMenuItem>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('ManageRestaurantManagers')} className="flex items-center gap-2">
+                                                   <User className="h-4 w-4" />
+                                                   Restaurant Managers
+                                               </Link>
+                                           </DropdownMenuItem>
+                                       </>
+                                       )}
+                                       <DropdownMenuSeparator />
                                         {user && (
                                             <>
                                                 <div className="px-2 py-1.5">
