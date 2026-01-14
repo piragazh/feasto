@@ -18,8 +18,9 @@ export default function LoyaltyProgramSettings() {
         name: '',
         description: '',
         points_required: 0,
-        reward_type: 'discount',
-        reward_value: 0
+        reward_type: 'fixed_discount',
+        discount_value: 0,
+        is_active: true
     });
     const queryClient = useQueryClient();
 
@@ -76,8 +77,9 @@ export default function LoyaltyProgramSettings() {
             name: '',
             description: '',
             points_required: 0,
-            reward_type: 'discount',
-            reward_value: 0
+            reward_type: 'fixed_discount',
+            discount_value: 0,
+            is_active: true
         });
         setEditingReward(null);
     };
@@ -97,7 +99,8 @@ export default function LoyaltyProgramSettings() {
             description: reward.description || '',
             points_required: reward.points_required,
             reward_type: reward.reward_type,
-            reward_value: reward.reward_value
+            discount_value: reward.discount_value || 0,
+            is_active: reward.is_active !== false
         });
         setShowRewardDialog(true);
     };
@@ -206,11 +209,21 @@ export default function LoyaltyProgramSettings() {
                                                 <Badge className="ml-2">{reward.points_required} points</Badge>
                                             </div>
                                             <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                                                <span className="capitalize">{reward.reward_type}</span>
-                                                <span>•</span>
-                                                <span className="font-medium text-green-600">
-                                                    {reward.reward_type === 'discount' ? `£${reward.reward_value}` : reward.reward_value}
-                                                </span>
+                                                <span className="capitalize">{reward.reward_type.replace('_', ' ')}</span>
+                                                {reward.discount_value > 0 && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="font-medium text-green-600">
+                                                            {reward.reward_type === 'percentage_discount' ? `${reward.discount_value}% off` : `£${reward.discount_value} off`}
+                                                        </span>
+                                                    </>
+                                                )}
+                                                {!reward.is_active && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <Badge variant="destructive">Inactive</Badge>
+                                                    </>
+                                                )}
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button size="sm" variant="outline" onClick={() => handleEditReward(reward)}>
@@ -324,19 +337,32 @@ export default function LoyaltyProgramSettings() {
                                 value={rewardForm.reward_type}
                                 onChange={(e) => setRewardForm({ ...rewardForm, reward_type: e.target.value })}
                             >
-                                <option value="discount">Discount</option>
+                                <option value="percentage_discount">Percentage Discount</option>
+                                <option value="fixed_discount">Fixed Discount</option>
                                 <option value="free_delivery">Free Delivery</option>
                                 <option value="free_item">Free Item</option>
                             </select>
                         </div>
                         <div>
-                            <Label>Reward Value (£)</Label>
+                            <Label>
+                                {rewardForm.reward_type === 'percentage_discount' ? 'Discount (%)' : 'Discount Value (£)'}
+                            </Label>
                             <Input
                                 type="number"
-                                step="0.01"
-                                value={rewardForm.reward_value}
-                                onChange={(e) => setRewardForm({ ...rewardForm, reward_value: parseFloat(e.target.value) || 0 })}
+                                step={rewardForm.reward_type === 'percentage_discount' ? '1' : '0.01'}
+                                value={rewardForm.discount_value}
+                                onChange={(e) => setRewardForm({ ...rewardForm, discount_value: parseFloat(e.target.value) || 0 })}
                             />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="is_active"
+                                checked={rewardForm.is_active}
+                                onChange={(e) => setRewardForm({ ...rewardForm, is_active: e.target.checked })}
+                                className="rounded"
+                            />
+                            <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
                         </div>
                     </div>
                     <DialogFooter>
