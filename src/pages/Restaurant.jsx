@@ -261,13 +261,14 @@ export default function Restaurant() {
     useEffect(() => {
         const handleScroll = () => {
             const scrollPosition = window.scrollY + 180;
-            
-            for (const category of Object.keys(categoryRefs.current).sort()) {
+
+            // Use categories array order instead of sorting refs
+            for (const category of categories) {
                 const element = categoryRefs.current[category];
                 if (element) {
                     const offsetTop = element.offsetTop;
                     const offsetBottom = offsetTop + element.offsetHeight;
-                    
+
                     if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
                         setActiveCategoryScroll(category);
                         break;
@@ -278,9 +279,9 @@ export default function Restaurant() {
 
         window.addEventListener('scroll', handleScroll);
         handleScroll(); // Initial check
-        
+
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [itemsByCategory]);
+    }, [categories]);
 
     const getActivePromotionForItem = (itemId) => {
         const now = new Date();
