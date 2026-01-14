@@ -37,6 +37,12 @@ export default function AdminRestaurants() {
         enabled: !isChecking,
     });
 
+    const { data: managers = [] } = useQuery({
+        queryKey: ['restaurant-managers'],
+        queryFn: () => base44.entities.RestaurantManager.list(),
+        enabled: !isChecking,
+    });
+
     const deleteRestaurantMutation = useMutation({
         mutationFn: (id) => base44.entities.Restaurant.delete(id),
         onSuccess: () => {
@@ -85,12 +91,6 @@ export default function AdminRestaurants() {
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.cuisine_type?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    const { data: managers = [] } = useQuery({
-        queryKey: ['restaurant-managers'],
-        queryFn: () => base44.entities.RestaurantManager.list(),
-        enabled: !isChecking,
-    });
 
     const getOwnerName = (restaurantId) => {
         const manager = managers.find(m => m.restaurant_ids?.includes(restaurantId));
