@@ -143,13 +143,13 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                     <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
                                         <span className="font-medium text-gray-700">{dayName}</span>
                                         <span className="text-gray-600">
-                                            {!hours || hours.closed ? (
+                                            {hours?.closed === true ? (
                                                 <Badge variant="secondary">Closed</Badge>
                                             ) : (
                                                 <span className="font-medium">
-                                                    {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                    {formatTime(hours?.open || '09:00')} - {formatTime(hours?.close || '22:00')}
                                                     <span className="text-xs text-gray-400 ml-2">
-                                                        ({hours.open || '09:00'} - {hours.close || '22:00'})
+                                                        ({hours?.open || '09:00'} - {hours?.close || '22:00'})
                                                     </span>
                                                 </span>
                                             )}
@@ -175,13 +175,13 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                     <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
                                         <span className="font-medium text-gray-700">{dayName}</span>
                                         <span className="text-gray-600">
-                                            {!hours || hours.closed ? (
+                                            {hours?.closed === true ? (
                                                 <Badge variant="secondary">No Delivery</Badge>
                                             ) : (
                                                 <span className="font-medium">
-                                                    {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                    {formatTime(hours?.open || '09:00')} - {formatTime(hours?.close || '22:00')}
                                                     <span className="text-xs text-gray-400 ml-2">
-                                                        ({hours.open || '09:00'} - {hours.close || '22:00'})
+                                                        ({hours?.open || '09:00'} - {hours?.close || '22:00'})
                                                     </span>
                                                 </span>
                                             )}
@@ -208,13 +208,13 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                         <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
                                             <span className="font-medium text-gray-700">{dayName}</span>
                                             <span className="text-gray-600">
-                                                {!hours || hours.closed ? (
+                                                {hours?.closed === true ? (
                                                     <Badge variant="secondary">No Collection</Badge>
                                                 ) : (
                                                     <span className="font-medium">
-                                                        {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                        {formatTime(hours?.open || '09:00')} - {formatTime(hours?.close || '22:00')}
                                                         <span className="text-xs text-gray-400 ml-2">
-                                                            ({hours.open || '09:00'} - {hours.close || '22:00'})
+                                                            ({hours?.open || '09:00'} - {hours?.close || '22:00'})
                                                         </span>
                                                     </span>
                                                 )}
