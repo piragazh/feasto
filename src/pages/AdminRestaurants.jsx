@@ -86,9 +86,15 @@ export default function AdminRestaurants() {
         r.cuisine_type?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const { data: managers = [] } = useQuery({
+        queryKey: ['restaurant-managers'],
+        queryFn: () => base44.entities.RestaurantManager.list(),
+        enabled: !isChecking,
+    });
+
     const getOwnerName = (restaurantId) => {
-        const owner = users.find(u => u.restaurant_id === restaurantId);
-        return owner ? owner.full_name || owner.email : 'Unassigned';
+        const manager = managers.find(m => m.restaurant_ids?.includes(restaurantId));
+        return manager ? manager.full_name || manager.user_email : 'Unassigned';
     };
 
     return (

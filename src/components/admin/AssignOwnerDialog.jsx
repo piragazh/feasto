@@ -14,18 +14,24 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
     const [selectedUserId, setSelectedUserId] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserName, setNewUserName] = useState('');
+    const [currentManager, setCurrentManager] = useState(null);
 
     const queryClient = useQueryClient();
 
     useEffect(() => {
-        if (open && restaurant) {
-            const currentOwner = users.find(u => u.restaurant_id === restaurant.id);
-            setSelectedUserId(currentOwner?.id || '');
-            setAssignmentType('existing');
-            setNewUserEmail('');
-            setNewUserName('');
-        }
-    }, [open, restaurant, users]);
+        const loadCurrentManager = async () => {
+            if (open && restaurant) {
+                const managers = await base44.entities.RestaurantManager.filter({});
+                const manager = managers.find(m => m.restaurant_ids?.includes(restaurant.id));
+                setCurrentManager(manager);
+                setSelectedUserId('');
+                setAssignmentType('existing');
+                setNewUserEmail('');
+                setNewUserName('');
+            }
+        };
+        loadCurrentManager();
+    }, [open, restaurant]);
 
     const assignOwnerMutation = useMutation({
         mutationFn: async ({ userId, restaurantId }) => {
@@ -51,6 +57,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
             }
         },
         onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant-managers']);
             queryClient.invalidateQueries(['all-users']);
             toast.success('Manager assigned successfully');
             onClose();
@@ -64,6 +71,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
             toast.success('User invited! They need to log in, then you can assign them.');
         },
         onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant-managers']);
             queryClient.invalidateQueries(['all-users']);
             onClose();
         },
@@ -94,6 +102,37 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
         }
     };
 
+    const removeOwnerMutation = useMutation({
+        mutationFn: async ({ managerId, restaurantId }) => {
+            const manager = await base44.entities.RestaurantManager.filter({ id: managerId });
+            if (manager.length > 0) {
+                const updatedRestaurantIds = manager[0].restaurant_ids.filter(id => id !== restaurantId);
+                if (updatedRestaurantIds.length === 0) {
+                    await base44.entities.RestaurantManager.delete(managerId);
+                } else {
+                    await base44.entities.RestaurantManager.update(managerId, {
+                        restaurant_ids: updatedRestaurantIds,
+                    });
+                }
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant-managers']);
+            queryClient.invalidateQueries(['all-users']);
+            toast.success('Owner removed successfully');
+            onClose();
+        },
+    });
+
+    const handleRemoveOwner = () => {
+        if (currentManager && confirm('Remove this owner from the restaurant?')) {
+            removeOwnerMutation.mutate({
+                managerId: currentManager.id,
+                restaurantId: restaurant.id
+            });
+        }
+    };
+
     if (!restaurant) return null;
 
     return (
@@ -102,6 +141,27 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
                 <DialogHeader>
                     <DialogTitle>Assign Owner to {restaurant.name}</DialogTitle>
                 </DialogHeader>
+
+                {currentManager && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-blue-900">Current Owner</p>
+                                <p className="text-sm text-blue-700">{currentManager.full_name || currentManager.user_email}</p>
+                            </div>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={handleRemoveOwner}
+                                disabled={removeOwnerMutation.isPending}
+                            >
+                                Remove
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <RadioGroup value={assignmentType} onValueChange={setAssignmentType}>
                         <div className="flex items-center space-x-2">
