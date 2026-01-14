@@ -1035,10 +1035,10 @@ export default function Restaurant() {
                     <div className="space-y-12">
                         {categories.map((category) => {
                             // Find items for this category (case-insensitive match)
-                            const items = Object.keys(itemsByCategory).find(key => 
+                            const matchingKey = Object.keys(itemsByCategory).find(key => 
                                 key.toLowerCase() === category.toLowerCase()
                             );
-                            const categoryItems = items ? itemsByCategory[items] : [];
+                            const categoryItems = matchingKey ? itemsByCategory[matchingKey] : [];
                             if (!categoryItems || categoryItems.length === 0) return null;
                             return (
                             <div 
