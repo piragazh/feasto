@@ -140,11 +140,22 @@ export default function Restaurant() {
         const categoryOrder = restaurant?.category_order || [];
         const allCategories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
         
-        // Start with ordered categories that exist in menu items
-        const ordered = categoryOrder.filter(cat => allCategories.includes(cat));
+        // Create case-insensitive lookup for matching
+        const categoryMap = {};
+        allCategories.forEach(cat => {
+            categoryMap[cat.toLowerCase()] = cat;
+        });
+        
+        // Start with ordered categories that exist in menu items (case-insensitive match)
+        const ordered = categoryOrder
+            .map(cat => categoryMap[cat.toLowerCase()])
+            .filter(Boolean);
         
         // Add any categories not in the order yet (sorted alphabetically)
-        const unordered = allCategories.filter(cat => !categoryOrder.includes(cat)).sort();
+        const orderedLower = ordered.map(c => c.toLowerCase());
+        const unordered = allCategories
+            .filter(cat => !orderedLower.includes(cat.toLowerCase()))
+            .sort();
         
         return [...ordered, ...unordered];
     }, [menuItems, restaurant?.category_order]);
