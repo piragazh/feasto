@@ -137,9 +137,17 @@ export default function Restaurant() {
     });
 
     const categories = React.useMemo(() => {
-        const cats = [...new Set(menuItems.map(item => item.category).filter(Boolean))].sort();
-        return cats;
-    }, [menuItems]);
+        const categoryOrder = restaurant?.category_order || [];
+        const allCategories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
+        
+        // Start with ordered categories that exist in menu items
+        const ordered = categoryOrder.filter(cat => allCategories.includes(cat));
+        
+        // Add any categories not in the order yet (sorted alphabetically)
+        const unordered = allCategories.filter(cat => !categoryOrder.includes(cat)).sort();
+        
+        return [...ordered, ...unordered];
+    }, [menuItems, restaurant?.category_order]);
 
     const categoryRefs = React.useRef({});
 
@@ -1013,7 +1021,9 @@ export default function Restaurant() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {Object.entries(itemsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, items], index) => (
+                        {categories.filter(cat => itemsByCategory[cat]).map((category) => {
+                            const items = itemsByCategory[category];
+                            return (
                             <div 
                                 key={category} 
                                 ref={el => categoryRefs.current[category] = el}
@@ -1033,7 +1043,8 @@ export default function Restaurant() {
                                     ))}
                                 </div>
                             </div>
-                        ))}
+                        );
+                        })}
                     </div>
                 )}
 
