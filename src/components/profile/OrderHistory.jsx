@@ -91,7 +91,7 @@ export default function OrderHistory({ userEmail }) {
                                     </div>
                                 </div>
 
-                                <Link to={createPageUrl('TrackOrder') + `?orderId=${order.id}`}>
+                                <Link to={createPageUrl('TrackOrder') + `?id=${order.id}`}>
                                     <Button variant="outline" size="sm">
                                         View Details
                                         <ChevronRight className="h-4 w-4 ml-1" />
