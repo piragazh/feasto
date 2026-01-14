@@ -199,7 +199,11 @@ export default function Restaurant() {
     const [showRightArrow, setShowRightArrow] = React.useState(false);
 
     const scrollToCategory = (category) => {
-        const element = categoryRefs.current[category];
+        // Find the ref using case-insensitive matching
+        const refKey = Object.keys(categoryRefs.current).find(key => 
+            key.toLowerCase() === category.toLowerCase()
+        );
+        const element = refKey ? categoryRefs.current[refKey] : null;
         if (element) {
             element.scrollIntoView({ 
                 behavior: 'smooth', 
