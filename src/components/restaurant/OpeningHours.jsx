@@ -46,7 +46,14 @@ export default function OpeningHours({ openingHours, isOpen }) {
                 <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Clock className="h-5 w-5 text-orange-500" />
-                        Opening Hours
+                        <div className="flex flex-col">
+                            <span>Opening Hours</span>
+                            {todayHours && !todayHours.closed && (
+                                <span className="text-sm font-normal text-gray-500">
+                                    Today: {formatTime(todayHours.open)} - {formatTime(todayHours.close)}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {isCurrentlyOpen() ? (
