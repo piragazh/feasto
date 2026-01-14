@@ -33,16 +33,19 @@ export default function OpeningHours({ openingHours, isOpen }) {
     };
 
     const formatTime = (time) => {
-        if (!time || typeof time !== 'string') return '';
-        try {
-            const [hour, min] = time.split(':');
-            const h = parseInt(hour);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
-            return `${displayHour}:${min} ${ampm}`;
-        } catch (e) {
-            return '';
-        }
+        if (!time) return '';
+        if (typeof time !== 'string') return '';
+        if (!time.includes(':')) return '';
+        
+        const [hour, min] = time.split(':');
+        if (!hour || !min) return '';
+        
+        const h = parseInt(hour);
+        if (isNaN(h)) return '';
+        
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+        return `${displayHour}:${min} ${ampm}`;
     };
 
     return (
