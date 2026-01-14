@@ -1055,37 +1055,38 @@ export default function Restaurant() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {categories.map((category) => {
-                            // Find items for this category (case-insensitive match)
-                            const matchingKey = Object.keys(itemsByCategory).find(key => 
-                                key.toLowerCase() === category.toLowerCase()
-                            );
-                            const categoryItems = matchingKey ? itemsByCategory[matchingKey] : [];
-                            if (!categoryItems || categoryItems.length === 0) return null;
-                            return (
-                            <div 
-                                key={category} 
-                                ref={el => categoryRefs.current[category] = el}
-                                style={{ scrollMarginTop: '180px' }}
-                            >
-                                <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
-                                    {category}
-                                </h3>
-                                <div className="space-y-2">
-                                    {categoryItems.map(item => (
-                                        <MenuItemCard 
-                                            key={item.id} 
-                                            item={item} 
-                                            promotion={getActivePromotionForItem(item.id)}
-                                            onAddToCart={handleItemClick} 
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                        })}
-                    </div>
-                )}
+                         {categories.map((category) => {
+                             // Find items for this category (case-insensitive match)
+                             const matchingKey = Object.keys(itemsByCategory).find(key => 
+                                 key.toLowerCase() === category.toLowerCase()
+                             );
+                             const categoryItems = matchingKey ? itemsByCategory[matchingKey] : [];
+                             if (!categoryItems || categoryItems.length === 0) return null;
+                             return (
+                             <div 
+                                 key={matchingKey} 
+                                 ref={el => categoryRefs.current[category] = el}
+                                 data-category={category}
+                                 style={{ scrollMarginTop: '180px' }}
+                             >
+                                 <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
+                                     {matchingKey}
+                                 </h3>
+                                 <div className="space-y-2">
+                                     {categoryItems.map(item => (
+                                         <MenuItemCard 
+                                             key={item.id} 
+                                             item={item} 
+                                             promotion={getActivePromotionForItem(item.id)}
+                                             onAddToCart={handleItemClick} 
+                                         />
+                                     ))}
+                                 </div>
+                             </div>
+                         );
+                         })}
+                     </div>
+                 )}
 
                 <ItemCustomizationModal
                     item={selectedItem}
