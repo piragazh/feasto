@@ -165,6 +165,10 @@ export default function Restaurant() {
     }, [menuItems, restaurant?.category_order]);
 
     const categoryRefs = React.useRef({});
+    const categoriesIndexMap = React.useMemo(() => {
+        // Create a map of category names to their display order for consistency
+        return Object.fromEntries(categories.map((cat, idx) => [cat, idx]));
+    }, [categories]);
 
     const searchSuggestions = React.useMemo(() => {
         if (!menuSearchQuery || menuSearchQuery.length < 2) return [];
