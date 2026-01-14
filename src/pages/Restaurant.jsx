@@ -209,14 +209,10 @@ export default function Restaurant() {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
-            // Set active category before scrolling
-            setActiveCategoryScroll(category);
-            setTimeout(() => {
-                element.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start'
-                });
-            }, 0);
+            element.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start'
+            });
         }
     };
 
