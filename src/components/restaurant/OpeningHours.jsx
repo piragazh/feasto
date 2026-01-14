@@ -14,27 +14,35 @@ export default function OpeningHours({ openingHours, isOpen }) {
     const todayHours = openingHours[today];
 
     const isCurrentlyOpen = () => {
-        if (!todayHours || todayHours.closed) return false;
+        if (!todayHours || todayHours.closed || !todayHours.open || !todayHours.close) return false;
         
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        
-        const [openHour, openMin] = todayHours.open.split(':').map(Number);
-        const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
-        
-        const openTime = openHour * 60 + openMin;
-        const closeTime = closeHour * 60 + closeMin;
-        
-        return currentTime >= openTime && currentTime <= closeTime;
+        try {
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            
+            const [openHour, openMin] = todayHours.open.split(':').map(Number);
+            const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
+            
+            const openTime = openHour * 60 + openMin;
+            const closeTime = closeHour * 60 + closeMin;
+            
+            return currentTime >= openTime && currentTime <= closeTime;
+        } catch (e) {
+            return false;
+        }
     };
 
     const formatTime = (time) => {
-        if (!time) return '';
-        const [hour, min] = time.split(':');
-        const h = parseInt(hour);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
-        return `${displayHour}:${min} ${ampm}`;
+        if (!time || typeof time !== 'string') return '';
+        try {
+            const [hour, min] = time.split(':');
+            const h = parseInt(hour);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+            return `${displayHour}:${min} ${ampm}`;
+        } catch (e) {
+            return '';
+        }
     };
 
     return (
