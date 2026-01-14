@@ -172,6 +172,7 @@ export default function Restaurant() {
             );
         }
         
+        // Group by normalized category names (case-insensitive)
         const grouped = {};
         items.forEach(item => {
             const cat = item.category || 'Other';
@@ -179,7 +180,13 @@ export default function Restaurant() {
             grouped[cat].push(item);
         });
         
-        return grouped;
+        // Create a case-insensitive lookup
+        const normalizedGrouped = {};
+        Object.keys(grouped).forEach(key => {
+            normalizedGrouped[key.toLowerCase()] = grouped[key];
+        });
+        
+        return { original: grouped, normalized: normalizedGrouped };
     }, [menuItems, menuSearchQuery]);
 
     const categoryNavRef = React.useRef(null);
