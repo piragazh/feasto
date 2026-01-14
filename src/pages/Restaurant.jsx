@@ -1027,16 +1027,19 @@ export default function Restaurant() {
                             <Skeleton key={i} className="h-32 w-full rounded-2xl" />
                         ))}
                     </div>
-                ) : Object.keys(itemsByCategory.original).length === 0 ? (
+                ) : Object.keys(itemsByCategory).length === 0 ? (
                     <div className="text-center py-12">
                         <p className="text-gray-500">No items found</p>
                     </div>
                 ) : (
                     <div className="space-y-12">
                         {categories.map((category) => {
-                            // Try exact match first, then case-insensitive match
-                            const items = itemsByCategory.original[category] || itemsByCategory.normalized[category.toLowerCase()];
-                            if (!items || items.length === 0) return null;
+                            // Find items for this category (case-insensitive match)
+                            const items = Object.keys(itemsByCategory).find(key => 
+                                key.toLowerCase() === category.toLowerCase()
+                            );
+                            const categoryItems = items ? itemsByCategory[items] : [];
+                            if (!categoryItems || categoryItems.length === 0) return null;
                             return (
                             <div 
                                 key={category} 
@@ -1047,7 +1050,7 @@ export default function Restaurant() {
                                     {category}
                                 </h3>
                                 <div className="space-y-2">
-                                    {items.map(item => (
+                                    {categoryItems.map(item => (
                                         <MenuItemCard 
                                             key={item.id} 
                                             item={item} 
