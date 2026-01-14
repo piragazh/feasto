@@ -99,9 +99,22 @@ export default function RestaurantDashboard() {
             const userData = await base44.auth.me();
             setUser(userData);
             
-            // For admin users, just show first restaurant
+            // Check for restaurantId in URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const restaurantIdParam = urlParams.get('restaurantId');
+            
+            // For admin users, load restaurant from URL param or first restaurant
             if (userData.role === 'admin') {
                 const allRestaurants = await base44.entities.Restaurant.list();
+                
+                if (restaurantIdParam) {
+                    const restaurantData = allRestaurants.find(r => r.id === restaurantIdParam);
+                    if (restaurantData) {
+                        setRestaurant(restaurantData);
+                        return;
+                    }
+                }
+                
                 if (allRestaurants.length > 0) {
                     setRestaurant(allRestaurants[0]);
                 }
