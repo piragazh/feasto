@@ -1021,8 +1021,9 @@ export default function Restaurant() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {categories.filter(cat => itemsByCategory[cat]).map((category) => {
+                        {categories.map((category) => {
                             const items = itemsByCategory[category];
+                            if (!items || items.length === 0) return null;
                             return (
                             <div 
                                 key={category} 
