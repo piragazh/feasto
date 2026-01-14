@@ -484,7 +484,7 @@ export default function Restaurant() {
 
         try {
             // Title
-            document.title = `${restaurant.name || 'Restaurant'} - ${restaurant.cuisine_type || 'Food'} Delivery | MealDrop`;
+            document.title = `${restaurant.name || 'Restaurant'} - MealDrop`;
 
             // Meta description
             let metaDescription = document.querySelector('meta[name="description"]');
