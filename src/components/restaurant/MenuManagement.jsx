@@ -519,11 +519,20 @@ export default function MenuManagement({ restaurantId }) {
                                                     onChange={(e) => {
                                                         const newCustoms = [...formData.customization_options];
                                                         newCustoms[idx].type = e.target.value;
+                                                        // Initialize meal options if switching to meal_upgrade type
+                                                        if (e.target.value === 'meal_upgrade') {
+                                                            newCustoms[idx].options = [
+                                                                { label: 'On its Own', price: 0 },
+                                                                { label: 'Meal', price: 0 }
+                                                            ];
+                                                            newCustoms[idx].meal_customizations = [];
+                                                        }
                                                         setFormData({ ...formData, customization_options: newCustoms });
                                                     }}
                                                 >
                                                     <option value="single">Single Choice</option>
                                                     <option value="multiple">Multiple Choice</option>
+                                                    <option value="meal_upgrade">Meal Upgrade (On its Own / Meal)</option>
                                                 </select>
                                                 <Button
                                                     type="button"
@@ -537,32 +546,34 @@ export default function MenuManagement({ restaurantId }) {
                                                     Remove
                                                 </Button>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-sm">Load Options from Category</Label>
-                                                <select
-                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                                    onChange={(e) => {
-                                                        if (e.target.value) {
-                                                            const categoryItems = menuItems.filter(item => item.category === e.target.value);
-                                                            const newOptions = categoryItems.map(item => ({
-                                                                label: item.name,
-                                                                price: 0
-                                                            }));
-                                                            const newCustoms = [...formData.customization_options];
-                                                            newCustoms[idx].options = newOptions;
-                                                            setFormData({ ...formData, customization_options: newCustoms });
-                                                            toast.success(`Loaded ${newOptions.length} items from ${e.target.value}`);
-                                                            e.target.value = '';
-                                                        }
-                                                    }}
-                                                    defaultValue=""
-                                                >
-                                                    <option value="">Select category to load items...</option>
-                                                    {categories.map((cat) => (
-                                                        <option key={cat} value={cat}>{cat}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
+                                            {custom.type !== 'meal_upgrade' && (
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm">Load Options from Category</Label>
+                                                    <select
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                        onChange={(e) => {
+                                                            if (e.target.value) {
+                                                                const categoryItems = menuItems.filter(item => item.category === e.target.value);
+                                                                const newOptions = categoryItems.map(item => ({
+                                                                    label: item.name,
+                                                                    price: 0
+                                                                }));
+                                                                const newCustoms = [...formData.customization_options];
+                                                                newCustoms[idx].options = newOptions;
+                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                                toast.success(`Loaded ${newOptions.length} items from ${e.target.value}`);
+                                                                e.target.value = '';
+                                                            }
+                                                        }}
+                                                        defaultValue=""
+                                                    >
+                                                        <option value="">Select category to load items...</option>
+                                                        {categories.map((cat) => (
+                                                            <option key={cat} value={cat}>{cat}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-2">
                                                 <Switch
                                                     checked={custom.required}
@@ -575,80 +586,271 @@ export default function MenuManagement({ restaurantId }) {
                                                 <Label className="text-sm">Required</Label>
                                             </div>
                                             <div className="space-y-2">
-                                                {custom.options.map((opt, optIdx) => (
-                                                    <div key={optIdx} className="flex gap-2">
-                                                        <Input
-                                                            placeholder="Option label"
-                                                            value={opt.label}
-                                                            onChange={(e) => {
-                                                                const newCustoms = [...formData.customization_options];
-                                                                newCustoms[idx].options[optIdx].label = e.target.value;
-                                                                setFormData({ ...formData, customization_options: newCustoms });
-                                                            }}
-                                                            className="flex-1"
-                                                        />
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            placeholder="Extra £"
-                                                            value={opt.price}
-                                                            onChange={(e) => {
-                                                                const newCustoms = [...formData.customization_options];
-                                                                newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
-                                                                setFormData({ ...formData, customization_options: newCustoms });
-                                                            }}
-                                                            className="w-28"
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            onClick={() => {
-                                                                const newCustoms = [...formData.customization_options];
-                                                                newCustoms[idx].options = newCustoms[idx].options.filter((_, i) => i !== optIdx);
-                                                                setFormData({ ...formData, customization_options: newCustoms });
-                                                            }}
-                                                            className="h-10 w-10"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            const newCustoms = [...formData.customization_options];
-                                                            newCustoms[idx].options.push({ label: '', price: 0 });
-                                                            setFormData({ ...formData, customization_options: newCustoms });
-                                                        }}
-                                                        className="flex-1"
-                                                    >
-                                                        <Plus className="h-4 w-4 mr-1" />
-                                                        Add Option Row
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            const newCustoms = [...formData.customization_options];
-                                                            // Add 3 rows at once
-                                                            newCustoms[idx].options.push(
-                                                                { label: '', price: 0 },
-                                                                { label: '', price: 0 },
-                                                                { label: '', price: 0 }
-                                                            );
-                                                            setFormData({ ...formData, customization_options: newCustoms });
-                                                        }}
-                                                        className="whitespace-nowrap"
-                                                    >
-                                                        <Plus className="h-4 w-4 mr-1" />
-                                                        Add 3 Rows
-                                                    </Button>
-                                                </div>
+                                                {custom.type === 'meal_upgrade' ? (
+                                                    <>
+                                                        <Label className="text-sm font-medium">Meal Pricing</Label>
+                                                        {custom.options.map((opt, optIdx) => (
+                                                            <div key={optIdx} className="flex gap-2 items-center">
+                                                                <Input
+                                                                    value={opt.label}
+                                                                    onChange={(e) => {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options[optIdx].label = e.target.value;
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                    }}
+                                                                    className="flex-1"
+                                                                    placeholder={optIdx === 0 ? "On its Own" : "Meal"}
+                                                                />
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    placeholder={optIdx === 0 ? "£0.00 (base)" : "Extra £"}
+                                                                    value={opt.price}
+                                                                    onChange={(e) => {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                    }}
+                                                                    className="w-32"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                        
+                                                        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                            <Label className="text-sm font-medium mb-2 block">Meal Options (shown when "Meal" is selected)</Label>
+                                                            {(custom.meal_customizations || []).map((mealCustom, mealIdx) => (
+                                                                <Card key={mealIdx} className="p-3 mb-2 bg-white">
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex gap-2">
+                                                                            <Input
+                                                                                placeholder="e.g., Choose A Drink"
+                                                                                value={mealCustom.name}
+                                                                                onChange={(e) => {
+                                                                                    const newCustoms = [...formData.customization_options];
+                                                                                    newCustoms[idx].meal_customizations[mealIdx].name = e.target.value;
+                                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                                }}
+                                                                                className="flex-1"
+                                                                            />
+                                                                            <select
+                                                                                className="px-2 py-1 border rounded text-sm"
+                                                                                value={mealCustom.type}
+                                                                                onChange={(e) => {
+                                                                                    const newCustoms = [...formData.customization_options];
+                                                                                    newCustoms[idx].meal_customizations[mealIdx].type = e.target.value;
+                                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                                }}
+                                                                            >
+                                                                                <option value="single">Single</option>
+                                                                                <option value="multiple">Multiple</option>
+                                                                            </select>
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                variant="ghost"
+                                                                                onClick={() => {
+                                                                                    const newCustoms = [...formData.customization_options];
+                                                                                    newCustoms[idx].meal_customizations = newCustoms[idx].meal_customizations.filter((_, i) => i !== mealIdx);
+                                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                                }}
+                                                                            >
+                                                                                ×
+                                                                            </Button>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Switch
+                                                                                checked={mealCustom.required}
+                                                                                onCheckedChange={(checked) => {
+                                                                                    const newCustoms = [...formData.customization_options];
+                                                                                    newCustoms[idx].meal_customizations[mealIdx].required = checked;
+                                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                                }}
+                                                                            />
+                                                                            <Label className="text-xs">Required</Label>
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <Label className="text-xs">Load from Category:</Label>
+                                                                            <select
+                                                                                className="w-full h-9 rounded-md border px-2 text-sm"
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.value) {
+                                                                                        const categoryItems = menuItems.filter(item => item.category === e.target.value);
+                                                                                        const newOptions = categoryItems.map(item => ({ label: item.name, price: 0 }));
+                                                                                        const newCustoms = [...formData.customization_options];
+                                                                                        newCustoms[idx].meal_customizations[mealIdx].options = newOptions;
+                                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                                        toast.success(`Loaded ${newOptions.length} items`);
+                                                                                        e.target.value = '';
+                                                                                    }
+                                                                                }}
+                                                                                defaultValue=""
+                                                                            >
+                                                                                <option value="">Select category...</option>
+                                                                                {categories.map((cat) => (
+                                                                                    <option key={cat} value={cat}>{cat}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                        {(mealCustom.options || []).map((opt, optIdx) => (
+                                                                            <div key={optIdx} className="flex gap-2">
+                                                                                <Input
+                                                                                    placeholder="Option"
+                                                                                    value={opt.label}
+                                                                                    onChange={(e) => {
+                                                                                        const newCustoms = [...formData.customization_options];
+                                                                                        newCustoms[idx].meal_customizations[mealIdx].options[optIdx].label = e.target.value;
+                                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                                    }}
+                                                                                    className="flex-1 text-sm"
+                                                                                />
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    step="0.01"
+                                                                                    placeholder="£"
+                                                                                    value={opt.price}
+                                                                                    onChange={(e) => {
+                                                                                        const newCustoms = [...formData.customization_options];
+                                                                                        newCustoms[idx].meal_customizations[mealIdx].options[optIdx].price = parseFloat(e.target.value) || 0;
+                                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                                    }}
+                                                                                    className="w-20 text-sm"
+                                                                                />
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    size="icon"
+                                                                                    variant="ghost"
+                                                                                    onClick={() => {
+                                                                                        const newCustoms = [...formData.customization_options];
+                                                                                        newCustoms[idx].meal_customizations[mealIdx].options = newCustoms[idx].meal_customizations[mealIdx].options.filter((_, i) => i !== optIdx);
+                                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                                    }}
+                                                                                    className="h-9 w-9"
+                                                                                >
+                                                                                    <Trash2 className="h-3 w-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))}
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={() => {
+                                                                                const newCustoms = [...formData.customization_options];
+                                                                                if (!newCustoms[idx].meal_customizations[mealIdx].options) {
+                                                                                    newCustoms[idx].meal_customizations[mealIdx].options = [];
+                                                                                }
+                                                                                newCustoms[idx].meal_customizations[mealIdx].options.push({ label: '', price: 0 });
+                                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                                            }}
+                                                                            className="w-full text-xs"
+                                                                        >
+                                                                            <Plus className="h-3 w-3 mr-1" />
+                                                                            Add Option
+                                                                        </Button>
+                                                                    </div>
+                                                                </Card>
+                                                            ))}
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    const newCustoms = [...formData.customization_options];
+                                                                    if (!newCustoms[idx].meal_customizations) {
+                                                                        newCustoms[idx].meal_customizations = [];
+                                                                    }
+                                                                    newCustoms[idx].meal_customizations.push({
+                                                                        name: '',
+                                                                        type: 'single',
+                                                                        required: false,
+                                                                        options: [{ label: '', price: 0 }]
+                                                                    });
+                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                }}
+                                                                className="w-full"
+                                                            >
+                                                                <Plus className="h-4 w-4 mr-2" />
+                                                                Add Meal Option
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {custom.options.map((opt, optIdx) => (
+                                                            <div key={optIdx} className="flex gap-2">
+                                                                <Input
+                                                                    placeholder="Option label"
+                                                                    value={opt.label}
+                                                                    onChange={(e) => {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options[optIdx].label = e.target.value;
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                    }}
+                                                                    className="flex-1"
+                                                                />
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    placeholder="Extra £"
+                                                                    value={opt.price}
+                                                                    onChange={(e) => {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                    }}
+                                                                    className="w-28"
+                                                                />
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options = newCustoms[idx].options.filter((_, i) => i !== optIdx);
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                    }}
+                                                                    className="h-10 w-10"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    const newCustoms = [...formData.customization_options];
+                                                                    newCustoms[idx].options.push({ label: '', price: 0 });
+                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                }}
+                                                                className="flex-1"
+                                                            >
+                                                                <Plus className="h-4 w-4 mr-1" />
+                                                                Add Option Row
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    const newCustoms = [...formData.customization_options];
+                                                                    newCustoms[idx].options.push(
+                                                                        { label: '', price: 0 },
+                                                                        { label: '', price: 0 },
+                                                                        { label: '', price: 0 }
+                                                                    );
+                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                }}
+                                                                className="whitespace-nowrap"
+                                                            >
+                                                                <Plus className="h-4 w-4 mr-1" />
+                                                                Add 3 Rows
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </Card>
