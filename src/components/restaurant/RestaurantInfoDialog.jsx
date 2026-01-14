@@ -148,6 +148,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                             ) : (
                                                 <span className="font-medium">
                                                     {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                    <span className="text-xs text-gray-400 ml-2">
+                                                        ({hours.open || '09:00'} - {hours.close || '22:00'})
+                                                    </span>
                                                 </span>
                                             )}
                                         </span>
@@ -177,6 +180,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                             ) : (
                                                 <span className="font-medium">
                                                     {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                    <span className="text-xs text-gray-400 ml-2">
+                                                        ({hours.open || '09:00'} - {hours.close || '22:00'})
+                                                    </span>
                                                 </span>
                                             )}
                                         </span>
@@ -207,6 +213,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                                 ) : (
                                                     <span className="font-medium">
                                                         {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                        <span className="text-xs text-gray-400 ml-2">
+                                                            ({hours.open || '09:00'} - {hours.close || '22:00'})
+                                                        </span>
                                                     </span>
                                                 )}
                                             </span>
