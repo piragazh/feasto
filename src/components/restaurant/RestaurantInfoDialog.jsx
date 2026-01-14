@@ -127,19 +127,18 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                 Opening Hours
                             </h3>
                             <div className="space-y-2">
-                                {DAYS.map((day) => {
-                                    const dayKey = day.toLowerCase();
+                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
                                     const hours = restaurant.opening_hours[dayKey];
-                                    if (!hours) return null;
+                                    const dayName = DAYS[idx];
 
                                     return (
-                                        <div key={day} className="flex justify-between text-sm border-b pb-2">
-                                            <span className="font-medium text-gray-700">{day}</span>
+                                        <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
+                                            <span className="font-medium text-gray-700">{dayName}</span>
                                             <span className="text-gray-600">
-                                                {hours.closed ? (
+                                                {!hours || hours.closed ? (
                                                     <Badge variant="secondary">Closed</Badge>
                                                 ) : (
-                                                    `${hours.open} - ${hours.close}`
+                                                    `${hours.open || '09:00'} - ${hours.close || '22:00'}`
                                                 )}
                                             </span>
                                         </div>
@@ -157,19 +156,18 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                 Delivery Hours
                             </h3>
                             <div className="space-y-2">
-                                {DAYS.map((day) => {
-                                    const dayKey = day.toLowerCase();
+                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
                                     const hours = restaurant.delivery_hours[dayKey];
-                                    if (!hours) return null;
+                                    const dayName = DAYS[idx];
 
                                     return (
-                                        <div key={day} className="flex justify-between text-sm border-b pb-2">
-                                            <span className="font-medium text-gray-700">{day}</span>
+                                        <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
+                                            <span className="font-medium text-gray-700">{dayName}</span>
                                             <span className="text-gray-600">
-                                                {hours.closed ? (
+                                                {!hours || hours.closed ? (
                                                     <Badge variant="secondary">No Delivery</Badge>
                                                 ) : (
-                                                    `${hours.open} - ${hours.close}`
+                                                    `${hours.open || '09:00'} - ${hours.close || '22:00'}`
                                                 )}
                                             </span>
                                         </div>
@@ -187,19 +185,18 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                 Collection Hours
                             </h3>
                             <div className="space-y-2">
-                                {DAYS.map((day) => {
-                                    const dayKey = day.toLowerCase();
+                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
                                     const hours = restaurant.collection_hours[dayKey];
-                                    if (!hours) return null;
+                                    const dayName = DAYS[idx];
 
                                     return (
-                                        <div key={day} className="flex justify-between text-sm border-b pb-2">
-                                            <span className="font-medium text-gray-700">{day}</span>
+                                        <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
+                                            <span className="font-medium text-gray-700">{dayName}</span>
                                             <span className="text-gray-600">
-                                                {hours.closed ? (
+                                                {!hours || hours.closed ? (
                                                     <Badge variant="secondary">No Collection</Badge>
                                                 ) : (
-                                                    `${hours.open} - ${hours.close}`
+                                                    `${hours.open || '09:00'} - ${hours.close || '22:00'}`
                                                 )}
                                             </span>
                                         </div>
