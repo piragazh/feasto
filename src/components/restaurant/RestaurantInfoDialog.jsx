@@ -120,62 +120,58 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                     </div>
 
                     {/* Opening Hours */}
-                    {restaurant.opening_hours && Object.keys(restaurant.opening_hours).length > 0 && (
-                        <div>
-                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-orange-500" />
-                                Opening Hours
-                            </h3>
-                            <div className="space-y-2">
-                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
-                                    const hours = restaurant.opening_hours[dayKey];
-                                    const dayName = DAYS[idx];
+                    <div>
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Clock className="h-5 w-5 text-orange-500" />
+                            Opening Hours
+                        </h3>
+                        <div className="space-y-2">
+                            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
+                                const hours = restaurant.opening_hours?.[dayKey];
+                                const dayName = DAYS[idx];
 
-                                    return (
-                                        <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
-                                            <span className="font-medium text-gray-700">{dayName}</span>
-                                            <span className="text-gray-600">
-                                                {!hours || hours.closed ? (
-                                                    <Badge variant="secondary">Closed</Badge>
-                                                ) : (
-                                                    `${hours.open || '09:00'} - ${hours.close || '22:00'}`
-                                                )}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                return (
+                                    <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
+                                        <span className="font-medium text-gray-700">{dayName}</span>
+                                        <span className="text-gray-600">
+                                            {!hours || hours.closed ? (
+                                                <Badge variant="secondary">Closed</Badge>
+                                            ) : (
+                                                `${hours.open || '09:00'} - ${hours.close || '22:00'}`
+                                            )}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
 
                     {/* Delivery Hours */}
-                    {restaurant.delivery_hours && Object.keys(restaurant.delivery_hours).length > 0 && (
-                        <div>
-                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                <Truck className="h-5 w-5 text-orange-500" />
-                                Delivery Hours
-                            </h3>
-                            <div className="space-y-2">
-                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
-                                    const hours = restaurant.delivery_hours[dayKey];
-                                    const dayName = DAYS[idx];
+                    <div>
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Truck className="h-5 w-5 text-orange-500" />
+                            Delivery Hours
+                        </h3>
+                        <div className="space-y-2">
+                            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
+                                const hours = restaurant.delivery_hours?.[dayKey];
+                                const dayName = DAYS[idx];
 
-                                    return (
-                                        <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
-                                            <span className="font-medium text-gray-700">{dayName}</span>
-                                            <span className="text-gray-600">
-                                                {!hours || hours.closed ? (
-                                                    <Badge variant="secondary">No Delivery</Badge>
-                                                ) : (
-                                                    `${hours.open || '09:00'} - ${hours.close || '22:00'}`
-                                                )}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                return (
+                                    <div key={dayKey} className="flex justify-between text-sm border-b pb-2">
+                                        <span className="font-medium text-gray-700">{dayName}</span>
+                                        <span className="text-gray-600">
+                                            {!hours || hours.closed ? (
+                                                <Badge variant="secondary">No Delivery</Badge>
+                                            ) : (
+                                                `${hours.open || '09:00'} - ${hours.close || '22:00'}`
+                                            )}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
 
                     {/* Collection Hours */}
                     {restaurant.collection_enabled && restaurant.collection_hours && Object.keys(restaurant.collection_hours).length > 0 && (
