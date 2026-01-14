@@ -8,6 +8,15 @@ import 'leaflet/dist/leaflet.css';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const formatTime = (time) => {
+    if (!time) return '';
+    const [hour, min] = time.split(':');
+    const h = parseInt(hour);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${displayHour}:${min} ${ampm}`;
+};
+
 // Fix Leaflet marker icon issue
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -137,7 +146,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                             {!hours || hours.closed ? (
                                                 <Badge variant="secondary">Closed</Badge>
                                             ) : (
-                                                `${hours.open || '09:00'} - ${hours.close || '22:00'}`
+                                                <span className="font-medium">
+                                                    {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                </span>
                                             )}
                                         </span>
                                     </div>
@@ -164,7 +175,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                             {!hours || hours.closed ? (
                                                 <Badge variant="secondary">No Delivery</Badge>
                                             ) : (
-                                                `${hours.open || '09:00'} - ${hours.close || '22:00'}`
+                                                <span className="font-medium">
+                                                    {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                </span>
                                             )}
                                         </span>
                                     </div>
@@ -182,7 +195,7 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                             </h3>
                             <div className="space-y-2">
                                 {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((dayKey, idx) => {
-                                    const hours = restaurant.collection_hours[dayKey];
+                                    const hours = restaurant.collection_hours?.[dayKey];
                                     const dayName = DAYS[idx];
 
                                     return (
@@ -192,7 +205,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                                                 {!hours || hours.closed ? (
                                                     <Badge variant="secondary">No Collection</Badge>
                                                 ) : (
-                                                    `${hours.open || '09:00'} - ${hours.close || '22:00'}`
+                                                    <span className="font-medium">
+                                                        {formatTime(hours.open || '09:00')} - {formatTime(hours.close || '22:00')}
+                                                    </span>
                                                 )}
                                             </span>
                                         </div>
