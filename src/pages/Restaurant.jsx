@@ -1002,7 +1002,14 @@ export default function Restaurant() {
                                 ref={categoryNavRef}
                                 className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1"
                             >
-                                {categories.map(cat => (
+                                {categories.map(cat => {
+                                    // Only show categories that have items
+                                    const matchingKey = Object.keys(itemsByCategory).find(key => 
+                                        key.toLowerCase() === cat.toLowerCase()
+                                    );
+                                    if (!matchingKey) return null;
+                                    
+                                    return (
                                     <button
                                         key={cat}
                                         data-category={cat}
@@ -1015,7 +1022,8 @@ export default function Restaurant() {
                                     >
                                         {cat}
                                     </button>
-                                ))}
+                                    );
+                                })}
                             </div>
                             {showRightArrow && (
                                 <button
