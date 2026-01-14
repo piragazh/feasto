@@ -7,7 +7,20 @@ import { Award, Star, Gift, TrendingUp, Crown } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 export default function LoyaltyRewards({ user }) {
-    const loyaltyPoints = user.loyalty_points || 0;
+    const { data: userPoints } = useQuery({
+        queryKey: ['loyalty-points', user.email],
+        queryFn: async () => {
+            const points = await base44.entities.LoyaltyPoints.filter({ created_by: user.email });
+            return points[0] || { points_balance: 0 };
+        },
+    });
+
+    const { data: rewards = [] } = useQuery({
+        queryKey: ['loyalty-rewards'],
+        queryFn: () => base44.entities.LoyaltyReward.filter({ is_active: true }),
+    });
+
+    const loyaltyPoints = userPoints?.points_balance || 0;
     const totalOrders = user.total_orders || 0;
     const totalSpent = user.total_spent || 0;
 
@@ -30,13 +43,10 @@ export default function LoyaltyRewards({ user }) {
         ((loyaltyPoints % (nextTierPoints === 1000 ? 500 : nextTierPoints === 500 ? 300 : 200)) / 
         (nextTierPoints === 1000 ? 500 : nextTierPoints === 500 ? 300 : 200)) * 100 : 100;
 
-    const rewards = [
-        { points: 50, reward: '£5 off your next order', available: loyaltyPoints >= 50 },
-        { points: 100, reward: 'Free delivery on next order', available: loyaltyPoints >= 100 },
-        { points: 200, reward: '£10 off your next order', available: loyaltyPoints >= 200 },
-        { points: 500, reward: '£25 off your next order', available: loyaltyPoints >= 500 },
-        { points: 1000, reward: '£50 off your next order', available: loyaltyPoints >= 1000 },
-    ];
+    const availableRewards = rewards.map(reward => ({
+        ...reward,
+        available: loyaltyPoints >= reward.points_required
+    }));
 
     return (
         <div className="space-y-6">
@@ -108,29 +118,39 @@ export default function LoyaltyRewards({ user }) {
                     <CardTitle>Available Rewards</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {rewards.map((reward, idx) => (
-                            <div
-                                key={idx}
-                                className={`flex items-center justify-between p-4 rounded-lg border ${
-                                    reward.available 
-                                        ? 'bg-green-50 border-green-200' 
-                                        : 'bg-gray-50 border-gray-200'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Gift className={`h-6 w-6 ${reward.available ? 'text-green-600' : 'text-gray-400'}`} />
-                                    <div>
-                                        <p className="font-semibold">{reward.reward}</p>
-                                        <p className="text-sm text-gray-600">{reward.points} points</p>
+                    {availableRewards.length === 0 ? (
+                        <div className="text-center py-8">
+                            <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500">No rewards available yet</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {availableRewards.map((reward) => (
+                                <div
+                                    key={reward.id}
+                                    className={`flex items-center justify-between p-4 rounded-lg border ${
+                                        reward.available 
+                                            ? 'bg-green-50 border-green-200' 
+                                            : 'bg-gray-50 border-gray-200'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Gift className={`h-6 w-6 ${reward.available ? 'text-green-600' : 'text-gray-400'}`} />
+                                        <div>
+                                            <p className="font-semibold">{reward.name}</p>
+                                            <p className="text-sm text-gray-500">{reward.description}</p>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                {reward.points_required} points • {reward.reward_type === 'percentage_discount' ? `${reward.discount_value}% off` : reward.reward_type === 'fixed_discount' ? `£${reward.discount_value} off` : reward.reward_type.replace('_', ' ')}
+                                            </p>
+                                        </div>
                                     </div>
+                                    <Badge variant={reward.available ? 'default' : 'secondary'}>
+                                        {reward.available ? 'Available' : 'Locked'}
+                                    </Badge>
                                 </div>
-                                <Badge variant={reward.available ? 'default' : 'secondary'}>
-                                    {reward.available ? 'Available' : 'Locked'}
-                                </Badge>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
