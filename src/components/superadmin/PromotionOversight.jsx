@@ -50,12 +50,15 @@ export default function PromotionOversight() {
         const end = new Date(promotion.end_date);
 
         if (!promotion.is_active) return { label: 'Disabled', color: 'bg-gray-100 text-gray-700', icon: Ban };
-        if (isBefore(now, start)) return { label: 'Scheduled', color: 'bg-blue-100 text-blue-700', icon: TrendingUp };
         if (isAfter(now, end)) return { label: 'Expired', color: 'bg-red-100 text-red-700', icon: AlertTriangle };
         if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) {
             return { label: 'Limit Reached', color: 'bg-orange-100 text-orange-700', icon: AlertTriangle };
         }
-        return { label: 'Active', color: 'bg-green-100 text-green-700', icon: TrendingUp };
+        if (isBefore(now, start)) return { label: 'Scheduled', color: 'bg-blue-100 text-blue-700', icon: TrendingUp };
+        if (isWithinInterval(now, { start, end })) {
+            return { label: 'Active', color: 'bg-green-100 text-green-700', icon: TrendingUp };
+        }
+        return { label: 'Inactive', color: 'bg-gray-100 text-gray-700', icon: Ban };
     };
 
     const getRestaurantName = (restaurantId) => {
