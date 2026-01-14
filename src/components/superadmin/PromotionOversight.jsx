@@ -20,19 +20,23 @@ export default function PromotionOversight() {
     const [confirmDialog, setConfirmDialog] = useState({ open: false, action: null, promotion: null });
     const queryClient = useQueryClient();
 
-    const { data: promotions = [], isLoading } = useQuery({
+    const { data: promotions = [], isLoading, error } = useQuery({
         queryKey: ['all-promotions'],
         queryFn: async () => {
-            const promos = await base44.asServiceRole.entities.Promotion.list();
-            console.log('Loaded promotions:', promos);
-            return promos.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+            try {
+                const promos = await base44.entities.Promotion.list();
+                console.log('Loaded promotions:', promos);
+                return promos || [];
+            } catch (err) {
+                console.error('Error loading promotions:', err);
+                throw err;
+            }
         },
-        refetchInterval: 30000,
     });
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['restaurants-list'],
-        queryFn: () => base44.asServiceRole.entities.Restaurant.list(),
+        queryFn: () => base44.entities.Restaurant.list(),
     });
 
     const toggleActiveMutation = useMutation({
@@ -206,6 +210,12 @@ export default function PromotionOversight() {
                 <CardContent>
                     {isLoading ? (
                        <p className="text-center text-gray-500 py-8">Loading promotions...</p>
+                    ) : error ? (
+                       <div className="text-center py-12">
+                           <AlertTriangle className="h-16 w-16 text-red-300 mx-auto mb-4" />
+                           <h3 className="text-xl font-semibold text-red-700 mb-2">Error Loading Promotions</h3>
+                           <p className="text-gray-500">{error.message}</p>
+                       </div>
                     ) : promotions.length === 0 ? (
                        <div className="text-center py-12">
                            <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
