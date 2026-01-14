@@ -20,6 +20,21 @@ export default function LoyaltyRewards({ user }) {
         queryFn: () => base44.entities.LoyaltyReward.filter({ is_active: true }),
     });
 
+    const { data: settings = [] } = useQuery({
+        queryKey: ['loyalty-settings'],
+        queryFn: () => base44.entities.SystemSettings.list(),
+    });
+
+    const getSetting = (key, defaultValue) => {
+        const setting = settings.find(s => s.setting_key === key);
+        return setting ? parseFloat(setting.setting_value) || defaultValue : defaultValue;
+    };
+
+    const pointsPerPound = getSetting('loyalty_points_per_pound', 10);
+    const firstOrderBonus = getSetting('loyalty_first_order_bonus', 50);
+    const referralBonus = getSetting('loyalty_referral_bonus', 100);
+    const minOrderValue = getSetting('loyalty_min_order_value', 0);
+
     const loyaltyPoints = userPoints?.points_balance || 0;
     const totalOrders = user.total_orders || 0;
     const totalSpent = user.total_spent || 0;
@@ -163,20 +178,26 @@ export default function LoyaltyRewards({ user }) {
                     <ul className="space-y-2 text-sm">
                         <li className="flex items-center gap-2">
                             <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            <span>Earn 10 points for every £1 spent</span>
+                            <span>Earn {pointsPerPound} points for every £1 spent</span>
                         </li>
-                        <li className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            <span>Get 50 bonus points on your first order</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            <span>Earn 100 points for every friend you refer</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            <span>Birthday bonus: 200 points on your special day!</span>
-                        </li>
+                        {firstOrderBonus > 0 && (
+                            <li className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span>Get {firstOrderBonus} bonus points on your first order</span>
+                            </li>
+                        )}
+                        {referralBonus > 0 && (
+                            <li className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span>Earn {referralBonus} points for every friend you refer</span>
+                            </li>
+                        )}
+                        {minOrderValue > 0 && (
+                            <li className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span>Minimum order value: £{minOrderValue.toFixed(2)}</span>
+                            </li>
+                        )}
                     </ul>
                 </CardContent>
             </Card>
