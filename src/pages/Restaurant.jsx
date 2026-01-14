@@ -425,30 +425,38 @@ export default function Restaurant() {
     };
 
     const addMealDealToCart = (deal) => {
-        setCart(prev => [...prev, {
-            menu_item_id: `deal_${deal.id}`,
-            name: deal.name,
-            price: deal.deal_price,
-            quantity: 1,
-            image_url: deal.image_url,
-            is_deal: true
-            }]);
-            toast.success(`🛒 ${deal.name} added to cart`, {
-            duration: 2000,
-            style: {
-                background: '#10b981',
-                color: '#fff',
-                fontWeight: '600',
-                padding: '16px',
-                borderRadius: '12px'
-            }
-            });
-    };
+            setCart(prev => [...prev, {
+                menu_item_id: `deal_${deal.id}`,
+                name: deal.name,
+                price: deal.deal_price,
+                quantity: 1,
+                image_url: deal.image_url,
+                is_deal: true,
+                fixed_items: deal.items || [],
+                selected_items: deal.category_rules?.length === 0 ? null : {}
+                }]);
+                toast.success(`🛒 ${deal.name} added to cart`, {
+                duration: 2000,
+                style: {
+                    background: '#10b981',
+                    color: '#fff',
+                    fontWeight: '600',
+                    padding: '16px',
+                    borderRadius: '12px'
+                }
+                });
+        };
 
     const handleCustomizeDeal = (deal) => {
-        setSelectedDeal(deal);
-        setCategoryDealModalOpen(true);
-    };
+            setSelectedDeal(deal);
+            // Open customization if deal has category rules (even if also has fixed items)
+            if (deal.category_rules?.length > 0) {
+                setCategoryDealModalOpen(true);
+            } else {
+                // No category rules, just add fixed items
+                addMealDealToCart(deal);
+            }
+        };
 
     const addCategoryDealToCart = (dealData) => {
         setCart(prev => [...prev, {
@@ -928,6 +936,7 @@ export default function Restaurant() {
                                     deal={deal} 
                                     onAddToCart={addMealDealToCart}
                                     onCustomize={handleCustomizeDeal}
+                                    hasCustomization={deal.category_rules?.length > 0}
                                 />
                             ))}
                         </div>
