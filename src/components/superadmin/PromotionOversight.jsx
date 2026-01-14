@@ -24,6 +24,7 @@ export default function PromotionOversight() {
         queryKey: ['all-promotions'],
         queryFn: async () => {
             const promos = await base44.asServiceRole.entities.Promotion.list();
+            console.log('Loaded promotions:', promos);
             return promos.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
         },
         refetchInterval: 30000,
@@ -204,7 +205,13 @@ export default function PromotionOversight() {
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <p className="text-center text-gray-500 py-8">Loading promotions...</p>
+                       <p className="text-center text-gray-500 py-8">Loading promotions...</p>
+                    ) : promotions.length === 0 ? (
+                       <div className="text-center py-12">
+                           <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                           <h3 className="text-xl font-semibold text-gray-700 mb-2">No Promotions in System</h3>
+                           <p className="text-gray-500">No promotions have been created yet</p>
+                       </div>
                     ) : filteredPromotions.length === 0 ? (
                         <div className="text-center py-12">
                             <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
