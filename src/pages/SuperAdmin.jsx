@@ -18,7 +18,8 @@ import PayoutManagement from '@/components/superadmin/PayoutManagement';
 import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManagement';
 import ReviewModeration from '@/components/restaurant/ReviewModeration';
 import PromotionOversight from '@/components/superadmin/PromotionOversight';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag } from 'lucide-react';
+import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
@@ -199,6 +200,14 @@ export default function SuperAdmin() {
                             <Tag className="h-4 w-4" />
                             Promotions
                         </Button>
+                        <Button
+                            variant={activeTab === 'loyalty' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('loyalty')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Award className="h-4 w-4" />
+                            Loyalty Program
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -219,6 +228,7 @@ export default function SuperAdmin() {
                 {activeTab === 'payouts' && <PayoutManagement />}
                 {activeTab === 'reviews' && <ReviewModeration isAdmin={true} />}
                 {activeTab === 'promotions' && <PromotionOversight />}
+                {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
                 {activeTab === 'managers' && (
                     <iframe 
                         src={createPageUrl('ManageRestaurantManagers')} 
