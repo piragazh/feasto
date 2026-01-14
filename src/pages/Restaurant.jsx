@@ -207,13 +207,16 @@ export default function Restaurant() {
     const [showRightArrow, setShowRightArrow] = React.useState(false);
 
     const scrollToCategory = (category) => {
-        // Find the exact category in refs (case-sensitive because we stored it that way)
         const element = categoryRefs.current[category];
         if (element) {
-            element.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start'
-            });
+            // Set active category before scrolling
+            setActiveCategoryScroll(category);
+            setTimeout(() => {
+                element.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start'
+                });
+            }, 0);
         }
     };
 
