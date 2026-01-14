@@ -89,14 +89,25 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
     const handleAddToCart = () => {
         // Validate required options
         if (item.customization_options) {
-            const missingRequired = item.customization_options.find(option => 
-                option.required && (!customizations[option.name] || 
-                (Array.isArray(customizations[option.name]) && customizations[option.name].length === 0))
-            );
-            
-            if (missingRequired) {
-                setError(`Please select ${missingRequired.name}`);
-                return;
+            for (const option of item.customization_options) {
+                // Check main option required
+                if (option.required && (!customizations[option.name] || 
+                    (Array.isArray(customizations[option.name]) && customizations[option.name].length === 0))) {
+                    setError(`Please select ${option.name}`);
+                    return;
+                }
+                
+                // Check meal customizations if meal is selected
+                if (option.type === 'meal_upgrade' && customizations[option.name] === 'Meal' && option.meal_customizations) {
+                    const mealCustoms = customizations[`${option.name}_meal_customizations`] || {};
+                    for (const mealOpt of option.meal_customizations) {
+                        if (mealOpt.required && (!mealCustoms[mealOpt.name] || 
+                            (Array.isArray(mealCustoms[mealOpt.name]) && mealCustoms[mealOpt.name].length === 0))) {
+                            setError(`Please select ${mealOpt.name} for your meal`);
+                            return;
+                        }
+                    }
+                }
             }
         }
 
