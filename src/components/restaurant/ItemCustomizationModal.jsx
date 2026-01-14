@@ -21,6 +21,9 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                     defaults[option.name] = option.options[0].label;
                 } else if (option.type === 'multiple') {
                     defaults[option.name] = [];
+                } else if (option.type === 'meal_upgrade' && option.options?.length > 0) {
+                    defaults[option.name] = option.options[0].label;
+                    defaults[`${option.name}_meal_customizations`] = {};
                 }
             });
             setCustomizations(defaults);
@@ -57,6 +60,25 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                         const selected = option.options.find(o => o.label === choice);
                         if (selected?.price) totalPrice += selected.price;
                     });
+                } else if (option.type === 'meal_upgrade' && customizations[option.name]) {
+                    const selected = option.options.find(o => o.label === customizations[option.name]);
+                    if (selected?.price) totalPrice += selected.price;
+                    
+                    // Add meal customization prices
+                    const mealCustoms = customizations[`${option.name}_meal_customizations`] || {};
+                    if (option.meal_customizations) {
+                        option.meal_customizations.forEach(mealOpt => {
+                            if (mealOpt.type === 'single' && mealCustoms[mealOpt.name]) {
+                                const mealChoice = mealOpt.options?.find(o => o.label === mealCustoms[mealOpt.name]);
+                                if (mealChoice?.price) totalPrice += mealChoice.price;
+                            } else if (mealOpt.type === 'multiple' && mealCustoms[mealOpt.name]) {
+                                mealCustoms[mealOpt.name].forEach(choice => {
+                                    const mealChoice = mealOpt.options?.find(o => o.label === choice);
+                                    if (mealChoice?.price) totalPrice += mealChoice.price;
+                                });
+                            }
+                        });
+                    }
                 }
             });
         }
@@ -120,7 +142,107 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                     )}
                                 </div>
 
-                                {option.type === 'single' ? (
+                                {option.type === 'meal_upgrade' ? (
+                                    <>
+                                        <RadioGroup
+                                            value={customizations[option.name]}
+                                            onValueChange={(value) => handleSingleChoice(option.name, value)}
+                                        >
+                                            {option.options?.map((choice, choiceIdx) => (
+                                                <div key={choiceIdx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                                                    <div className="flex items-center space-x-3">
+                                                        <RadioGroupItem value={choice.label} id={`${idx}-${choiceIdx}`} />
+                                                        <Label htmlFor={`${idx}-${choiceIdx}`} className="cursor-pointer font-normal">
+                                                            {choice.label}
+                                                        </Label>
+                                                    </div>
+                                                    {choice.price > 0 && (
+                                                        <span className="text-sm text-gray-600">+£{choice.price.toFixed(2)}</span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </RadioGroup>
+                                        
+                                        {customizations[option.name] === 'Meal' && option.meal_customizations?.length > 0 && (
+                                            <div className="mt-4 p-4 bg-blue-50 rounded-lg space-y-4">
+                                                <Label className="text-sm font-medium text-blue-900">Meal</Label>
+                                                {option.meal_customizations.map((mealOpt, mealIdx) => (
+                                                    <div key={mealIdx} className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <Label className="font-semibold">{mealOpt.name}</Label>
+                                                            {mealOpt.required && (
+                                                                <Badge variant="destructive" className="text-xs">Required</Badge>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        {mealOpt.type === 'single' ? (
+                                                            <RadioGroup
+                                                                value={customizations[`${option.name}_meal_customizations`]?.[mealOpt.name]}
+                                                                onValueChange={(value) => {
+                                                                    setCustomizations(prev => ({
+                                                                        ...prev,
+                                                                        [`${option.name}_meal_customizations`]: {
+                                                                            ...(prev[`${option.name}_meal_customizations`] || {}),
+                                                                            [mealOpt.name]: value
+                                                                        }
+                                                                    }));
+                                                                }}
+                                                            >
+                                                                {mealOpt.options?.map((mealChoice, mealChoiceIdx) => (
+                                                                    <div key={mealChoiceIdx} className="flex items-center justify-between p-2 border rounded hover:bg-white">
+                                                                        <div className="flex items-center space-x-2">
+                                                                            <RadioGroupItem value={mealChoice.label} id={`meal-${mealIdx}-${mealChoiceIdx}`} />
+                                                                            <Label htmlFor={`meal-${mealIdx}-${mealChoiceIdx}`} className="cursor-pointer text-sm">
+                                                                                {mealChoice.label}
+                                                                            </Label>
+                                                                        </div>
+                                                                        {mealChoice.price > 0 && (
+                                                                            <span className="text-xs text-gray-600">+£{mealChoice.price.toFixed(2)}</span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </RadioGroup>
+                                                        ) : (
+                                                            <div className="space-y-2">
+                                                                {mealOpt.options?.map((mealChoice, mealChoiceIdx) => (
+                                                                    <div key={mealChoiceIdx} className="flex items-center justify-between p-2 border rounded hover:bg-white">
+                                                                        <div className="flex items-center space-x-2">
+                                                                            <Checkbox
+                                                                                id={`meal-${mealIdx}-${mealChoiceIdx}`}
+                                                                                checked={(customizations[`${option.name}_meal_customizations`]?.[mealOpt.name] || []).includes(mealChoice.label)}
+                                                                                onCheckedChange={(checked) => {
+                                                                                    setCustomizations(prev => {
+                                                                                        const mealCustoms = prev[`${option.name}_meal_customizations`] || {};
+                                                                                        const currentChoices = mealCustoms[mealOpt.name] || [];
+                                                                                        return {
+                                                                                            ...prev,
+                                                                                            [`${option.name}_meal_customizations`]: {
+                                                                                                ...mealCustoms,
+                                                                                                [mealOpt.name]: checked
+                                                                                                    ? [...currentChoices, mealChoice.label]
+                                                                                                    : currentChoices.filter(c => c !== mealChoice.label)
+                                                                                            }
+                                                                                        };
+                                                                                    });
+                                                                                }}
+                                                                            />
+                                                                            <Label htmlFor={`meal-${mealIdx}-${mealChoiceIdx}`} className="cursor-pointer text-sm">
+                                                                                {mealChoice.label}
+                                                                            </Label>
+                                                                        </div>
+                                                                        {mealChoice.price > 0 && (
+                                                                            <span className="text-xs text-gray-600">+£{mealChoice.price.toFixed(2)}</span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : option.type === 'single' ? (
                                     <RadioGroup
                                         value={customizations[option.name]}
                                         onValueChange={(value) => handleSingleChoice(option.name, value)}
