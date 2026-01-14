@@ -103,6 +103,14 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                         </div>
                     )}
 
+                    {/* About Us */}
+                    {restaurant.about_us && (
+                        <div>
+                            <h3 className="font-semibold text-gray-900 mb-2">About Us</h3>
+                            <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">{restaurant.about_us}</p>
+                        </div>
+                    )}
+
                     {/* Location */}
                     <div>
                         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
