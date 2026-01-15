@@ -43,19 +43,19 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
 
                 if (error) {
                     ev.complete('fail');
-                    onError(error.message || 'Payment failed');
+                    if (onError) onError(error.message || 'Payment failed');
                     setIsProcessing(false);
                     return;
                 }
 
                 ev.complete('success');
                 
-                if (paymentIntent.status === 'succeeded') {
-                    onSuccess(paymentIntent.id);
+                if (paymentIntent && paymentIntent.status === 'succeeded' && paymentIntent.id) {
+                    if (onSuccess) onSuccess(String(paymentIntent.id));
                 }
             } catch (error) {
                 ev.complete('fail');
-                onError(error?.message || 'Payment failed');
+                if (onError) onError(error?.message || 'Payment failed');
             } finally {
                 setIsProcessing(false);
             }
@@ -79,18 +79,20 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
                     )}
                 </div>
-                <PaymentRequestButtonElement
-                    options={{
-                        paymentRequest,
-                        style: {
-                            paymentRequestButton: {
-                                type: 'default',
-                                theme: 'dark',
-                                height: '48px',
+                {paymentRequest && (
+                    <PaymentRequestButtonElement
+                        options={{
+                            paymentRequest,
+                            style: {
+                                paymentRequestButton: {
+                                    type: 'default',
+                                    theme: 'dark',
+                                    height: '48px',
+                                },
                             },
-                        },
-                    }}
-                />
+                        }}
+                    />
+                )}
                 <div className="flex items-center gap-2">
                     <div className="flex-1 border-t"></div>
                     <span className="text-xs text-gray-500">OR</span>
