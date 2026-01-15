@@ -12,53 +12,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
     const [isValidating, setIsValidating] = useState(false);
     const [appliedCoupons, setAppliedCoupons] = useState([]);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
-    const [autoPromotions, setAutoPromotions] = useState([]);
 
-    // Auto-apply promotions without code
-    useEffect(() => {
-        if (!restaurantId) return;
-        
-        const checkAutoPromotions = async () => {
-            try {
-                const promotions = await base44.entities.Promotion.filter({
-                    restaurant_id: restaurantId,
-                    is_active: true
-                });
-
-                const now = new Date();
-                const validPromotions = promotions.filter(p => {
-                    // Only promotions without codes
-                    if (p.promotion_code) return false;
-
-                    // Check date range
-                    const start = new Date(p.start_date);
-                    const end = new Date(p.end_date);
-                    if (!isWithinInterval(now, { start, end })) return false;
-
-                    // Check usage limit
-                    if (p.usage_limit && p.usage_count >= p.usage_limit) return false;
-
-                    // Check minimum order
-                    if (p.minimum_order && subtotal < p.minimum_order) return false;
-
-                    return true;
-                });
-
-                setAutoPromotions(validPromotions);
-
-                // Auto-apply all valid promotions
-                if (validPromotions.length > 0 && appliedPromotions.length === 0) {
-                    for (const promo of validPromotions) {
-                        await validatePromotion(promo, true, cartItems);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to check auto promotions:', error);
-            }
-        };
-
-        checkAutoPromotions();
-    }, [restaurantId, subtotal]);
 
     const validateCode = async () => {
         if (!code.trim()) {
