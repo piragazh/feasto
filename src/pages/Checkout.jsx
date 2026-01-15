@@ -689,81 +689,78 @@ export default function Checkout() {
                                             Delivery Address
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-3">{orderType === 'delivery' ? (
-                                        <>
-                                            <div>
-                                                <Label htmlFor="door_number">Door Number / Flat *</Label>
-                                                <Input
-                                                    id="door_number"
-                                                    type="text"
-                                                    placeholder="e.g., 42 or Flat 5B"
-                                                    value={formData.door_number}
-                                                    onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
-                                                    className="h-12"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <Label htmlFor="address">Street Address *</Label>
-                                                <LocationPicker
-                                                    onLocationSelect={async (locationData) => {
-                                                        setFormData({ ...formData, delivery_address: locationData.address });
-                                                        setDeliveryCoordinates(locationData.coordinates);
+                                    <CardContent className="space-y-3">
+                                        <div>
+                                            <Label htmlFor="door_number">Door Number / Flat *</Label>
+                                            <Input
+                                                id="door_number"
+                                                type="text"
+                                                placeholder="e.g., 42 or Flat 5B"
+                                                value={formData.door_number}
+                                                onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
+                                                className="h-12"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="address">Street Address *</Label>
+                                            <LocationPicker
+                                                onLocationSelect={async (locationData) => {
+                                                    setFormData({ ...formData, delivery_address: locationData.address });
+                                                    setDeliveryCoordinates(locationData.coordinates);
 
-                                                        if (locationData.coordinates && restaurantId) {
-                                                            setZoneCheckComplete(false);
-                                                            const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
-                                                            setDeliveryZoneInfo(zoneInfo);
-                                                            setZoneCheckComplete(true);
-                                                        }
-                                                    }}
-                                                    className="[&>div]:h-12"
-                                                />
-                                            </div>
+                                                    if (locationData.coordinates && restaurantId) {
+                                                        setZoneCheckComplete(false);
+                                                        const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
+                                                        setDeliveryZoneInfo(zoneInfo);
+                                                        setZoneCheckComplete(true);
+                                                    }
+                                                }}
+                                                className="[&>div]:h-12"
+                                            />
+                                        </div>
 
-                                            {zoneCheckComplete && deliveryZoneInfo && (
-                                                <div className={`p-3 rounded-lg border ${
-                                                    deliveryZoneInfo.available 
-                                                        ? 'bg-green-50 border-green-200' 
-                                                        : 'bg-red-50 border-red-200'
-                                                }`}>
-                                                    {deliveryZoneInfo.available ? (
-                                                        <div>
-                                                            <p className="text-sm font-medium text-green-800">
-                                                                ✓ Delivery available to {deliveryZoneInfo.zoneName}
-                                                            </p>
-                                                            <p className="text-xs text-green-700 mt-1">
-                                                                Fee: £{deliveryZoneInfo.deliveryFee.toFixed(2)} • 
-                                                                ETA: {deliveryZoneInfo.estimatedTime}
-                                                            </p>
-                                                            {deliveryZoneInfo.minOrderValue && (
-                                                                <p className="text-xs text-green-700">
-                                                                    Min order: £{deliveryZoneInfo.minOrderValue.toFixed(2)}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-sm font-medium text-red-800">
-                                                            ✗ {deliveryZoneInfo.message}
+                                        {zoneCheckComplete && deliveryZoneInfo && (
+                                            <div className={`p-3 rounded-lg border ${
+                                                deliveryZoneInfo.available 
+                                                    ? 'bg-green-50 border-green-200' 
+                                                    : 'bg-red-50 border-red-200'
+                                            }`}>
+                                                {deliveryZoneInfo.available ? (
+                                                    <div>
+                                                        <p className="text-sm font-medium text-green-800">
+                                                            ✓ Delivery available to {deliveryZoneInfo.zoneName}
                                                         </p>
-                                                    )}
-                                                </div>
-                                            )}
-                                            </>
-                                            )}
-                                            </CardContent>
-                                            </Card>
-                                            )}
+                                                        <p className="text-xs text-green-700 mt-1">
+                                                            Fee: £{deliveryZoneInfo.deliveryFee.toFixed(2)} • 
+                                                            ETA: {deliveryZoneInfo.estimatedTime}
+                                                        </p>
+                                                        {deliveryZoneInfo.minOrderValue && (
+                                                            <p className="text-xs text-green-700">
+                                                                Min order: £{deliveryZoneInfo.minOrderValue.toFixed(2)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm font-medium text-red-800">
+                                                        ✗ {deliveryZoneInfo.message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                    </Card>
+                                    )}
 
-                                            {orderType === 'collection' && (
-                                            <Card>
-                                            <CardHeader>
-                                            <CardTitle className="flex items-center gap-2">
+                            {orderType === 'collection' && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
                                             🏪 Collection Details
-                                            </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                            <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-200 rounded-xl space-y-3">
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-200 rounded-xl space-y-3">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                                                     <span className="text-xl">🏪</span>
@@ -787,10 +784,10 @@ export default function Checkout() {
                                                     <span>You'll receive an order number with QR code via SMS</span>
                                                 </p>
                                             </div>
-                                            </div>
-                                            </CardContent>
-                                            </Card>
-                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
 
                             <Card>
                                 <CardHeader>
