@@ -3,14 +3,14 @@ import { PaymentRequestButtonElement, useStripe } from '@stripe/react-stripe-js'
 import { Card } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
 
-export default function ExpressCheckout({ amount, onSuccess, onError, disabled }) {
+export default function ExpressCheckout({ amount, onSuccess, onError, disabled, clientSecret }) {
     const stripe = useStripe();
     const [paymentRequest, setPaymentRequest] = useState(null);
     const [canMakePayment, setCanMakePayment] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
-        if (!stripe || !amount || disabled) {
+        if (!stripe || !amount || disabled || !clientSecret) {
             return;
         }
 
@@ -19,13 +19,12 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled }
             currency: 'gbp',
             total: {
                 label: 'Total',
-                amount: Math.round(amount * 100), // Convert to pence
+                amount: Math.round(amount * 100),
             },
             requestPayerName: true,
             requestPayerEmail: true,
         });
 
-        // Check if Apple Pay or Google Pay is available
         pr.canMakePayment().then(result => {
             if (result) {
                 setPaymentRequest(pr);
@@ -36,14 +35,27 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled }
         pr.on('paymentmethod', async (ev) => {
             setIsProcessing(true);
             try {
-                // The payment method was authorized by Apple/Google Pay
-                // Now we need to complete the payment on our backend
-                // For now, just mark as success and complete
-                onSuccess(ev.paymentMethod.id);
+                const { error, paymentIntent } = await stripe.confirmCardPayment(
+                    clientSecret,
+                    { payment_method: ev.paymentMethod.id },
+                    { handleActions: false }
+                );
+
+                if (error) {
+                    ev.complete('fail');
+                    onError(error.message || 'Payment failed');
+                    setIsProcessing(false);
+                    return;
+                }
+
                 ev.complete('success');
+                
+                if (paymentIntent.status === 'succeeded') {
+                    onSuccess(paymentIntent.id);
+                }
             } catch (error) {
                 ev.complete('fail');
-                onError(error.message || 'Payment failed');
+                onError(error?.message || 'Payment failed');
             } finally {
                 setIsProcessing(false);
             }
@@ -52,7 +64,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled }
         return () => {
             pr.off('paymentmethod');
         };
-    }, [stripe, amount, onSuccess, onError, disabled]);
+    }, [stripe, amount, clientSecret, disabled]);
 
     if (!canMakePayment || !paymentRequest) {
         return null;

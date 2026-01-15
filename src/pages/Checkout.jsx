@@ -884,6 +884,7 @@ export default function Checkout() {
                                             >
                                                 <StripePaymentForm
                                                     amount={total}
+                                                    clientSecret={clientSecret}
                                                     onSuccess={handleStripeSuccess}
                                                 />
                                             </Elements>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 import ExpressCheckout from './ExpressCheckout';
 
-export default function StripePaymentForm({ onSuccess, amount }) {
+export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -102,10 +102,9 @@ export default function StripePaymentForm({ onSuccess, amount }) {
         <div className="space-y-4">
             <ExpressCheckout
                 amount={amount}
-                onSuccess={async (paymentMethod) => {
-                    // Express checkout already handled payment authorization
-                    // We just need to complete the order
-                    console.log('✅ Express payment completed');
+                clientSecret={clientSecret}
+                onSuccess={(paymentIntentId) => {
+                    onSuccess(paymentIntentId);
                 }}
                 onError={(error) => {
                     setErrorMessage(error);
