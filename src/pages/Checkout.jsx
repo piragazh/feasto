@@ -750,7 +750,7 @@ export default function Checkout() {
                                                 </div>
                                             )}
                                             </>
-                                            ) : null}
+                                            )}
                                             </CardContent>
                                             </Card>
                                             )}
