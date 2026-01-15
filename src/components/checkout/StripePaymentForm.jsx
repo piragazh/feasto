@@ -92,7 +92,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
             return false;
         } catch (err) {
             console.log('🔴 Exception:', err);
-            setErrorMessage(err.message || 'An error occurred. Please try again.');
+            setErrorMessage(String(err?.message || 'An error occurred. Please try again.'));
             setIsProcessing(false);
             return false;
         }
@@ -107,7 +107,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                     onSuccess(paymentIntentId);
                 }}
                 onError={(error) => {
-                    setErrorMessage(error);
+                    setErrorMessage(String(error || 'Payment failed'));
                 }}
                 disabled={isProcessing}
             />
@@ -121,7 +121,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
             {errorMessage && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <p className="text-sm text-red-800 font-medium">
-                        ❌ {errorMessage}
+                        ❌ {String(errorMessage)}
                     </p>
                 </div>
             )}
