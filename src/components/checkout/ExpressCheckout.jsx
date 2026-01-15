@@ -11,6 +11,8 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
 
     useEffect(() => {
         if (!stripe || !amount || disabled || !clientSecret) {
+            setCanMakePayment(false);
+            setPaymentRequest(null);
             return;
         }
 
@@ -29,7 +31,13 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
             if (result) {
                 setPaymentRequest(pr);
                 setCanMakePayment(true);
+            } else {
+                setCanMakePayment(false);
+                setPaymentRequest(null);
             }
+        }).catch(() => {
+            setCanMakePayment(false);
+            setPaymentRequest(null);
         });
 
         pr.on('paymentmethod', async (ev) => {
@@ -43,7 +51,9 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
 
                 if (error) {
                     ev.complete('fail');
-                    if (onError) onError(error.message || 'Payment failed');
+                    if (onError && typeof onError === 'function') {
+                        onError(String(error.message || 'Payment failed'));
+                    }
                     setIsProcessing(false);
                     return;
                 }
@@ -51,11 +61,15 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                 ev.complete('success');
                 
                 if (paymentIntent && paymentIntent.status === 'succeeded' && paymentIntent.id) {
-                    if (onSuccess) onSuccess(String(paymentIntent.id));
+                    if (onSuccess && typeof onSuccess === 'function') {
+                        onSuccess(String(paymentIntent.id));
+                    }
                 }
             } catch (error) {
                 ev.complete('fail');
-                if (onError) onError(error?.message || 'Payment failed');
+                if (onError && typeof onError === 'function') {
+                    onError(String(error?.message || 'Payment failed'));
+                }
             } finally {
                 setIsProcessing(false);
             }
@@ -75,24 +89,20 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-700">Express Checkout</h3>
-                    {isProcessing && (
-                        <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-                    )}
+                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" /> : null}
                 </div>
-                {paymentRequest && (
-                    <PaymentRequestButtonElement
-                        options={{
-                            paymentRequest,
-                            style: {
-                                paymentRequestButton: {
-                                    type: 'default',
-                                    theme: 'dark',
-                                    height: '48px',
-                                },
+                <PaymentRequestButtonElement
+                    options={{
+                        paymentRequest,
+                        style: {
+                            paymentRequestButton: {
+                                type: 'default',
+                                theme: 'dark',
+                                height: '48px',
                             },
-                        }}
-                    />
-                )}
+                        },
+                    }}
+                />
                 <div className="flex items-center gap-2">
                     <div className="flex-1 border-t"></div>
                     <span className="text-xs text-gray-500">OR</span>
