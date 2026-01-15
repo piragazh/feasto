@@ -179,9 +179,6 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="text-sm text-gray-600">
-                                                    £{item.price.toFixed(2)}
-                                                </div>
                                             </button>
                                         );
                                     })}
