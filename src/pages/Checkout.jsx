@@ -933,19 +933,19 @@ export default function Checkout() {
                                             <div className="flex gap-2 flex-1">
                                                 <span className="text-gray-500">{item.quantity}x</span>
                                                 <div className="flex-1">
-                                                    <span>{item.name}</span>
+                                                    <span>{String(item.name || '')}</span>
                                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                                         <div className="text-xs text-gray-500 mt-1">
                                                             {Object.entries(item.customizations).map(([key, value]) => (
                                                                 <div key={key}>
-                                                                    {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                                                    {String(key)}: {Array.isArray(value) ? value.join(', ') : String(value)}
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                            <span className="font-medium">£{(item.price * item.quantity).toFixed(2)}</span>
+                                            <span className="font-medium">£{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -973,16 +973,16 @@ export default function Checkout() {
                                             <span>£{smallOrderSurcharge.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    {appliedCoupons.map((coupon) => (
+                                    {appliedCoupons && appliedCoupons.length > 0 && appliedCoupons.map((coupon) => (
                                         <div key={coupon.id} className="flex justify-between text-green-600">
-                                            <span>Coupon ({coupon.code})</span>
-                                            <span>-£{coupon.discount.toFixed(2)}</span>
+                                            <span>Coupon ({String(coupon.code || '')})</span>
+                                            <span>-£{Number(coupon.discount || 0).toFixed(2)}</span>
                                         </div>
                                     ))}
-                                    {appliedPromotions.map((promo) => (
+                                    {appliedPromotions && appliedPromotions.length > 0 && appliedPromotions.map((promo) => (
                                         <div key={promo.id} className="flex justify-between text-purple-600">
-                                            <span>Promo ({promo.name})</span>
-                                            <span>-£{(promo.discount || 0).toFixed(2)}</span>
+                                            <span>Promo ({String(promo.name || '')})</span>
+                                            <span>-£{Number(promo.discount || 0).toFixed(2)}</span>
                                         </div>
                                     ))}
                                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
