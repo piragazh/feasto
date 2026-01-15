@@ -937,20 +937,34 @@ export default function Checkout() {
                                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                                         <div className="text-xs text-gray-500 mt-1">
                                                             {Object.entries(item.customizations).map(([key, value]) => {
+                                                                // Skip empty values
+                                                                if (!value || (Array.isArray(value) && value.length === 0) || 
+                                                                    (typeof value === 'object' && Object.keys(value).length === 0)) {
+                                                                    return null;
+                                                                }
+
                                                                 let displayValue = '';
                                                                 if (Array.isArray(value)) {
                                                                     displayValue = value.join(', ');
                                                                 } else if (typeof value === 'object' && value !== null) {
                                                                     displayValue = JSON.stringify(value);
                                                                 } else {
-                                                                    displayValue = String(value || '');
+                                                                    displayValue = String(value);
                                                                 }
+
+                                                                // Format key: remove underscores, capitalize
+                                                                const formattedKey = key
+                                                                    .replace(/_/g, ' ')
+                                                                    .split(' ')
+                                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                                                    .join(' ');
+
                                                                 return (
                                                                     <div key={key}>
-                                                                        {String(key)}: {displayValue}
+                                                                        {formattedKey}: {displayValue}
                                                                     </div>
                                                                 );
-                                                            })}
+                                                            }).filter(Boolean)}
                                                         </div>
                                                     )}
                                                 </div>
