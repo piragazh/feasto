@@ -696,7 +696,7 @@ export default function Checkout() {
                                                 id="door_number"
                                                 type="text"
                                                 placeholder="e.g., 42 or Flat 5B"
-                                                value={formData.door_number}
+                                                value={formData.door_number || ''}
                                                 onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
                                                 className="h-12"
                                                 required
@@ -720,7 +720,7 @@ export default function Checkout() {
                                             />
                                         </div>
 
-                                        {zoneCheckComplete && deliveryZoneInfo && (
+                                        {zoneCheckComplete && deliveryZoneInfo && deliveryZoneInfo.available !== undefined && (
                                             <div className={`p-3 rounded-lg border ${
                                                 deliveryZoneInfo.available 
                                                     ? 'bg-green-50 border-green-200' 
@@ -729,21 +729,21 @@ export default function Checkout() {
                                                 {deliveryZoneInfo.available ? (
                                                     <div>
                                                         <p className="text-sm font-medium text-green-800">
-                                                            ✓ Delivery available to {deliveryZoneInfo.zoneName}
+                                                            ✓ Delivery available to {String(deliveryZoneInfo.zoneName || 'your area')}
                                                         </p>
                                                         <p className="text-xs text-green-700 mt-1">
-                                                            Fee: £{deliveryZoneInfo.deliveryFee.toFixed(2)} • 
-                                                            ETA: {deliveryZoneInfo.estimatedTime}
+                                                            Fee: £{Number(deliveryZoneInfo.deliveryFee || 0).toFixed(2)} • 
+                                                            ETA: {String(deliveryZoneInfo.estimatedTime || '30-45 min')}
                                                         </p>
                                                         {deliveryZoneInfo.minOrderValue && (
                                                             <p className="text-xs text-green-700">
-                                                                Min order: £{deliveryZoneInfo.minOrderValue.toFixed(2)}
+                                                                Min order: £{Number(deliveryZoneInfo.minOrderValue).toFixed(2)}
                                                             </p>
                                                         )}
                                                     </div>
                                                 ) : (
                                                     <p className="text-sm font-medium text-red-800">
-                                                        ✗ {deliveryZoneInfo.message}
+                                                        ✗ {String(deliveryZoneInfo.message || 'Delivery not available')}
                                                     </p>
                                                 )}
                                             </div>
