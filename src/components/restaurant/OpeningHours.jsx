@@ -33,15 +33,20 @@ export default function OpeningHours({ openingHours, isOpen }) {
     };
 
     const formatTime = (time) => {
-        if (!time) return '';
-        if (typeof time !== 'string') return '';
-        if (!time.includes(':')) return '';
+        if (!time) return null;
         
-        const [hour, min] = time.split(':');
-        if (!hour || !min) return '';
+        // Handle both string and object formats
+        const timeStr = typeof time === 'string' ? time : 
+                       (typeof time === 'object' && time !== null) ? JSON.stringify(time) : 
+                       String(time);
+        
+        if (!timeStr || !timeStr.includes(':')) return null;
+        
+        const [hour, min] = timeStr.split(':');
+        if (!hour || !min) return null;
         
         const h = parseInt(hour);
-        if (isNaN(h)) return '';
+        if (isNaN(h)) return null;
         
         const ampm = h >= 12 ? 'PM' : 'AM';
         const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
@@ -92,9 +97,11 @@ export default function OpeningHours({ openingHours, isOpen }) {
                             >
                                 <span className="capitalize">{day}</span>
                                 <span>
-                                    {!hours || hours.closed === true ? (
+                                    {!hours ? (
+                                        'Not set'
+                                    ) : hours.closed === true ? (
                                         'Closed'
-                                    ) : (openFormatted && closeFormatted) ? (
+                                    ) : openFormatted !== null && closeFormatted !== null ? (
                                         `${openFormatted} - ${closeFormatted}`
                                     ) : (
                                         'Not set'
