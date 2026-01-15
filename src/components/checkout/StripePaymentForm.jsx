@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
+import ExpressCheckout from './ExpressCheckout';
 
 export default function StripePaymentForm({ onSuccess, amount }) {
     const stripe = useStripe();
@@ -99,6 +100,41 @@ export default function StripePaymentForm({ onSuccess, amount }) {
 
     return (
         <div className="space-y-4">
+            <ExpressCheckout
+                amount={amount}
+                onSuccess={async (paymentMethod) => {
+                    // Express checkout completed successfully
+                    console.log('✅ Express payment method:', paymentMethod.id);
+                    
+                    // Confirm the payment using the payment method
+                    const { error: submitError } = await elements.submit();
+                    if (submitError) {
+                        throw new Error(submitError.message);
+                    }
+                    
+                    const result = await stripe.confirmPayment({
+                        elements,
+                        redirect: 'if_required',
+                        confirmParams: {
+                            payment_method: paymentMethod.id,
+                            return_url: window.location.href
+                        }
+                    });
+                    
+                    if (result.error) {
+                        throw new Error(result.error.message);
+                    }
+                    
+                    if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+                        onSuccess(result.paymentIntent.id);
+                    }
+                }}
+                onError={(error) => {
+                    setErrorMessage(error);
+                }}
+                disabled={isProcessing}
+            />
+            
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
                     🔒 Enter your card details below to complete payment
