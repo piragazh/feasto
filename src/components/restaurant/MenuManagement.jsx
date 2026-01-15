@@ -496,8 +496,8 @@ export default function MenuManagement({ restaurantId }) {
                                             setFormData({
                                                 ...formData,
                                                 customization_options: [
-                                                    ...formData.customization_options,
-                                                    { name: '', type: 'single', required: false, options: [{ label: '', price: 0 }] }
+                                                   ...formData.customization_options,
+                                                   { name: '', type: 'single', required: false, max_quantity: 1, options: [{ label: '', price: 0 }] }
                                                 ]
                                             });
                                         }}
@@ -579,16 +579,34 @@ export default function MenuManagement({ restaurantId }) {
                                                     </select>
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-2">
-                                                <Switch
-                                                    checked={custom.required}
-                                                    onCheckedChange={(checked) => {
-                                                        const newCustoms = [...formData.customization_options];
-                                                        newCustoms[idx].required = checked;
-                                                        setFormData({ ...formData, customization_options: newCustoms });
-                                                    }}
-                                                />
-                                                <Label className="text-sm">Required</Label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        checked={custom.required}
+                                                        onCheckedChange={(checked) => {
+                                                            const newCustoms = [...formData.customization_options];
+                                                            newCustoms[idx].required = checked;
+                                                            setFormData({ ...formData, customization_options: newCustoms });
+                                                        }}
+                                                    />
+                                                    <Label className="text-sm">Required</Label>
+                                                </div>
+                                                {custom.type !== 'single' && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Label className="text-sm">Max Quantity:</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="1"
+                                                            value={custom.max_quantity || 1}
+                                                            onChange={(e) => {
+                                                                const newCustoms = [...formData.customization_options];
+                                                                newCustoms[idx].max_quantity = parseInt(e.target.value) || 1;
+                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                            }}
+                                                            className="w-20 h-9"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="space-y-2">
                                                 {custom.type === 'meal_upgrade' ? (
