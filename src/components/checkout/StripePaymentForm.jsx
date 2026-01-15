@@ -100,17 +100,19 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
 
     return (
         <div className="space-y-4">
-            <ExpressCheckout
-                amount={amount}
-                clientSecret={clientSecret}
-                onSuccess={(paymentIntentId) => {
-                    onSuccess(paymentIntentId);
-                }}
-                onError={(error) => {
-                    setErrorMessage(String(error || 'Payment failed'));
-                }}
-                disabled={isProcessing}
-            />
+            {amount && clientSecret && (
+                <ExpressCheckout
+                    amount={amount}
+                    clientSecret={clientSecret}
+                    onSuccess={(paymentIntentId) => {
+                        onSuccess(paymentIntentId);
+                    }}
+                    onError={(error) => {
+                        setErrorMessage(String(error || 'Payment failed'));
+                    }}
+                    disabled={isProcessing}
+                />
+            )}
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
@@ -159,7 +161,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                 ) : (
                     <>
                         <CreditCard className="h-5 w-5 mr-2" />
-                        Pay £{amount.toFixed(2)}
+                        Pay £{amount ? amount.toFixed(2) : '0.00'}
                     </>
                 )}
             </Button>
