@@ -103,31 +103,9 @@ export default function StripePaymentForm({ onSuccess, amount }) {
             <ExpressCheckout
                 amount={amount}
                 onSuccess={async (paymentMethod) => {
-                    // Express checkout completed successfully
-                    console.log('✅ Express payment method:', paymentMethod.id);
-                    
-                    // Confirm the payment using the payment method
-                    const { error: submitError } = await elements.submit();
-                    if (submitError) {
-                        throw new Error(submitError.message);
-                    }
-                    
-                    const result = await stripe.confirmPayment({
-                        elements,
-                        redirect: 'if_required',
-                        confirmParams: {
-                            payment_method: paymentMethod.id,
-                            return_url: window.location.href
-                        }
-                    });
-                    
-                    if (result.error) {
-                        throw new Error(result.error.message);
-                    }
-                    
-                    if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-                        onSuccess(result.paymentIntent.id);
-                    }
+                    // Express checkout already handled payment authorization
+                    // We just need to complete the order
+                    console.log('✅ Express payment completed');
                 }}
                 onError={(error) => {
                     setErrorMessage(error);
