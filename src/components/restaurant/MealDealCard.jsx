@@ -50,9 +50,6 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
 
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-gray-400 line-through text-xs">
-                                £{deal.original_price?.toFixed(2)}
-                            </span>
                             <span className="font-bold text-lg text-orange-600">
                                 £{deal.deal_price?.toFixed(2)}
                             </span>
