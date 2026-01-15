@@ -936,11 +936,21 @@ export default function Checkout() {
                                                     <span>{String(item.name || '')}</span>
                                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            {Object.entries(item.customizations).map(([key, value]) => (
-                                                                <div key={key}>
-                                                                    {String(key)}: {Array.isArray(value) ? value.join(', ') : String(value)}
-                                                                </div>
-                                                            ))}
+                                                            {Object.entries(item.customizations).map(([key, value]) => {
+                                                                let displayValue = '';
+                                                                if (Array.isArray(value)) {
+                                                                    displayValue = value.join(', ');
+                                                                } else if (typeof value === 'object' && value !== null) {
+                                                                    displayValue = JSON.stringify(value);
+                                                                } else {
+                                                                    displayValue = String(value || '');
+                                                                }
+                                                                return (
+                                                                    <div key={key}>
+                                                                        {String(key)}: {displayValue}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
                                                 </div>
