@@ -89,20 +89,22 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-700">Express Checkout</h3>
-                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" /> : null}
+                    {isProcessing && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
                 </div>
-                <PaymentRequestButtonElement
-                    options={{
-                        paymentRequest,
-                        style: {
-                            paymentRequestButton: {
-                                type: 'default',
-                                theme: 'dark',
-                                height: '48px',
+                {paymentRequest && (
+                    <PaymentRequestButtonElement
+                        options={{
+                            paymentRequest,
+                            style: {
+                                paymentRequestButton: {
+                                    type: 'default',
+                                    theme: 'dark',
+                                    height: '48px',
+                                },
                             },
-                        },
-                    }}
-                />
+                        }}
+                    />
+                )}
                 <div className="flex items-center gap-2">
                     <div className="flex-1 border-t"></div>
                     <span className="text-xs text-gray-500">OR</span>
