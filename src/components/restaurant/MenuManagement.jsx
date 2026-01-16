@@ -13,6 +13,7 @@ import { Plus, Edit, Trash2, EyeOff, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
+import CustomOptionTemplates from './CustomOptionTemplates';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function MenuManagement({ restaurantId }) {
@@ -290,6 +291,8 @@ export default function MenuManagement({ restaurantId }) {
     return (
         <div className="space-y-6">
             <AIMenuInsights restaurantId={restaurantId} />
+            
+            <CustomOptionTemplates restaurantId={restaurantId} />
             
             <Card>
                 <CardContent className="pt-6">
@@ -692,27 +695,51 @@ export default function MenuManagement({ restaurantId }) {
                                                                             <Label className="text-xs">Required</Label>
                                                                         </div>
                                                                         <div className="space-y-2">
-                                                                            <Label className="text-xs">Load from Category:</Label>
-                                                                            <select
-                                                                                className="w-full h-9 rounded-md border px-2 text-sm"
-                                                                                onChange={(e) => {
-                                                                                    if (e.target.value) {
-                                                                                        const categoryItems = menuItems.filter(item => item.category === e.target.value);
-                                                                                        const newOptions = categoryItems.map(item => ({ label: item.name, price: 0 }));
-                                                                                        const newCustoms = [...formData.customization_options];
-                                                                                        newCustoms[idx].meal_customizations[mealIdx].options = newOptions;
-                                                                                        setFormData({ ...formData, customization_options: newCustoms });
-                                                                                        toast.success(`Loaded ${newOptions.length} items`);
-                                                                                        e.target.value = '';
-                                                                                    }
-                                                                                }}
-                                                                                defaultValue=""
-                                                                            >
-                                                                                <option value="">Select category...</option>
-                                                                                {categories.map((cat) => (
-                                                                                    <option key={cat} value={cat}>{cat}</option>
-                                                                                ))}
-                                                                            </select>
+                                                                            <Label className="text-xs">Load Options:</Label>
+                                                                            <div className="grid grid-cols-2 gap-1">
+                                                                                <select
+                                                                                    className="w-full h-9 rounded-md border px-2 text-xs"
+                                                                                    onChange={(e) => {
+                                                                                        if (e.target.value) {
+                                                                                            const categoryItems = menuItems.filter(item => item.category === e.target.value);
+                                                                                            const newOptions = categoryItems.map(item => ({ label: item.name, price: 0 }));
+                                                                                            const newCustoms = [...formData.customization_options];
+                                                                                            newCustoms[idx].meal_customizations[mealIdx].options = newOptions;
+                                                                                            setFormData({ ...formData, customization_options: newCustoms });
+                                                                                            toast.success(`Loaded ${newOptions.length} items`);
+                                                                                            e.target.value = '';
+                                                                                        }
+                                                                                    }}
+                                                                                    defaultValue=""
+                                                                                >
+                                                                                    <option value="">Category...</option>
+                                                                                    {categories.map((cat) => (
+                                                                                        <option key={cat} value={cat}>{cat}</option>
+                                                                                    ))}
+                                                                                </select>
+                                                                                <select
+                                                                                    className="w-full h-9 rounded-md border px-2 text-xs"
+                                                                                    onChange={(e) => {
+                                                                                        if (e.target.value) {
+                                                                                            const templates = restaurant?.custom_option_templates || [];
+                                                                                            const template = templates.find(t => t.name === e.target.value);
+                                                                                            if (template) {
+                                                                                                const newCustoms = [...formData.customization_options];
+                                                                                                newCustoms[idx].meal_customizations[mealIdx].options = [...template.options];
+                                                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                                                                toast.success(`Loaded: ${template.name}`);
+                                                                                                e.target.value = '';
+                                                                                            }
+                                                                                        }
+                                                                                    }}
+                                                                                    defaultValue=""
+                                                                                >
+                                                                                    <option value="">Template...</option>
+                                                                                    {(restaurant?.custom_option_templates || []).map((template) => (
+                                                                                        <option key={template.name} value={template.name}>{template.name}</option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            </div>
                                                                         </div>
                                                                         {(mealCustom.options || []).map((opt, optIdx) => (
                                                                             <div key={optIdx} className="flex gap-2">
