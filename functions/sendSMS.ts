@@ -10,17 +10,32 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Missing required fields: to, message' }, { status: 400 });
         }
 
-        // Validate UK phone number format
-        const cleanPhone = to.replace(/\s/g, '');
-        if (!cleanPhone.match(/^(\+44|0)7\d{9}$/)) {
-            return Response.json({ error: 'Invalid UK phone number format' }, { status: 400 });
+        // Clean and format phone number to UK format with country code
+        let cleanPhone = to.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
+        
+        // Convert to +44 format
+        if (cleanPhone.startsWith('00')) {
+            cleanPhone = '+' + cleanPhone.slice(2);
+        } else if (cleanPhone.startsWith('0')) {
+            cleanPhone = '+44' + cleanPhone.slice(1);
+        } else if (cleanPhone.startsWith('44')) {
+            cleanPhone = '+' + cleanPhone;
+        } else if (cleanPhone.startsWith('7')) {
+            cleanPhone = '+44' + cleanPhone;
+        } else if (!cleanPhone.startsWith('+')) {
+            cleanPhone = '+44' + cleanPhone;
+        }
+        
+        // Validate it's a UK mobile number
+        if (!cleanPhone.match(/^\+447\d{9}$/)) {
+            return Response.json({ 
+                error: 'Invalid UK mobile number. Must be a UK mobile starting with 07',
+                received: to,
+                formatted: cleanPhone
+            }, { status: 400 });
         }
 
-        // Convert to international format
-        let formattedPhone = cleanPhone;
-        if (cleanPhone.startsWith('0')) {
-            formattedPhone = '+44' + cleanPhone.slice(1);
-        }
+        const formattedPhone = cleanPhone;
 
         // Check if Twilio credentials are configured
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
