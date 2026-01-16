@@ -556,30 +556,54 @@ export default function MenuManagement({ restaurantId }) {
                                             </div>
                                             {custom.type !== 'meal_upgrade' && (
                                                 <div className="space-y-2">
-                                                    <Label className="text-sm">Load Options from Category</Label>
-                                                    <select
-                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                                        onChange={(e) => {
-                                                            if (e.target.value) {
-                                                                const categoryItems = menuItems.filter(item => item.category === e.target.value);
-                                                                const newOptions = categoryItems.map(item => ({
-                                                                    label: item.name,
-                                                                    price: 0
-                                                                }));
-                                                                const newCustoms = [...formData.customization_options];
-                                                                newCustoms[idx].options = newOptions;
-                                                                setFormData({ ...formData, customization_options: newCustoms });
-                                                                toast.success(`Loaded ${newOptions.length} items from ${e.target.value}`);
-                                                                e.target.value = '';
-                                                            }
-                                                        }}
-                                                        defaultValue=""
-                                                    >
-                                                        <option value="">Select category to load items...</option>
-                                                        {categories.map((cat) => (
-                                                            <option key={cat} value={cat}>{cat}</option>
-                                                        ))}
-                                                    </select>
+                                                    <Label className="text-sm">Load Options</Label>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <select
+                                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                            onChange={(e) => {
+                                                                if (e.target.value) {
+                                                                    const categoryItems = menuItems.filter(item => item.category === e.target.value);
+                                                                    const newOptions = categoryItems.map(item => ({
+                                                                        label: item.name,
+                                                                        price: 0
+                                                                    }));
+                                                                    const newCustoms = [...formData.customization_options];
+                                                                    newCustoms[idx].options = newOptions;
+                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                    toast.success(`Loaded ${newOptions.length} items from ${e.target.value}`);
+                                                                    e.target.value = '';
+                                                                }
+                                                            }}
+                                                            defaultValue=""
+                                                        >
+                                                            <option value="">From category...</option>
+                                                            {categories.map((cat) => (
+                                                                <option key={cat} value={cat}>{cat}</option>
+                                                            ))}
+                                                        </select>
+                                                        <select
+                                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                            onChange={(e) => {
+                                                                if (e.target.value) {
+                                                                    const templates = restaurant?.custom_option_templates || [];
+                                                                    const template = templates.find(t => t.name === e.target.value);
+                                                                    if (template) {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options = [...template.options];
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                        toast.success(`Loaded template: ${template.name}`);
+                                                                        e.target.value = '';
+                                                                    }
+                                                                }
+                                                            }}
+                                                            defaultValue=""
+                                                        >
+                                                            <option value="">From template...</option>
+                                                            {(restaurant?.custom_option_templates || []).map((template) => (
+                                                                <option key={template.name} value={template.name}>{template.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             )}
                                             <div className="flex items-center gap-4">
