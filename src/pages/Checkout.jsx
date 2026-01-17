@@ -502,11 +502,14 @@ export default function Checkout() {
                     ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min\n\nShow this number when collecting!`
                     : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}\n\nYou'll receive SMS updates when your order is being prepared and dispatched.`;
 
-                await base44.functions.invoke('sendSMS', {
+                console.log('Sending customer SMS to:', formData.phone);
+                const smsResult = await base44.functions.invoke('sendSMS', {
                     to: formData.phone,
                     message: customerMessage
                 });
+                console.log('Customer SMS result:', smsResult);
             } catch (smsError) {
+                console.error('Customer SMS failed:', smsError);
                 // SMS failed but order still placed - don't block user
             }
 

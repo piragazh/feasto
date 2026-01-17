@@ -70,6 +70,9 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
             const error = await response.text();
+            console.error('Twilio API error:', error);
+            console.error('Phone number attempted:', formattedPhone);
+            console.error('Message:', message);
             return Response.json({ 
                 error: 'Failed to send SMS', 
                 details: error 
@@ -77,6 +80,7 @@ Deno.serve(async (req) => {
         }
 
         const result = await response.json();
+        console.log(`✅ SMS sent successfully to ${formattedPhone}, SID: ${result.sid}`);
         return Response.json({ 
             success: true, 
             messageSid: result.sid,
@@ -84,6 +88,7 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
+        console.error('SMS function error:', error);
         return Response.json({ 
             error: error.message || 'Failed to send SMS' 
         }, { status: 500 });
