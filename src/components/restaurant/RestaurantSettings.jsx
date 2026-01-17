@@ -30,6 +30,7 @@ export default function RestaurantSettings({ restaurantId }) {
         description: '',
         address: '',
         phone: '',
+        alert_phone: '',
         delivery_fee: '',
         minimum_order: '',
         collection_enabled: false,
@@ -57,6 +58,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 description: restaurant.description || '',
                 address: restaurant.address || '',
                 phone: restaurant.phone || '',
+                alert_phone: restaurant.alert_phone || '',
                 delivery_fee: restaurant.delivery_fee || '',
                 minimum_order: restaurant.minimum_order || '',
                 collection_enabled: restaurant.collection_enabled || false,
@@ -125,6 +127,7 @@ export default function RestaurantSettings({ restaurantId }) {
             description: formData.description,
             address: formData.address,
             phone: formData.phone,
+            alert_phone: formData.alert_phone,
             delivery_fee: parseFloat(formData.delivery_fee) || 0,
             minimum_order: parseFloat(formData.minimum_order) || 0,
             collection_enabled: formData.collection_enabled,
@@ -335,6 +338,17 @@ export default function RestaurantSettings({ restaurantId }) {
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 placeholder="07XXX XXXXXX"
                             />
+                        </div>
+                        <div>
+                            <Label>SMS Alert Phone (For New Orders) 📱</Label>
+                            <Input
+                                value={formData.alert_phone}
+                                onChange={(e) => setFormData({ ...formData, alert_phone: e.target.value })}
+                                placeholder="07XXX XXXXXX"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Receive SMS alerts for new orders on this number
+                            </p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
