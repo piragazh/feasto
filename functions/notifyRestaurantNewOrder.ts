@@ -4,20 +4,30 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        const { orderId, restaurantName } = await req.json();
+        const { orderId, restaurantId, restaurantName } = await req.json();
 
         if (!orderId || !restaurantName) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Get restaurant alert phone number
-        const alertPhone = Deno.env.get('RESTAURANT_ALERT_PHONE');
+        // Get restaurant alert phone from restaurant settings
+        let alertPhone = null;
+        if (restaurantId) {
+            try {
+                const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId });
+                if (restaurants.length > 0 && restaurants[0].alert_phone) {
+                    alertPhone = restaurants[0].alert_phone;
+                }
+            } catch (error) {
+                console.error('Failed to fetch restaurant phone:', error);
+            }
+        }
 
         if (!alertPhone) {
-            console.log(`Restaurant alert would be sent for order ${orderId} at ${restaurantName}`);
+            console.log(`Restaurant alert would be sent for order ${orderId} at ${restaurantName} (phone not configured)`);
             return Response.json({ 
                 success: true, 
-                message: 'Restaurant alert simulation (phone not configured)',
+                message: 'Restaurant alert phone not configured',
                 simulated: true 
             });
         }

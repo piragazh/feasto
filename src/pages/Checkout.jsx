@@ -504,6 +504,7 @@ export default function Checkout() {
             try {
                 await base44.functions.invoke('notifyRestaurantNewOrder', {
                     orderId: newOrder.id,
+                    restaurantId: restaurantId,
                     restaurantName: restaurantName
                 });
             } catch (notifyError) {
