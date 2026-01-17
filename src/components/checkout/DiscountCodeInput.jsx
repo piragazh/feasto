@@ -13,6 +13,22 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
     const [appliedCoupons, setAppliedCoupons] = useState([]);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
 
+    // Recalculate BOGO promotions when cart changes
+    useEffect(() => {
+        if (appliedPromotions.length === 0) return;
+
+        const updatedPromotions = appliedPromotions.map(promo => {
+            if (promo.promotion_type === 'buy_one_get_one' || promo.promotion_type === 'buy_two_get_one') {
+                const newDiscount = calculateBogoDiscount(promo, cartItems);
+                return { ...promo, discount: newDiscount };
+            }
+            return promo;
+        });
+
+        setAppliedPromotions(updatedPromotions);
+        onPromotionApply(updatedPromotions);
+    }, [cartItems]);
+
 
     const validateCode = async () => {
         if (!code.trim()) {
