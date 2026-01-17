@@ -485,12 +485,22 @@ export default function Checkout() {
                 }
             }
 
-            // Send SMS confirmation to customer
+            // Send SMS confirmation to customer with order details
             try {
-                const orderNumber = orderType === 'collection' ? orderNumber : `#${newOrder.id.slice(-6)}`;
+                const orderLabel = orderType === 'collection' && newOrder.order_number
+                    ? newOrder.order_number
+                    : `#${newOrder.id.slice(-6)}`;
+                
+                // Build order summary
+                const itemsList = cart.slice(0, 3).map(item => 
+                    `${item.quantity}x ${item.name}`
+                ).join('\n');
+                
+                const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
+
                 const customerMessage = orderType === 'collection'
-                    ? `Thank you for your order! Your collection order ${orderNumber} has been placed at ${restaurantName}. You'll receive updates via SMS. Show your order number when collecting.`
-                    : `Thank you for your order! Order ${orderNumber} from ${restaurantName} has been placed. You'll receive updates as your order is prepared and dispatched.`;
+                    ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min\n\nShow this number when collecting!`
+                    : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}\n\nYou'll receive SMS updates when your order is being prepared and dispatched.`;
 
                 await base44.functions.invoke('sendSMS', {
                     to: formData.phone,
