@@ -32,6 +32,13 @@ Deno.serve(async (req) => {
             });
         }
 
+        // Fetch order details
+        const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+        if (orders.length === 0) {
+            return Response.json({ error: 'Order not found' }, { status: 404 });
+        }
+        const order = orders[0];
+
         // Check if Twilio is configured
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -46,7 +53,18 @@ Deno.serve(async (req) => {
             });
         }
 
-        const message = `🍕 NEW ORDER ALERT!\n\n${restaurantName} has received a new order #${orderId.slice(-6)}.\n\nPlease check your dashboard to accept/reject.`;
+        // Build order summary
+        const orderLabel = order.order_type === 'collection' && order.order_number 
+            ? order.order_number 
+            : `#${orderId.slice(-6)}`;
+        
+        const itemsList = order.items.slice(0, 3).map(item => 
+            `${item.quantity}x ${item.name}`
+        ).join('\n');
+        
+        const moreItems = order.items.length > 3 ? `\n+${order.items.length - 3} more items` : '';
+
+        const message = `🔔 NEW ORDER - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${order.total.toFixed(2)}\nType: ${order.order_type}\nPayment: ${order.payment_method}\n\nCheck dashboard to accept!`;
 
         // Send SMS via Twilio
         const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
