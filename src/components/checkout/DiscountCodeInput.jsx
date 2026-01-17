@@ -17,17 +17,23 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
     useEffect(() => {
         if (appliedPromotions.length === 0) return;
 
+        let hasChanges = false;
         const updatedPromotions = appliedPromotions.map(promo => {
             if (promo.promotion_type === 'buy_one_get_one' || promo.promotion_type === 'buy_two_get_one') {
                 const newDiscount = calculateBogoDiscount(promo, cartItems);
-                return { ...promo, discount: newDiscount };
+                if (newDiscount !== promo.discount) {
+                    hasChanges = true;
+                    return { ...promo, discount: newDiscount };
+                }
             }
             return promo;
         });
 
-        setAppliedPromotions(updatedPromotions);
-        onPromotionApply(updatedPromotions);
-    }, [cartItems]);
+        if (hasChanges) {
+            setAppliedPromotions(updatedPromotions);
+            onPromotionApply(updatedPromotions);
+        }
+    }, [JSON.stringify(cartItems.map(item => ({ id: item.menu_item_id, qty: item.quantity })))]);
 
 
     const validateCode = async () => {
