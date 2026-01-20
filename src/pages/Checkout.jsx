@@ -169,47 +169,46 @@ export default function Checkout() {
         if (savedPromotions) {
             setAppliedPromotions(JSON.parse(savedPromotions));
         }
+    }, []); // Only on mount
 
-        // Auto-detect and apply BOGO promotions from cart
-        if (cart.length > 0) {
-            const bogoPromotions = [];
-            cart.forEach(item => {
-                if (item.promotion_type === 'buy_one_get_one') {
-                    // 1 free item for every 2 quantity
-                    const freeItems = Math.floor(item.quantity / 2);
-                    if (freeItems > 0) {
-                        const discount = item.price * freeItems;
-                        bogoPromotions.push({
-                            id: `${item.menu_item_id}_bogo`,
-                            name: item.promotion_name || 'Buy 1 Get 1 Free',
-                            promotion_type: 'buy_one_get_one',
-                            discount: discount,
-                            is_automatic: true
-                        });
-                    }
-                } else if (item.promotion_type === 'buy_two_get_one') {
-                    // 1 free item for every 3 quantity
-                    const freeItems = Math.floor(item.quantity / 3);
-                    if (freeItems > 0) {
-                        const discount = item.price * freeItems;
-                        bogoPromotions.push({
-                            id: `${item.menu_item_id}_b2g1`,
-                            name: item.promotion_name || 'Buy 2 Get 1 Free',
-                            promotion_type: 'buy_two_get_one',
-                            discount: discount,
-                            is_automatic: true
-                        });
-                    }
+    // Auto-detect BOGO promotions from cart items
+    useEffect(() => {
+        if (cart.length === 0) return;
+
+        const bogoPromotions = [];
+        cart.forEach(item => {
+            if (item.promotion_type === 'buy_one_get_one') {
+                const freeItems = Math.floor(item.quantity / 2);
+                if (freeItems > 0) {
+                    const discount = item.price * freeItems;
+                    bogoPromotions.push({
+                        id: `${item.menu_item_id}_bogo`,
+                        name: item.promotion_name || 'Buy 1 Get 1 Free',
+                        promotion_type: 'buy_one_get_one',
+                        discount: discount,
+                        is_automatic: true
+                    });
                 }
-            });
-            if (bogoPromotions.length > 0) {
-                setAppliedPromotions(prev => {
-                    const filtered = prev.filter(p => !p.is_automatic);
-                    return [...filtered, ...bogoPromotions];
-                });
+            } else if (item.promotion_type === 'buy_two_get_one') {
+                const freeItems = Math.floor(item.quantity / 3);
+                if (freeItems > 0) {
+                    const discount = item.price * freeItems;
+                    bogoPromotions.push({
+                        id: `${item.menu_item_id}_b2g1`,
+                        name: item.promotion_name || 'Buy 2 Get 1 Free',
+                        promotion_type: 'buy_two_get_one',
+                        discount: discount,
+                        is_automatic: true
+                    });
+                }
             }
-        }
-    }, [cart]); // Re-run when cart changes
+        });
+
+        setAppliedPromotions(prev => {
+            const filtered = prev.filter(p => !p.is_automatic);
+            return bogoPromotions.length > 0 ? [...filtered, ...bogoPromotions] : filtered;
+        });
+    }, [cart]);
 
     // Auto-enable scheduling if restaurant is closed (runs on mount/restaurant change)
     useEffect(() => {
