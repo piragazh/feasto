@@ -826,6 +826,9 @@ export default function Checkout() {
                                                         }
                                                     }}
                                                 />
+                                                {/* Hidden fields to hold selected address values for form validation */}
+                                                <input type="hidden" name="door_number" value={formData.door_number || ''} />
+                                                <input type="hidden" name="delivery_address" value={formData.delivery_address || ''} />
                                                 <Button
                                                     type="button"
                                                     variant="outline"
