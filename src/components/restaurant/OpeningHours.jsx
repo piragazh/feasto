@@ -64,18 +64,22 @@ export default function OpeningHours({ openingHours, isOpen }) {
                         <Clock className="h-5 w-5 text-orange-500" />
                         <div className="flex flex-col">
                             <span>Opening Hours</span>
-                            {todayHours && !todayHours.closed && (
+                            {todayHours && !todayHours.closed ? (
                                 <span className="text-sm font-normal text-gray-500">
                                     Today: {formatTime(todayHours.open)} - {formatTime(todayHours.close)}
+                                </span>
+                            ) : (
+                                <span className="text-sm font-normal text-gray-500">
+                                    Today: Closed
                                 </span>
                             )}
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {isCurrentlyOpen() ? (
-                            <Badge className="bg-green-100 text-green-800">Open Now</Badge>
+                            <Badge className="bg-green-100 text-green-800 font-semibold">Open Now</Badge>
                         ) : (
-                            <Badge className="bg-red-100 text-red-800">Closed</Badge>
+                            <Badge className="bg-red-100 text-red-800 font-semibold">Closed</Badge>
                         )}
                         {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </div>

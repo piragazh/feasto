@@ -5,10 +5,65 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Calendar, Clock } from 'lucide-react';
 
-export default function ScheduleOrderSection({ isScheduled, onScheduleToggle, scheduledFor, onScheduleChange }) {
+export default function ScheduleOrderSection({ isScheduled, onScheduleToggle, scheduledFor, onScheduleChange, restaurant, orderType }) {
     const minDateTime = new Date();
     minDateTime.setHours(minDateTime.getHours() + 1);
     const minDateTimeString = minDateTime.toISOString().slice(0, 16);
+
+    // Get next available time slot based on restaurant hours
+    const getNextAvailableTime = () => {
+        if (!restaurant) return minDateTimeString;
+        
+        const now = new Date();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+        
+        let hours;
+        if (orderType === 'collection' && restaurant.collection_hours) {
+            hours = restaurant.collection_hours[dayName];
+        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+            hours = restaurant.delivery_hours[dayName];
+        } else {
+            hours = restaurant.opening_hours?.[dayName];
+        }
+
+        if (!hours || hours.closed) {
+            // Find next open day
+            for (let i = 1; i <= 7; i++) {
+                const nextDay = new Date(now);
+                nextDay.setDate(nextDay.getDate() + i);
+                const nextDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDay.getDay()];
+                
+                let nextHours;
+                if (orderType === 'collection' && restaurant.collection_hours) {
+                    nextHours = restaurant.collection_hours[nextDayName];
+                } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+                    nextHours = restaurant.delivery_hours[nextDayName];
+                } else {
+                    nextHours = restaurant.opening_hours?.[nextDayName];
+                }
+
+                if (nextHours && !nextHours.closed) {
+                    const [hour, min] = nextHours.open.split(':').map(Number);
+                    nextDay.setHours(hour, min, 0, 0);
+                    return nextDay.toISOString().slice(0, 16);
+                }
+            }
+            return minDateTimeString;
+        }
+
+        const [openHour, openMin] = hours.open.split(':').map(Number);
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const openTime = openHour * 60 + openMin;
+
+        // If current time + 1 hour is before opening, set to opening time
+        if (currentTime + 60 < openTime) {
+            const nextAvailable = new Date(now);
+            nextAvailable.setHours(openHour, openMin, 0, 0);
+            return nextAvailable.toISOString().slice(0, 16);
+        }
+
+        return minDateTimeString;
+    };
 
     return (
         <Card>
@@ -31,18 +86,18 @@ export default function ScheduleOrderSection({ isScheduled, onScheduleToggle, sc
                     <div>
                         <Label className="flex items-center gap-2 mb-2">
                             <Clock className="h-4 w-4" />
-                            Delivery Time
+                            {orderType === 'collection' ? 'Collection' : 'Delivery'} Time
                         </Label>
                         <Input
                             type="datetime-local"
-                            min={minDateTimeString}
+                            min={getNextAvailableTime()}
                             value={scheduledFor}
                             onChange={(e) => onScheduleChange(e.target.value)}
                             className="h-12"
                             required={isScheduled}
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                            Schedule at least 1 hour in advance
+                            Schedule during {orderType === 'collection' ? 'collection' : 'delivery'} hours only
                         </p>
                     </div>
                 )}

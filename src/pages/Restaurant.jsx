@@ -622,7 +622,7 @@ export default function Restaurant() {
     }, [restaurant]);
 
     // Check if restaurant is open for delivery/collection
-    const checkOrderingAvailable = () => {
+    const checkOrderingAvailable = (type = orderType) => {
         if (!restaurant) return { available: true, message: '' };
 
         const now = new Date();
@@ -630,9 +630,9 @@ export default function Restaurant() {
         const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
 
         let hours;
-        if (orderType === 'collection' && restaurant.collection_hours) {
+        if (type === 'collection' && restaurant.collection_hours) {
             hours = restaurant.collection_hours[dayName];
-        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+        } else if (type === 'delivery' && restaurant.delivery_hours) {
             hours = restaurant.delivery_hours[dayName];
         } else {
             hours = restaurant.opening_hours?.[dayName];
@@ -641,7 +641,7 @@ export default function Restaurant() {
         if (!hours || hours.closed) {
             return {
                 available: false,
-                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} is not available on ${dayName}s`
+                message: `${type === 'collection' ? 'Collection' : 'Delivery'} is not available on ${dayName.charAt(0).toUpperCase() + dayName.slice(1)}s`
             };
         }
 
@@ -653,14 +653,14 @@ export default function Restaurant() {
         if (currentTime < openTime) {
             return {
                 available: false,
-                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} starts at ${hours.open}`
+                message: `${type === 'collection' ? 'Collection' : 'Delivery'} starts at ${hours.open}`
             };
         }
 
         if (currentTime > closeTime) {
             return {
                 available: false,
-                message: `${orderType === 'collection' ? 'Collection' : 'Delivery'} closed at ${hours.close}`
+                message: `${type === 'collection' ? 'Collection' : 'Delivery'} closed at ${hours.close}`
             };
         }
 
@@ -676,6 +676,34 @@ export default function Restaurant() {
 
         if (!restaurant || !restaurant.name) {
             toast.error('Restaurant information unavailable');
+            return;
+        }
+
+        // Check if ordering is available for current order type
+        const orderStatus = checkOrderingAvailable();
+        if (!orderStatus.available) {
+            // Show warning with suggestions
+            if (orderType === 'delivery') {
+                // Outside delivery hours - suggest collection or schedule
+                const collectionStatus = checkOrderingAvailable('collection');
+                if (restaurant.collection_enabled && collectionStatus.available) {
+                    toast.error(orderStatus.message, {
+                        description: 'Switch to collection or schedule your order for later',
+                        duration: 5000
+                    });
+                } else {
+                    toast.error(orderStatus.message, {
+                        description: 'Please schedule your order for later',
+                        duration: 5000
+                    });
+                }
+            } else {
+                // Outside collection hours - suggest schedule
+                toast.error(orderStatus.message, {
+                    description: 'Please schedule your order for later',
+                    duration: 5000
+                });
+            }
             return;
         }
 
