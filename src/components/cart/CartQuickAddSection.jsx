@@ -44,12 +44,12 @@ export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClos
                                     });
                                 }}
                                 variant="outline"
-                                className="w-full h-auto flex flex-col items-start gap-1 p-1.5 sm:p-2 bg-white hover:bg-orange-50 border-orange-200 group text-left"
+                                className="w-full h-auto flex flex-col items-start gap-0.5 p-1.5 sm:p-2 bg-white hover:bg-orange-50 border-orange-200 group text-left overflow-hidden"
                             >
-                                <span className="text-[10px] sm:text-xs font-medium text-gray-900 line-clamp-2 leading-tight">{item.name}</span>
-                                <div className="flex items-center justify-between w-full">
-                                    <span className="text-[9px] sm:text-xs text-gray-600 font-semibold">£{item.price.toFixed(2)}</span>
-                                    <Plus className="h-3 w-3 text-orange-500 flex-shrink-0" />
+                                <span className="text-[10px] sm:text-xs font-medium text-gray-900 line-clamp-2 leading-tight w-full break-words overflow-hidden">{item.name}</span>
+                                <div className="flex items-center justify-between w-full flex-shrink-0">
+                                    <span className="text-[9px] sm:text-xs text-gray-600 font-semibold flex-shrink-0">£{item.price.toFixed(2)}</span>
+                                    <Plus className="h-3 w-3 text-orange-500 flex-shrink-0 ml-1" />
                                 </div>
                             </Button>
                         </motion.div>
