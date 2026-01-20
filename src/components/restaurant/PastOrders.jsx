@@ -111,6 +111,11 @@ export default function PastOrders({ restaurantId }) {
                                 <p><strong>Customer:</strong> {order.phone}</p>
                                 <p><strong>Address:</strong> {order.delivery_address}</p>
                                 <p><strong>Items:</strong> {order.items?.length || 0} items</p>
+                                <p><strong>Payment:</strong> {order.payment_method || 'N/A'}</p>
+                                <p><strong>Order Type:</strong> {order.order_type === 'collection' ? '🏪 Collection' : '🚚 Delivery'}</p>
+                                {order.order_number && (
+                                    <p><strong>Order Number:</strong> {order.order_number}</p>
+                                )}
                                 <Button
                                     size="sm"
                                     variant="ghost"
