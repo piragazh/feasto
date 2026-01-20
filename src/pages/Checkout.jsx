@@ -514,15 +514,15 @@ export default function Checkout() {
                 return;
             }
 
-            // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
-            // Check if zone check is still pending for new addresses
-            if (!isExistingAddress && !zoneCheckComplete) {
+            // ---- VALIDATION: Delivery Zone (for both new and existing addresses) ----
+            // Check if zone check is still pending
+            if (!zoneCheckComplete) {
                 console.log('BLOCKED: Zone check still pending');
                 toast.error('Checking delivery availability... please wait');
                 return;
             }
 
-            // Check if delivery is available (only if zone info exists)
+            // Check if delivery is available
             if (deliveryZoneInfo && deliveryZoneInfo.available === false) {
                 console.log('BLOCKED: Delivery not available to location');
                 toast.error('Delivery is not available to your location');
