@@ -387,6 +387,39 @@ export default function Checkout() {
              }
          }
 
+         // ---- VALIDATION: Check if restaurant is currently open (for immediate orders) ----
+         if (!isScheduled && restaurant) {
+             const now = new Date();
+             const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+             
+             let hours;
+             if (orderType === 'collection' && restaurant.collection_hours) {
+                 hours = restaurant.collection_hours[dayName];
+             } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+                 hours = restaurant.delivery_hours[dayName];
+             } else {
+                 hours = restaurant.opening_hours?.[dayName];
+             }
+
+             if (!hours || hours.closed) {
+                 console.log('BLOCKED: Restaurant closed now - must schedule order');
+                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} is closed. Please schedule your order for later.`);
+                 return;
+             }
+
+             const currentTime = now.getHours() * 60 + now.getMinutes();
+             const [openHour, openMin] = hours.open.split(':').map(Number);
+             const [closeHour, closeMin] = hours.close.split(':').map(Number);
+             const openTime = openHour * 60 + openMin;
+             const closeTime = closeHour * 60 + closeMin;
+
+             if (currentTime < openTime || currentTime > closeTime) {
+                 console.log('BLOCKED: Outside operating hours - must schedule order');
+                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} is closed now (${hours.open}-${hours.close}). Please schedule your order for later.`);
+                 return;
+             }
+         }
+
          // ---- VALIDATION: Scheduled Order Time ----
          if (isScheduled && scheduledFor && restaurant) {
              const scheduledDate = new Date(scheduledFor);
