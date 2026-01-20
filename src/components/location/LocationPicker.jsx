@@ -5,10 +5,15 @@ import { MapPin, Loader2, Navigation } from 'lucide-react';
 import { useGeolocation, reverseGeocode } from './useGeolocation';
 import { toast } from 'sonner';
 
-export default function LocationPicker({ onLocationSelect, className = '' }) {
-    const [address, setAddress] = useState('');
+export default function LocationPicker({ onLocationSelect, className = '', value = '' }) {
+    const [address, setAddress] = useState(value);
     const { location, loading, getCurrentLocation } = useGeolocation();
     const [isGettingAddress, setIsGettingAddress] = useState(false);
+
+    // Update internal state when value prop changes
+    React.useEffect(() => {
+        setAddress(value);
+    }, [value]);
 
     const handleUseCurrentLocation = async () => {
         getCurrentLocation();

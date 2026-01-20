@@ -836,6 +836,7 @@ export default function Checkout() {
                                         <div>
                                             <Label htmlFor="address">Street Address *</Label>
                                             <LocationPicker
+                                                value={formData.delivery_address}
                                                 onLocationSelect={async (locationData) => {
                                                     setFormData({ ...formData, delivery_address: locationData.address });
                                                     setDeliveryCoordinates(locationData.coordinates);
