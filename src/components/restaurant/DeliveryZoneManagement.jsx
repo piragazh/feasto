@@ -462,6 +462,32 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                         attribution='&copy; OpenStreetMap'
                                     />
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
+                                    
+                                    {/* Show all existing zones for reference */}
+                                    {zones.map((zone) => (
+                                        zone.coordinates && (!editingZone || zone.id !== editingZone.id) && (
+                                            <Polygon
+                                                key={zone.id}
+                                                positions={zone.coordinates.map(c => [c.lat, c.lng])}
+                                                pathOptions={{
+                                                    color: zone.color || '#999999',
+                                                    fillColor: zone.color || '#999999',
+                                                    fillOpacity: 0.1,
+                                                    weight: 1,
+                                                    dashArray: '5, 5'
+                                                }}
+                                            >
+                                                <Popup>
+                                                    <div className="text-xs p-1">
+                                                        <p className="font-semibold">{zone.name}</p>
+                                                        <p>Fee: £{zone.delivery_fee.toFixed(2)}</p>
+                                                    </div>
+                                                </Popup>
+                                            </Polygon>
+                                        )
+                                    ))}
+                                    
+                                    {/* Current zone being drawn */}
                                     {drawnCoordinates && (
                                         <Polygon
                                             positions={drawnCoordinates.map(c => [c.lat, c.lng])}
@@ -469,6 +495,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                 color: formData.color,
                                                 fillColor: formData.color,
                                                 fillOpacity: 0.3,
+                                                weight: 2
                                             }}
                                         />
                                     )}
