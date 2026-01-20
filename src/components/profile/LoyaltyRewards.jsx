@@ -9,6 +9,10 @@ import { Progress } from "@/components/ui/progress";
 import RedeemRewardDialog from './RedeemRewardDialog';
 
 export default function LoyaltyRewards({ user }) {
+    const [selectedReward, setSelectedReward] = useState(null);
+    const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+    const queryClient = useQueryClient();
+
     const { data: userPoints } = useQuery({
         queryKey: ['loyalty-points', user.email],
         queryFn: async () => {
