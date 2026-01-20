@@ -99,7 +99,10 @@ export default function NotificationBell({ userEmail }) {
                             {notifications.map((notification) => (
                                 <div
                                     key={notification.id}
-                                    onClick={() => handleNotificationClick(notification)}
+                                    onClick={() => {
+                                        handleNotificationClick(notification);
+                                        playNotificationSound();
+                                    }}
                                     className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
                                         !notification.is_read ? 'bg-blue-50' : ''
                                     }`}
