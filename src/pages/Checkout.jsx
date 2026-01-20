@@ -116,6 +116,7 @@ export default function Checkout() {
     const [isExistingAddress, setIsExistingAddress] = useState(false);
     const [isExistingPhone, setIsExistingPhone] = useState(false);
     const [user, setUser] = useState(null);
+    const [showManualAddressEntry, setShowManualAddressEntry] = useState(false);
 
     // ============================================
     // INITIALIZATION - Runs when page loads
@@ -192,6 +193,9 @@ export default function Checkout() {
                             setDeliveryCoordinates(defaultAddress.coordinates);
                         }
                         setIsExistingAddress(true);
+                        setShowManualAddressEntry(false);
+                    } else {
+                        setShowManualAddressEntry(true);
                     }
                 } catch (error) {
                     console.error('Failed to load user data:', error);
@@ -793,65 +797,109 @@ export default function Checkout() {
                                     </CardHeader>
                                     <CardContent className="space-y-3">
                                         {/* Saved Addresses Section */}
-                                        {!isGuest && (
-                                            <SavedAddressesSection 
-                                                onAddressSelect={async (address) => {
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        delivery_address: address.address || '',
-                                                        door_number: address.door_number || '',
-                                                        notes: address.instructions || ''
-                                                    }));
-                                                    if (address.coordinates) {
-                                                        setDeliveryCoordinates(address.coordinates);
-                                                    }
-                                                    setIsExistingAddress(true);
-                                                    
-                                                    // Check delivery zone for selected address
-                                                    if (address.coordinates && restaurantId) {
-                                                        setZoneCheckComplete(false);
-                                                        const zoneInfo = await calculateDeliveryDetails(restaurantId, address.coordinates);
-                                                        setDeliveryZoneInfo(zoneInfo);
-                                                        setZoneCheckComplete(true);
-                                                    }
-                                                }}
-                                            />
+                                        {!isGuest && !showManualAddressEntry && (
+                                            <>
+                                                <SavedAddressesSection 
+                                                    onAddressSelect={async (address) => {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            delivery_address: address.address || '',
+                                                            door_number: address.door_number || '',
+                                                            notes: address.instructions || ''
+                                                        }));
+                                                        if (address.coordinates) {
+                                                            setDeliveryCoordinates(address.coordinates);
+                                                        }
+                                                        setIsExistingAddress(true);
+                                                        
+                                                        // Check delivery zone for selected address
+                                                        if (address.coordinates && restaurantId) {
+                                                            setZoneCheckComplete(false);
+                                                            const zoneInfo = await calculateDeliveryDetails(restaurantId, address.coordinates);
+                                                            setDeliveryZoneInfo(zoneInfo);
+                                                            setZoneCheckComplete(true);
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setShowManualAddressEntry(true);
+                                                        setIsExistingAddress(false);
+                                                        setFormData(prev => ({ ...prev, delivery_address: '', door_number: '' }));
+                                                    }}
+                                                    className="w-full"
+                                                >
+                                                    <MapPin className="h-4 w-4 mr-2" />
+                                                    Use a Different Address
+                                                </Button>
+                                            </>
                                         )}
                                         
-                                        <div>
-                                            <Label htmlFor="door_number">Door Number / Flat *</Label>
-                                            <Input
-                                                id="door_number"
-                                                type="text"
-                                                placeholder="e.g., 42 or Flat 5B"
-                                                value={formData.door_number || ''}
-                                                onChange={(e) => {
-                                                    setFormData({ ...formData, door_number: e.target.value });
-                                                    setIsExistingAddress(false);
-                                                }}
-                                                className="h-12"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="address">Street Address *</Label>
-                                            <LocationPicker
-                                                value={formData.delivery_address}
-                                                onLocationSelect={async (locationData) => {
-                                                    setFormData({ ...formData, delivery_address: locationData.address });
-                                                    setDeliveryCoordinates(locationData.coordinates);
-                                                    setIsExistingAddress(false);
+                                        {(isGuest || showManualAddressEntry) && (
+                                            <>
+                                                {!isGuest && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            setShowManualAddressEntry(false);
+                                                            // Reload default address
+                                                            if (user?.saved_addresses?.length > 0) {
+                                                                const defaultAddress = user.saved_addresses.find(addr => addr.is_default) || user.saved_addresses[0];
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    delivery_address: defaultAddress.address || '',
+                                                                    door_number: defaultAddress.door_number || ''
+                                                                }));
+                                                                if (defaultAddress.coordinates) {
+                                                                    setDeliveryCoordinates(defaultAddress.coordinates);
+                                                                }
+                                                                setIsExistingAddress(true);
+                                                            }
+                                                        }}
+                                                        className="w-full mb-3 text-orange-600 hover:text-orange-700"
+                                                    >
+                                                        ← Back to Saved Addresses
+                                                    </Button>
+                                                )}
+                                                <div>
+                                                    <Label htmlFor="door_number">Door Number / Flat *</Label>
+                                                    <Input
+                                                        id="door_number"
+                                                        type="text"
+                                                        placeholder="e.g., 42 or Flat 5B"
+                                                        value={formData.door_number || ''}
+                                                        onChange={(e) => {
+                                                            setFormData({ ...formData, door_number: e.target.value });
+                                                            setIsExistingAddress(false);
+                                                        }}
+                                                        className="h-12"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="address">Street Address *</Label>
+                                                    <LocationPicker
+                                                        value={formData.delivery_address}
+                                                        onLocationSelect={async (locationData) => {
+                                                            setFormData({ ...formData, delivery_address: locationData.address });
+                                                            setDeliveryCoordinates(locationData.coordinates);
+                                                            setIsExistingAddress(false);
 
-                                                    if (locationData.coordinates && restaurantId) {
-                                                        setZoneCheckComplete(false);
-                                                        const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
-                                                        setDeliveryZoneInfo(zoneInfo);
-                                                        setZoneCheckComplete(true);
-                                                    }
-                                                }}
-                                                className="[&>div]:h-12"
-                                            />
-                                        </div>
+                                                            if (locationData.coordinates && restaurantId) {
+                                                                setZoneCheckComplete(false);
+                                                                const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
+                                                                setDeliveryZoneInfo(zoneInfo);
+                                                                setZoneCheckComplete(true);
+                                                            }
+                                                        }}
+                                                        className="[&>div]:h-12"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
 
                                         {zoneCheckComplete && deliveryZoneInfo && deliveryZoneInfo.available !== undefined && (
                                             <div className={`p-3 rounded-lg border ${
