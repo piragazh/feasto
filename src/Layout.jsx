@@ -35,7 +35,11 @@ export default function Layout({ children, currentPageName }) {
             metaDescription.name = 'description';
             document.head.appendChild(metaDescription);
         }
-        metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers. Download the MealDrop app for iOS and Android.';
+        if (customDomainRestaurantId && restaurant?.description) {
+          metaDescription.content = restaurant.description;
+      } else {
+          metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers. Download the MealDrop app for iOS and Android.';
+      }
 
         // Keywords
         let metaKeywords = document.querySelector('meta[name="keywords"]');
@@ -205,12 +209,25 @@ export default function Layout({ children, currentPageName }) {
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
                             <Link to={homeUrl} className="flex items-center gap-2">
-                                <img 
-                                    src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png?w=100&h=100&fit=crop" 
-                                    alt="MealDrop Logo" 
-                                    className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
-                                />
-                                <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">MealDrop</span>
+                                {customDomainRestaurantId ? (
+                                    <>
+                                        <img 
+                                            src={restaurant?.logo_url || restaurant?.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png?w=100&h=100&fit=crop'} 
+                                            alt={restaurant?.name || "Restaurant Logo"} 
+                                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
+                                        />
+                                        <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">{restaurant?.name}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <img 
+                                            src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png?w=100&h=100&fit=crop" 
+                                            alt="MealDrop Logo" 
+                                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
+                                        />
+                                        <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">MealDrop</span>
+                                    </>
+                                )}
                             </Link>
 
                             <nav className="hidden md:flex items-center gap-8">
