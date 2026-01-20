@@ -399,13 +399,15 @@ export default function Checkout() {
         console.log('Payment Completed:', paymentCompleted);
         
         // Auto-enable scheduling if restaurant is closed
+        let finalScheduledFor = scheduledFor;
+        let finalIsScheduled = isScheduled;
+        
         if (!isScheduled && checkRestaurantStatus()) {
             const earliestTime = getEarliestScheduleTime();
             if (earliestTime) {
-                setIsScheduled(true);
-                setScheduledFor(earliestTime);
+                finalIsScheduled = true;
+                finalScheduledFor = earliestTime;
                 toast.info('Restaurant is closed - order scheduled for opening time');
-                return;
             }
         }
         
