@@ -350,11 +350,18 @@ export default function Checkout() {
 
         // For delivery, door number and address are required
         if (orderType === 'delivery') {
-            const hasDoorNumber = formData.door_number && formData.door_number.trim() !== '';
-            const hasAddress = formData.delivery_address && formData.delivery_address.trim() !== '';
+            const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
+            const hasAddress = formData.delivery_address && String(formData.delivery_address).trim() !== '';
 
             if (!hasDoorNumber || !hasAddress) {
-                console.log('BLOCKED: Delivery address missing', { hasDoorNumber, hasAddress, formData });
+                console.log('BLOCKED: Delivery address missing', { 
+                    hasDoorNumber, 
+                    hasAddress, 
+                    door_number: formData.door_number,
+                    delivery_address: formData.delivery_address,
+                    isExistingAddress,
+                    formData 
+                });
                 toast.error('Please provide your delivery address');
                 return;
             }
