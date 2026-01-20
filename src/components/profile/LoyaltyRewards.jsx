@@ -165,9 +165,23 @@ export default function LoyaltyRewards({ user }) {
                                             </p>
                                         </div>
                                     </div>
-                                    <Badge variant={reward.available ? 'default' : 'secondary'}>
-                                        {reward.available ? 'Available' : 'Locked'}
-                                    </Badge>
+                                    <div className="flex gap-2">
+                                        <Badge variant={reward.available ? 'default' : 'secondary'}>
+                                            {reward.available ? 'Available' : 'Locked'}
+                                        </Badge>
+                                        {reward.available && (
+                                            <Button 
+                                                size="sm" 
+                                                className="bg-orange-500 hover:bg-orange-600"
+                                                onClick={() => {
+                                                    setSelectedReward(reward);
+                                                    setRedeemDialogOpen(true);
+                                                }}
+                                            >
+                                                Redeem
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
