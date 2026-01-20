@@ -120,8 +120,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
         queryFn: () => base44.entities.DeliveryZone.filter({ restaurant_id: restaurantId }),
     });
 
-    // Sort zones by creation date to ensure consistent ordering for overlap calculation
-    const zones = rawZones.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+    const zones = rawZones;
 
     const createZoneMutation = useMutation({
         mutationFn: (data) => base44.entities.DeliveryZone.create(data),
