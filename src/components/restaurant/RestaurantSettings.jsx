@@ -53,13 +53,15 @@ export default function RestaurantSettings({ restaurantId }) {
 
     React.useEffect(() => {
         if (restaurant) {
-            // Initialize hours with defaults for all days if they don't exist
+            // Initialize hours with defaults for all days and fields
             const initializeHours = (hours) => {
                 const initialized = { ...hours };
                 DAYS.forEach(day => {
-                    if (!initialized[day]) {
-                        initialized[day] = { open: '09:00', close: '22:00', closed: false };
-                    }
+                    initialized[day] = {
+                        open: initialized[day]?.open || '09:00',
+                        close: initialized[day]?.close || '22:00',
+                        closed: initialized[day]?.closed || false
+                    };
                 });
                 return initialized;
             };
