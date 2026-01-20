@@ -19,7 +19,8 @@ import {
     Users,
     AlertCircle,
     Tag,
-    MapPin
+    MapPin,
+    Award
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import OrderQueue from '@/components/restaurant/OrderQueue';
