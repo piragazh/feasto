@@ -21,6 +21,7 @@ export default function Layout({ children, currentPageName }) {
     const [cartCount, setCartCount] = useState(0);
     const [customDomainChecked, setCustomDomainChecked] = useState(false);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
     // SEO Meta Tags
     useEffect(() => {
@@ -152,6 +153,8 @@ export default function Layout({ children, currentPageName }) {
             );
 
             if (domainRestaurant) {
+                setCustomDomainRestaurantId(domainRestaurant.id);
+                
                 // If on custom domain, redirect to restaurant page if not already there
                 const restaurantUrl = createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`;
                 if (!window.location.pathname.includes('/Restaurant') || !window.location.search.includes(domainRestaurant.id)) {
@@ -169,6 +172,11 @@ export default function Layout({ children, currentPageName }) {
     const hideHeader = ['Checkout'].includes(currentPageName);
     const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'PrivacyPolicy', 'TermsOfService'].includes(currentPageName);
     const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
+    
+    // Custom domain home link
+    const homeUrl = customDomainRestaurantId 
+        ? createPageUrl('Restaurant') + `?id=${customDomainRestaurantId}`
+        : createPageUrl('Home');
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
@@ -196,7 +204,7 @@ export default function Layout({ children, currentPageName }) {
                 <header className="bg-white border-b sticky top-0 z-50 safe-area-top">
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
-                            <Link to={createPageUrl('Home')} className="flex items-center gap-2">
+                            <Link to={homeUrl} className="flex items-center gap-2">
                                 <img 
                                     src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png?w=100&h=100&fit=crop" 
                                     alt="MealDrop Logo" 
@@ -207,14 +215,14 @@ export default function Layout({ children, currentPageName }) {
 
                             <nav className="hidden md:flex items-center gap-8">
                                 <Link 
-                                    to={createPageUrl('Home')} 
+                                    to={homeUrl} 
                                     className={`text-sm font-medium transition-colors ${
-                                        currentPageName === 'Home' 
+                                        currentPageName === 'Home' || currentPageName === 'Restaurant'
                                             ? 'text-orange-500' 
                                             : 'text-gray-600 hover:text-gray-900'
                                     }`}
                                 >
-                                    Restaurants
+                                    {customDomainRestaurantId ? 'Home' : 'Restaurants'}
                                 </Link>
                                 <Link 
                                     to={createPageUrl('Orders')} 
@@ -265,9 +273,9 @@ export default function Layout({ children, currentPageName }) {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-56">
                                        <DropdownMenuItem asChild className="md:hidden">
-                                           <Link to={createPageUrl('Home')} className="flex items-center gap-2">
+                                           <Link to={homeUrl} className="flex items-center gap-2">
                                                <Home className="h-4 w-4" />
-                                               Restaurants
+                                               {customDomainRestaurantId ? 'Home' : 'Restaurants'}
                                            </Link>
                                        </DropdownMenuItem>
                                        <DropdownMenuItem asChild className="md:hidden">
@@ -425,9 +433,9 @@ export default function Layout({ children, currentPageName }) {
                 <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 safe-area-bottom">
                     <div className="flex items-center justify-around h-16 px-2">
                         <Link 
-                            to={createPageUrl('Home')} 
+                            to={homeUrl} 
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-                                currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-600'
+                                currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant') ? 'text-orange-500' : 'text-gray-600'
                             }`}
                         >
                             <Home className="h-6 w-6" />
