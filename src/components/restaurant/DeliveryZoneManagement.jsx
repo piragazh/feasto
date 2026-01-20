@@ -253,37 +253,24 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             
                             {zones.map((zone) => {
                                 if (!zone.is_active || !zone.coordinates) return null;
-                                
-                                const difference = getZoneDifference(zone);
-                                let displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
-
-                                if (difference && difference.geometry) {
-                                    if (difference.geometry.type === 'Polygon') {
-                                        displayCoords = difference.geometry.coordinates[0].map(c => [c[1], c[0]]);
-                                    } else if (difference.geometry.type === 'MultiPolygon') {
-                                        // For MultiPolygon, use the largest polygon
-                                        const largest = difference.geometry.coordinates.reduce((prev, current) => 
-                                            (prev.length > current.length) ? prev : current
-                                        );
-                                        displayCoords = largest[0].map(c => [c[1], c[0]]);
-                                    }
-                                }
+                                const displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
 
                                 return (
                                     <Polygon
-                                        key={zone.id}
+                                        key={`${zone.id}-main`}
                                         positions={displayCoords}
                                         pathOptions={{
                                             color: zone.color || '#FF6B35',
                                             fillColor: zone.color || '#FF6B35',
                                             fillOpacity: 0.2,
+                                            weight: 2
                                         }}
                                     >
                                         <Popup>
-                                            <div className="p-2">
-                                                <h3 className="font-semibold">{zone.name}</h3>
-                                                <p className="text-sm">Fee: £{zone.delivery_fee.toFixed(2)}</p>
-                                                <p className="text-sm">ETA: {zone.estimated_delivery_time}</p>
+                                            <div className="p-2 min-w-[180px]">
+                                                <h3 className="font-semibold text-sm">{zone.name}</h3>
+                                                <p className="text-xs text-gray-600 mt-1">Fee: <span className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</span></p>
+                                                <p className="text-xs text-gray-600">ETA: <span className="font-semibold">{zone.estimated_delivery_time}</span></p>
                                             </div>
                                         </Popup>
                                     </Polygon>
