@@ -5,8 +5,10 @@ import { Plus, Flame, Leaf, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function MenuItemCard({ item, promotion, onAddToCart }) {
+    const [expanded, setExpanded] = React.useState(false);
     const hasCustomizations = item.customization_options?.length > 0;
     const isAvailable = item.is_available !== false;
+    const hasLongDescription = item.description && item.description.length > 100;
 
     return (
         <motion.div
@@ -44,7 +46,21 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                         <Badge variant="outline" className="text-xs">Customizable</Badge>
                     )}
                 </div>
-                <p className="text-gray-500 text-sm mb-3 line-clamp-2">{item.description}</p>
+                {item.description && (
+                    <div className="mb-3">
+                        <p className={`text-gray-500 text-sm ${!expanded && hasLongDescription ? 'line-clamp-2' : ''}`}>
+                            {item.description}
+                        </p>
+                        {hasLongDescription && (
+                            <button
+                                onClick={() => setExpanded(!expanded)}
+                                className="text-orange-500 hover:text-orange-600 text-xs font-medium mt-1"
+                            >
+                                {expanded ? 'Show less' : 'Read more'}
+                            </button>
+                        )}
+                    </div>
+                )}
                 <div className="flex items-center gap-3">
                     <span className="font-bold text-lg text-gray-900">£{item.price?.toFixed(2)}</span>
                     {item.is_vegetarian && (
