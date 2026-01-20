@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client'; // SDK to call backend
+import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button"; // UI Components
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,14 +26,11 @@ export default function ChatbotWidget() {
     // Chat window visibility
     const [isOpen, setIsOpen] = useState(false); // Is chat popup open?
     
+    // Current restaurant from custom domain or URL
+    const [currentRestaurant, setCurrentRestaurant] = useState(null);
+    
     // Conversation messages array
-    const [messages, setMessages] = useState([
-        {
-            role: 'assistant', // Message from bot
-            content: 'Hi! I\'m your MealDrop assistant. How can I help you today? I can answer questions about your orders, delivery times, restaurant hours, and refund policies.',
-            timestamp: new Date().toISOString() // When message was sent
-        }
-    ]);
+    const [messages, setMessages] = useState([]);
     
     // User input
     const [inputMessage, setInputMessage] = useState(''); // Text being typed
@@ -45,6 +43,56 @@ export default function ChatbotWidget() {
     
     // Reference to scroll to bottom of messages
     const messagesEndRef = useRef(null);
+
+    // Fetch current restaurant from URL or custom domain
+    useEffect(() => {
+        const getRestaurant = async () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const restaurantIdFromUrl = urlParams.get('id');
+                
+                if (restaurantIdFromUrl) {
+                    const restaurants = await base44.entities.Restaurant.filter({ id: restaurantIdFromUrl });
+                    if (restaurants.length > 0) {
+                        setCurrentRestaurant(restaurants[0]);
+                    }
+                } else {
+                    // Check if custom domain
+                    const currentDomain = window.location.hostname;
+                    if (!currentDomain.includes('localhost') && !currentDomain.includes('base44') && !/^\d+\.\d+\.\d+\.\d+$/.test(currentDomain)) {
+                        const restaurants = await base44.entities.Restaurant.filter({});
+                        const customDomainRestaurant = restaurants.find(r => 
+                            r.custom_domain && 
+                            r.domain_verified && 
+                            r.custom_domain.toLowerCase() === currentDomain.toLowerCase()
+                        );
+                        if (customDomainRestaurant) {
+                            setCurrentRestaurant(customDomainRestaurant);
+                        }
+                    }
+                }
+            } catch (error) {
+                // Silently fail
+            }
+        };
+        
+        getRestaurant();
+    }, []);
+
+    // Initialize welcome message based on restaurant context
+    useEffect(() => {
+        const greeting = currentRestaurant 
+            ? `Hi! I'm the assistant for ${currentRestaurant.name}. How can I help you today? I can answer questions about our menu, delivery times, and orders.`
+            : 'Hi! I\'m your MealDrop assistant. How can I help you today? I can answer questions about your orders, delivery times, restaurant hours, and refund policies.';
+        
+        setMessages([
+            {
+                role: 'assistant',
+                content: greeting,
+                timestamp: new Date().toISOString()
+            }
+        ]);
+    }, [currentRestaurant]);
 
     // ============================================
     // HELPER FUNCTIONS
@@ -87,7 +135,7 @@ export default function ChatbotWidget() {
             // ---- CALL BACKEND FUNCTION ----
             // Get current context from URL
             const urlParams = new URLSearchParams(window.location.search);
-            const restaurantId = urlParams.get('id');
+            const restaurantId = urlParams.get('id') || (currentRestaurant ? currentRestaurant.id : null);
             const currentPage = window.location.pathname.split('/').pop();
             
             // Send message to AI chatbot backend
@@ -176,11 +224,16 @@ export default function ChatbotWidget() {
                             <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                                            <Bot className="h-6 w-6" />
-                                        </div>
+                                        {currentRestaurant?.logo_url && (
+                                            <img src={currentRestaurant.logo_url} alt={currentRestaurant.name} className="w-10 h-10 rounded-full object-cover" />
+                                        )}
+                                        {!currentRestaurant?.logo_url && (
+                                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                                <Bot className="h-6 w-6" />
+                                            </div>
+                                        )}
                                         <div>
-                                            <CardTitle className="text-lg">MealDrop Assistant</CardTitle>
+                                            <CardTitle className="text-lg">{currentRestaurant ? `${currentRestaurant.name} Assistant` : 'MealDrop Assistant'}</CardTitle>
                                             <div className="flex items-center gap-1 text-xs">
                                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                                                 <span>Online</span>
