@@ -349,10 +349,15 @@ export default function Checkout() {
         }
 
         // For delivery, door number and address are required
-        if (orderType === 'delivery' && (!formData.door_number || !formData.delivery_address)) {
-            console.log('BLOCKED: Delivery address missing');
-            toast.error('Please provide your delivery address');
-            return;
+        if (orderType === 'delivery') {
+            const hasDoorNumber = formData.door_number && formData.door_number.trim() !== '';
+            const hasAddress = formData.delivery_address && formData.delivery_address.trim() !== '';
+
+            if (!hasDoorNumber || !hasAddress) {
+                console.log('BLOCKED: Delivery address missing', { hasDoorNumber, hasAddress, formData });
+                toast.error('Please provide your delivery address');
+                return;
+            }
         }
 
         // ---- VALIDATION: UK Phone Number Format ----
@@ -876,7 +881,6 @@ export default function Checkout() {
                                                             setIsExistingAddress(false);
                                                         }}
                                                         className="h-12"
-                                                        required
                                                     />
                                                 </div>
                                                 <div>
