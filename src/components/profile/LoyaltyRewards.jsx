@@ -4,8 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Award, Star, Gift, TrendingUp, Crown } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Award, Star, Gift, TrendingUp, Crown, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
+import { toast } from 'sonner';
 import RedeemRewardDialog from '../loyalty/RedeemRewardDialog';
 
 export default function LoyaltyRewards({ user }) {
@@ -29,6 +31,31 @@ export default function LoyaltyRewards({ user }) {
     const { data: settings = [] } = useQuery({
         queryKey: ['loyalty-settings'],
         queryFn: () => base44.entities.SystemSettings.list(),
+    });
+
+    const { data: redeemCoupons = [] } = useQuery({
+        queryKey: ['redeemed-coupons', user.email],
+        queryFn: async () => {
+            try {
+                const coupons = await base44.entities.Coupon.filter({ is_active: true });
+                // Filter coupons that were created for this user (redeemed rewards)
+                return coupons.filter(c => c.description && c.description.startsWith('Reward:'));
+            } catch (e) {
+                return [];
+            }
+        },
+    });
+
+    const { data: pointsHistory = [] } = useQuery({
+        queryKey: ['points-history', user.email],
+        queryFn: async () => {
+            try {
+                const transactions = await base44.entities.LoyaltyTransaction.filter({ user_email: user.email });
+                return transactions.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+            } catch (e) {
+                return [];
+            }
+        },
     });
 
     const getSetting = (key, defaultValue) => {
@@ -71,6 +98,16 @@ export default function LoyaltyRewards({ user }) {
 
     const handleRedeemSuccess = () => {
         queryClient.invalidateQueries({ queryKey: ['loyalty-points', user.email] });
+        queryClient.invalidateQueries({ queryKey: ['redeemed-coupons', user.email] });
+    };
+
+    const copyCouponCode = (code) => {
+        navigator.clipboard.writeText(code);
+        toast.success('Coupon code copied to clipboard!');
+    };
+
+    const isExpired = (expiresAt) => {
+        return new Date(expiresAt) < new Date();
     };
 
     return (
@@ -145,61 +182,195 @@ export default function LoyaltyRewards({ user }) {
                 </Card>
             </div>
 
-            {/* Available Rewards */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Available Rewards</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {availableRewards.length === 0 ? (
-                        <div className="text-center py-8">
-                            <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500">No rewards available yet</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {availableRewards.map((reward) => (
-                                <div
-                                    key={reward.id}
-                                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                                        reward.available 
-                                            ? 'bg-green-50 border-green-200' 
-                                            : 'bg-gray-50 border-gray-200'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Gift className={`h-6 w-6 ${reward.available ? 'text-green-600' : 'text-gray-400'}`} />
-                                        <div>
-                                            <p className="font-semibold">{reward.name}</p>
-                                            <p className="text-sm text-gray-500">{reward.description}</p>
-                                            <p className="text-sm text-gray-600 mt-1">
-                                                {reward.points_required} points • {reward.reward_type === 'percentage_discount' ? `${reward.discount_value}% off` : reward.reward_type === 'fixed_discount' ? `£${reward.discount_value} off` : reward.reward_type.replace('_', ' ')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Badge variant={reward.available ? 'default' : 'secondary'}>
-                                            {reward.available ? 'Available' : 'Locked'}
-                                        </Badge>
-                                        {reward.available && (
-                                            <Button 
-                                                size="sm" 
-                                                className="bg-orange-500 hover:bg-orange-600"
-                                                onClick={() => {
-                                                    setSelectedReward(reward);
-                                                    setRedeemDialogOpen(true);
-                                                }}
-                                            >
-                                                Redeem
-                                            </Button>
-                                        )}
-                                    </div>
+            {/* Rewards Tabs */}
+            <Tabs defaultValue="available" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="available">Available Rewards</TabsTrigger>
+                    <TabsTrigger value="redeemed">Redeemed Coupons</TabsTrigger>
+                    <TabsTrigger value="history">Points History</TabsTrigger>
+                </TabsList>
+
+                {/* Available Rewards Tab */}
+                <TabsContent value="available">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Available Rewards</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {availableRewards.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500">No rewards available yet</p>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                            ) : (
+                                <div className="space-y-3">
+                                    {availableRewards.map((reward) => (
+                                        <div
+                                            key={reward.id}
+                                            className={`flex items-center justify-between p-4 rounded-lg border ${
+                                                reward.available 
+                                                    ? 'bg-green-50 border-green-200' 
+                                                    : 'bg-gray-50 border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Gift className={`h-6 w-6 ${reward.available ? 'text-green-600' : 'text-gray-400'}`} />
+                                                <div>
+                                                    <p className="font-semibold">{reward.name}</p>
+                                                    <p className="text-sm text-gray-500">{reward.description}</p>
+                                                    <p className="text-sm text-gray-600 mt-1">
+                                                        {reward.points_required} points • {reward.reward_type === 'percentage_discount' ? `${reward.discount_value}% off` : reward.reward_type === 'fixed_discount' ? `£${reward.discount_value} off` : reward.reward_type.replace('_', ' ')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Badge variant={reward.available ? 'default' : 'secondary'}>
+                                                    {reward.available ? 'Available' : 'Locked'}
+                                                </Badge>
+                                                {reward.available && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="bg-orange-500 hover:bg-orange-600"
+                                                        onClick={() => {
+                                                            setSelectedReward(reward);
+                                                            setRedeemDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        Redeem
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Redeemed Coupons Tab */}
+                <TabsContent value="redeemed">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Your Redeemed Coupons</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {redeemCoupons.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500">No redeemed coupons yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {redeemCoupons.map((coupon) => {
+                                        const expired = coupon.expires_at && isExpired(coupon.expires_at);
+                                        return (
+                                            <div
+                                                key={coupon.id}
+                                                className={`p-4 rounded-lg border ${
+                                                    expired 
+                                                        ? 'bg-gray-50 border-gray-200' 
+                                                        : 'bg-blue-50 border-blue-200'
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900">{coupon.description}</p>
+                                                        <p className="text-sm text-gray-600 mt-1">
+                                                            {coupon.discount_type === 'percentage' 
+                                                                ? `${coupon.discount_value}% off` 
+                                                                : `£${coupon.discount_value} off`}
+                                                        </p>
+                                                    </div>
+                                                    <Badge variant={expired ? 'secondary' : 'default'} className="ml-2">
+                                                        {expired ? 'Expired' : 'Active'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <code className="bg-white px-3 py-2 rounded font-mono font-bold text-orange-600 text-sm flex-1 border border-gray-200">
+                                                        {coupon.code}
+                                                    </code>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => copyCouponCode(coupon.code)}
+                                                        disabled={expired}
+                                                        className="gap-1"
+                                                    >
+                                                        <Copy className="h-4 w-4" />
+                                                        Copy
+                                                    </Button>
+                                                </div>
+                                                {coupon.expires_at && (
+                                                    <p className={`text-xs mt-2 ${expired ? 'text-red-600' : 'text-gray-600'}`}>
+                                                        {expired ? 'Expired on' : 'Expires'} {new Date(coupon.expires_at).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Points History Tab */}
+                <TabsContent value="history">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Points Transaction History</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {pointsHistory.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500">No transaction history yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {pointsHistory.map((transaction) => {
+                                        const isExpired = transaction.is_expired;
+                                        const isRedeemed = transaction.transaction_type === 'redeemed';
+                                        const isEarned = transaction.transaction_type === 'earned';
+                                        
+                                        return (
+                                            <div
+                                                key={transaction.id}
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-gray-50"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    {isRedeemed ? (
+                                                        <Gift className="h-5 w-5 text-red-600" />
+                                                    ) : isExpired ? (
+                                                        <AlertCircle className="h-5 w-5 text-gray-400" />
+                                                    ) : (
+                                                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                                    )}
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{transaction.description}</p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {new Date(transaction.created_date).toLocaleDateString()} {new Date(transaction.created_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className={`font-semibold ${
+                                                        isRedeemed || isExpired ? 'text-red-600' : 'text-green-600'
+                                                    }`}>
+                                                        {transaction.points > 0 ? '+' : ''}{transaction.points}
+                                                    </p>
+                                                    {isExpired && <p className="text-xs text-gray-500">Expired</p>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             {/* How to Earn */}
             <Card>
