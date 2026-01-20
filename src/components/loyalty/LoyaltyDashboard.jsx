@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Trophy, Gift, TrendingUp, History, Crown, Award, Star, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import RedeemRewardDialog from './RedeemRewardDialog';
 
 export default function LoyaltyDashboard({ userEmail }) {
     const queryClient = useQueryClient();
