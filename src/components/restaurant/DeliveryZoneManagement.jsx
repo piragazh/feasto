@@ -220,50 +220,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
 
     const centerLocation = restaurantLocation || { lat: 51.5074, lng: -0.1278 };
 
-    // Calculate difference zones (remove overlapping areas)
-    const getZoneDifference = (zoneToProcess) => {
-        if (!zoneToProcess?.coordinates || zoneToProcess.coordinates.length < 3) {
-            return null;
-        }
 
-        try {
-            let coords = zoneToProcess.coordinates.map(c => [c.lng, c.lat]);
-            let difference = turf.polygon([coords]);
-
-            // Subtract each zone that was created before this one
-            const zoneIndex = zones.findIndex(z => z.id === zoneToProcess.id);
-            
-            for (let i = 0; i < zoneIndex; i++) {
-                const otherZone = zones[i];
-                if (otherZone.coordinates && otherZone.coordinates.length >= 3) {
-                    try {
-                        const otherCoords = otherZone.coordinates.map(c => [c.lng, c.lat]);
-                        const otherPolygon = turf.polygon([otherCoords]);
-                        const result = turf.difference(difference, otherPolygon);
-                        
-                        if (result && result.geometry) {
-                            if (result.geometry.type === 'GeometryCollection') {
-                                // Handle geometry collection by extracting polygons
-                                const polygons = result.geometry.geometries.filter(g => g.type === 'Polygon');
-                                if (polygons.length > 0) {
-                                    difference = turf.polygon(polygons[0].coordinates);
-                                }
-                            } else {
-                                difference = result;
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Error subtracting zone:', e);
-                    }
-                }
-            }
-
-            return difference;
-        } catch (e) {
-            console.error('Error calculating zone difference:', e);
-            return null;
-        }
-    };
 
     return (
         <div className="space-y-6">
