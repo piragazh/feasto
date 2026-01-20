@@ -159,13 +159,13 @@ export default function Layout({ children, currentPageName }) {
 
     // Track page views with GTM
     useEffect(() => {
-        if (gtmId && gtmId !== 'undefined' && window.gtag && window.dataLayer) {
+        if (window.__gtmId && window.__gtmId !== 'undefined' && window.gtag && window.dataLayer) {
             // Use setTimeout to ensure GTM is ready
             setTimeout(() => {
                 window.gtag('event', 'page_view', {
                     'page_path': location.pathname,
                     'page_title': document.title,
-                    'send_to': gtmId
+                    'send_to': window.__gtmId
                 });
             }, 100);
         }
