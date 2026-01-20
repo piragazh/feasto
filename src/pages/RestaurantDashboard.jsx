@@ -35,6 +35,7 @@ import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
 import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
 import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
 import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
+import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import DriverManagement from '@/components/restaurant/DriverManagement';
 import DriverPerformance from '@/components/restaurant/DriverPerformance';
@@ -46,7 +47,6 @@ import OrderModification from '@/components/restaurant/OrderModification';
 import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
 import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
-import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
 import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
 import { toast } from 'sonner';
 
@@ -293,6 +293,11 @@ export default function RestaurantDashboard() {
                                 <span className="hidden sm:inline">Analytics</span>
                                 <span className="sm:hidden">📊</span>
                             </TabsTrigger>
+                            <TabsTrigger value="order-analytics" className="whitespace-nowrap text-xs sm:text-sm">
+                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Order Insights</span>
+                                <span className="sm:hidden">📈</span>
+                            </TabsTrigger>
                                 <TabsTrigger value="driver-performance" className="whitespace-nowrap text-xs sm:text-sm">
                                 <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Performance</span>
@@ -390,8 +395,12 @@ export default function RestaurantDashboard() {
                     </TabsContent>
 
                     <TabsContent value="analytics">
-                        <OrderAnalyticsDashboard restaurantId={restaurant.id} />
-                    </TabsContent>
+                         <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
+                     </TabsContent>
+
+                    <TabsContent value="order-analytics">
+                         <OrderAnalyticsDashboard restaurantId={restaurant.id} />
+                     </TabsContent>
 
                     <TabsContent value="drivers">
                         <DriverTracking restaurantId={restaurant.id} />
