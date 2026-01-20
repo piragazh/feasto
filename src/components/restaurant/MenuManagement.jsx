@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
@@ -312,41 +312,40 @@ export default function MenuManagement({ restaurantId }) {
                     {categories.length === 0 ? (
                         <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
                             {categories.map((category, index) => (
-                                <div key={category} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            onClick={() => moveCategory(index, 'up')}
-                                            disabled={index === 0}
-                                            className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            title="Move up"
-                                        >
-                                            <ChevronUp className="h-4 w-4 text-gray-600" />
-                                        </button>
-                                        <button
-                                            onClick={() => moveCategory(index, 'down')}
-                                            disabled={index === categories.length - 1}
-                                            className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            title="Move down"
-                                        >
-                                            <ChevronDown className="h-4 w-4 text-gray-600" />
-                                        </button>
-                                    </div>
+                                <div key={category} className="flex items-center gap-1 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors group">
+                                    <button
+                                        onClick={() => moveCategory(index, 'up')}
+                                        disabled={index === 0}
+                                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        title="Move left"
+                                    >
+                                        <ChevronLeft className="h-3.5 w-3.5 text-gray-600" />
+                                    </button>
                                     
-                                    <span className="font-medium text-gray-900 flex-1">{category}</span>
+                                    <span className="font-medium text-sm text-gray-900 whitespace-nowrap">{category}</span>
                                     
-                                    <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => moveCategory(index, 'down')}
+                                        disabled={index === categories.length - 1}
+                                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        title="Move right"
+                                    >
+                                        <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
+                                    </button>
+                                    
+                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 ml-1 pl-1 border-l border-gray-300 transition-all">
                                         <button
                                             onClick={() => {
                                                 setEditingCategory(category);
                                                 setNewCategoryName(category);
                                                 setCategoryDialogOpen(true);
                                             }}
-                                            className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                            title="Edit category"
+                                            className="p-0.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                                            title="Edit"
                                         >
-                                            <Edit className="h-4 w-4" />
+                                            <Edit className="h-3.5 w-3.5" />
                                         </button>
                                         <button
                                             onClick={() => {
@@ -354,10 +353,10 @@ export default function MenuManagement({ restaurantId }) {
                                                     removeCategoryMutation.mutate(category);
                                                 }
                                             }}
-                                            className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                            title="Remove category"
+                                            className="p-0.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                            title="Delete"
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                         </button>
                                     </div>
                                 </div>
