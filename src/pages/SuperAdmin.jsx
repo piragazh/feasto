@@ -238,6 +238,7 @@ export default function SuperAdmin() {
                 {activeTab === 'reviews' && <ReviewModeration isAdmin={true} />}
                 {activeTab === 'promotions' && <PromotionOversight />}
                 {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
+                {activeTab === 'files' && <PublicFilesManagement />}
                 {activeTab === 'managers' && (
                     <iframe 
                         src={createPageUrl('ManageRestaurantManagers')} 
