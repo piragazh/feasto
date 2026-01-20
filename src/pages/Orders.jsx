@@ -163,6 +163,11 @@ export default function Orders() {
                                                            </Badge>
                                                        )}
                                                    </div>
+                                                   {order?.order_type === 'collection' && order?.order_number && (
+                                                       <p className="text-lg font-bold text-orange-600 mb-1">
+                                                           Collection Code: {order.order_number}
+                                                       </p>
+                                                   )}
                                                    <p className="text-sm text-gray-500">
                                                        {order?.created_date ? format(new Date(order.created_date), 'MMM d, yyyy • h:mm a') : 'N/A'}
                                                    </p>

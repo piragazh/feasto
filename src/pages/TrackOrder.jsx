@@ -191,7 +191,11 @@ export default function TrackOrder() {
                     </Link>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900">Track Order</h1>
-                        <p className="text-sm text-gray-500">Order #{order.id.slice(-8)}</p>
+                        {order.order_type === 'collection' && order.order_number ? (
+                            <p className="text-sm font-bold text-orange-600">Collection Code: {order.order_number}</p>
+                        ) : (
+                            <p className="text-sm text-gray-500">Order #{order.id.slice(-8)}</p>
+                        )}
                     </div>
                 </div>
             </div>
