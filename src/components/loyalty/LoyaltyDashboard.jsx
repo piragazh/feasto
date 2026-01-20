@@ -151,13 +151,19 @@ export default function LoyaltyDashboard({ userEmail }) {
                                             <h3 className="font-bold text-lg">{reward.name}</h3>
                                             <p className="text-sm text-gray-600 mb-3">{reward.description}</p>
                                             <div className="flex items-center gap-2">
-                                                <Badge className="bg-orange-500">{reward.points_required} points</Badge>
-                                                <Badge variant="outline" className="capitalize">{reward.tier_required}</Badge>
-                                            </div>
-                                        </div>
-                                        <Button className="bg-orange-500 hover:bg-orange-600">
-                                            Redeem
-                                        </Button>
+                                                     <Badge className="bg-orange-500">{reward.points_required} points</Badge>
+                                                     <Badge variant="outline" className="capitalize">{reward.tier_required}</Badge>
+                                                 </div>
+                                             </div>
+                                             <Button 
+                                                 className="bg-orange-500 hover:bg-orange-600"
+                                                 onClick={() => {
+                                                     setSelectedReward(reward);
+                                                     setRedeemDialogOpen(true);
+                                                 }}
+                                             >
+                                                 Redeem
+                                             </Button>
                                     </div>
                                 </CardContent>
                             </Card>
