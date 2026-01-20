@@ -442,12 +442,13 @@ export default function Checkout() {
                      }
                  }
 
-                 // Use the state values immediately for order creation
-                 const scheduledForValue = nextDate.toISOString();
+                 setIsScheduled(true);
+                 setScheduledFor(nextDate.toISOString());
 
-                 // Create order with scheduled time
-                 const orderData = createOrderData(scheduledForValue, true, nextDate);
-                 await submitOrderWithData(orderData, nextDate);
+                 // Manually trigger order creation with scheduled time
+                 setTimeout(() => {
+                     handleAutoScheduledOrder(nextDate.toISOString());
+                 }, 100);
                  return;
              }
          }
