@@ -74,6 +74,7 @@ export async function calculateDeliveryDetails(restaurantId, customerLocation) {
         deliveryFee: zone.delivery_fee,
         estimatedTime: zone.estimated_delivery_time,
         minOrderValue: zone.min_order_value,
+        minimumOrder: zone.min_order_value,
         zoneName: zone.name,
         zone: zone
     };

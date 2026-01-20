@@ -318,7 +318,10 @@ export default function Checkout() {
     const deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99);
 
     // Small order surcharge: if subtotal is below minimum order, add the difference (only for delivery)
-    const minimumOrder = restaurant?.minimum_order || 0;
+    // Use zone-specific minimum order if available, otherwise fall back to restaurant setting
+    const minimumOrder = orderType === 'delivery' && deliveryZoneInfo?.minimumOrder 
+        ? deliveryZoneInfo.minimumOrder 
+        : (restaurant?.minimum_order || 0);
     const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
         ? (minimumOrder - subtotal) 
         : 0;
