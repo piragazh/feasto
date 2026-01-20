@@ -27,8 +27,12 @@ export default function Layout({ children, currentPageName }) {
     // SEO Meta Tags
     useEffect(() => {
         // Set title and meta tags
-        document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
-        
+        if (customDomainRestaurant?.name) {
+            document.title = `${customDomainRestaurant.name} - Order Online`;
+        } else {
+            document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
+        }
+
         // Meta description
         let metaDescription = document.querySelector('meta[name="description"]');
         if (!metaDescription) {
@@ -36,11 +40,13 @@ export default function Layout({ children, currentPageName }) {
             metaDescription.name = 'description';
             document.head.appendChild(metaDescription);
         }
-        if (customDomainRestaurant?.description) {
-          metaDescription.content = customDomainRestaurant.description;
-      } else {
-          metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers. Download the MealDrop app for iOS and Android.';
-      }
+        if (customDomainRestaurant?.seo_description) {
+              metaDescription.content = customDomainRestaurant.seo_description;
+          } else if (customDomainRestaurant?.description) {
+              metaDescription.content = customDomainRestaurant.description;
+          } else {
+              metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers. Download the MealDrop app for iOS and Android.';
+          }
 
         // Keywords
         let metaKeywords = document.querySelector('meta[name="keywords"]');
