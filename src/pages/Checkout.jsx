@@ -1302,16 +1302,57 @@ export default function Checkout() {
                                 </CardContent>
                             </Card>
 
-                            <PaymentMethods
-                                selectedMethod={paymentMethod}
-                                onMethodChange={(method) => {
-                                    setPaymentMethod(method);
-                                    setClientSecret('');
-                                    setShowStripeForm(false);
-                                    setPaymentCompleted(false);
-                                }}
-                                acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
-                            />
+                            {(() => {
+                                // Validation checks before showing payment methods
+                                const isAddressValid = () => {
+                                    if (orderType === 'delivery') {
+                                        if (!formData.delivery_address || !formData.phone) return false;
+                                        if (!isExistingAddress && !formData.door_number) return false;
+                                        if (!deliveryCoordinates?.lat || !deliveryCoordinates?.lng) return false;
+                                        if (!zoneCheckComplete || (deliveryZoneInfo && deliveryZoneInfo.available === false)) return false;
+                                    } else {
+                                        if (!formData.phone) return false;
+                                    }
+                                    return true;
+                                };
+
+                                if (!isAddressValid()) {
+                                    return (
+                                        <Card className="bg-orange-50 border-orange-200">
+                                            <CardContent className="pt-6">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="text-2xl">⚠️</div>
+                                                    <div>
+                                                        <p className="font-semibold text-orange-900 mb-1">Complete your delivery details first</p>
+                                                        <p className="text-sm text-orange-800">
+                                                            {orderType === 'delivery' ? (
+                                                                deliveryZoneInfo?.available === false 
+                                                                    ? 'Please select an address within our delivery zone'
+                                                                    : 'Please enter a valid delivery address'
+                                                            ) : (
+                                                                'Please enter your phone number'
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                }
+
+                                return (
+                                    <PaymentMethods
+                                        selectedMethod={paymentMethod}
+                                        onMethodChange={(method) => {
+                                            setPaymentMethod(method);
+                                            setClientSecret('');
+                                            setShowStripeForm(false);
+                                            setPaymentCompleted(false);
+                                        }}
+                                        acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
+                                    />
+                                );
+                            })()}
 
                             {(paymentMethod === 'card') && showStripeForm && clientSecret ? (
                                 <Card>

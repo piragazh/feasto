@@ -13,11 +13,11 @@ import Messages from './pages/Messages';
 import OrderHistory from './pages/OrderHistory';
 import Orders from './pages/Orders';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Restaurant from './pages/Restaurant';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
 import __Layout from './Layout.jsx';
 
@@ -38,11 +38,11 @@ export const PAGES = {
     "OrderHistory": OrderHistory,
     "Orders": Orders,
     "PrivacyPolicy": PrivacyPolicy,
+    "Restaurant": Restaurant,
     "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "Restaurant": Restaurant,
     "Checkout": Checkout,
 }
 
