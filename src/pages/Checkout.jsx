@@ -1104,6 +1104,8 @@ export default function Checkout() {
                                 onScheduleToggle={setIsScheduled}
                                 scheduledFor={scheduledFor}
                                 onScheduleChange={setScheduledFor}
+                                restaurant={restaurant}
+                                orderType={orderType}
                             />
 
                             <Card>
