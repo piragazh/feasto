@@ -170,6 +170,35 @@ export default function PublicFilesManagement() {
 
             <Card>
                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Volume2 className="h-5 w-5" />
+                        Notification Sound
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="notification-url">Notification Sound URL</Label>
+                        <Input
+                            id="notification-url"
+                            placeholder="https://..."
+                            value={notificationUrl}
+                            onChange={(e) => setNotificationUrl(e.target.value)}
+                            className="h-10 mt-2"
+                        />
+                        <p className="text-xs text-gray-500 mt-2">Set the system-wide notification sound URL</p>
+                    </div>
+                    <Button
+                        onClick={saveNotificationSound}
+                        disabled={savingNotification}
+                        className="bg-blue-600 hover:bg-blue-700"
+                    >
+                        {savingNotification ? 'Saving...' : 'Save Notification Sound'}
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle>Usage</CardTitle>
                 </CardHeader>
                 <CardContent>
