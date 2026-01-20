@@ -32,30 +32,45 @@ export default function POSDashboard() {
             }
             setUser(userData);
 
-            // Check if user is restaurant manager
-            const managers = await base44.entities.RestaurantManager.filter({
-                user_email: userData.email,
-                is_active: true
-            });
+            let restaurantId = null;
 
-            if (managers.length === 0) {
-                toast.error('You do not have access to the POS system');
-                base44.auth.redirectToLogin();
-                return;
-            }
-
-            const manager = managers[0];
-            if (!manager.restaurant_ids || manager.restaurant_ids.length === 0) {
-                toast.error('No restaurants assigned to your account');
-                return;
-            }
-
-            const restaurantData = await base44.entities.Restaurant.filter({ id: manager.restaurant_ids[0] });
-            if (restaurantData && restaurantData.length > 0) {
-                setRestaurant(restaurantData[0]);
-                initializeTables(restaurantData[0]);
+            // Check if user is admin
+            if (userData.role === 'admin') {
+                const restaurants = await base44.entities.Restaurant.list();
+                if (restaurants.length > 0) {
+                    restaurantId = restaurants[0].id;
+                }
             } else {
-                toast.error('Restaurant not found');
+                // Check if user is restaurant manager
+                const managers = await base44.entities.RestaurantManager.filter({
+                    user_email: userData.email,
+                    is_active: true
+                });
+
+                if (managers.length === 0) {
+                    toast.error('You do not have access to the POS system');
+                    base44.auth.redirectToLogin();
+                    return;
+                }
+
+                const manager = managers[0];
+                if (!manager.restaurant_ids || manager.restaurant_ids.length === 0) {
+                    toast.error('No restaurants assigned to your account');
+                    return;
+                }
+                restaurantId = manager.restaurant_ids[0];
+            }
+
+            if (restaurantId) {
+                const restaurantData = await base44.entities.Restaurant.filter({ id: restaurantId });
+                if (restaurantData && restaurantData.length > 0) {
+                    setRestaurant(restaurantData[0]);
+                    initializeTables(restaurantData[0]);
+                } else {
+                    toast.error('Restaurant not found');
+                }
+            } else {
+                toast.error('No restaurants available');
             }
         } catch (e) {
             console.error('POS loading error:', e);
