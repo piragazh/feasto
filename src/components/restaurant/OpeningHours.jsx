@@ -54,39 +54,39 @@ export default function OpeningHours({ openingHours, isOpen }) {
     };
 
     return (
-        <Card className="border rounded-lg">
+        <Card>
             <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors pb-4"
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setExpanded(!expanded)}
             >
-                <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                        <Clock className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                            <h3 className="font-semibold text-gray-900">Opening Hours</h3>
+                <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-orange-500" />
+                        <div className="flex flex-col">
+                            <span>Opening Hours</span>
                             {todayHours && !todayHours.closed ? (
-                                <p className="text-sm text-gray-500 mt-0.5">
+                                <span className="text-sm font-normal text-gray-500">
                                     Today: {formatTime(todayHours.open)} - {formatTime(todayHours.close)}
-                                </p>
+                                </span>
                             ) : (
-                                <p className="text-sm text-gray-500 mt-0.5">
+                                <span className="text-sm font-normal text-gray-500">
                                     Today: Closed
-                                </p>
+                                </span>
                             )}
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {isCurrentlyOpen() ? (
-                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Open</Badge>
+                            <Badge className="bg-green-100 text-green-800 font-semibold">Open Now</Badge>
                         ) : (
-                            <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Closed</Badge>
+                            <Badge className="bg-red-100 text-red-800 font-semibold">Closed</Badge>
                         )}
-                        {expanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                        {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </div>
-                </div>
+                </CardTitle>
             </CardHeader>
             {expanded && (
-                <CardContent className="pt-0 space-y-3 border-t">
+                <CardContent className="space-y-2">
                     {DAYS.map((day) => {
                         const hours = openingHours[day];
                         const isToday = day === today;
@@ -97,10 +97,10 @@ export default function OpeningHours({ openingHours, isOpen }) {
                         return (
                             <div 
                                 key={day}
-                                className={`flex justify-between text-sm py-1 ${isToday ? 'text-orange-600 font-medium' : 'text-gray-700'}`}
+                                className={`flex justify-between text-sm ${isToday ? 'font-semibold text-orange-600' : 'text-gray-600'}`}
                             >
                                 <span className="capitalize">{day}</span>
-                                <span className={!hours || hours.closed || (openFormatted === null || closeFormatted === null) ? 'text-gray-400' : ''}>
+                                <span>
                                     {!hours ? (
                                         'Not set'
                                     ) : hours.closed === true ? (
