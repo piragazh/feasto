@@ -43,30 +43,11 @@ Deno.serve(async (req) => {
             reward_id: reward_id
         });
 
-        // Create coupon for user to use on next order
-        const couponCode = `REWARD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-        const validUntil = new Date();
-        validUntil.setDate(validUntil.getDate() + 30); // Valid for 30 days
-
-        const coupon = await base44.entities.Coupon.create({
-            code: couponCode,
-            description: `From loyalty reward: ${targetReward.name}`,
-            discount_type: targetReward.reward_type === 'percentage_discount' ? 'percentage' : 'fixed',
-            discount_value: targetReward.discount_value,
-            valid_from: new Date().toISOString().split('T')[0],
-            valid_until: validUntil.toISOString().split('T')[0],
-            usage_limit: 1,
-            is_active: true,
-            assigned_to_user_email: user.email,
-            loyalty_reward_id: reward_id
-        });
-
         return Response.json({ 
             success: true, 
-            message: `Successfully redeemed ${targetReward.name}! You received a discount coupon: ${couponCode}`,
+            message: `Successfully redeemed ${targetReward.name}!`,
             new_balance: newTotal,
-            reward: targetReward,
-            coupon: coupon
+            reward: targetReward
         });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
