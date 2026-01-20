@@ -28,7 +28,7 @@ export default function PastOrders({ restaurantId }) {
         queryKey: ['past-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ 
             restaurant_id: restaurantId,
-            status: { $in: ['delivered', 'cancelled', 'refunded', 'refund_requested'] }
+            status: { $in: ['delivered', 'collected', 'cancelled', 'refunded', 'refund_requested'] }
         }, '-created_date', 100),
     });
 
@@ -49,9 +49,9 @@ export default function PastOrders({ restaurantId }) {
     });
 
     const undoRefundMutation = useMutation({
-        mutationFn: (orderId) => 
+        mutationFn: ({ orderId, originalStatus }) => 
             base44.entities.Order.update(orderId, { 
-                status: 'delivered',
+                status: originalStatus || 'delivered',
                 refunded_items: null,
                 refund_amount: null,
                 refund_reason: null,
@@ -64,9 +64,9 @@ export default function PastOrders({ restaurantId }) {
     });
 
     const rejectRefundMutation = useMutation({
-        mutationFn: ({ orderId, rejectionReason }) => 
+        mutationFn: ({ orderId, rejectionReason, originalStatus }) => 
             base44.entities.Order.update(orderId, { 
-                status: 'delivered',
+                status: originalStatus || 'delivered',
                 refund_request_type: null,
                 refund_requested_items: null,
                 refund_requested_amount: null,
@@ -101,7 +101,7 @@ export default function PastOrders({ restaurantId }) {
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <Badge className={order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                                    <Badge className={(order.status === 'delivered' || order.status === 'collected') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
                                         {order.status}
                                     </Badge>
                                     <p className="text-lg font-bold mt-1">£{order.total.toFixed(2)}</p>
@@ -163,7 +163,7 @@ export default function PastOrders({ restaurantId }) {
                                     )}
                                 </div>
                             )}
-                            {order.status === 'delivered' && (
+                            {(order.status === 'delivered' || order.status === 'collected') && (
                                 <Button
                                     size="sm"
                                     variant="outline"
@@ -201,7 +201,10 @@ export default function PastOrders({ restaurantId }) {
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => undoRefundMutation.mutate(order.id)}
+                                            onClick={() => undoRefundMutation.mutate({ 
+                                                orderId: order.id,
+                                                originalStatus: order.order_type === 'collection' ? 'collected' : 'delivered'
+                                            })}
                                             className="text-red-600 ml-2"
                                         >
                                             Undo Refund
@@ -298,7 +301,8 @@ export default function PastOrders({ restaurantId }) {
                                 }
                                 rejectRefundMutation.mutate({
                                     orderId: rejectingRefund.id,
-                                    rejectionReason
+                                    rejectionReason,
+                                    originalStatus: rejectingRefund.order_type === 'collection' ? 'collected' : 'delivered'
                                 });
                                 setRejectionReason('');
                                 setRejectingRefund(null);
