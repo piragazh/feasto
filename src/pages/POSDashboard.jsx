@@ -238,6 +238,10 @@ export default function POSDashboard() {
                     <TabsContent value="kitchen">
                         <POSKitchenDisplay restaurantId={restaurant.id} />
                     </TabsContent>
+
+                    <TabsContent value="waitlist">
+                        <POSWaitlist />
+                    </TabsContent>
                 </Tabs>
             </div>
         </div>
