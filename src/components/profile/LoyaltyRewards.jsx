@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Award, Star, Gift, TrendingUp, Crown } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import RedeemRewardDialog from './RedeemRewardDialog';
+import RedeemRewardDialog from '../loyalty/RedeemRewardDialog';
 
 export default function LoyaltyRewards({ user }) {
     const [selectedReward, setSelectedReward] = useState(null);
