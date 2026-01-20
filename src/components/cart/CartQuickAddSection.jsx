@@ -12,18 +12,18 @@ export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClos
         <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="px-6 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-orange-200"
+            className="px-3 py-2.5 sm:px-6 sm:py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-orange-200"
         >
-            <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-bold">
-                        <Zap className="h-3.5 w-3.5" />
-                        QUICK ADD
+            <div className="space-y-2 sm:space-y-3">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="flex items-center gap-1 px-2 py-0.5 sm:px-3 sm:py-1 bg-orange-500 text-white rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap">
+                        <Zap className="h-3 w-3" />
+                        <span>QUICK ADD</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-700">Popular items - Add to order quickly!</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 hidden sm:block">Popular items - Add to order quickly!</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                    {quickAddItems.map((item) => (
+                <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2">
+                    {quickAddItems.slice(0, 6).map((item) => (
                         <motion.div
                             key={item.id}
                             whileHover={{ scale: 1.02 }}
@@ -32,7 +32,7 @@ export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClos
                             <Button
                                 onClick={() => {
                                     onAddToCart(item);
-                                    toast.success(`✨ ${item.name} added to cart!`, {
+                                    toast.success(`✨ ${item.name} added!`, {
                                         duration: 2000,
                                         style: {
                                             background: '#f97316',
@@ -44,14 +44,12 @@ export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClos
                                     });
                                 }}
                                 variant="outline"
-                                className="w-full h-auto flex flex-col items-start gap-1.5 p-2 bg-white hover:bg-orange-50 border-orange-200 group"
+                                className="w-full h-auto flex flex-col items-start gap-1 p-1.5 sm:p-2 bg-white hover:bg-orange-50 border-orange-200 group text-left"
                             >
+                                <span className="text-[10px] sm:text-xs font-medium text-gray-900 line-clamp-2 leading-tight">{item.name}</span>
                                 <div className="flex items-center justify-between w-full">
-                                    <span className="text-xs font-medium text-gray-900 line-clamp-1">{item.name}</span>
-                                    <Plus className="h-3.5 w-3.5 text-orange-500 group-hover:scale-110 transition-transform" />
-                                </div>
-                                <div className="flex items-center justify-between w-full">
-                                    <span className="text-xs text-gray-500">£{item.price.toFixed(2)}</span>
+                                    <span className="text-[9px] sm:text-xs text-gray-600 font-semibold">£{item.price.toFixed(2)}</span>
+                                    <Plus className="h-3 w-3 text-orange-500 flex-shrink-0" />
                                 </div>
                             </Button>
                         </motion.div>
