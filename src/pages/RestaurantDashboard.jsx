@@ -289,6 +289,11 @@ export default function RestaurantDashboard() {
                                 <span className="hidden sm:inline">Analytics</span>
                                 <span className="sm:hidden">📊</span>
                             </TabsTrigger>
+                                <TabsTrigger value="driver-performance" className="whitespace-nowrap text-xs sm:text-sm">
+                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Performance</span>
+                                <span className="sm:hidden">📈</span>
+                            </TabsTrigger>
                         </TabsList>
                         
                         <TabsList className="bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
@@ -302,11 +307,7 @@ export default function RestaurantDashboard() {
                                 <span className="hidden sm:inline">Manage Drivers</span>
                                 <span className="sm:hidden">Drivers</span>
                             </TabsTrigger>
-                            <TabsTrigger value="driver-performance" className="whitespace-nowrap text-xs sm:text-sm">
-                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Performance</span>
-                                <span className="sm:hidden">📈</span>
-                            </TabsTrigger>
+                        
                             <TabsTrigger value="crm" className="whitespace-nowrap text-xs sm:text-sm">
                                 <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 CRM
