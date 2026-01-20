@@ -219,30 +219,35 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
 
     // Calculate difference zones (remove overlapping areas)
     const getZoneDifference = (zoneToProcess) => {
-        if (!zoneToProcess || !zoneToProcess.coordinates || zoneToProcess.coordinates.length < 3) {
+        if (!zoneToProcess?.coordinates || zoneToProcess.coordinates.length < 3) {
             return null;
         }
 
         try {
-            // Create polygon from zone coordinates
-            let difference = turf.polygon([zoneToProcess.coordinates.map(c => [c.lng, c.lat])]);
+            let coords = zoneToProcess.coordinates.map(c => [c.lng, c.lat]);
+            let difference = turf.polygon([coords]);
 
-            // Subtract each other zone from current zone
-            zones.forEach(otherZone => {
-                if (otherZone.id !== zoneToProcess.id && otherZone.coordinates && otherZone.coordinates.length >= 3) {
+            // Subtract each zone that was created before this one
+            const zoneIndex = zones.findIndex(z => z.id === zoneToProcess.id);
+            
+            for (let i = 0; i < zoneIndex; i++) {
+                const otherZone = zones[i];
+                if (otherZone.coordinates && otherZone.coordinates.length >= 3) {
                     try {
-                        const otherPolygon = turf.polygon([otherZone.coordinates.map(c => [c.lng, c.lat])]);
-                        difference = turf.difference(difference, otherPolygon);
-                        if (!difference || difference.geometry.type === 'GeometryCollection') {
-                            return null;
+                        const otherCoords = otherZone.coordinates.map(c => [c.lng, c.lat]);
+                        const otherPolygon = turf.polygon([otherCoords]);
+                        const result = turf.difference(difference, otherPolygon);
+                        
+                        if (result && result.geometry) {
+                            difference = result;
                         }
                     } catch (e) {
-                        // Silently handle calculation errors
+                        // Skip this subtraction on error
                     }
                 }
-            });
+            }
 
-            return difference && difference.geometry.coordinates ? difference : null;
+            return difference;
         } catch (e) {
             return null;
         }
