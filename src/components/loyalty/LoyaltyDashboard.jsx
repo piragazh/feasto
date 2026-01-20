@@ -59,8 +59,21 @@ export default function LoyaltyDashboard({ userEmail }) {
 
     const TierIcon = currentTierInfo.icon;
 
+    const handleRedeemSuccess = () => {
+        queryClient.invalidateQueries({ queryKey: ['loyaltyPoints', userEmail] });
+        queryClient.invalidateQueries({ queryKey: ['loyaltyTransactions', userEmail] });
+    };
+
     return (
         <div className="space-y-6">
+            {selectedReward && (
+                <RedeemRewardDialog 
+                    reward={selectedReward} 
+                    open={redeemDialogOpen} 
+                    onOpenChange={setRedeemDialogOpen}
+                    onSuccess={handleRedeemSuccess}
+                />
+            )}
             {/* Points Balance Card */}
             <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
                 <CardHeader>
