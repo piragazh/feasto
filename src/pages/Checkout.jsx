@@ -164,6 +164,71 @@ export default function Checkout() {
         setOrderType(savedOrderType);
     }, []); // Empty array means this runs once when component mounts
 
+    // Auto-enable scheduling if restaurant is closed (runs on mount/restaurant change)
+    useEffect(() => {
+        if (!restaurant || isScheduled) return;
+        
+        const now = new Date();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+        
+        let hours;
+        if (orderType === 'collection' && restaurant.collection_hours) {
+            hours = restaurant.collection_hours[dayName];
+        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+            hours = restaurant.delivery_hours[dayName];
+        } else {
+            hours = restaurant.opening_hours?.[dayName];
+        }
+
+        if (!hours || hours.closed) {
+            // Restaurant is closed, find next opening time
+            for (let i = 1; i <= 7; i++) {
+                const nextDay = new Date(now);
+                nextDay.setDate(nextDay.getDate() + i);
+                const nextDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDay.getDay()];
+                
+                let nextHours;
+                if (orderType === 'collection' && restaurant.collection_hours) {
+                    nextHours = restaurant.collection_hours[nextDayName];
+                } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+                    nextHours = restaurant.delivery_hours[nextDayName];
+                } else {
+                    nextHours = restaurant.opening_hours?.[nextDayName];
+                }
+
+                if (nextHours && !nextHours.closed) {
+                    const [hour, min] = nextHours.open.split(':').map(Number);
+                    nextDay.setHours(hour, min, 0, 0);
+                    setScheduledFor(nextDay.toISOString().slice(0, 16));
+                    setIsScheduled(true);
+                    toast.info('Restaurant is closed - order will be delivered when they open');
+                    break;
+                }
+            }
+        } else {
+            // Check if currently closed (between closing and opening)
+            const [openHour, openMin] = hours.open.split(':').map(Number);
+            const [closeHour, closeMin] = hours.close.split(':').map(Number);
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const openTime = openHour * 60 + openMin;
+            const closeTime = closeHour * 60 + closeMin;
+
+            if (currentTime >= closeTime || currentTime < openTime) {
+                // Currently closed, schedule for opening
+                const scheduleTime = new Date(now);
+                if (currentTime < openTime) {
+                    scheduleTime.setHours(openHour, openMin, 0, 0);
+                } else {
+                    scheduleTime.setDate(scheduleTime.getDate() + 1);
+                    scheduleTime.setHours(openHour, openMin, 0, 0);
+                }
+                setScheduledFor(scheduleTime.toISOString().slice(0, 16));
+                setIsScheduled(true);
+                toast.info('Restaurant is closed - order will be delivered when they open');
+            }
+        }
+    }, [restaurant, orderType]);
+
     // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
         try {
