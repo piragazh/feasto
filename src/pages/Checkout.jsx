@@ -576,9 +576,9 @@ export default function Checkout() {
                 delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
                 phone: formData.phone,
                 notes: formData.notes,
-                estimated_delivery: isScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
-                is_scheduled: isScheduled,
-                scheduled_for: isScheduled ? scheduledFor : null,
+                estimated_delivery: finalIsScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
+                is_scheduled: finalIsScheduled,
+                scheduled_for: finalIsScheduled ? finalScheduledFor : null,
                 is_group_order: !!groupOrderId,
                 group_order_id: groupOrderId,
                 payment_intent_id: paymentIntentId
