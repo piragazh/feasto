@@ -522,9 +522,18 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                         if (!zone.coordinates || (editingZone && zone.id === editingZone.id)) return null;
                                         
                                         const difference = getZoneDifference(zone);
-                                        const displayCoords = difference && difference.geometry.type === 'Polygon'
-                                            ? difference.geometry.coordinates[0].map(c => [c[1], c[0]])
-                                            : zone.coordinates.map(c => [c.lat, c.lng]);
+                                        let displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
+
+                                        if (difference && difference.geometry) {
+                                            if (difference.geometry.type === 'Polygon') {
+                                                displayCoords = difference.geometry.coordinates[0].map(c => [c[1], c[0]]);
+                                            } else if (difference.geometry.type === 'MultiPolygon') {
+                                                const largest = difference.geometry.coordinates.reduce((prev, current) => 
+                                                    (prev.length > current.length) ? prev : current
+                                                );
+                                                displayCoords = largest[0].map(c => [c[1], c[0]]);
+                                            }
+                                        }
 
                                         return (
                                             <Polygon
