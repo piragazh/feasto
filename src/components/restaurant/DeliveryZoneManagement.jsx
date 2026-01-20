@@ -464,7 +464,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
                                     
                                     {/* Show all existing zones for reference */}
-                                    {zones.map((zone) => (
+                                    {zones.map((zone, idx) => (
                                         zone.coordinates && (!editingZone || zone.id !== editingZone.id) && (
                                             <Polygon
                                                 key={zone.id}
@@ -472,15 +472,17 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                 pathOptions={{
                                                     color: zone.color || '#999999',
                                                     fillColor: zone.color || '#999999',
-                                                    fillOpacity: 0.1,
-                                                    weight: 1,
-                                                    dashArray: '5, 5'
+                                                    fillOpacity: 0.15 + (idx * 0.05),
+                                                    weight: 2,
+                                                    dashArray: '5, 5',
+                                                    opacity: 0.8
                                                 }}
                                             >
                                                 <Popup>
-                                                    <div className="text-xs p-1">
-                                                        <p className="font-semibold">{zone.name}</p>
-                                                        <p>Fee: £{zone.delivery_fee.toFixed(2)}</p>
+                                                    <div className="text-xs p-2 space-y-1">
+                                                        <p className="font-semibold text-sm">{zone.name}</p>
+                                                        <p className="text-gray-700">Fee: £{zone.delivery_fee.toFixed(2)}</p>
+                                                        <p className="text-gray-700">ETA: {zone.estimated_delivery_time}</p>
                                                     </div>
                                                 </Popup>
                                             </Polygon>
