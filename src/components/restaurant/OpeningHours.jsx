@@ -8,7 +8,7 @@ const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
 export default function OpeningHours({ openingHours, isOpen }) {
     const [expanded, setExpanded] = useState(false);
 
-    if (!openingHours) return null;
+    if (!openingHours || Object.keys(openingHours).length === 0) return null;
 
     const today = DAYS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
     const todayHours = openingHours[today];
@@ -94,8 +94,33 @@ export default function OpeningHours({ openingHours, isOpen }) {
                         const hours = openingHours[day];
                         const isToday = day === today;
                         
-                        const openFormatted = formatTime(hours?.open);
-                        const closeFormatted = formatTime(hours?.close);
+                        // Check if hours exist and are valid
+                        if (!hours || typeof hours !== 'object') {
+                            return (
+                                <div 
+                                    key={day}
+                                    className={`flex justify-between text-sm ${isToday ? 'font-semibold text-orange-600' : 'text-gray-600'}`}
+                                >
+                                    <span className="capitalize">{day}</span>
+                                    <span>Not set</span>
+                                </div>
+                            );
+                        }
+                        
+                        if (hours.closed === true) {
+                            return (
+                                <div 
+                                    key={day}
+                                    className={`flex justify-between text-sm ${isToday ? 'font-semibold text-orange-600' : 'text-gray-600'}`}
+                                >
+                                    <span className="capitalize">{day}</span>
+                                    <span>Closed</span>
+                                </div>
+                            );
+                        }
+                        
+                        const openFormatted = formatTime(hours.open);
+                        const closeFormatted = formatTime(hours.close);
                         
                         return (
                             <div 
@@ -104,11 +129,7 @@ export default function OpeningHours({ openingHours, isOpen }) {
                             >
                                 <span className="capitalize">{day}</span>
                                 <span>
-                                    {!hours ? (
-                                        'Not set'
-                                    ) : hours.closed === true ? (
-                                        'Closed'
-                                    ) : openFormatted && closeFormatted ? (
+                                    {openFormatted && closeFormatted ? (
                                         `${openFormatted} - ${closeFormatted}`
                                     ) : (
                                         'Not set'
