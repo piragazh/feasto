@@ -34,6 +34,19 @@ Deno.serve(async (req) => {
             points_redeemed: (loyaltyRecord.points_redeemed || 0) + targetReward.points_required
         });
 
+        // Generate unique coupon code
+        const couponCode = `REWARD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+        
+        // Create coupon record
+        await base44.entities.Coupon.create({
+            code: couponCode,
+            description: `Reward: ${targetReward.name}`,
+            discount_type: targetReward.discount_type || 'percentage',
+            discount_value: targetReward.discount_value || 10,
+            is_active: true,
+            valid_until: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        });
+
         // Record transaction
         await base44.entities.LoyaltyTransaction.create({
             user_email: user.email,
@@ -47,7 +60,8 @@ Deno.serve(async (req) => {
             success: true, 
             message: `Successfully redeemed ${targetReward.name}!`,
             new_balance: newTotal,
-            reward: targetReward
+            reward: targetReward,
+            coupon_code: couponCode
         });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
