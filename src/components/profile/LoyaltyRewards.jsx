@@ -10,8 +10,8 @@ export default function LoyaltyRewards({ user }) {
     const { data: userPoints } = useQuery({
         queryKey: ['loyalty-points', user.email],
         queryFn: async () => {
-            const points = await base44.entities.LoyaltyPoints.filter({ created_by: user.email });
-            return points[0] || { points_balance: 0 };
+            const points = await base44.entities.LoyaltyPoints.filter({ user_email: user.email });
+            return points[0] || { total_points: 0 };
         },
     });
 
