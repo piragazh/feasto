@@ -525,7 +525,8 @@ export default function Checkout() {
 
         // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
         if (orderType === 'delivery') {
-            if (deliveryZoneInfo && !deliveryZoneInfo.available) {
+            // Only check delivery zone if it's completed and info is available
+            if (zoneCheckComplete && deliveryZoneInfo && !deliveryZoneInfo.available) {
                 console.log('BLOCKED: Delivery not available');
                 toast.error('Delivery is not available to your location');
                 return;
