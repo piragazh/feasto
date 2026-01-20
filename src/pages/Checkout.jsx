@@ -398,15 +398,14 @@ export default function Checkout() {
         console.log('Payment Method:', paymentMethod);
         console.log('Payment Completed:', paymentCompleted);
         
-        // Auto-enable scheduling if restaurant is closed - update state and continue
-        let finalScheduledFor = scheduledFor;
-        let finalIsScheduled = isScheduled;
-        
+        // Auto-enable scheduling if restaurant is closed
         if (!isScheduled && checkRestaurantStatus()) {
             const earliestTime = getEarliestScheduleTime();
             if (earliestTime) {
-                finalIsScheduled = true;
-                finalScheduledFor = earliestTime;
+                setIsScheduled(true);
+                setScheduledFor(earliestTime);
+                toast.info('Restaurant is closed - order scheduled for opening time');
+                return;
             }
         }
         
@@ -477,12 +476,6 @@ export default function Checkout() {
         // For CASH: Show confirmation dialog
         if (paymentMethod === 'cash') {
             setShowCashConfirmation(true);
-            return;
-        }
-        
-        // For CARD: Form submit should NOT create order (StripePaymentForm handles it)
-        if (paymentMethod === 'card') {
-            console.log('Card payment - waiting for Stripe form submission');
             return;
         }
 
@@ -581,9 +574,9 @@ export default function Checkout() {
                 delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
                 phone: formData.phone,
                 notes: formData.notes,
-                estimated_delivery: finalIsScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
-                is_scheduled: finalIsScheduled,
-                scheduled_for: finalIsScheduled ? finalScheduledFor : null,
+                estimated_delivery: isScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
+                is_scheduled: isScheduled,
+                scheduled_for: isScheduled ? scheduledFor : null,
                 is_group_order: !!groupOrderId,
                 group_order_id: groupOrderId,
                 payment_intent_id: paymentIntentId
