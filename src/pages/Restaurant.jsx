@@ -702,6 +702,9 @@ export default function Restaurant() {
             localStorage.setItem('cartRestaurantId', restaurantId);
             localStorage.setItem('orderType', orderType);
             localStorage.setItem('cartRestaurantName', restaurant.name);
+            if (appliedPromotions.length > 0) {
+                localStorage.setItem('appliedPromotions', JSON.stringify(appliedPromotions));
+            }
         } catch (error) {
             toast.error('Unable to save cart data');
             return;
