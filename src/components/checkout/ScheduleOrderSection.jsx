@@ -91,7 +91,7 @@ export default function ScheduleOrderSection({ isScheduled, onScheduleToggle, sc
                         <Input
                             type="datetime-local"
                             min={getNextAvailableTime()}
-                            value={scheduledFor}
+                            value={scheduledFor || ''}
                             onChange={(e) => onScheduleChange(e.target.value)}
                             className="h-12"
                             required={isScheduled}
