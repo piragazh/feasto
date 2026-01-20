@@ -271,20 +271,35 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                     ))}
                     {appliedPromotions.map((promo) => (
                         <div key={promo.id} className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-1">
                                 <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Tag className="h-4 w-4 text-orange-600" />
                                 </div>
-                                <div>
-                                    <p className="font-semibold text-orange-900 text-sm">{promo.name}</p>
-                                    <p className="text-xs text-orange-700">Saved £{promo.discount.toFixed(2)}</p>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-orange-900 text-sm">{promo.name}</p>
+                                        {promo.badge_text && (
+                                            <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
+                                                {promo.badge_text}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-orange-700 mt-1">
+                                        {promo.condition_text ? (
+                                            <>
+                                                {promo.condition_text} • Saved £{promo.discount.toFixed(2)}
+                                            </>
+                                        ) : (
+                                            <>Saved £{promo.discount.toFixed(2)}</>
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => removeDiscount('promotion', promo.id)}
-                                className="text-orange-600 hover:text-orange-800 h-8 w-8"
+                                className="text-orange-600 hover:text-orange-800 h-8 w-8 flex-shrink-0"
                             >
                                 <X className="h-4 w-4" />
                             </Button>
