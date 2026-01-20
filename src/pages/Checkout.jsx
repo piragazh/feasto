@@ -163,6 +163,12 @@ export default function Checkout() {
 
         // Restore order type
         setOrderType(savedOrderType);
+
+        // Restore applied promotions from cart drawer
+        const savedPromotions = localStorage.getItem('appliedPromotions');
+        if (savedPromotions) {
+            setAppliedPromotions(JSON.parse(savedPromotions));
+        }
     }, []); // Empty array means this runs once when component mounts
 
     // Auto-enable scheduling if restaurant is closed (runs on mount/restaurant change)
