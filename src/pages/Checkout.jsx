@@ -510,7 +510,22 @@ export default function Checkout() {
             // Verify delivery coordinates exist
             if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) {
                 console.log('BLOCKED: Delivery coordinates missing');
-                toast.error('Please select a valid delivery address with location');
+                toast.error('Please select a valid delivery address from the dropdown');
+                return;
+            }
+
+            // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
+            // Check if zone check is still pending for new addresses
+            if (!isExistingAddress && !zoneCheckComplete) {
+                console.log('BLOCKED: Zone check still pending');
+                toast.error('Checking delivery availability... please wait');
+                return;
+            }
+
+            // Check if delivery is available (only if zone info exists)
+            if (deliveryZoneInfo && deliveryZoneInfo.available === false) {
+                console.log('BLOCKED: Delivery not available to location');
+                toast.error('Delivery is not available to your location');
                 return;
             }
         }
@@ -521,16 +536,6 @@ export default function Checkout() {
             console.log('BLOCKED: Invalid phone format');
             toast.error('Please enter a valid UK phone number');
             return;
-        }
-
-        // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
-        if (orderType === 'delivery') {
-            // Only check delivery zone if it's completed and info is available
-            if (zoneCheckComplete && deliveryZoneInfo && !deliveryZoneInfo.available) {
-                console.log('BLOCKED: Delivery not available');
-                toast.error('Delivery is not available to your location');
-                return;
-            }
         }
         
         console.log('All validations passed, proceeding...');
