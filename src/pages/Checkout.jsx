@@ -801,19 +801,62 @@ export default function Checkout() {
                 };
 
     const handleStripeSuccess = async (paymentIntentId) => {
-        // Validate payment intent before proceeding
-        if (!paymentIntentId || typeof paymentIntentId !== 'string') {
-            toast.error('Invalid payment confirmation. Please try again.');
-            setIsSubmitting(false);
-            setPaymentCompleted(false);
-            return;
-        }
-        
-        // Mark payment as completed
-        setPaymentCompleted(true);
-        toast.success('Payment successful!');
-        await createOrder(paymentIntentId);
-    };
+          // Validate payment intent before proceeding
+          if (!paymentIntentId || typeof paymentIntentId !== 'string') {
+              toast.error('Invalid payment confirmation. Please try again.');
+              setIsSubmitting(false);
+              setPaymentCompleted(false);
+              return;
+          }
+
+          // Re-validate all required conditions before creating order
+          setIsSubmitting(true);
+
+          // For delivery, address is ALWAYS required
+          if (orderType === 'delivery') {
+              if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') {
+                  toast.error('Please select your delivery address');
+                  setIsSubmitting(false);
+                  setPaymentCompleted(false);
+                  return;
+              }
+
+              if (!isExistingAddress) {
+                  if (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '') {
+                      toast.error('Please provide your door number (house/flat number)');
+                      setIsSubmitting(false);
+                      setPaymentCompleted(false);
+                      return;
+                  }
+              }
+
+              if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) {
+                  toast.error('Please select a valid delivery address from the dropdown');
+                  setIsSubmitting(false);
+                  setPaymentCompleted(false);
+                  return;
+              }
+
+              if (!zoneCheckComplete) {
+                  toast.error('Checking delivery availability... please wait');
+                  setIsSubmitting(false);
+                  setPaymentCompleted(false);
+                  return;
+              }
+
+              if (deliveryZoneInfo && deliveryZoneInfo.available === false) {
+                  toast.error('Delivery is not available to your location');
+                  setIsSubmitting(false);
+                  setPaymentCompleted(false);
+                  return;
+              }
+          }
+
+          // Mark payment as completed
+          setPaymentCompleted(true);
+          toast.success('Payment successful!');
+          await createOrder(paymentIntentId);
+      };
 
 
 
