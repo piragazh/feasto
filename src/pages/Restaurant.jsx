@@ -74,7 +74,10 @@ export default function Restaurant() {
                 }
             }
         } catch (error) {
+            console.error('Cart load error:', error);
             localStorage.removeItem('cart');
+            localStorage.removeItem('cartRestaurantId');
+            localStorage.removeItem('appliedPromotions');
             toast.error('Cart data corrupted. Starting fresh.');
         }
     }, [restaurantId]);
@@ -710,8 +713,11 @@ export default function Restaurant() {
             localStorage.setItem('cartRestaurantName', restaurant.name);
             if (appliedPromotions.length > 0) {
                 localStorage.setItem('appliedPromotions', JSON.stringify(appliedPromotions));
+            } else {
+                localStorage.removeItem('appliedPromotions');
             }
         } catch (error) {
+            console.error('localStorage error:', error);
             toast.error('Unable to save cart data');
             return;
         }

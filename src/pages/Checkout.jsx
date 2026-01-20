@@ -800,6 +800,9 @@ export default function Checkout() {
 
             // Increment promotion usage and update stats for all applied promotions
             for (const promo of appliedPromotions) {
+                // Skip automatic BOGO promotions as they're not manual discount codes
+                if (promo.is_automatic) continue;
+                
                 try {
                     await base44.entities.Promotion.update(promo.id, {
                         usage_count: (promo.usage_count || 0) + 1,
@@ -852,8 +855,12 @@ export default function Checkout() {
 
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
+            localStorage.removeItem('cartRestaurantName');
             localStorage.removeItem('groupOrderId');
             localStorage.removeItem('orderType');
+            localStorage.removeItem('appliedPromotions');
+            localStorage.removeItem('userAddress');
+            localStorage.removeItem('userCoordinates');
             setOrderPlaced(true);
 
             setTimeout(() => {
