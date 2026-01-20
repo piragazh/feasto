@@ -4,6 +4,34 @@ import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
+
+// Google Tag Manager initialization
+const gtmId = import.meta.env.VITE_GTM_ID;
+
+const initializeGTM = () => {
+    if (!gtmId) return;
+    
+    // GTM script (in head)
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${gtmId}`;
+    document.head.appendChild(script);
+
+    // GTM initialization code
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { window.dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', gtmId, { 
+        'anonymize_ip': true,
+        'allow_google_signals': false
+    });
+};
+
+// GTM No-script fallback
+const getGTMNoscript = () => {
+    if (!gtmId) return null;
+    return `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
+};
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -105,6 +133,7 @@ export default function Layout({ children, currentPageName }) {
     }, [location]);
 
     useEffect(() => {
+        initializeGTM();
         loadUser();
         updateCartCount();
         checkCustomDomain();
@@ -112,6 +141,16 @@ export default function Layout({ children, currentPageName }) {
         const interval = setInterval(updateCartCount, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // Track page views with GTM
+    useEffect(() => {
+        if (gtmId && window.gtag) {
+            window.gtag('event', 'page_view', {
+                'page_path': location.pathname,
+                'page_title': document.title
+            });
+        }
+    }, [location]);
 
     const loadUser = async () => {
         try {
@@ -202,6 +241,14 @@ export default function Layout({ children, currentPageName }) {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
+            {/* Google Tag Manager Noscript */}
+            {gtmId && (
+                <noscript 
+                    dangerouslySetInnerHTML={{
+                        __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
+                    }}
+                />
+            )}
             <Toaster position="top-center" richColors />
             <style>{`
                 :root {
