@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Gift, TrendingUp, Users, Award, Plus, Trash2, Edit, Settings } from 'lucide-react';
+import { Gift, TrendingUp, Users, Award, Plus, Trash2, Edit, Settings, Store, BarChart3, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoyaltyProgramSettings() {
@@ -187,10 +187,21 @@ export default function LoyaltyProgramSettings() {
     const stats = {
         totalRewards: rewards.length,
         totalUsers: userPoints.length,
-        totalPoints: userPoints.reduce((sum, up) => sum + (up.points_balance || 0), 0),
+        totalPoints: userPoints.reduce((sum, up) => sum + (up.total_points || 0), 0),
         totalTransactions: transactions.length,
         participatingRestaurants: restaurants.filter(r => r.loyalty_program_enabled).length
     };
+
+    const topCustomers = userPoints
+        .sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
+        .slice(0, 10);
+
+    const earnedTransactions = transactions.filter(t => t.transaction_type === 'earned');
+    const redeemedTransactions = transactions.filter(t => t.transaction_type === 'redeemed');
+    const totalEarnedPoints = earnedTransactions.reduce((sum, t) => sum + (t.points || 0), 0);
+    const totalRedeemedPoints = redeemedTransactions.reduce((sum, t) => sum + (t.points || 0), 0);
+
+    const participatingRestaurants = restaurants.filter(r => r.loyalty_program_enabled).sort((a, b) => (b.loyalty_points_multiplier || 1) - (a.loyalty_points_multiplier || 1));
 
     return (
         <div className="space-y-6">
@@ -284,10 +295,12 @@ export default function LoyaltyProgramSettings() {
             </Card>
 
             <Tabs defaultValue="rewards">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="rewards">Rewards</TabsTrigger>
-                    <TabsTrigger value="users">User Points</TabsTrigger>
+                    <TabsTrigger value="users">Top Customers</TabsTrigger>
                     <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                    <TabsTrigger value="restaurants">Restaurants</TabsTrigger>
+                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="rewards" className="space-y-4">
@@ -363,48 +376,195 @@ export default function LoyaltyProgramSettings() {
                 <TabsContent value="users" className="space-y-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>User Points ({userPoints.length})</CardTitle>
+                            <CardTitle>Top Customers by Points ({topCustomers.length} of {userPoints.length})</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-2">
-                                {userPoints.map(up => (
-                                    <div key={up.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                        <div>
-                                            <p className="font-medium">{up.created_by}</p>
-                                            <p className="text-sm text-gray-600">Member since {new Date(up.created_date).toLocaleDateString()}</p>
+                            {topCustomers.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500">No customer data yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {topCustomers.map((customer, idx) => (
+                                        <div key={customer.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-lg text-gray-400 w-6">#{idx + 1}</span>
+                                                <div>
+                                                    <p className="font-medium">{customer.user_email}</p>
+                                                    <p className="text-xs text-gray-600">Member since {new Date(customer.created_date).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <Badge className="text-lg font-bold bg-orange-100 text-orange-800">
+                                                {customer.total_points || 0} pts
+                                            </Badge>
                                         </div>
-                                        <Badge variant="outline" className="text-lg font-bold">
-                                            {up.points_balance || 0} pts
-                                        </Badge>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 <TabsContent value="transactions" className="space-y-4">
+                    {/* Transaction Stats */}
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600">Total Transactions</p>
+                                        <p className="text-2xl font-bold">{transactions.length}</p>
+                                    </div>
+                                    <TrendingUp className="h-8 w-8 text-blue-500" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600">Total Earned</p>
+                                        <p className="text-2xl font-bold text-green-600">{totalEarnedPoints.toLocaleString()}</p>
+                                    </div>
+                                    <TrendingUp className="h-8 w-8 text-green-500" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600">Total Redeemed</p>
+                                        <p className="text-2xl font-bold text-red-600">{totalRedeemedPoints.toLocaleString()}</p>
+                                    </div>
+                                    <TrendingDown className="h-8 w-8 text-red-500" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
                     <Card>
                         <CardHeader>
-                            <CardTitle>Recent Transactions ({transactions.length})</CardTitle>
+                            <CardTitle>Transaction History (Latest 50)</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-2">
-                                {transactions.slice(0, 50).map(tx => (
-                                    <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                        <div>
-                                            <p className="font-medium">{tx.created_by}</p>
-                                            <p className="text-sm text-gray-600">{tx.description}</p>
-                                            <p className="text-xs text-gray-400">{new Date(tx.created_date).toLocaleString()}</p>
+                            {transactions.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500">No transactions yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-96 overflow-y-auto">
+                                    {transactions.slice(0, 50).sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).map(tx => (
+                                        <div key={tx.id} className="flex items-start justify-between p-3 border rounded-lg hover:bg-gray-50">
+                                            <div className="flex-1">
+                                                <p className="font-medium text-sm">{tx.user_email}</p>
+                                                <p className="text-xs text-gray-600">{tx.description}</p>
+                                                <p className="text-xs text-gray-400 mt-1">{new Date(tx.created_date).toLocaleString()}</p>
+                                            </div>
+                                            <Badge variant={tx.transaction_type === 'earned' ? 'default' : 'destructive'} className="ml-2 flex-shrink-0">
+                                                {tx.transaction_type === 'earned' ? '+' : '-'}{tx.points || 0} pts
+                                            </Badge>
                                         </div>
-                                        <Badge variant={tx.points_change > 0 ? 'default' : 'destructive'}>
-                                            {tx.points_change > 0 ? '+' : ''}{tx.points_change} pts
-                                        </Badge>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                <TabsContent value="restaurants" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Participating Restaurants ({participatingRestaurants.length})</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {participatingRestaurants.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Store className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500">No participating restaurants</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {participatingRestaurants.map((restaurant) => (
+                                        <div key={restaurant.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                                            <div className="flex items-center gap-3">
+                                                {restaurant.logo_url && (
+                                                    <img src={restaurant.logo_url} alt={restaurant.name} className="h-10 w-10 rounded object-cover" />
+                                                )}
+                                                <div className="flex-1">
+                                                    <p className="font-medium">{restaurant.name}</p>
+                                                    <p className="text-xs text-gray-600">{restaurant.cuisine_type}</p>
+                                                </div>
+                                            </div>
+                                            <Badge variant="outline" className="flex-shrink-0">
+                                                {restaurant.loyalty_points_multiplier || 1}x multiplier
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="analytics" className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <BarChart3 className="h-5 w-5" />
+                                    Customer Engagement
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-gray-600">Total Users</span>
+                                    <span className="font-bold">{stats.totalUsers}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-gray-600">Avg Points/User</span>
+                                    <span className="font-bold">{stats.totalUsers > 0 ? Math.round(stats.totalPoints / stats.totalUsers) : 0}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-gray-600">Total Points Issued</span>
+                                    <span className="font-bold text-green-600">{totalEarnedPoints.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">Total Points Redeemed</span>
+                                    <span className="font-bold text-red-600">{totalRedeemedPoints.toLocaleString()}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Gift className="h-5 w-5" />
+                                    Rewards & Redemption
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-gray-600">Active Rewards</span>
+                                    <span className="font-bold">{rewards.filter(r => r.is_active).length}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-gray-600">Total Rewards</span>
+                                    <span className="font-bold">{stats.totalRewards}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-gray-600">Redemption Rate</span>
+                                    <span className="font-bold">{stats.totalPoints > 0 ? Math.round((totalRedeemedPoints / totalEarnedPoints) * 100) : 0}%</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">Outstanding Points</span>
+                                    <span className="font-bold">{(totalEarnedPoints - totalRedeemedPoints).toLocaleString()}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </TabsContent>
             </Tabs>
 
