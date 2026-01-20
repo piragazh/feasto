@@ -217,6 +217,37 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
 
     const centerLocation = restaurantLocation || { lat: 51.5074, lng: -0.1278 };
 
+    // Calculate difference zones (remove overlapping areas)
+    const getZoneDifference = (zoneToProcess) => {
+        if (!zoneToProcess || !zoneToProcess.coordinates || zoneToProcess.coordinates.length < 3) {
+            return null;
+        }
+
+        try {
+            // Create polygon from zone coordinates
+            let difference = turf.polygon([zoneToProcess.coordinates.map(c => [c.lng, c.lat])]);
+
+            // Subtract each other zone from current zone
+            zones.forEach(otherZone => {
+                if (otherZone.id !== zoneToProcess.id && otherZone.coordinates && otherZone.coordinates.length >= 3) {
+                    try {
+                        const otherPolygon = turf.polygon([otherZone.coordinates.map(c => [c.lng, c.lat])]);
+                        difference = turf.difference(difference, otherPolygon);
+                        if (!difference || difference.geometry.type === 'GeometryCollection') {
+                            return null;
+                        }
+                    } catch (e) {
+                        // Silently handle calculation errors
+                    }
+                }
+            });
+
+            return difference && difference.geometry.coordinates ? difference : null;
+        } catch (e) {
+            return null;
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
