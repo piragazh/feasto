@@ -35,6 +35,7 @@ export default function MenuManagement({ restaurantId }) {
         is_vegetarian: false,
         is_spicy: false,
         is_available: true,
+        show_in_cart_quick_add: false,
         customization_options: []
     });
 
@@ -285,6 +286,7 @@ export default function MenuManagement({ restaurantId }) {
             is_vegetarian: false,
             is_spicy: false,
             is_available: true,
+            show_in_cart_quick_add: false,
             customization_options: []
         });
         setEditingItem(null);
@@ -308,6 +310,7 @@ export default function MenuManagement({ restaurantId }) {
             is_vegetarian: item.is_vegetarian || false,
             is_spicy: item.is_spicy || false,
             is_available: item.is_available !== false,
+            show_in_cart_quick_add: item.show_in_cart_quick_add || false,
             customization_options: customizations
         });
         setDialogOpen(true);
@@ -518,7 +521,17 @@ export default function MenuManagement({ restaurantId }) {
                                         onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
                                     />
                                     <Label>Available</Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={formData.show_in_cart_quick_add}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, show_in_cart_quick_add: checked })}
+                                    />
+                                    <div className="flex flex-col">
+                                        <Label>Show in Cart Quick-Add</Label>
+                                        <p className="text-xs text-gray-500">Display in quick-add section on cart screen</p>
                                     </div>
+                                </div>
                                     </div>
 
                                     {/* Customization Options */}

@@ -1183,6 +1183,7 @@ export default function Restaurant() {
                 collectionEnabled={restaurant.collection_enabled}
                 restaurant={restaurant}
                 onPromotionApply={setAppliedPromotions}
+                onAddItem={addToCartDirect}
                 />
 
                 <RestaurantInfoDialog
