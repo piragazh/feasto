@@ -17,8 +17,8 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import Checkout from './pages/Checkout';
 import Restaurant from './pages/Restaurant';
+import Checkout from './pages/Checkout';
 import __Layout from './Layout.jsx';
 
 
@@ -42,8 +42,8 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "Checkout": Checkout,
     "Restaurant": Restaurant,
+    "Checkout": Checkout,
 }
 
 export const pagesConfig = {

@@ -679,35 +679,7 @@ export default function Restaurant() {
             return;
         }
 
-        // Check if ordering is available for current order type
-        const orderStatus = checkOrderingAvailable();
-        if (!orderStatus.available) {
-            // Show warning with suggestions
-            if (orderType === 'delivery') {
-                // Outside delivery hours - suggest collection or schedule
-                const collectionStatus = checkOrderingAvailable('collection');
-                if (restaurant.collection_enabled && collectionStatus.available) {
-                    toast.error(orderStatus.message, {
-                        description: 'Switch to collection or schedule your order for later',
-                        duration: 5000
-                    });
-                } else {
-                    toast.error(orderStatus.message, {
-                        description: 'Please schedule your order for later',
-                        duration: 5000
-                    });
-                }
-            } else {
-                // Outside collection hours - suggest schedule
-                toast.error(orderStatus.message, {
-                    description: 'Please schedule your order for later',
-                    duration: 5000
-                });
-            }
-            return;
-        }
-
-        // Save to localStorage
+        // Save to localStorage even if out of hours - checkout will handle scheduling
         try {
             localStorage.setItem('cart', JSON.stringify(cart));
             localStorage.setItem('cartRestaurantId', restaurantId);
