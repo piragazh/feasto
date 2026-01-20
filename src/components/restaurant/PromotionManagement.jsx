@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, TrendingUp, Percent, DollarSign, Gift, Truck, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, TrendingUp, Percent, DollarSign, Gift, Truck, Calendar, X } from 'lucide-react';
 import { format, isAfter, isBefore, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -24,12 +24,15 @@ export default function PromotionManagement({ restaurantId }) {
         promotion_code: '',
         promotion_type: 'percentage_off',
         discount_value: 0,
+        tiered_discounts: [],
+        combo_deal: { main_item_id: '', free_item_id: '', combo_name: '' },
         minimum_order: 0,
         applicable_items: [],
         start_date: '',
         end_date: '',
         is_active: true,
-        usage_limit: null
+        usage_limit: null,
+        per_customer_limit: null
     });
     const queryClient = useQueryClient();
 
@@ -84,12 +87,15 @@ export default function PromotionManagement({ restaurantId }) {
             promotion_code: '',
             promotion_type: 'percentage_off',
             discount_value: 0,
+            tiered_discounts: [],
+            combo_deal: { main_item_id: '', free_item_id: '', combo_name: '' },
             minimum_order: 0,
             applicable_items: [],
             start_date: '',
             end_date: '',
             is_active: true,
-            usage_limit: null
+            usage_limit: null,
+            per_customer_limit: null
         });
     };
 
@@ -101,12 +107,15 @@ export default function PromotionManagement({ restaurantId }) {
             promotion_code: promotion.promotion_code || '',
             promotion_type: promotion.promotion_type,
             discount_value: promotion.discount_value || 0,
+            tiered_discounts: promotion.tiered_discounts || [],
+            combo_deal: promotion.combo_deal || { main_item_id: '', free_item_id: '', combo_name: '' },
             minimum_order: promotion.minimum_order || 0,
             applicable_items: promotion.applicable_items || [],
             start_date: promotion.start_date ? format(new Date(promotion.start_date), "yyyy-MM-dd'T'HH:mm") : '',
             end_date: promotion.end_date ? format(new Date(promotion.end_date), "yyyy-MM-dd'T'HH:mm") : '',
             is_active: promotion.is_active,
-            usage_limit: promotion.usage_limit || null
+            usage_limit: promotion.usage_limit || null,
+            per_customer_limit: promotion.per_customer_limit || null
         });
         setActiveTab('create');
     };
@@ -145,6 +154,8 @@ export default function PromotionManagement({ restaurantId }) {
         fixed_amount_off: DollarSign,
         buy_one_get_one: Gift,
         buy_two_get_one: Gift,
+        tiered_discount: TrendingUp,
+        combo_deal: Gift,
         free_delivery: Truck
     };
 
@@ -382,6 +393,8 @@ export default function PromotionManagement({ restaurantId }) {
                                             <SelectItem value="fixed_amount_off">Fixed Amount Off</SelectItem>
                                             <SelectItem value="buy_one_get_one">Buy One Get One Free</SelectItem>
                                             <SelectItem value="buy_two_get_one">Buy Two Get One Free</SelectItem>
+                                            <SelectItem value="tiered_discount">Tiered Discount</SelectItem>
+                                            <SelectItem value="combo_deal">Combo Deal</SelectItem>
                                             <SelectItem value="free_delivery">Free Delivery</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -423,7 +436,154 @@ export default function PromotionManagement({ restaurantId }) {
                                     </div>
                                 )}
 
-                                {formData.promotion_type !== 'free_delivery' && formData.promotion_type !== 'buy_one_get_one' && formData.promotion_type !== 'buy_two_get_one' && (
+                                {formData.promotion_type === 'tiered_discount' && (
+                                    <div>
+                                        <Label>Discount Tiers *</Label>
+                                        <p className="text-xs text-gray-500 mb-2">Define discounts for different order values</p>
+                                        <div className="space-y-3">
+                                            {formData.tiered_discounts.map((tier, idx) => (
+                                                <div key={idx} className="border rounded-lg p-3 space-y-2">
+                                                    <div className="flex items-end gap-2">
+                                                        <div className="flex-1">
+                                                            <Label className="text-xs">Min Order (£)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                value={tier.min_order_value}
+                                                                onChange={(e) => {
+                                                                    const newTiers = [...formData.tiered_discounts];
+                                                                    newTiers[idx].min_order_value = parseFloat(e.target.value) || 0;
+                                                                    setFormData({ ...formData, tiered_discounts: newTiers });
+                                                                }}
+                                                                placeholder="e.g., 50"
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <Label className="text-xs">Type</Label>
+                                                            <Select
+                                                                value={tier.discount_type}
+                                                                onValueChange={(value) => {
+                                                                    const newTiers = [...formData.tiered_discounts];
+                                                                    newTiers[idx].discount_type = value;
+                                                                    setFormData({ ...formData, tiered_discounts: newTiers });
+                                                                }}
+                                                            >
+                                                                <SelectTrigger className="h-9">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="percentage">%</SelectItem>
+                                                                    <SelectItem value="fixed">£</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <Label className="text-xs">Value</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                value={tier.discount_value}
+                                                                onChange={(e) => {
+                                                                    const newTiers = [...formData.tiered_discounts];
+                                                                    newTiers[idx].discount_value = parseFloat(e.target.value) || 0;
+                                                                    setFormData({ ...formData, tiered_discounts: newTiers });
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            size="icon"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const newTiers = formData.tiered_discounts.filter((_, i) => i !== idx);
+                                                                setFormData({ ...formData, tiered_discounts: newTiers });
+                                                            }}
+                                                            className="h-9 w-9"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        tiered_discounts: [...formData.tiered_discounts, { min_order_value: 0, discount_type: 'percentage', discount_value: 0 }]
+                                                    });
+                                                }}
+                                            >
+                                                <Plus className="h-4 w-4 mr-2" /> Add Tier
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {formData.promotion_type === 'combo_deal' && (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label>Combo Name *</Label>
+                                            <Input
+                                                value={formData.combo_deal.combo_name}
+                                                onChange={(e) => setFormData({
+                                                    ...formData,
+                                                    combo_deal: { ...formData.combo_deal, combo_name: e.target.value }
+                                                })}
+                                                placeholder="e.g., Main + Free Drink"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Main Item Customer Must Buy *</Label>
+                                            <Select
+                                                value={formData.combo_deal.main_item_id}
+                                                onValueChange={(value) => setFormData({
+                                                    ...formData,
+                                                    combo_deal: { ...formData.combo_deal, main_item_id: value }
+                                                })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select item..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {menuItems.map(item => (
+                                                        <SelectItem key={item.id} value={item.id}>
+                                                            {item.name} - £{item.price.toFixed(2)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <Label>Free Item to Give *</Label>
+                                            <Select
+                                                value={formData.combo_deal.free_item_id}
+                                                onValueChange={(value) => setFormData({
+                                                    ...formData,
+                                                    combo_deal: { ...formData.combo_deal, free_item_id: value }
+                                                })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select item..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {menuItems.map(item => (
+                                                        <SelectItem key={item.id} value={item.id}>
+                                                            {item.name} - £{item.price.toFixed(2)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {formData.promotion_type !== 'free_delivery' && formData.promotion_type !== 'buy_one_get_one' && formData.promotion_type !== 'buy_two_get_one' && formData.promotion_type !== 'tiered_discount' && formData.promotion_type !== 'combo_deal' && (
                                     <div>
                                         <Label>
                                             Discount Value * ({formData.promotion_type === 'percentage_off' ? '%' : '£'})
@@ -471,15 +631,29 @@ export default function PromotionManagement({ restaurantId }) {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <Label>Usage Limit (optional)</Label>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        value={formData.usage_limit || ''}
-                                        onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value ? parseInt(e.target.value) : null })}
-                                        placeholder="Leave empty for unlimited"
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label>Global Usage Limit (optional)</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            value={formData.usage_limit || ''}
+                                            onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value ? parseInt(e.target.value) : null })}
+                                            placeholder="Unlimited"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Max uses across all customers</p>
+                                    </div>
+                                    <div>
+                                        <Label>Per-Customer Limit (optional)</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            value={formData.per_customer_limit || ''}
+                                            onChange={(e) => setFormData({ ...formData, per_customer_limit: e.target.value ? parseInt(e.target.value) : null })}
+                                            placeholder="Unlimited"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Max uses per customer</p>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-2">
