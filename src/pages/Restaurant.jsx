@@ -682,29 +682,11 @@ export default function Restaurant() {
         // Check if ordering is available for current order type
         const orderStatus = checkOrderingAvailable();
         if (!orderStatus.available) {
-            // Show warning with suggestions
-            if (orderType === 'delivery') {
-                // Outside delivery hours - suggest collection or schedule
-                const collectionStatus = checkOrderingAvailable('collection');
-                if (restaurant.collection_enabled && collectionStatus.available) {
-                    toast.error(orderStatus.message, {
-                        description: 'Switch to collection or schedule your order for later',
-                        duration: 5000
-                    });
-                } else {
-                    toast.error(orderStatus.message, {
-                        description: 'Please schedule your order for later',
-                        duration: 5000
-                    });
-                }
-            } else {
-                // Outside collection hours - suggest schedule
-                toast.error(orderStatus.message, {
-                    description: 'Please schedule your order for later',
-                    duration: 5000
-                });
-            }
-            return;
+            // Show warning but allow proceeding to schedule for later
+            toast.warning(orderStatus.message, {
+                description: 'You can schedule your order for later on the checkout page',
+                duration: 4000
+            });
         }
 
         // Save to localStorage
@@ -717,7 +699,7 @@ export default function Restaurant() {
             toast.error('Unable to save cart data');
             return;
         }
-        
+
         // Close drawer and navigate using React Router
         setCartOpen(false);
         navigate(createPageUrl('Checkout'));
