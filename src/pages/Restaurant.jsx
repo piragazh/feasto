@@ -200,8 +200,24 @@ export default function Restaurant() {
             grouped[cat].push(item);
         });
         
+        // Sort items within each category by restaurant's item_order
+        const itemOrder = restaurant?.item_order || {};
+        Object.keys(grouped).forEach(category => {
+            const categoryOrder = itemOrder[category] || [];
+            const categoryItems = grouped[category];
+            
+            // Separate ordered and unordered items
+            const ordered = categoryOrder
+                .map(id => categoryItems.find(item => item.id === id))
+                .filter(Boolean);
+            const orderedIds = new Set(ordered.map(item => item.id));
+            const unordered = categoryItems.filter(item => !orderedIds.has(item.id));
+            
+            grouped[category] = [...ordered, ...unordered];
+        });
+        
         return grouped;
-    }, [menuItems, menuSearchQuery]);
+    }, [menuItems, menuSearchQuery, restaurant?.item_order]);
 
     const categoryNavRef = React.useRef(null);
     const [showLeftArrow, setShowLeftArrow] = React.useState(false);
