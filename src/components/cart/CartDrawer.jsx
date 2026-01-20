@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CartPromotions from './CartPromotions';
 
 export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -65,6 +66,11 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                         </div>
                     </div>
                 </SheetHeader>
+
+                {/* Promotions Section */}
+                {cart.length > 0 && restaurantId && (
+                    <CartPromotions restaurantId={restaurantId} subtotal={subtotal} />
+                )}
 
                 {/* Order Type Selector */}
                 {cart.length > 0 && onOrderTypeChange && collectionEnabled && (
