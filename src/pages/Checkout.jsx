@@ -398,14 +398,14 @@ export default function Checkout() {
         console.log('Payment Method:', paymentMethod);
         console.log('Payment Completed:', paymentCompleted);
         
-        // Auto-enable scheduling if restaurant is closed
+        // Auto-enable scheduling if restaurant is closed (but don't return early)
         if (!isScheduled && checkRestaurantStatus()) {
             const earliestTime = getEarliestScheduleTime();
             if (earliestTime) {
                 setIsScheduled(true);
                 setScheduledFor(earliestTime);
                 toast.info('Restaurant is closed - order scheduled for opening time');
-                return;
+                return; // Let user see the scheduled time before proceeding
             }
         }
         
