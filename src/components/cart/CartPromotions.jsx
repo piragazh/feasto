@@ -16,19 +16,20 @@ export default function CartPromotions({ restaurantId, subtotal }) {
         const fetchPromotions = async () => {
             try {
                 const promotions = await base44.entities.Promotion.filter({
-                    restaurant_id: restaurantId,
-                    is_active: true
+                    restaurant_id: restaurantId
                 });
 
-                // Filter to only those with minimum_order conditions
+                // Filter to only those with minimum_order conditions and active
                 const autoPromotions = promotions.filter(p => {
+                    if (!p.is_active) return false;
+                    if (!p.minimum_order || p.minimum_order <= 0) return false;
+                    
+                    // Check date range
                     const now = new Date();
                     const start = new Date(p.start_date);
                     const end = new Date(p.end_date);
                     
-                    return isWithinInterval(now, { start, end }) && 
-                           p.condition_type === 'minimum_order' && 
-                           p.minimum_order > 0;
+                    return now >= start && now <= end;
                 });
 
                 setAvailablePromotions(autoPromotions);
