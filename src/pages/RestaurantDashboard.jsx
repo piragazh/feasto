@@ -197,6 +197,8 @@ export default function RestaurantDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <NotificationSoundManager restaurantId={restaurant?.id} />
+            
             {showOnboarding && (
                 <RestaurantOnboarding 
                     restaurant={restaurant}
