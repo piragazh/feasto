@@ -281,6 +281,8 @@ export default function Checkout() {
             if (!formData.phone) return;
             if (orderType === 'delivery' && (!formData.door_number || !formData.delivery_address)) return;
             if (isGuest && (!formData.guest_name || !formData.guest_email)) return;
+            // For scheduled orders, ensure scheduling is set
+            if (isScheduled && !scheduledFor) return;
 
             setInitializingPayment(true);
             try {
