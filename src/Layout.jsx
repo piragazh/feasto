@@ -6,14 +6,16 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 
 // Google Tag Manager initialization
-const gtmId = (import.meta.env.VITE_GTM_ID || '').trim();
-
 const initializeGTM = () => {
+    const gtmId = (import.meta.env.VITE_GTM_ID || '').trim();
     console.log('GTM ID value:', gtmId, 'Type:', typeof gtmId, 'Length:', gtmId?.length);
     if (!gtmId || gtmId === 'undefined' || gtmId.length === 0) {
         console.error('GTM ID not configured. Current value:', gtmId);
         return;
     }
+    
+    // Store for later use
+    window.__gtmId = gtmId;
     
     // Initialize dataLayer
     window.dataLayer = window.dataLayer || [];
