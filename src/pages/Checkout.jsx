@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle, User } from 'lucide-react'; // Icons
 import DiscountCodeInput from '@/components/checkout/DiscountCodeInput'; // Discount code application
 import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
@@ -110,6 +111,8 @@ export default function Checkout() {
     const [checkingEmail, setCheckingEmail] = useState(false);
     const [savePhone, setSavePhone] = useState(true);
     const [saveAddress, setSaveAddress] = useState(true);
+    const [addressLabel, setAddressLabel] = useState('Home');
+    const [setAsDefault, setSetAsDefault] = useState(false);
 
     // ============================================
     // INITIALIZATION - Runs when page loads
@@ -171,16 +174,16 @@ export default function Checkout() {
                     if (userData.phone) {
                         setFormData(prev => ({ ...prev, phone: userData.phone }));
                     }
-                    // Pre-fill first saved address if available
+                    // Pre-fill default or first saved address if available
                     if (userData.saved_addresses && userData.saved_addresses.length > 0) {
-                        const firstAddress = userData.saved_addresses[0];
+                        const defaultAddress = userData.saved_addresses.find(addr => addr.is_default) || userData.saved_addresses[0];
                         setFormData(prev => ({
                             ...prev,
-                            delivery_address: firstAddress.address || '',
-                            door_number: firstAddress.door_number || ''
+                            delivery_address: defaultAddress.address || '',
+                            door_number: defaultAddress.door_number || ''
                         }));
-                        if (firstAddress.coordinates) {
-                            setDeliveryCoordinates(firstAddress.coordinates);
+                        if (defaultAddress.coordinates) {
+                            setDeliveryCoordinates(defaultAddress.coordinates);
                         }
                     }
                 } catch (error) {
@@ -494,23 +497,30 @@ export default function Checkout() {
                     
                     // Save address for delivery orders if opted in
                     if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
-                        const newAddress = {
-                            label: 'Home',
-                            address: formData.delivery_address,
-                            door_number: formData.door_number,
-                            coordinates: deliveryCoordinates,
-                            instructions: formData.notes || ''
-                        };
-                        
                         const currentAddresses = userData.saved_addresses || [];
                         
                         // Check if address already exists
                         const addressExists = currentAddresses.some(addr => 
-                            addr.address === newAddress.address && addr.door_number === newAddress.door_number
+                            addr.address === formData.delivery_address && addr.door_number === formData.door_number
                         );
                         
                         if (!addressExists) {
-                            updates.saved_addresses = [...currentAddresses, newAddress];
+                            const newAddress = {
+                                label: addressLabel,
+                                address: formData.delivery_address,
+                                door_number: formData.door_number,
+                                coordinates: deliveryCoordinates,
+                                instructions: formData.notes || '',
+                                is_default: setAsDefault
+                            };
+                            
+                            // If setting as default, unmark all other addresses
+                            let updatedAddresses = currentAddresses;
+                            if (setAsDefault) {
+                                updatedAddresses = currentAddresses.map(addr => ({ ...addr, is_default: false }));
+                            }
+                            
+                            updates.saved_addresses = [...updatedAddresses, newAddress];
                         }
                     }
                     
@@ -851,18 +861,50 @@ export default function Checkout() {
                                         )}
 
                                         {!isGuest && (
-                                            <div className="flex items-center space-x-2 pt-2">
-                                                <Checkbox
-                                                    id="save-address"
-                                                    checked={saveAddress}
-                                                    onCheckedChange={setSaveAddress}
-                                                />
-                                                <label
-                                                    htmlFor="save-address"
-                                                    className="text-sm text-gray-700 cursor-pointer"
-                                                >
-                                                    Save this address for future orders
-                                                </label>
+                                            <div className="space-y-3 pt-3 border-t">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id="save-address"
+                                                        checked={saveAddress}
+                                                        onCheckedChange={setSaveAddress}
+                                                    />
+                                                    <label
+                                                        htmlFor="save-address"
+                                                        className="text-sm font-medium text-gray-700 cursor-pointer"
+                                                    >
+                                                        Save this address for future orders
+                                                    </label>
+                                                </div>
+                                                {saveAddress && (
+                                                    <div className="ml-6 space-y-3">
+                                                        <div>
+                                                            <Label htmlFor="address-label" className="text-xs">Address Type</Label>
+                                                            <Select value={addressLabel} onValueChange={setAddressLabel}>
+                                                                <SelectTrigger id="address-label" className="h-10">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="Home">🏠 Home</SelectItem>
+                                                                    <SelectItem value="Work">💼 Work</SelectItem>
+                                                                    <SelectItem value="Other">📍 Other</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id="set-default"
+                                                                checked={setAsDefault}
+                                                                onCheckedChange={setSetAsDefault}
+                                                            />
+                                                            <label
+                                                                htmlFor="set-default"
+                                                                className="text-xs text-gray-600 cursor-pointer"
+                                                            >
+                                                                Set as default address
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </CardContent>
