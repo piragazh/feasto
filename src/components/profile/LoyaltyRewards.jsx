@@ -69,8 +69,20 @@ export default function LoyaltyRewards({ user }) {
         available: loyaltyPoints >= reward.points_required
     }));
 
+    const handleRedeemSuccess = () => {
+        queryClient.invalidateQueries({ queryKey: ['loyalty-points', user.email] });
+    };
+
     return (
         <div className="space-y-6">
+            {selectedReward && (
+                <RedeemRewardDialog 
+                    reward={selectedReward} 
+                    open={redeemDialogOpen} 
+                    onOpenChange={setRedeemDialogOpen}
+                    onSuccess={handleRedeemSuccess}
+                />
+            )}
             {/* Loyalty Status */}
             <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
                 <CardContent className="pt-6">
