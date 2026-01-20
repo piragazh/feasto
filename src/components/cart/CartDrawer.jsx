@@ -7,7 +7,7 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartPromotions from './CartPromotions';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 2.99);
     
@@ -69,7 +69,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
 
                 {/* Promotions Section */}
                 {cart.length > 0 && restaurantId && (
-                    <CartPromotions restaurantId={restaurantId} subtotal={subtotal} />
+                    <CartPromotions restaurantId={restaurantId} subtotal={subtotal} onPromotionApply={onPromotionApply} />
                 )}
 
                 {/* Order Type Selector */}
