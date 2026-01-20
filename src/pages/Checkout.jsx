@@ -398,7 +398,7 @@ export default function Checkout() {
         console.log('Payment Method:', paymentMethod);
         console.log('Payment Completed:', paymentCompleted);
         
-        // Auto-enable scheduling if restaurant is closed
+        // Auto-enable scheduling if restaurant is closed - update state and continue
         let finalScheduledFor = scheduledFor;
         let finalIsScheduled = isScheduled;
         
@@ -407,7 +407,6 @@ export default function Checkout() {
             if (earliestTime) {
                 finalIsScheduled = true;
                 finalScheduledFor = earliestTime;
-                toast.info('Restaurant is closed - order scheduled for opening time');
             }
         }
         
