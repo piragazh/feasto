@@ -113,6 +113,9 @@ export default function Checkout() {
     const [saveAddress, setSaveAddress] = useState(true);
     const [addressLabel, setAddressLabel] = useState('Home');
     const [setAsDefault, setSetAsDefault] = useState(false);
+    const [isExistingAddress, setIsExistingAddress] = useState(false);
+    const [isExistingPhone, setIsExistingPhone] = useState(false);
+    const [user, setUser] = useState(null);
 
     // ============================================
     // INITIALIZATION - Runs when page loads
@@ -170,9 +173,12 @@ export default function Checkout() {
             if (authenticated) {
                 try {
                     const userData = await base44.auth.me();
+                    setUser(userData);
+                    
                     // Pre-fill phone if saved
                     if (userData.phone) {
                         setFormData(prev => ({ ...prev, phone: userData.phone }));
+                        setIsExistingPhone(true);
                     }
                     // Pre-fill default or first saved address if available
                     if (userData.saved_addresses && userData.saved_addresses.length > 0) {
@@ -185,6 +191,7 @@ export default function Checkout() {
                         if (defaultAddress.coordinates) {
                             setDeliveryCoordinates(defaultAddress.coordinates);
                         }
+                        setIsExistingAddress(true);
                     }
                 } catch (error) {
                     console.error('Failed to load user data:', error);
@@ -788,14 +795,24 @@ export default function Checkout() {
                                         {/* Saved Addresses Section */}
                                         {!isGuest && (
                                             <SavedAddressesSection 
-                                                onAddressSelect={(address) => {
+                                                onAddressSelect={async (address) => {
                                                     setFormData(prev => ({
                                                         ...prev,
                                                         delivery_address: address.address || '',
-                                                        door_number: address.door_number || ''
+                                                        door_number: address.door_number || '',
+                                                        notes: address.instructions || ''
                                                     }));
                                                     if (address.coordinates) {
                                                         setDeliveryCoordinates(address.coordinates);
+                                                    }
+                                                    setIsExistingAddress(true);
+                                                    
+                                                    // Check delivery zone for selected address
+                                                    if (address.coordinates && restaurantId) {
+                                                        setZoneCheckComplete(false);
+                                                        const zoneInfo = await calculateDeliveryDetails(restaurantId, address.coordinates);
+                                                        setDeliveryZoneInfo(zoneInfo);
+                                                        setZoneCheckComplete(true);
                                                     }
                                                 }}
                                             />
@@ -808,7 +825,10 @@ export default function Checkout() {
                                                 type="text"
                                                 placeholder="e.g., 42 or Flat 5B"
                                                 value={formData.door_number || ''}
-                                                onChange={(e) => setFormData({ ...formData, door_number: e.target.value })}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, door_number: e.target.value });
+                                                    setIsExistingAddress(false);
+                                                }}
                                                 className="h-12"
                                                 required
                                             />
@@ -819,6 +839,7 @@ export default function Checkout() {
                                                 onLocationSelect={async (locationData) => {
                                                     setFormData({ ...formData, delivery_address: locationData.address });
                                                     setDeliveryCoordinates(locationData.coordinates);
+                                                    setIsExistingAddress(false);
 
                                                     if (locationData.coordinates && restaurantId) {
                                                         setZoneCheckComplete(false);
@@ -860,7 +881,7 @@ export default function Checkout() {
                                             </div>
                                         )}
 
-                                        {!isGuest && (
+                                        {!isGuest && !isExistingAddress && (
                                             <div className="space-y-3 pt-3 border-t">
                                                 <div className="flex items-center space-x-2">
                                                     <Checkbox
@@ -963,13 +984,21 @@ export default function Checkout() {
                                             type="tel"
                                             placeholder="07123 456789"
                                             value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, phone: e.target.value });
+                                                // Check if it's different from saved phone
+                                                if (user?.phone && e.target.value !== user.phone) {
+                                                    setIsExistingPhone(false);
+                                                } else if (user?.phone && e.target.value === user.phone) {
+                                                    setIsExistingPhone(true);
+                                                }
+                                            }}
                                             className="h-12"
                                             required
                                         />
                                         <p className="text-xs text-gray-500 mt-1">Format: 07XXX XXXXXX</p>
                                     </div>
-                                    {!isGuest && (
+                                    {!isGuest && !isExistingPhone && (
                                         <div className="flex items-center space-x-2 pt-2">
                                             <Checkbox
                                                 id="save-phone"
