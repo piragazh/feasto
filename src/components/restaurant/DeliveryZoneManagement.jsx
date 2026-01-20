@@ -504,16 +504,23 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     />
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
                                     
-                                    {/* Show all existing zones for reference */}
-                                    {zones.map((zone, idx) => (
-                                        zone.coordinates && (!editingZone || zone.id !== editingZone.id) && (
+                                    {/* Show all existing zones (with overlaps removed) */}
+                                    {zones.map((zone, idx) => {
+                                        if (!zone.coordinates || (editingZone && zone.id === editingZone.id)) return null;
+                                        
+                                        const difference = getZoneDifference(zone);
+                                        const displayCoords = difference && difference.geometry.type === 'Polygon'
+                                            ? difference.geometry.coordinates[0].map(c => [c[1], c[0]])
+                                            : zone.coordinates.map(c => [c.lat, c.lng]);
+
+                                        return (
                                             <Polygon
                                                 key={zone.id}
-                                                positions={zone.coordinates.map(c => [c.lat, c.lng])}
+                                                positions={displayCoords}
                                                 pathOptions={{
                                                     color: zone.color || '#999999',
                                                     fillColor: zone.color || '#999999',
-                                                    fillOpacity: 0.15 + (idx * 0.05),
+                                                    fillOpacity: 0.15,
                                                     weight: 2,
                                                     dashArray: '5, 5',
                                                     opacity: 0.8
@@ -527,8 +534,8 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                     </div>
                                                 </Popup>
                                             </Polygon>
-                                        )
-                                    ))}
+                                        );
+                                    })}
                                     
                                     {/* Current zone being drawn */}
                                     {drawnCoordinates && (
