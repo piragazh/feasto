@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, MapPin, Clock, Phone, Package, CheckCircle, Loader2, Star } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import RateDriverDialog from '@/components/driver/RateDriverDialog';
 import LiveDriverMap from '@/components/tracking/LiveDriverMap';
 import 'leaflet/dist/leaflet.css';
@@ -35,16 +36,63 @@ export default function TrackOrder() {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('id');
     const [showRatingDialog, setShowRatingDialog] = useState(false);
+    const [order, setOrder] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const { data: order, isLoading } = useQuery({
-        queryKey: ['track-order', orderId],
-        queryFn: async () => {
+    // Real-time subscription to order updates
+    useEffect(() => {
+        if (!orderId) return;
+
+        const loadOrder = async () => {
             const orders = await base44.entities.Order.filter({ id: orderId });
-            return orders[0];
-        },
-        enabled: !!orderId,
-        refetchInterval: 3000, // Update every 3 seconds
-    });
+            setOrder(orders[0]);
+            setIsLoading(false);
+        };
+
+        loadOrder();
+
+        // Subscribe to real-time updates
+        const unsubscribe = base44.entities.Order.subscribe((event) => {
+            if (event.id === orderId && event.type === 'update') {
+                const newStatus = event.data.status;
+                const oldStatus = order?.status;
+
+                // Update order data
+                setOrder(event.data);
+
+                // Show notification for status changes
+                if (oldStatus && newStatus !== oldStatus) {
+                    const statusMessages = {
+                        confirmed: '✅ Order confirmed! Your food is being prepared.',
+                        preparing: '👨‍🍳 Your order is being prepared.',
+                        out_for_delivery: '🚗 Your order is on the way!',
+                        delivered: '🎉 Your order has been delivered. Enjoy!',
+                        ready_for_collection: '✅ Your order is ready for collection!',
+                        collected: '✅ Order collected successfully!',
+                        cancelled: '❌ Order has been cancelled.'
+                    };
+
+                    const message = statusMessages[newStatus];
+                    if (message) {
+                        toast.success(message, { duration: 5000 });
+                        
+                        // Request notification permission and show browser notification
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification('Order Update', {
+                                body: message,
+                                icon: '/logo.png',
+                                badge: '/logo.png'
+                            });
+                        } else if ('Notification' in window && Notification.permission !== 'denied') {
+                            Notification.requestPermission();
+                        }
+                    }
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [orderId, order?.status]);
 
     const { data: driver } = useQuery({
         queryKey: ['driver-info', order?.driver_id],
@@ -53,7 +101,7 @@ export default function TrackOrder() {
             return drivers[0];
         },
         enabled: !!order?.driver_id && order?.status === 'out_for_delivery',
-        refetchInterval: 3000,
+        refetchInterval: 5000,
     });
 
     const { data: restaurant } = useQuery({
@@ -78,6 +126,13 @@ export default function TrackOrder() {
     });
 
     const hasRatedDriver = driverRatings.length > 0;
+
+    // Request notification permission on mount
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
 
     if (!orderId) {
         return (
