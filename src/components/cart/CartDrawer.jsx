@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartPromotions from './CartPromotions';
+import CartQuickAddSection from './CartQuickAddSection';
 
 export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -66,6 +67,30 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                         </div>
                     </div>
                 </SheetHeader>
+
+                {/* Quick Add Section */}
+                {restaurantId && (
+                    <QuickAddSection restaurantId={restaurantId} currentCart={cart} onItemClick={(item) => {
+                        // Route to MenuItemCard click handler
+                        if (item.customization_options?.length > 0) {
+                            // Has customizations - would need modal
+                            // For now, add directly
+                            const existing = cart.find(i => i.menu_item_id === item.id && !i.customizations);
+                            if (existing) {
+                                updateQuantity(existing.menu_item_id, existing.quantity + 1);
+                            } else {
+                                const newItem = {
+                                    menu_item_id: item.id,
+                                    name: item.name,
+                                    price: item.price,
+                                    quantity: 1,
+                                    image_url: item.image_url
+                                };
+                                // setCart would need to be passed, use a callback instead
+                            }
+                        }
+                    }} />
+                )}
 
                 {/* Promotions Section */}
                 {cart.length > 0 && restaurantId && (
