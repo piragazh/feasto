@@ -209,6 +209,14 @@ export default function SuperAdmin() {
                             <Award className="h-4 w-4" />
                             Loyalty Program
                         </Button>
+                        <Button
+                            variant={activeTab === 'files' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('files')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Files
+                        </Button>
                     </div>
                 </div>
             </div>
