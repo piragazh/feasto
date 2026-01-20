@@ -46,6 +46,7 @@ import OrderModification from '@/components/restaurant/OrderModification';
 import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
 import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
+import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
 import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
 import { toast } from 'sonner';
 
@@ -389,7 +390,7 @@ export default function RestaurantDashboard() {
                     </TabsContent>
 
                     <TabsContent value="analytics">
-                        <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
+                        <OrderAnalyticsDashboard restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="drivers">
