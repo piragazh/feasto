@@ -173,7 +173,7 @@ export default function POSDashboard() {
             {/* Main Content */}
             <div className="max-w-7xl mx-auto p-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-5 bg-gray-800 border border-gray-700 mb-6">
+                    <TabsList className="grid w-full grid-cols-6 bg-gray-800 border border-gray-700 mb-6">
                         <TabsTrigger value="order-entry" className="text-white data-[state=active]:bg-orange-500">
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Orders
@@ -185,6 +185,10 @@ export default function POSDashboard() {
                         <TabsTrigger value="tables" className="text-white data-[state=active]:bg-orange-500">
                             <Monitor className="h-4 w-4 mr-2" />
                             Tables
+                        </TabsTrigger>
+                        <TabsTrigger value="waitlist" className="text-white data-[state=active]:bg-orange-500">
+                            <Users className="h-4 w-4 mr-2" />
+                            Waitlist
                         </TabsTrigger>
                         <TabsTrigger value="payment" className="text-white data-[state=active]:bg-orange-500">
                             <DollarSign className="h-4 w-4 mr-2" />
