@@ -35,6 +35,8 @@ import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
 import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
 import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
 import DriverTracking from '@/components/restaurant/DriverTracking';
+import DriverManagement from '@/components/restaurant/DriverManagement';
+import DriverPerformance from '@/components/restaurant/DriverPerformance';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import RefundManagement from '@/components/restaurant/RefundManagement';
 import PromotionManagement from '@/components/restaurant/PromotionManagement';

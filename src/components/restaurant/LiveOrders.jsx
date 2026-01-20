@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -32,6 +32,12 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] }
         }, '-created_date'),
         refetchInterval: 3000,
+    });
+
+    const { data: availableDrivers = [] } = useQuery({
+        queryKey: ['available-drivers'],
+        queryFn: () => base44.entities.Driver.filter({ is_available: true }),
+        refetchInterval: 5000,
     });
 
     // Filter orders
@@ -175,15 +181,50 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         toast.success('Order rejected and customer notified');
     };
 
+    const assignDriverMutation = useMutation({
+        mutationFn: async ({ orderId, driverId }) => {
+            const driver = availableDrivers.find(d => d.id === driverId);
+            
+            const etaPrompt = `Calculate estimated delivery time for a food delivery order.
+Distance: Assume 3-5 km average urban delivery.
+Traffic: Consider it's ${new Date().getHours()}:00, adjust for peak hours (12-14, 18-21).
+Vehicle: ${driver.vehicle_type}
+Provide only the time range (e.g., "25-30 min").`;
+            
+            const etaResponse = await base44.integrations.Core.InvokeLLM({
+                prompt: etaPrompt
+            });
+            
+            await base44.entities.Order.update(orderId, { 
+                driver_id: driverId,
+                estimated_delivery: etaResponse,
+                status: 'out_for_delivery'
+            });
+            
+            await base44.entities.Driver.update(driverId, {
+                current_order_id: orderId,
+                is_available: false
+            });
+            
+            return { driver };
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries(['live-orders']);
+            queryClient.invalidateQueries(['available-drivers']);
+            toast.success(`Driver ${data.driver.full_name} assigned - Customer notified`);
+            if (onOrderUpdate) onOrderUpdate();
+        },
+    });
+
     const handleStatusChange = async (orderId, newStatus) => {
         if (newStatus === 'out_for_delivery') {
-            const availableDrivers = await base44.entities.Driver.filter({ 
+            const drivers = await base44.entities.Driver.filter({ 
                 is_available: true,
                 current_order_id: null 
             });
             
-            if (availableDrivers.length > 0) {
-                const driver = availableDrivers[0];
+            if (drivers.length > 0) {
+                const driver = drivers[0];
                 
                 const etaPrompt = `Calculate estimated delivery time for a food delivery order.
 Distance: Assume 3-5 km average urban delivery.
@@ -582,12 +623,32 @@ Provide only the time range (e.g., "25-30 min").`;
                                                             Ready for Collection
                                                         </Button>
                                                     ) : (
-                                                        <Button
-                                                            onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
-                                                            className="flex-1 bg-orange-600 hover:bg-orange-700"
-                                                        >
-                                                            Mark as Dispatched
-                                                        </Button>
+                                                        <>
+                                                            {availableDrivers.length > 0 ? (
+                                                                <Select onValueChange={(driverId) => assignDriverMutation.mutate({ orderId: order.id, driverId })}>
+                                                                    <SelectTrigger className="flex-1">
+                                                                        <SelectValue placeholder="Assign Driver & Dispatch" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {availableDrivers.map(driver => (
+                                                                            <SelectItem key={driver.id} value={driver.id}>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <User className="h-4 w-4" />
+                                                                                    {driver.full_name} ({driver.vehicle_type})
+                                                                                </div>
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            ) : (
+                                                                <Button
+                                                                    onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
+                                                                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                                                                >
+                                                                    Mark as Dispatched
+                                                                </Button>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </>
                                             )}
