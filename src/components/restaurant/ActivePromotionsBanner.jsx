@@ -35,53 +35,46 @@ export default function ActivePromotionsBanner({ restaurantId }) {
     };
 
     return (
-        <div className="mb-6">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 shadow-lg">
-                <div className="flex items-center gap-2 mb-3">
-                    <Tag className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Active Promotions</h3>
+        <div className="mb-4">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg p-3 shadow-md">
+                <div className="flex items-center gap-2 mb-2">
+                    <Tag className="h-4 w-4" />
+                    <h3 className="font-bold text-sm">Active Promotions</h3>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     {promotions.map((promo) => {
                         const Icon = iconMap[promo.promotion_type] || Tag;
                         return (
-                            <motion.div
+                            <div
                                 key={promo.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="bg-white/20 backdrop-blur-sm rounded-lg p-3"
+                                className="bg-white/20 backdrop-blur-sm rounded-md p-2"
                             >
-                                <div className="flex items-start gap-3">
-                                    <div className="w-8 h-8 bg-white/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <Icon className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h4 className="font-semibold">{promo.name}</h4>
+                                <div className="flex items-center gap-2">
+                                    <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-sm truncate">{promo.name}</span>
                                             {promo.promotion_code && (
-                                                <Badge className="bg-white text-orange-600 font-mono font-bold">
+                                                <Badge className="bg-white text-orange-600 font-mono text-xs px-1.5 py-0">
                                                     {promo.promotion_code}
                                                 </Badge>
                                             )}
                                         </div>
-                                        {promo.description && (
-                                            <p className="text-sm text-white/90">{promo.description}</p>
-                                        )}
-                                        <p className="text-sm text-white/80 mt-1">
+                                        <p className="text-xs text-white/90 truncate">
                                             {promo.promotion_type === 'percentage_off' && 
-                                                `Get ${promo.discount_value}% off your order`}
+                                                `${promo.discount_value}% off`}
                                             {promo.promotion_type === 'fixed_amount_off' && 
-                                                `Save £${promo.discount_value.toFixed(2)} on your order`}
+                                                `Save £${promo.discount_value.toFixed(2)}`}
                                             {promo.promotion_type === 'free_delivery' && 
-                                                'Free delivery on this order'}
+                                                'Free delivery'}
                                             {promo.promotion_type === 'buy_one_get_one' && 
-                                                'Buy one get one free'}
+                                                'BOGO'}
                                             {promo.minimum_order > 0 && 
-                                                ` • Min order £${promo.minimum_order.toFixed(2)}`}
+                                                ` • Min £${promo.minimum_order.toFixed(2)}`}
                                         </p>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         );
                     })}
                 </div>
