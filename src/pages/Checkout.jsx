@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle, User } from 'lucide-react'; // Icons
 import DiscountCodeInput from '@/components/checkout/DiscountCodeInput'; // Discount code application
 import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
@@ -107,6 +108,8 @@ export default function Checkout() {
     const [emailChecked, setEmailChecked] = useState(false);
     const [emailExists, setEmailExists] = useState(false);
     const [checkingEmail, setCheckingEmail] = useState(false);
+    const [savePhone, setSavePhone] = useState(true);
+    const [saveAddress, setSaveAddress] = useState(true);
 
     // ============================================
     // INITIALIZATION - Runs when page loads
@@ -478,19 +481,19 @@ export default function Checkout() {
                 throw new Error('Order creation failed');
             }
 
-            // Save phone and address for logged-in users
+            // Save phone and address for logged-in users (if opted in)
             if (!isGuest) {
                 try {
                     const userData = await base44.auth.me();
                     const updates = {};
                     
-                    // Save phone if not already saved
-                    if (formData.phone && formData.phone !== userData.phone) {
+                    // Save phone if opted in and not already saved
+                    if (savePhone && formData.phone && formData.phone !== userData.phone) {
                         updates.phone = formData.phone;
                     }
                     
-                    // Save address for delivery orders
-                    if (orderType === 'delivery' && formData.delivery_address && formData.door_number) {
+                    // Save address for delivery orders if opted in
+                    if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
                         const newAddress = {
                             label: 'Home',
                             address: formData.delivery_address,
@@ -846,6 +849,22 @@ export default function Checkout() {
                                                 )}
                                             </div>
                                         )}
+
+                                        {!isGuest && (
+                                            <div className="flex items-center space-x-2 pt-2">
+                                                <Checkbox
+                                                    id="save-address"
+                                                    checked={saveAddress}
+                                                    onCheckedChange={setSaveAddress}
+                                                />
+                                                <label
+                                                    htmlFor="save-address"
+                                                    className="text-sm text-gray-700 cursor-pointer"
+                                                >
+                                                    Save this address for future orders
+                                                </label>
+                                            </div>
+                                        )}
                                     </CardContent>
                                     </Card>
                                     )}
@@ -894,18 +913,35 @@ export default function Checkout() {
                                         Contact Number
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <Label htmlFor="phone">UK Mobile Number *</Label>
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="07123 456789"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        className="h-12"
-                                        required
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Format: 07XXX XXXXXX</p>
+                                <CardContent className="space-y-3">
+                                    <div>
+                                        <Label htmlFor="phone">UK Mobile Number *</Label>
+                                        <Input
+                                            id="phone"
+                                            type="tel"
+                                            placeholder="07123 456789"
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            className="h-12"
+                                            required
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Format: 07XXX XXXXXX</p>
+                                    </div>
+                                    {!isGuest && (
+                                        <div className="flex items-center space-x-2 pt-2">
+                                            <Checkbox
+                                                id="save-phone"
+                                                checked={savePhone}
+                                                onCheckedChange={setSavePhone}
+                                            />
+                                            <label
+                                                htmlFor="save-phone"
+                                                className="text-sm text-gray-700 cursor-pointer"
+                                            >
+                                                Save this phone number for future orders
+                                            </label>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
