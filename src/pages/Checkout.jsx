@@ -318,12 +318,96 @@ export default function Checkout() {
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
     // ============================================
+    // Check if restaurant is currently closed and auto-enable scheduling
+    const checkRestaurantStatus = () => {
+        if (!restaurant) return false;
+        
+        const now = new Date();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+        
+        let hours;
+        if (orderType === 'collection' && restaurant.collection_hours) {
+            hours = restaurant.collection_hours[dayName];
+        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+            hours = restaurant.delivery_hours[dayName];
+        } else {
+            hours = restaurant.opening_hours?.[dayName];
+        }
+
+        if (!hours || hours.closed) return true;
+
+        const [openHour, openMin] = hours.open.split(':').map(Number);
+        const [closeHour, closeMin] = hours.close.split(':').map(Number);
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const openTime = openHour * 60 + openMin;
+        const closeTime = closeHour * 60 + closeMin;
+
+        return currentTime < openTime || currentTime >= closeTime;
+    };
+
+    // Get earliest available time for auto-scheduling
+    const getEarliestScheduleTime = () => {
+        if (!restaurant) return '';
+        
+        const now = new Date();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+        
+        let hours;
+        if (orderType === 'collection' && restaurant.collection_hours) {
+            hours = restaurant.collection_hours[dayName];
+        } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+            hours = restaurant.delivery_hours[dayName];
+        } else {
+            hours = restaurant.opening_hours?.[dayName];
+        }
+
+        if (!hours || hours.closed) {
+            for (let i = 1; i <= 7; i++) {
+                const nextDay = new Date(now);
+                nextDay.setDate(nextDay.getDate() + i);
+                const nextDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDay.getDay()];
+                
+                let nextHours;
+                if (orderType === 'collection' && restaurant.collection_hours) {
+                    nextHours = restaurant.collection_hours[nextDayName];
+                } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+                    nextHours = restaurant.delivery_hours[nextDayName];
+                } else {
+                    nextHours = restaurant.opening_hours?.[nextDayName];
+                }
+
+                if (nextHours && !nextHours.closed) {
+                    const [hour, min] = nextHours.open.split(':').map(Number);
+                    nextDay.setHours(hour, min, 0, 0);
+                    return nextDay.toISOString().slice(0, 16);
+                }
+            }
+            return '';
+        }
+
+        const [openHour, openMin] = hours.open.split(':').map(Number);
+        const scheduleTime = new Date(now);
+        scheduleTime.setHours(openHour, openMin, 0, 0);
+        return scheduleTime.toISOString().slice(0, 16);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         console.log('=== CHECKOUT SUBMIT ===');
         console.log('Payment Method:', paymentMethod);
         console.log('Payment Completed:', paymentCompleted);
+        
+        // Auto-enable scheduling if restaurant is closed
+        if (!isScheduled && checkRestaurantStatus()) {
+            const earliestTime = getEarliestScheduleTime();
+            if (earliestTime) {
+                setIsScheduled(true);
+                setScheduledFor(earliestTime);
+                toast.info('Restaurant is closed - order scheduled for opening time');
+                return;
+            }
+        }
         
         // CRITICAL: Block ALL submissions when card is selected
         if (paymentMethod === 'card') {
