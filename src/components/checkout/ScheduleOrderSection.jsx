@@ -63,7 +63,7 @@ export default function ScheduleOrderSection({ isScheduled, onScheduleToggle, sc
         }
 
         return minDateTimeString;
-    };
+    }, [restaurant, orderType, minDateTimeString]);
 
     return (
         <Card>
