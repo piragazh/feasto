@@ -973,18 +973,45 @@ export default function Checkout() {
                                                             door_number: address.door_number || '',
                                                             notes: address.instructions || ''
                                                         }));
-                                                        if (address.coordinates) {
-                                                            setDeliveryCoordinates(address.coordinates);
-                                                        }
                                                         setIsExistingAddress(true);
-                                                        
-                                                        // Check delivery zone for selected address
-                                                        if (address.coordinates && restaurantId) {
-                                                            setZoneCheckComplete(false);
-                                                            const zoneInfo = await calculateDeliveryDetails(restaurantId, address.coordinates);
-                                                            setDeliveryZoneInfo(zoneInfo);
-                                                            setZoneCheckComplete(true);
+                                                        setZoneCheckComplete(false);
+
+                                                        let coords = address.coordinates;
+
+                                                        // If no coordinates stored, geocode the address
+                                                        if (!coords || !coords.lat || !coords.lng) {
+                                                            try {
+                                                                const response = await fetch(
+                                                                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address.address || '')}&countrycodes=GB&limit=1`
+                                                                );
+                                                                const results = await response.json();
+                                                                if (results && results.length > 0) {
+                                                                    coords = {
+                                                                        lat: parseFloat(results[0].lat),
+                                                                        lng: parseFloat(results[0].lon)
+                                                                    };
+                                                                }
+                                                            } catch (error) {
+                                                                console.error('Geocoding saved address failed:', error);
+                                                            }
                                                         }
+
+                                                        // Set coordinates
+                                                        if (coords && coords.lat && coords.lng) {
+                                                            setDeliveryCoordinates(coords);
+
+                                                            // Check delivery zone
+                                                            if (restaurantId) {
+                                                                try {
+                                                                    const zoneInfo = await calculateDeliveryDetails(restaurantId, coords);
+                                                                    setDeliveryZoneInfo(zoneInfo);
+                                                                } catch (error) {
+                                                                    console.error('Zone check failed:', error);
+                                                                }
+                                                            }
+                                                        }
+
+                                                        setZoneCheckComplete(true);
                                                     }}
                                                 />
                                                 {/* Hidden fields to hold selected address values for form validation */}
