@@ -169,7 +169,47 @@ export default function Checkout() {
         if (savedPromotions) {
             setAppliedPromotions(JSON.parse(savedPromotions));
         }
-    }, []); // Empty array means this runs once when component mounts
+
+        // Auto-detect and apply BOGO promotions from cart
+        if (cart.length > 0) {
+            const bogoPromotions = [];
+            cart.forEach(item => {
+                if (item.promotion_type === 'buy_one_get_one') {
+                    // 1 free item for every 2 quantity
+                    const freeItems = Math.floor(item.quantity / 2);
+                    if (freeItems > 0) {
+                        const discount = item.price * freeItems;
+                        bogoPromotions.push({
+                            id: `${item.menu_item_id}_bogo`,
+                            name: item.promotion_name || 'Buy 1 Get 1 Free',
+                            promotion_type: 'buy_one_get_one',
+                            discount: discount,
+                            is_automatic: true
+                        });
+                    }
+                } else if (item.promotion_type === 'buy_two_get_one') {
+                    // 1 free item for every 3 quantity
+                    const freeItems = Math.floor(item.quantity / 3);
+                    if (freeItems > 0) {
+                        const discount = item.price * freeItems;
+                        bogoPromotions.push({
+                            id: `${item.menu_item_id}_b2g1`,
+                            name: item.promotion_name || 'Buy 2 Get 1 Free',
+                            promotion_type: 'buy_two_get_one',
+                            discount: discount,
+                            is_automatic: true
+                        });
+                    }
+                }
+            });
+            if (bogoPromotions.length > 0) {
+                setAppliedPromotions(prev => {
+                    const filtered = prev.filter(p => !p.is_automatic);
+                    return [...filtered, ...bogoPromotions];
+                });
+            }
+        }
+    }, [cart]); // Re-run when cart changes
 
     // Auto-enable scheduling if restaurant is closed (runs on mount/restaurant change)
     useEffect(() => {
