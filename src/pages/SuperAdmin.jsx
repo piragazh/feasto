@@ -19,7 +19,8 @@ import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManageme
 import ReviewModeration from '@/components/restaurant/ReviewModeration';
 import PromotionOversight from '@/components/superadmin/PromotionOversight';
 import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award } from 'lucide-react';
+import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
