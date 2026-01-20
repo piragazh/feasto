@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Gift, Lock } from 'lucide-react';
-import { isWithinInterval } from 'date-fns';
 
-export default function CartPromotions({ restaurantId, subtotal }) {
+export default function CartPromotions({ restaurantId, subtotal, onPromotionApply }) {
     const [availablePromotions, setAvailablePromotions] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -33,6 +32,36 @@ export default function CartPromotions({ restaurantId, subtotal }) {
                 });
 
                 setAvailablePromotions(autoPromotions);
+                
+                // Auto-apply eligible promotions
+                if (onPromotionApply && autoPromotions.length > 0) {
+                    const toApply = [];
+                    for (const promo of autoPromotions) {
+                        if (subtotal >= promo.minimum_order) {
+                            let discount = 0;
+                            if (promo.promotion_type === 'percentage_off') {
+                                discount = (subtotal * promo.discount_value) / 100;
+                            } else if (promo.promotion_type === 'fixed_amount_off') {
+                                discount = promo.discount_value;
+                            } else if (promo.promotion_type === 'free_delivery') {
+                                discount = 2.99;
+                            }
+                            toApply.push({ ...promo, discount });
+                        }
+                    }
+                    
+                    if (toApply.length > 0) {
+                        onPromotionApply(prev => {
+                            const updated = [...prev];
+                            for (const promo of toApply) {
+                                if (!updated.find(p => p.id === promo.id)) {
+                                    updated.push(promo);
+                                }
+                            }
+                            return updated;
+                        });
+                    }
+                }
             } catch (error) {
                 console.error('Failed to fetch promotions:', error);
             } finally {
@@ -42,6 +71,38 @@ export default function CartPromotions({ restaurantId, subtotal }) {
 
         fetchPromotions();
     }, [restaurantId]);
+
+    // Auto-apply when subtotal changes
+    useEffect(() => {
+        if (!onPromotionApply || availablePromotions.length === 0) return;
+
+        const toApply = [];
+        for (const promo of availablePromotions) {
+            if (subtotal >= promo.minimum_order) {
+                let discount = 0;
+                if (promo.promotion_type === 'percentage_off') {
+                    discount = (subtotal * promo.discount_value) / 100;
+                } else if (promo.promotion_type === 'fixed_amount_off') {
+                    discount = promo.discount_value;
+                } else if (promo.promotion_type === 'free_delivery') {
+                    discount = 2.99;
+                }
+                toApply.push({ ...promo, discount });
+            }
+        }
+        
+        if (toApply.length > 0) {
+            onPromotionApply(prev => {
+                const updated = [...prev];
+                for (const promo of toApply) {
+                    if (!updated.find(p => p.id === promo.id)) {
+                        updated.push(promo);
+                    }
+                }
+                return updated;
+            });
+        }
+    }, [subtotal, availablePromotions]);
 
     if (loading || availablePromotions.length === 0) return null;
 
