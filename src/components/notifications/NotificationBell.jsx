@@ -46,6 +46,13 @@ export default function NotificationBell({ userEmail }) {
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
+    const playNotificationSound = () => {
+        if (settings?.setting_value) {
+            const audio = new Audio(settings.setting_value);
+            audio.play().catch(err => console.log('Audio play error:', err));
+        }
+    };
+
     const handleNotificationClick = (notification) => {
         if (!notification.is_read) {
             markAsReadMutation.mutate(notification.id);
