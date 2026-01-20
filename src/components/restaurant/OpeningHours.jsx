@@ -8,7 +8,16 @@ const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
 export default function OpeningHours({ openingHours, isOpen }) {
     const [expanded, setExpanded] = useState(false);
 
-    if (!openingHours || Object.keys(openingHours).length === 0) return null;
+    if (!openingHours || Object.keys(openingHours).length === 0) {
+        return (
+            <Card>
+                <CardContent className="py-6 text-center">
+                    <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">Opening hours not configured yet</p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     const today = DAYS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
     const todayHours = openingHours[today];
