@@ -25,7 +25,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         queryKey: ['order-queue', restaurantId],
         queryFn: () => base44.entities.Order.filter({ 
             restaurant_id: restaurantId,
-            status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery'] }
+            status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] }
         }, '-created_date'),
         refetchInterval: 2000,
     });
@@ -186,6 +186,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
             confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
             preparing: 'bg-purple-100 text-purple-800 border-purple-300',
             out_for_delivery: 'bg-orange-100 text-orange-800 border-orange-300',
+            ready_for_collection: 'bg-green-100 text-green-800 border-green-300',
         };
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
@@ -251,6 +252,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                     <SelectItem value="confirmed">Confirmed</SelectItem>
                                     <SelectItem value="preparing">Preparing</SelectItem>
                                     <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                                    <SelectItem value="ready_for_collection">Ready for Collection</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Select value={sortBy} onValueChange={setSortBy}>
@@ -324,20 +326,27 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                 onCheckedChange={() => toggleOrderSelection(order.id)}
                                             />
                                             <div>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    Order #{order.id.slice(-6)}
-                                                    <Badge className={getStatusColor(order.status)}>
-                                                        {order.status.replace('_', ' ')}
-                                                    </Badge>
-                                                    {order.status === 'pending' && (
-                                                        <Badge className="bg-red-100 text-red-800 animate-pulse">
-                                                            NEW
-                                                        </Badge>
-                                                    )}
-                                                </CardTitle>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {format(new Date(order.created_date), 'MMM d, h:mm a')}
-                                                </p>
+                                               <CardTitle className="flex items-center gap-2 flex-wrap">
+                                                   {order.order_type === 'collection' && order.order_number ? (
+                                                       <span className="text-lg font-bold text-blue-600">{order.order_number}</span>
+                                                   ) : (
+                                                       <>Order #{order.id.slice(-6)}</>
+                                                   )}
+                                                   <Badge className={order.order_type === 'collection' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>
+                                                       {order.order_type === 'collection' ? '🏪 Collection' : '🚚 Delivery'}
+                                                   </Badge>
+                                                   <Badge className={getStatusColor(order.status)}>
+                                                       {order.status.replace('_', ' ')}
+                                                   </Badge>
+                                                   {order.status === 'pending' && (
+                                                       <Badge className="bg-red-100 text-red-800 animate-pulse">
+                                                           NEW
+                                                       </Badge>
+                                                   )}
+                                               </CardTitle>
+                                               <p className="text-sm text-gray-500 mt-1">
+                                                   {format(new Date(order.created_date), 'MMM d, h:mm a')}
+                                               </p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -359,10 +368,12 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
 
                                     {/* Customer Info */}
                                     <div className="space-y-2 text-sm bg-blue-50 p-3 rounded">
-                                        <div className="flex items-start gap-2">
-                                            <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                                            <span className="text-gray-700">{order.delivery_address}</span>
-                                        </div>
+                                        {order.order_type === 'delivery' && (
+                                            <div className="flex items-start gap-2">
+                                                <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                                                <span className="text-gray-700">{order.delivery_address}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2">
                                             <Phone className="h-4 w-4 text-blue-600" />
                                             <a href={`tel:${order.phone}`} className="text-blue-600 font-medium">
@@ -410,12 +421,23 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                         )}
 
                                         {order.status === 'preparing' && (
-                                            <Button
-                                                onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
-                                                className="flex-1 bg-orange-600 hover:bg-orange-700"
-                                            >
-                                                Mark as Dispatched
-                                            </Button>
+                                            <>
+                                                {order.order_type === 'collection' ? (
+                                                    <Button
+                                                        onClick={() => handleStatusChange(order.id, 'ready_for_collection')}
+                                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                                    >
+                                                        Ready for Collection
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
+                                                        className="flex-1 bg-orange-600 hover:bg-orange-700"
+                                                    >
+                                                        Mark as Dispatched
+                                                    </Button>
+                                                )}
+                                            </>
                                         )}
 
                                         {order.status === 'out_for_delivery' && (
@@ -424,6 +446,15 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                 className="flex-1 bg-green-600 hover:bg-green-700"
                                             >
                                                 Mark as Delivered
+                                            </Button>
+                                        )}
+
+                                        {order.status === 'ready_for_collection' && (
+                                            <Button
+                                                onClick={() => handleStatusChange(order.id, 'collected')}
+                                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                            >
+                                                Mark as Collected
                                             </Button>
                                         )}
 
