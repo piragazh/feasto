@@ -58,18 +58,6 @@ export default function LoyaltyRewards({ user }) {
         },
     });
 
-    const { data: tierBenefits = [] } = useQuery({
-        queryKey: ['tier-benefits', tier.name],
-        queryFn: async () => {
-            try {
-                const benefits = await base44.entities.LoyaltyTierBenefit.filter({ tier_name: tier.name, is_active: true });
-                return benefits;
-            } catch (e) {
-                return [];
-            }
-        },
-    });
-
     const getSetting = (key, defaultValue) => {
         const setting = settings.find(s => s.setting_key === key);
         return setting ? parseFloat(setting.setting_value) || defaultValue : defaultValue;
@@ -93,6 +81,18 @@ export default function LoyaltyRewards({ user }) {
     };
 
     const tier = getTier();
+
+    const { data: tierBenefits = [] } = useQuery({
+        queryKey: ['tier-benefits', tier.name],
+        queryFn: async () => {
+            try {
+                const benefits = await base44.entities.LoyaltyTierBenefit.filter({ tier_name: tier.name, is_active: true });
+                return benefits;
+            } catch (e) {
+                return [];
+            }
+        },
+    });
     const TierIcon = tier.icon;
 
     const nextTierPoints = loyaltyPoints >= 1000 ? null : 
