@@ -37,8 +37,11 @@ export async function findDeliveryZone(restaurantId, customerLocation) {
             return null;
         }
 
-        // Check which zone contains the customer location
-        for (const zone of zones) {
+        // Sort zones by creation date (oldest first) for consistent overlap handling
+        const sortedZones = [...zones].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+
+        // Check which zone contains the customer location (return the first/oldest matching zone)
+        for (const zone of sortedZones) {
             if (zone.coordinates && zone.coordinates.length > 0) {
                 if (isPointInPolygon(customerLocation, zone.coordinates)) {
                     return zone;
