@@ -508,9 +508,82 @@ export default function Checkout() {
     };
 
     const confirmCashOrder = async () => {
-        setShowCashConfirmation(false);
-        await createOrder();
-    };
+         setShowCashConfirmation(false);
+         await createOrder();
+     };
+
+     const handleAutoScheduledOrder = async (scheduledForValue) => {
+         setIsSubmitting(true);
+         try {
+             const fullAddress = orderType === 'delivery' 
+                 ? `${formData.door_number}, ${formData.delivery_address}`
+                 : restaurant?.address || 'Collection';
+
+             const orderNumber = orderType === 'collection' 
+                 ? `C-${Date.now().toString().slice(-6)}` 
+                 : null;
+
+             const earnLoyalty = restaurant?.loyalty_program_enabled !== false;
+             const pointsMultiplier = restaurant?.loyalty_points_multiplier || 1;
+             const pointsToEarn = earnLoyalty ? Math.floor(total * pointsMultiplier) : 0;
+
+             const orderData = {
+                 order_number: orderNumber,
+                 restaurant_id: restaurantId,
+                 restaurant_name: restaurantName,
+                 loyalty_points_earned: pointsToEarn,
+                 items: cart,
+                 subtotal,
+                 delivery_fee: deliveryFee,
+                 small_order_surcharge: smallOrderSurcharge,
+                 discount: discount,
+                 coupon_codes: appliedCoupons.map(c => c.code).join(', '),
+                 promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name).join(', '),
+                 total,
+                 payment_method: paymentMethod,
+                 order_type: orderType,
+                 status: 'pending',
+                 delivery_address: orderType === 'delivery' ? fullAddress : restaurant?.address || 'Collection',
+                 delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
+                 phone: formData.phone,
+                 notes: formData.notes,
+                 estimated_delivery: 'Scheduled',
+                 is_scheduled: true,
+                 scheduled_for: scheduledForValue,
+                 is_group_order: !!groupOrderId,
+                 group_order_id: groupOrderId,
+                 payment_intent_id: null
+             };
+
+             if (isGuest) {
+                 orderData.guest_name = formData.guest_name;
+                 orderData.guest_email = formData.guest_email;
+             }
+
+             const newOrder = await base44.entities.Order.create(orderData);
+
+             if (!newOrder || !newOrder.id) {
+                 throw new Error('Order creation failed');
+             }
+
+             toast.success(`✅ Order scheduled for ${new Date(scheduledForValue).toLocaleTimeString('en-UK', { hour: '2-digit', minute: '2-digit' })}`);
+
+             localStorage.removeItem('cart');
+             localStorage.removeItem('cartRestaurantId');
+             localStorage.removeItem('groupOrderId');
+             localStorage.removeItem('orderType');
+             setOrderPlaced(true);
+
+             setTimeout(() => {
+                 navigate(createPageUrl('Orders'));
+             }, 2000);
+         } catch (error) {
+             console.error('Auto-schedule order error:', error);
+             toast.error('Failed to schedule order');
+         } finally {
+             setIsSubmitting(false);
+         }
+     };
 
     const createOrder = async (paymentIntentId = null) => {
         // ABSOLUTE CRITICAL: Block any order creation if card payment was initiated but not completed
