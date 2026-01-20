@@ -132,10 +132,10 @@ export default function Layout({ children, currentPageName }) {
 
     const checkCustomDomain = async () => {
         if (customDomainChecked) return;
-        
+
         try {
             const currentDomain = window.location.hostname;
-            
+
             // Skip for localhost, IP addresses, or main platform domains
             if (
                 currentDomain === 'localhost' || 
@@ -149,7 +149,7 @@ export default function Layout({ children, currentPageName }) {
 
             // Fetch all restaurants to check for custom domain match
             const restaurants = await base44.entities.Restaurant.list();
-            
+
             const domainRestaurant = restaurants.find(r => 
                 r.custom_domain && 
                 r.domain_verified && 
@@ -158,20 +158,31 @@ export default function Layout({ children, currentPageName }) {
 
             if (domainRestaurant) {
                 setCustomDomainRestaurantId(domainRestaurant.id);
-                
+
                 // If on custom domain, redirect to restaurant page if not already there
                 const restaurantUrl = createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`;
                 if (!window.location.pathname.includes('/Restaurant') || !window.location.search.includes(domainRestaurant.id)) {
                     window.location.href = restaurantUrl;
                 }
             }
-            
+
             setCustomDomainChecked(true);
         } catch (error) {
             // Silently fail - don't disrupt user experience
             setCustomDomainChecked(true);
         }
     };
+
+    // Fetch restaurant data if custom domain is set
+    const { data: customDomainRestaurant } = useQuery({
+        queryKey: ['custom-domain-restaurant', customDomainRestaurantId],
+        queryFn: async () => {
+            if (!customDomainRestaurantId) return null;
+            const restaurants = await base44.entities.Restaurant.filter({ id: customDomainRestaurantId });
+            return restaurants?.[0] || null;
+        },
+        enabled: !!customDomainRestaurantId,
+    });
 
     const hideHeader = ['Checkout'].includes(currentPageName);
     const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'PrivacyPolicy', 'TermsOfService'].includes(currentPageName);
