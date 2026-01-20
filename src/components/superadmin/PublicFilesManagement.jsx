@@ -12,6 +12,21 @@ export default function PublicFilesManagement() {
     const [uploading, setUploading] = useState(false);
     const [uploadedFile, setUploadedFile] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [notificationUrl, setNotificationUrl] = useState('');
+    const [savingNotification, setSavingNotification] = useState(false);
+
+    const { data: settings } = useQuery({
+        queryKey: ['system-settings'],
+        queryFn: () => base44.asServiceRole.entities.SystemSettings.filter({ 
+            setting_key: 'notification_sound_url' 
+        }),
+    });
+
+    useEffect(() => {
+        if (settings && settings.length > 0) {
+            setNotificationUrl(settings[0].setting_value);
+        }
+    }, [settings]);
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
