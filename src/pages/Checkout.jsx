@@ -387,7 +387,7 @@ export default function Checkout() {
              }
          }
 
-         // ---- VALIDATION: Check if restaurant is currently open (for immediate orders) ----
+         // ---- VALIDATION: Auto-schedule if restaurant is closed ----
          if (!isScheduled && restaurant) {
              const now = new Date();
              const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
@@ -401,21 +401,50 @@ export default function Checkout() {
                  hours = restaurant.opening_hours?.[dayName];
              }
 
-             if (!hours || hours.closed) {
-                 console.log('BLOCKED: Restaurant closed now - must schedule order');
-                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} is closed. Please schedule your order for later.`);
-                 return;
-             }
-
              const currentTime = now.getHours() * 60 + now.getMinutes();
-             const [openHour, openMin] = hours.open.split(':').map(Number);
-             const [closeHour, closeMin] = hours.close.split(':').map(Number);
+             const [openHour, openMin] = hours?.open?.split(':').map(Number) || [9, 0];
+             const [closeHour, closeMin] = hours?.close?.split(':').map(Number) || [22, 0];
              const openTime = openHour * 60 + openMin;
              const closeTime = closeHour * 60 + closeMin;
 
-             if (currentTime < openTime || currentTime > closeTime) {
-                 console.log('BLOCKED: Outside operating hours - must schedule order');
-                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} is closed now (${hours.open}-${hours.close}). Please schedule your order for later.`);
+             // Check if currently closed
+             if (!hours || hours.closed || currentTime < openTime || currentTime > closeTime) {
+                 // Auto-schedule for next available time
+                 let nextDate = new Date(now);
+                 let nextDayName = dayName;
+                 let nextHours = hours;
+
+                 // If closed today, find next open day
+                 if (!hours || hours.closed || currentTime < openTime || currentTime > closeTime) {
+                     if (currentTime >= closeTime) {
+                         // After closing - schedule for tomorrow
+                         nextDate.setDate(nextDate.getDate() + 1);
+                     } else if (currentTime < openTime) {
+                         // Before opening - schedule for today at opening
+                         nextDate.setHours(openHour, openMin, 0, 0);
+                     }
+
+                     // If scheduling for tomorrow, find its hours
+                     if (nextDate.getDate() !== now.getDate()) {
+                         nextDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDate.getDay()];
+                         if (orderType === 'collection' && restaurant.collection_hours) {
+                             nextHours = restaurant.collection_hours[nextDayName];
+                         } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+                             nextHours = restaurant.delivery_hours[nextDayName];
+                         } else {
+                             nextHours = restaurant.opening_hours?.[nextDayName];
+                         }
+                         
+                         if (nextHours && !nextHours.closed) {
+                             const [nextOpenHour, nextOpenMin] = nextHours.open.split(':').map(Number);
+                             nextDate.setHours(nextOpenHour, nextOpenMin, 0, 0);
+                         }
+                     }
+                 }
+
+                 setIsScheduled(true);
+                 setScheduledFor(nextDate.toISOString());
+                 toast.success(`Order scheduled for ${nextDate.toLocaleTimeString('en-UK', { hour: '2-digit', minute: '2-digit' })}. You can adjust the time if needed.`);
                  return;
              }
          }
