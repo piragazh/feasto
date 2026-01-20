@@ -473,42 +473,29 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     />
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
                                     
-                                    {/* Show all existing zones (with overlaps removed) */}
+                                    {/* Show all existing zones for reference */}
                                     {zones.map((zone, idx) => {
                                         if (!zone.coordinates || (editingZone && zone.id === editingZone.id)) return null;
-                                        
-                                        const difference = getZoneDifference(zone);
-                                        let displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
-
-                                        if (difference && difference.geometry) {
-                                            if (difference.geometry.type === 'Polygon') {
-                                                displayCoords = difference.geometry.coordinates[0].map(c => [c[1], c[0]]);
-                                            } else if (difference.geometry.type === 'MultiPolygon') {
-                                                const largest = difference.geometry.coordinates.reduce((prev, current) => 
-                                                    (prev.length > current.length) ? prev : current
-                                                );
-                                                displayCoords = largest[0].map(c => [c[1], c[0]]);
-                                            }
-                                        }
+                                        const displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
 
                                         return (
                                             <Polygon
-                                                key={zone.id}
+                                                key={`${zone.id}-edit`}
                                                 positions={displayCoords}
                                                 pathOptions={{
                                                     color: zone.color || '#999999',
                                                     fillColor: zone.color || '#999999',
-                                                    fillOpacity: 0.15,
+                                                    fillOpacity: 0.1,
                                                     weight: 2,
                                                     dashArray: '5, 5',
-                                                    opacity: 0.8
+                                                    opacity: 0.7
                                                 }}
                                             >
                                                 <Popup>
-                                                    <div className="text-xs p-2 space-y-1">
+                                                    <div className="text-xs p-2 min-w-[180px]">
                                                         <p className="font-semibold text-sm">{zone.name}</p>
-                                                        <p className="text-gray-700">Fee: £{zone.delivery_fee.toFixed(2)}</p>
-                                                        <p className="text-gray-700">ETA: {zone.estimated_delivery_time}</p>
+                                                        <p className="text-gray-700 text-xs mt-1">Fee: <span className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</span></p>
+                                                        <p className="text-gray-700 text-xs">ETA: <span className="font-semibold">{zone.estimated_delivery_time}</span></p>
                                                     </div>
                                                 </Popup>
                                             </Polygon>
