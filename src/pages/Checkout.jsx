@@ -342,12 +342,33 @@ export default function Checkout() {
 
             if (clientSecret || initializingPayment) return;
 
-            // Basic validation before initializing payment
-            if (!formData.phone) return;
-            if (orderType === 'delivery' && !formData.delivery_address) return; // Delivery address is always required
-            if (orderType === 'delivery' && !isExistingAddress && !formData.door_number) return; // Door number required only for new addresses
+            // ✅ COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
+            
+            // Guest checkout validation
             if (isGuest && (!formData.guest_name || !formData.guest_email)) return;
-            // For scheduled orders, ensure scheduling is set
+            
+            // Phone always required
+            if (!formData.phone) return;
+            
+            // Delivery address validation
+            if (orderType === 'delivery') {
+                // Address must be present and valid string
+                if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') return;
+                
+                // Door number required for new addresses only
+                if (!isExistingAddress && (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '')) return;
+                
+                // Coordinates MUST exist
+                if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) return;
+                
+                // Zone check MUST be complete
+                if (!zoneCheckComplete) return;
+                
+                // Zone MUST be available
+                if (deliveryZoneInfo && deliveryZoneInfo.available === false) return;
+            }
+            
+            // Scheduled orders validation
             if (isScheduled && !scheduledFor) return;
 
             setInitializingPayment(true);
