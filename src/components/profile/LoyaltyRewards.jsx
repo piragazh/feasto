@@ -35,7 +35,7 @@ export default function LoyaltyRewards({ user }) {
     const referralBonus = getSetting('loyalty_referral_bonus', 100);
     const minOrderValue = getSetting('loyalty_min_order_value', 0);
 
-    const loyaltyPoints = userPoints?.points_balance || 0;
+    const loyaltyPoints = userPoints?.total_points || 0;
     const totalOrders = user.total_orders || 0;
     const totalSpent = user.total_spent || 0;
 
