@@ -3,7 +3,6 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { getCachedData } from '@/utils/apiCache';
 import { Search, MapPin, Filter, Star, Clock, DollarSign } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,17 +22,20 @@ export default function Home() {
     const [userLocation, setUserLocation] = useState(null);
     const [menuItemSearch, setMenuItemSearch] = useState('');
 
-    // Fetch menu items for advanced search
+    // Fetch menu items for advanced search with extended cache
     const { data: allMenuItems = [] } = useQuery({
         queryKey: ['allMenuItems'],
         queryFn: () => base44.entities.MenuItem.list(),
-        staleTime: 300000,
+        staleTime: 15 * 60 * 1000, // Cache for 15 minutes
+        gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
     });
 
+    // Fetch restaurants with optimized caching
     const { data: restaurants = [], isLoading } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
-        staleTime: 60000, // Cache for 1 minute
+        staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+        gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
     });
 
     useEffect(() => {
