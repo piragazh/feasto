@@ -435,19 +435,26 @@ export default function Checkout() {
             return;
         }
 
-        // For delivery, address is required
-        // For saved addresses, trust they're valid even if door_number appears empty
+        // For delivery, address is ALWAYS required
         if (orderType === 'delivery') {
+            // Check street address
             const hasAddress = formData.delivery_address && String(formData.delivery_address).trim() !== '';
-
             if (!hasAddress) {
                 console.log('BLOCKED: Delivery address missing');
-                toast.error('Please provide your delivery address');
+                toast.error('Please select your delivery address');
                 return;
             }
 
-            // For new addresses (not saved), require door number
-            if (!isExistingAddress) {
+            // For existing saved addresses, still ensure both fields are populated
+            if (isExistingAddress) {
+                const hasSavedDoor = formData.door_number && String(formData.door_number).trim() !== '';
+                if (!hasSavedDoor) {
+                    console.log('BLOCKED: Door number missing for saved address');
+                    toast.error('Please provide your door number');
+                    return;
+                }
+            } else {
+                // For new addresses, require door number
                 const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
                 if (!hasDoorNumber) {
                     console.log('BLOCKED: Door number missing for new address');
