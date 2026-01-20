@@ -466,17 +466,6 @@ export default function Checkout() {
         console.log('Payment Method:', paymentMethod);
         console.log('Payment Completed:', paymentCompleted);
         
-        // Auto-enable scheduling if restaurant is closed
-        if (!isScheduled && checkRestaurantStatus()) {
-            const earliestTime = getEarliestScheduleTime();
-            if (earliestTime) {
-                setIsScheduled(true);
-                setScheduledFor(earliestTime);
-                toast.info('Restaurant is closed - order scheduled for opening time');
-                return;
-            }
-        }
-        
         // CRITICAL: Block ALL submissions when card is selected
         if (paymentMethod === 'card') {
             console.log('BLOCKED: Card payment selected - form submission not allowed');
