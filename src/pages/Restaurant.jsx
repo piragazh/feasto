@@ -48,6 +48,7 @@ export default function Restaurant() {
     const [showInfoDialog, setShowInfoDialog] = useState(false);
     const [showCartConflictDialog, setShowCartConflictDialog] = useState(false);
     const [previousCartData, setPreviousCartData] = useState(null);
+    const [appliedPromotions, setAppliedPromotions] = useState([]);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
@@ -1166,6 +1167,7 @@ export default function Restaurant() {
                 onProceedToCheckout={handleProceedToCheckout}
                 collectionEnabled={restaurant.collection_enabled}
                 restaurant={restaurant}
+                onPromotionApply={setAppliedPromotions}
                 />
 
                 <RestaurantInfoDialog
