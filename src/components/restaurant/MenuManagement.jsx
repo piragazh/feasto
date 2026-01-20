@@ -9,12 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
 import CustomOptionTemplates from './CustomOptionTemplates';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -146,15 +145,15 @@ export default function MenuManagement({ restaurantId }) {
         },
     });
 
-    const handleDragEnd = (result) => {
-        if (!result.destination) return;
-
+    const moveCategory = (index, direction) => {
         const orderedCategories = getOrderedCategories();
-        const reordered = Array.from(orderedCategories);
-        const [removed] = reordered.splice(result.source.index, 1);
-        reordered.splice(result.destination.index, 0, removed);
+        const newOrder = Array.from(orderedCategories);
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
 
-        reorderCategoriesMutation.mutate(reordered);
+        if (newIndex < 0 || newIndex >= newOrder.length) return;
+
+        [newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]];
+        reorderCategoriesMutation.mutate(newOrder);
     };
 
     const getOrderedCategories = () => {
@@ -313,61 +312,57 @@ export default function MenuManagement({ restaurantId }) {
                     {categories.length === 0 ? (
                         <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
                     ) : (
-                        <DragDropContext onDragEnd={handleDragEnd}>
-                            <Droppable droppableId="categories" direction="horizontal">
-                                {(provided) => (
-                                    <div 
-                                        {...provided.droppableProps}
-                                        ref={provided.innerRef}
-                                        className="flex flex-wrap gap-2"
-                                    >
-                                        {categories.map((category, index) => (
-                                            <Draggable key={category} draggableId={category} index={index}>
-                                                {(provided, snapshot) => (
-                                                    <div
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
-                                                    >
-                                                        <Badge variant="secondary" className="text-sm py-1.5 px-3 flex items-center gap-2">
-                                                            <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                                                <GripVertical className="h-4 w-4 text-gray-400" />
-                                                            </div>
-                                                            {category}
-                                                            <div className="flex items-center gap-1">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setEditingCategory(category);
-                                                                        setNewCategoryName(category);
-                                                                        setCategoryDialogOpen(true);
-                                                                    }}
-                                                                    className="text-gray-500 hover:text-blue-600"
-                                                                    title="Edit category"
-                                                                >
-                                                                    <Edit className="h-3 w-3" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        if (confirm(`Remove category "${category}"?`)) {
-                                                                            removeCategoryMutation.mutate(category);
-                                                                        }
-                                                                    }}
-                                                                    className="text-gray-500 hover:text-red-600"
-                                                                    title="Remove category"
-                                                                >
-                                                                    ×
-                                                                </button>
-                                                            </div>
-                                                        </Badge>
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                        ))}
-                                        {provided.placeholder}
+                        <div className="space-y-3">
+                            {categories.map((category, index) => (
+                                <div key={category} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => moveCategory(index, 'up')}
+                                            disabled={index === 0}
+                                            className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            title="Move up"
+                                        >
+                                            <ChevronUp className="h-4 w-4 text-gray-600" />
+                                        </button>
+                                        <button
+                                            onClick={() => moveCategory(index, 'down')}
+                                            disabled={index === categories.length - 1}
+                                            className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            title="Move down"
+                                        >
+                                            <ChevronDown className="h-4 w-4 text-gray-600" />
+                                        </button>
                                     </div>
-                                )}
-                            </Droppable>
-                        </DragDropContext>
+                                    
+                                    <span className="font-medium text-gray-900 flex-1">{category}</span>
+                                    
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => {
+                                                setEditingCategory(category);
+                                                setNewCategoryName(category);
+                                                setCategoryDialogOpen(true);
+                                            }}
+                                            className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                            title="Edit category"
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`Remove category "${category}"?`)) {
+                                                    removeCategoryMutation.mutate(category);
+                                                }
+                                            }}
+                                            className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                            title="Remove category"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </CardContent>
             </Card>
