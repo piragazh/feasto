@@ -445,7 +445,7 @@ export default function Checkout() {
                  setIsScheduled(true);
                  setScheduledFor(nextDate.toISOString());
                  toast.success(`Order scheduled for ${nextDate.toLocaleTimeString('en-UK', { hour: '2-digit', minute: '2-digit' })}. You can adjust the time if needed.`);
-                 // Don't return - let form re-render with scheduled time
+                 return;
              }
          }
 
