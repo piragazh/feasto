@@ -367,13 +367,19 @@ export default function Restaurant() {
                             : i
                     );
                 }
-                return [...prev, {
+                const newItem = {
                     menu_item_id: item.id,
                     name: item.name,
                     price: item.price,
                     quantity: quantityToAdd,
                     image_url: item.image_url
-                }];
+                };
+                if (activePromotion) {
+                    newItem.promotion_id = activePromotion.id;
+                    newItem.promotion_type = activePromotion.promotion_type;
+                    newItem.promotion_name = activePromotion.name;
+                }
+                return [...prev, newItem];
                 });
                 toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
                 duration: 3000,
