@@ -499,13 +499,6 @@ export default function Checkout() {
                 return;
             }
 
-            // Check coordinates exist
-            if (!deliveryCoordinates) {
-                console.log('BLOCKED: Delivery coordinates missing');
-                toast.error('Please select a valid delivery address');
-                return;
-            }
-
             // Only require door number for NEW addresses (not saved ones)
             if (!isExistingAddress) {
                 const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
