@@ -279,7 +279,8 @@ export default function Checkout() {
 
             // Basic validation before initializing payment
             if (!formData.phone) return;
-            if (orderType === 'delivery' && (!formData.door_number || !formData.delivery_address)) return;
+            if (orderType === 'delivery' && !formData.delivery_address) return; // Delivery address is always required
+            if (orderType === 'delivery' && !isExistingAddress && !formData.door_number) return; // Door number required only for new addresses
             if (isGuest && (!formData.guest_name || !formData.guest_email)) return;
             // For scheduled orders, ensure scheduling is set
             if (isScheduled && !scheduledFor) return;
@@ -315,7 +316,7 @@ export default function Checkout() {
         };
 
         initPayment();
-    }, [paymentMethod, formData.phone, formData.door_number, formData.delivery_address, formData.guest_name, formData.guest_email, total]);
+    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType];
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
