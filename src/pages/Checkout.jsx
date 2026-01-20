@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, MapPin, Phone, FileText, Loader2, CheckCircle, User } from 'lucide-react'; // Icons
 import DiscountCodeInput from '@/components/checkout/DiscountCodeInput'; // Discount code application
+import AvailablePromotions from '@/components/checkout/AvailablePromotions'; // Auto-apply promotions
 import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment selection component
 import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection'; // Schedule future orders
 import GroupOrderSection from '@/components/checkout/GroupOrderSection'; // Group order functionality
@@ -1306,6 +1307,13 @@ export default function Checkout() {
                                 onScheduleChange={setScheduledFor}
                                 restaurant={restaurant}
                                 orderType={orderType}
+                            />
+
+                            <AvailablePromotions
+                                restaurantId={restaurantId}
+                                subtotal={subtotal}
+                                appliedPromotions={appliedPromotions}
+                                onPromotionApply={setAppliedPromotions}
                             />
 
                             <Card>
