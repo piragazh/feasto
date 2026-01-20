@@ -277,11 +277,20 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         >
                             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                             
-                            {zones.map((zone) => (
-                                zone.is_active && zone.coordinates && (
+                            {zones.map((zone) => {
+                                if (!zone.is_active || !zone.coordinates) return null;
+                                
+                                const difference = getZoneDifference(zone);
+                                
+                                // If difference exists, show only the difference, otherwise show original
+                                const displayCoords = difference && difference.geometry.type === 'Polygon' 
+                                    ? difference.geometry.coordinates[0].map(c => [c[1], c[0]])
+                                    : zone.coordinates.map(c => [c.lat, c.lng]);
+
+                                return (
                                     <Polygon
                                         key={zone.id}
-                                        positions={zone.coordinates.map(c => [c.lat, c.lng])}
+                                        positions={displayCoords}
                                         pathOptions={{
                                             color: zone.color || '#FF6B35',
                                             fillColor: zone.color || '#FF6B35',
@@ -296,8 +305,8 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                             </div>
                                         </Popup>
                                     </Polygon>
-                                )
-                            ))}
+                                );
+                            })}
                         </MapContainer>
                     </div>
                 </CardContent>
