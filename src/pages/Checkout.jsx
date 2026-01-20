@@ -24,6 +24,7 @@ import PaymentMethods from '@/components/checkout/PaymentMethods'; // Payment se
 import ScheduleOrderSection from '@/components/checkout/ScheduleOrderSection'; // Schedule future orders
 import GroupOrderSection from '@/components/checkout/GroupOrderSection'; // Group order functionality
 import LocationPicker from '@/components/location/LocationPicker'; // Address autocomplete
+import SavedAddressesSection from '@/components/checkout/SavedAddressesSection'; // Saved addresses for logged-in users
 import { motion } from 'framer-motion'; // Animations
 import { toast } from 'sonner'; // Toast notifications
 import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
@@ -158,6 +159,31 @@ export default function Checkout() {
         try {
             const authenticated = await base44.auth.isAuthenticated();
             setIsGuest(!authenticated); // If not authenticated, they're a guest
+            
+            // Load user data if authenticated
+            if (authenticated) {
+                try {
+                    const userData = await base44.auth.me();
+                    // Pre-fill phone if saved
+                    if (userData.phone) {
+                        setFormData(prev => ({ ...prev, phone: userData.phone }));
+                    }
+                    // Pre-fill first saved address if available
+                    if (userData.saved_addresses && userData.saved_addresses.length > 0) {
+                        const firstAddress = userData.saved_addresses[0];
+                        setFormData(prev => ({
+                            ...prev,
+                            delivery_address: firstAddress.address || '',
+                            door_number: firstAddress.door_number || ''
+                        }));
+                        if (firstAddress.coordinates) {
+                            setDeliveryCoordinates(firstAddress.coordinates);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load user data:', error);
+                }
+            }
         } catch (e) {
             setIsGuest(true); // On error, assume guest
         }
@@ -452,6 +478,48 @@ export default function Checkout() {
                 throw new Error('Order creation failed');
             }
 
+            // Save phone and address for logged-in users
+            if (!isGuest) {
+                try {
+                    const userData = await base44.auth.me();
+                    const updates = {};
+                    
+                    // Save phone if not already saved
+                    if (formData.phone && formData.phone !== userData.phone) {
+                        updates.phone = formData.phone;
+                    }
+                    
+                    // Save address for delivery orders
+                    if (orderType === 'delivery' && formData.delivery_address && formData.door_number) {
+                        const newAddress = {
+                            label: 'Home',
+                            address: formData.delivery_address,
+                            door_number: formData.door_number,
+                            coordinates: deliveryCoordinates,
+                            instructions: formData.notes || ''
+                        };
+                        
+                        const currentAddresses = userData.saved_addresses || [];
+                        
+                        // Check if address already exists
+                        const addressExists = currentAddresses.some(addr => 
+                            addr.address === newAddress.address && addr.door_number === newAddress.door_number
+                        );
+                        
+                        if (!addressExists) {
+                            updates.saved_addresses = [...currentAddresses, newAddress];
+                        }
+                    }
+                    
+                    // Update user if there are changes
+                    if (Object.keys(updates).length > 0) {
+                        await base44.auth.updateMe(updates);
+                    }
+                } catch (error) {
+                    console.error('Failed to save user data:', error);
+                }
+            }
+
             // Update group order status if applicable
             if (groupOrderId) {
                 try {
@@ -704,6 +772,22 @@ export default function Checkout() {
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
+                                        {/* Saved Addresses Section */}
+                                        {!isGuest && (
+                                            <SavedAddressesSection 
+                                                onAddressSelect={(address) => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        delivery_address: address.address || '',
+                                                        door_number: address.door_number || ''
+                                                    }));
+                                                    if (address.coordinates) {
+                                                        setDeliveryCoordinates(address.coordinates);
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                        
                                         <div>
                                             <Label htmlFor="door_number">Door Number / Flat *</Label>
                                             <Input
