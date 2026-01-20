@@ -20,7 +20,7 @@ const initializeGTM = () => {
     // Initialize dataLayer
     window.dataLayer = window.dataLayer || [];
     
-    // Define gtag function
+    // Define gtag function PK
     window.gtag = function() { 
         window.dataLayer.push(arguments); 
     };
