@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartPromotions from './CartPromotions';
-import CartQuickAddSection from './CartQuickAddSection';
+import CartQuickAddContainer from './CartQuickAddContainer';
 
-export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null }) {
+export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null, onAddItem = null }) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 2.99);
     
@@ -67,6 +67,13 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                         </div>
                     </div>
                 </SheetHeader>
+
+                {/* Quick Add Section */}
+                <CartQuickAddContainer 
+                    restaurantId={restaurantId}
+                    onAddToCart={onAddItem}
+                    onClose={() => onOpenChange(false)}
+                />
 
                 {/* Promotions Section */}
                 {cart.length > 0 && restaurantId && (
