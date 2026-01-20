@@ -513,8 +513,8 @@ export default function Checkout() {
             const actualPaymentMethod = paymentIntentId ? 'card' : paymentMethod;
             
             // CRITICAL: If no paymentIntentId, verify it's NOT a card payment
-            if (!paymentIntentId && (actualPaymentMethod === 'card' || actualPaymentMethod === 'apple_pay' || actualPaymentMethod === 'google_pay')) {
-                toast.error('❌ Online payment required but not completed.');
+            if (!paymentIntentId && actualPaymentMethod === 'card') {
+                toast.error('❌ Card payment required but not completed.');
                 setIsSubmitting(false);
                 return;
             }
