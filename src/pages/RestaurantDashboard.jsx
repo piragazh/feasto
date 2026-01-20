@@ -37,6 +37,8 @@ import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalytic
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import DriverManagement from '@/components/restaurant/DriverManagement';
 import DriverPerformance from '@/components/restaurant/DriverPerformance';
+import LoyaltyProgramManagement from '@/components/restaurant/LoyaltyProgramManagement';
+import LoyaltyCustomerInsights from '@/components/restaurant/LoyaltyCustomerInsights';
 import CustomerCRM from '@/components/restaurant/CustomerCRM';
 import RefundManagement from '@/components/restaurant/RefundManagement';
 import PromotionManagement from '@/components/restaurant/PromotionManagement';
@@ -306,6 +308,16 @@ export default function RestaurantDashboard() {
                                 <span className="hidden sm:inline">Performance</span>
                                 <span className="sm:hidden">📈</span>
                             </TabsTrigger>
+                            <TabsTrigger value="loyalty-program" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Award className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Loyalty Program</span>
+                                <span className="sm:hidden">🏆</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="loyalty-insights" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Loyalty Insights</span>
+                                <span className="sm:hidden">📊</span>
+                            </TabsTrigger>
                             <TabsTrigger value="crm" className="whitespace-nowrap text-xs sm:text-sm">
                                 <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 CRM
@@ -397,6 +409,14 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="driver-performance">
                         <DriverPerformance restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="loyalty-program">
+                        <LoyaltyProgramManagement restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="loyalty-insights">
+                        <LoyaltyCustomerInsights restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="crm">
