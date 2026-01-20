@@ -33,24 +33,26 @@ export default function OpeningHours({ openingHours, isOpen }) {
     };
 
     const formatTime = (time) => {
-        if (!time) return 'N/A';
+        if (!time) return null;
         
         try {
             const timeStr = String(time).trim();
-            if (!timeStr.includes(':')) return 'N/A';
+            if (!timeStr || !timeStr.includes(':')) return null;
             
-            const [hour, min] = timeStr.split(':').map(s => s.trim());
-            const h = parseInt(hour);
+            const parts = timeStr.split(':');
+            if (parts.length < 2) return null;
             
-            if (isNaN(h) || h < 0 || h > 23) return 'N/A';
+            const hour = parseInt(parts[0]);
+            const min = parts[1].padStart(2, '0');
             
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
-            const displayMin = min || '00';
+            if (isNaN(hour) || hour < 0 || hour > 23) return null;
             
-            return `${displayHour}:${displayMin} ${ampm}`;
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+            
+            return `${displayHour}:${min} ${ampm}`;
         } catch (e) {
-            return 'N/A';
+            return null;
         }
     };
 
@@ -92,6 +94,9 @@ export default function OpeningHours({ openingHours, isOpen }) {
                         const hours = openingHours[day];
                         const isToday = day === today;
                         
+                        const openFormatted = formatTime(hours?.open);
+                        const closeFormatted = formatTime(hours?.close);
+                        
                         return (
                             <div 
                                 key={day}
@@ -99,12 +104,14 @@ export default function OpeningHours({ openingHours, isOpen }) {
                             >
                                 <span className="capitalize">{day}</span>
                                 <span>
-                                    {!hours || !hours.open ? (
+                                    {!hours ? (
                                         'Not set'
                                     ) : hours.closed === true ? (
                                         'Closed'
+                                    ) : openFormatted && closeFormatted ? (
+                                        `${openFormatted} - ${closeFormatted}`
                                     ) : (
-                                        `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+                                        'Not set'
                                     )}
                                 </span>
                             </div>
