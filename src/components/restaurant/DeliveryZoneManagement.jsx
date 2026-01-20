@@ -286,11 +286,19 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 if (!zone.is_active || !zone.coordinates) return null;
                                 
                                 const difference = getZoneDifference(zone);
-                                
-                                // If difference exists, show only the difference, otherwise show original
-                                const displayCoords = difference && difference.geometry.type === 'Polygon' 
-                                    ? difference.geometry.coordinates[0].map(c => [c[1], c[0]])
-                                    : zone.coordinates.map(c => [c.lat, c.lng]);
+                                let displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
+
+                                if (difference && difference.geometry) {
+                                    if (difference.geometry.type === 'Polygon') {
+                                        displayCoords = difference.geometry.coordinates[0].map(c => [c[1], c[0]]);
+                                    } else if (difference.geometry.type === 'MultiPolygon') {
+                                        // For MultiPolygon, use the largest polygon
+                                        const largest = difference.geometry.coordinates.reduce((prev, current) => 
+                                            (prev.length > current.length) ? prev : current
+                                        );
+                                        displayCoords = largest[0].map(c => [c[1], c[0]]);
+                                    }
+                                }
 
                                 return (
                                     <Polygon
