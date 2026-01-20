@@ -325,34 +325,11 @@ export default function Checkout() {
           console.log('Payment Method:', paymentMethod);
           console.log('Payment Completed:', paymentCompleted);
 
-          // CRITICAL: Block manual form submission only when card is selected
-          // Allow form submission to pass through if it's for auto-scheduling
-          if (paymentMethod === 'card' && !isScheduled && restaurant) {
-              // Check if restaurant is currently open before blocking
-              const now = new Date();
-              const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
-
-              let hours;
-              if (orderType === 'collection' && restaurant.collection_hours) {
-                  hours = restaurant.collection_hours[dayName];
-              } else if (orderType === 'delivery' && restaurant.delivery_hours) {
-                  hours = restaurant.delivery_hours[dayName];
-              } else {
-                  hours = restaurant.opening_hours?.[dayName];
-              }
-
-              const currentTime = now.getHours() * 60 + now.getMinutes();
-              const [openHour, openMin] = hours?.open?.split(':').map(Number) || [9, 0];
-              const [closeHour, closeMin] = hours?.close?.split(':').map(Number) || [22, 0];
-              const openTime = openHour * 60 + openMin;
-              const closeTime = closeHour * 60 + closeMin;
-
-              // Only block if restaurant is open - card form is already showing so they should submit through Stripe
-              if (!(hours && !hours.closed && currentTime >= openTime && currentTime <= closeTime)) {
-                  console.log('BLOCKED: Card payment selected - form submission not allowed');
-                  toast.error('Please complete the card payment form below');
-                  return;
-              }
+          // CRITICAL: Block form submission when card is selected - must use Stripe form
+          if (paymentMethod === 'card') {
+              console.log('BLOCKED: Card payment selected - form submission not allowed');
+              toast.error('Please complete the card payment form below');
+              return;
           }
 
          // ---- VALIDATION: Check Required Fields ----
