@@ -10,8 +10,8 @@ export default function ScheduleOrderSection({ isScheduled, onScheduleToggle, sc
     minDateTime.setHours(minDateTime.getHours() + 1);
     const minDateTimeString = minDateTime.toISOString().slice(0, 16);
 
-    // Get next available time slot based on restaurant hours
-    const getNextAvailableTime = () => {
+    // Get next available time slot based on restaurant hours (memoized)
+    const getNextAvailableTime = React.useMemo(() => () => {
         if (!restaurant) return minDateTimeString;
         
         const now = new Date();
