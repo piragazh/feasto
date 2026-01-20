@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import RedeemRewardDialog from './RedeemRewardDialog';
 
 export default function LoyaltyDashboard({ userEmail }) {
+    const [selectedReward, setSelectedReward] = useState(null);
+    const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
     const queryClient = useQueryClient();
 
     const { data: loyaltyPoints } = useQuery({
