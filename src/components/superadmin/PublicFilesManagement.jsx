@@ -65,6 +65,31 @@ export default function PublicFilesManagement() {
         toast.success('URL copied!');
     };
 
+    const saveNotificationSound = async () => {
+        if (!notificationUrl) {
+            toast.error('Please enter a notification sound URL');
+            return;
+        }
+
+        setSavingNotification(true);
+        try {
+            const response = await base44.functions.invoke('saveNotificationSound', {
+                notification_sound_url: notificationUrl
+            });
+
+            if (response?.data?.success) {
+                toast.success('Notification sound saved!');
+            } else {
+                toast.error('Failed to save notification sound');
+            }
+        } catch (error) {
+            console.error('Save error:', error);
+            toast.error('Failed to save notification sound');
+        } finally {
+            setSavingNotification(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div>
