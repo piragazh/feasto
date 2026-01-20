@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
 
         // Generate unique coupon code
         const couponCode = `REWARD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
         
         // Create coupon record
         await base44.entities.Coupon.create({
@@ -44,7 +45,8 @@ Deno.serve(async (req) => {
             discount_type: targetReward.discount_type || 'percentage',
             discount_value: targetReward.discount_value || 10,
             is_active: true,
-            valid_until: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            valid_until: expiresAt.split('T')[0],
+            expires_at: expiresAt
         });
 
         // Record transaction
