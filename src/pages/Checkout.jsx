@@ -442,9 +442,12 @@ export default function Checkout() {
                      }
                  }
 
-                 setIsScheduled(true);
-                 setScheduledFor(nextDate.toISOString());
-                 toast.success(`Order scheduled for ${nextDate.toLocaleTimeString('en-UK', { hour: '2-digit', minute: '2-digit' })}. You can adjust the time if needed.`);
+                 // Use the state values immediately for order creation
+                 const scheduledForValue = nextDate.toISOString();
+
+                 // Create order with scheduled time
+                 const orderData = createOrderData(scheduledForValue, true, nextDate);
+                 await submitOrderWithData(orderData, nextDate);
                  return;
              }
          }
