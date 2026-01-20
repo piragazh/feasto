@@ -19,8 +19,9 @@ import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManageme
 import ReviewModeration from '@/components/restaurant/ReviewModeration';
 import PromotionOversight from '@/components/superadmin/PromotionOversight';
 import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
+import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManagement';
 import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
@@ -210,6 +211,14 @@ export default function SuperAdmin() {
                             Loyalty Program
                         </Button>
                         <Button
+                            variant={activeTab === 'tier-benefits' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('tier-benefits')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Gift className="h-4 w-4" />
+                            Tier Benefits
+                        </Button>
+                        <Button
                             variant={activeTab === 'files' ? 'secondary' : 'ghost'}
                             onClick={() => setActiveTab('files')}
                             className="flex items-center gap-2 text-white hover:bg-white/10"
@@ -238,6 +247,7 @@ export default function SuperAdmin() {
                 {activeTab === 'reviews' && <ReviewModeration isAdmin={true} />}
                 {activeTab === 'promotions' && <PromotionOversight />}
                 {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
+                {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
                 {activeTab === 'files' && <PublicFilesManagement />}
                 {activeTab === 'managers' && (
                     <iframe 
