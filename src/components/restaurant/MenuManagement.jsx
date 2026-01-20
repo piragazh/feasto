@@ -169,6 +169,46 @@ export default function MenuManagement({ restaurantId }) {
         return [...ordered, ...unordered];
     };
 
+    const getOrderedItems = (category) => {
+        const itemOrder = restaurant?.item_order || {};
+        const categoryOrder = itemOrder[category] || [];
+        const categoryItems = menuItems.filter(item => item.category === category);
+        
+        // Start with ordered items
+        const ordered = categoryOrder
+            .map(id => categoryItems.find(item => item.id === id))
+            .filter(Boolean);
+        
+        // Add any new items not in the order yet
+        const orderedIds = new Set(ordered.map(item => item.id));
+        const unordered = categoryItems.filter(item => !orderedIds.has(item.id));
+        
+        return [...ordered, ...unordered];
+    };
+
+    const moveItem = (category, itemId, direction) => {
+        const orderedItems = getOrderedItems(category);
+        const index = orderedItems.findIndex(item => item.id === itemId);
+        if (index === -1) return;
+        
+        const newIndex = direction === 'left' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= orderedItems.length) return;
+        
+        const newOrder = Array.from(orderedItems);
+        [newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]];
+        
+        const currentItemOrder = restaurant?.item_order || {};
+        const updatedItemOrder = {
+            ...currentItemOrder,
+            [category]: newOrder.map(item => item.id)
+        };
+        
+        base44.entities.Restaurant.update(restaurantId, { item_order: updatedItemOrder }).then(() => {
+            queryClient.invalidateQueries(['restaurant']);
+            toast.success('Item order updated');
+        });
+    };
+
     const bulkDeleteMutation = useMutation({
         mutationFn: async (itemIds) => {
             for (const id of itemIds) {
@@ -997,9 +1037,24 @@ export default function MenuManagement({ restaurantId }) {
                 </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredMenuItems.map((item) => (
-                    <Card key={item.id} className={`${item.is_available === false ? 'opacity-60' : ''} ${selectedItems.includes(item.id) ? 'ring-2 ring-orange-500' : ''}`}>
+            <div className="space-y-6">
+                {categories.map((category) => {
+                    const categoryItems = getOrderedItems(category).filter(item => 
+                        (filterCategory === 'all' || item.category === filterCategory) &&
+                        (filterAvailable === 'all' || 
+                            (filterAvailable === 'available' && item.is_available !== false) ||
+                            (filterAvailable === 'unavailable' && item.is_available === false))
+                    );
+                    
+                    if (categoryItems.length === 0) return null;
+                    
+                    return (
+                        <div key={category}>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-3 capitalize">{category}</h3>
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {categoryItems.map((item, index) => (
+                                    <div key={item.id} className="relative">
+                                        <Card className={`${item.is_available === false ? 'opacity-60' : ''} ${selectedItems.includes(item.id) ? 'ring-2 ring-orange-500' : ''}`}>
                         <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-2">
                                 <input
@@ -1063,8 +1118,32 @@ export default function MenuManagement({ restaurantId }) {
                                 </Button>
                             </div>
                         </CardContent>
-                    </Card>
-                ))}
+                        </Card>
+                        {/* Item reorder buttons */}
+                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 hover:opacity-100 transition-opacity bg-white rounded-lg shadow p-1">
+                            <button
+                                onClick={() => moveItem(category, item.id, 'left')}
+                                disabled={categoryItems.indexOf(item) === 0}
+                                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Move left"
+                            >
+                                <ChevronLeft className="h-3.5 w-3.5 text-gray-600" />
+                            </button>
+                            <button
+                                onClick={() => moveItem(category, item.id, 'right')}
+                                disabled={categoryItems.indexOf(item) === categoryItems.length - 1}
+                                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Move right"
+                            >
+                                <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
+                            </button>
+                        </div>
+                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             <Dialog open={categoryDialogOpen} onOpenChange={(open) => {
