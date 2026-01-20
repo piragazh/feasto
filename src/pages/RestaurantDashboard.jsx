@@ -293,8 +293,18 @@ export default function RestaurantDashboard() {
                         <TabsList className="bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
                             <TabsTrigger value="drivers" className="whitespace-nowrap text-xs sm:text-sm">
                                 <Navigation className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Drivers</span>
-                                <span className="sm:hidden">🚗</span>
+                                <span className="hidden sm:inline">Driver Tracking</span>
+                                <span className="sm:hidden">Track</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="driver-management" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Manage Drivers</span>
+                                <span className="sm:hidden">Drivers</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="driver-performance" className="whitespace-nowrap text-xs sm:text-sm">
+                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Performance</span>
+                                <span className="sm:hidden">📈</span>
                             </TabsTrigger>
                             <TabsTrigger value="crm" className="whitespace-nowrap text-xs sm:text-sm">
                                 <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
@@ -379,6 +389,14 @@ export default function RestaurantDashboard() {
 
                     <TabsContent value="drivers">
                         <DriverTracking restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="driver-management">
+                        <DriverManagement restaurantId={restaurant.id} />
+                    </TabsContent>
+
+                    <TabsContent value="driver-performance">
+                        <DriverPerformance restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="crm">
