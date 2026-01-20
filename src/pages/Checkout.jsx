@@ -319,179 +319,75 @@ export default function Checkout() {
     // FORM SUBMISSION - When user clicks "Place Order"
     // ============================================
     const handleSubmit = async (e) => {
-         e.preventDefault();
+        e.preventDefault();
+        
+        console.log('=== CHECKOUT SUBMIT ===');
+        console.log('Payment Method:', paymentMethod);
+        console.log('Payment Completed:', paymentCompleted);
+        
+        // CRITICAL: Block ALL submissions when card is selected
+        if (paymentMethod === 'card') {
+            console.log('BLOCKED: Card payment selected - form submission not allowed');
+            toast.error('Please complete the card payment form below');
+            return;
+        }
+        
+        // ---- VALIDATION: Check Required Fields ----
 
-         console.log('=== CHECKOUT SUBMIT ===');
-          console.log('Payment Method:', paymentMethod);
-          console.log('Payment Completed:', paymentCompleted);
+        // For guest users, name and email are required
+        if (isGuest && (!formData.guest_name || !formData.guest_email)) {
+            console.log('BLOCKED: Guest name/email missing');
+            toast.error('Please provide your name and email');
+            return;
+        }
 
-          // CRITICAL: Block form submission when card is selected - must use Stripe form
-          if (paymentMethod === 'card') {
-              console.log('BLOCKED: Card payment selected - form submission not allowed');
-              toast.error('Please complete the card payment form below');
-              return;
-          }
+        // Phone is always required
+        if (!formData.phone) {
+            console.log('BLOCKED: Phone missing');
+            toast.error('Please provide your phone number');
+            return;
+        }
 
-         // ---- VALIDATION: Check Required Fields ----
+        // For delivery, address is required
+        // For saved addresses, trust they're valid even if door_number appears empty
+        if (orderType === 'delivery') {
+            const hasAddress = formData.delivery_address && String(formData.delivery_address).trim() !== '';
 
-         // For guest users, name and email are required
-         if (isGuest && (!formData.guest_name || !formData.guest_email)) {
-             console.log('BLOCKED: Guest name/email missing');
-             toast.error('Please provide your name and email');
-             return;
-         }
+            if (!hasAddress) {
+                console.log('BLOCKED: Delivery address missing');
+                toast.error('Please provide your delivery address');
+                return;
+            }
 
-         // Phone is always required
-         if (!formData.phone) {
-             console.log('BLOCKED: Phone missing');
-             toast.error('Please provide your phone number');
-             return;
-         }
+            // For new addresses (not saved), require door number
+            if (!isExistingAddress) {
+                const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
+                if (!hasDoorNumber) {
+                    console.log('BLOCKED: Door number missing for new address');
+                    toast.error('Please provide your door number');
+                    return;
+                }
+            }
+        }
 
-         // For delivery, address is required
-         // For saved addresses, trust they're valid even if door_number appears empty
-         if (orderType === 'delivery') {
-             const hasAddress = formData.delivery_address && String(formData.delivery_address).trim() !== '';
+        // ---- VALIDATION: UK Phone Number Format ----
+        const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
+        if (!ukPhoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+            console.log('BLOCKED: Invalid phone format');
+            toast.error('Please enter a valid UK phone number');
+            return;
+        }
 
-             if (!hasAddress) {
-                 console.log('BLOCKED: Delivery address missing');
-                 toast.error('Please provide your delivery address');
-                 return;
-             }
-
-             // For new addresses (not saved), require door number
-             if (!isExistingAddress) {
-                 const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
-                 if (!hasDoorNumber) {
-                     console.log('BLOCKED: Door number missing for new address');
-                     toast.error('Please provide your door number');
-                     return;
-                 }
-             }
-         }
-
-         // ---- VALIDATION: UK Phone Number Format ----
-         const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
-         if (!ukPhoneRegex.test(formData.phone.replace(/\s/g, ''))) {
-             console.log('BLOCKED: Invalid phone format');
-             toast.error('Please enter a valid UK phone number');
-             return;
-         }
-
-         // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
-         if (orderType === 'delivery') {
-             if (deliveryZoneInfo && !deliveryZoneInfo.available) {
-                 console.log('BLOCKED: Delivery not available');
-                 toast.error('Delivery is not available to your location');
-                 return;
-             }
-         }
-
-         // ---- VALIDATION: Auto-schedule if restaurant is closed ----
-         if (!isScheduled && restaurant) {
-             const now = new Date();
-             const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
-             
-             let hours;
-             if (orderType === 'collection' && restaurant.collection_hours) {
-                 hours = restaurant.collection_hours[dayName];
-             } else if (orderType === 'delivery' && restaurant.delivery_hours) {
-                 hours = restaurant.delivery_hours[dayName];
-             } else {
-                 hours = restaurant.opening_hours?.[dayName];
-             }
-
-             const currentTime = now.getHours() * 60 + now.getMinutes();
-             const [openHour, openMin] = hours?.open?.split(':').map(Number) || [9, 0];
-             const [closeHour, closeMin] = hours?.close?.split(':').map(Number) || [22, 0];
-             const openTime = openHour * 60 + openMin;
-             const closeTime = closeHour * 60 + closeMin;
-
-             // Check if currently closed
-             if (!hours || hours.closed || currentTime < openTime || currentTime > closeTime) {
-                 // Auto-schedule for next available time
-                 let nextDate = new Date(now);
-                 let nextDayName = dayName;
-                 let nextHours = hours;
-
-                 // If closed today, find next open day
-                 if (!hours || hours.closed || currentTime < openTime || currentTime > closeTime) {
-                     if (currentTime >= closeTime) {
-                         // After closing - schedule for tomorrow
-                         nextDate.setDate(nextDate.getDate() + 1);
-                     } else if (currentTime < openTime) {
-                         // Before opening - schedule for today at opening
-                         nextDate.setHours(openHour, openMin, 0, 0);
-                     }
-
-                     // If scheduling for tomorrow, find its hours
-                     if (nextDate.getDate() !== now.getDate()) {
-                         nextDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDate.getDay()];
-                         if (orderType === 'collection' && restaurant.collection_hours) {
-                             nextHours = restaurant.collection_hours[nextDayName];
-                         } else if (orderType === 'delivery' && restaurant.delivery_hours) {
-                             nextHours = restaurant.delivery_hours[nextDayName];
-                         } else {
-                             nextHours = restaurant.opening_hours?.[nextDayName];
-                         }
-                         
-                         if (nextHours && !nextHours.closed) {
-                             const [nextOpenHour, nextOpenMin] = nextHours.open.split(':').map(Number);
-                             nextDate.setHours(nextOpenHour, nextOpenMin, 0, 0);
-                         }
-                     }
-                 }
-
-                 setIsScheduled(true);
-                 setScheduledFor(nextDate.toISOString());
-                 toast.success(`Order scheduled for ${nextDate.toLocaleTimeString('en-UK', { hour: '2-digit', minute: '2-digit' })}. You can adjust the time if needed.`);
-                 return;
-             }
-         }
-
-         // ---- VALIDATION: Scheduled Order Time ----
-         if (isScheduled && scheduledFor && restaurant) {
-             const scheduledDate = new Date(scheduledFor);
-             const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][scheduledDate.getDay()];
-
-             let hours;
-             if (orderType === 'collection' && restaurant.collection_hours) {
-                 hours = restaurant.collection_hours[dayName];
-             } else if (orderType === 'delivery' && restaurant.delivery_hours) {
-                 hours = restaurant.delivery_hours[dayName];
-             } else {
-                 hours = restaurant.opening_hours?.[dayName];
-             }
-
-             if (!hours || hours.closed) {
-                 console.log('BLOCKED: Restaurant closed on scheduled day');
-                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} is not available on ${dayName}s. Please choose a different date.`);
-                 return;
-             }
-
-             const scheduledHour = scheduledDate.getHours();
-             const scheduledMin = scheduledDate.getMinutes();
-             const scheduledTime = scheduledHour * 60 + scheduledMin;
-
-             const [openHour, openMin] = hours.open.split(':').map(Number);
-             const [closeHour, closeMin] = hours.close.split(':').map(Number);
-             const openTime = openHour * 60 + openMin;
-             const closeTime = closeHour * 60 + closeMin;
-
-             if (scheduledTime < openTime) {
-                 console.log('BLOCKED: Scheduled time before opening');
-                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} starts at ${hours.open}. Please choose a later time.`);
-                 return;
-             }
-
-             if (scheduledTime > closeTime) {
-                 console.log('BLOCKED: Scheduled time after closing');
-                 toast.error(`${orderType === 'collection' ? 'Collection' : 'Delivery'} closes at ${hours.close}. Please choose an earlier time.`);
-                 return;
-             }
-         }
-
-         console.log('All validations passed, proceeding...');
+        // ---- VALIDATION: Delivery Zone (only for delivery orders) ----
+        if (orderType === 'delivery') {
+            if (deliveryZoneInfo && !deliveryZoneInfo.available) {
+                console.log('BLOCKED: Delivery not available');
+                toast.error('Delivery is not available to your location');
+                return;
+            }
+        }
+        
+        console.log('All validations passed, proceeding...');
 
         // For CASH: Show confirmation dialog
         if (paymentMethod === 'cash') {
