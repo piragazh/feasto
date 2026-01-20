@@ -23,6 +23,7 @@ import ReviewsSection from '@/components/restaurant/ReviewsSection';
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import ActivePromotionsBanner from '@/components/restaurant/ActivePromotionsBanner';
 import RestaurantProfileSection from '@/components/restaurant/RestaurantProfileSection';
+import MealDealsSection from '@/components/restaurant/MealDealsSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -924,24 +925,12 @@ export default function Restaurant() {
                 {/* Popular Items */}
                 <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
 
-                {/* Menu */}
                 {/* Meal Deals Section */}
-                {mealDeals.length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">🔥 Meal Deals</h2>
-                        <div className="space-y-4">
-                            {mealDeals.map(deal => (
-                                <MealDealCard 
-                                    key={deal.id} 
-                                    deal={deal} 
-                                    onAddToCart={addMealDealToCart}
-                                    onCustomize={handleCustomizeDeal}
-                                    hasCustomization={deal.category_rules?.length > 0}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <MealDealsSection 
+                    deals={mealDeals}
+                    onAddToCart={addMealDealToCart}
+                    onCustomize={handleCustomizeDeal}
+                />
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Full Menu</h2>
 
