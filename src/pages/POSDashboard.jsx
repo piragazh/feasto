@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor } from 'lucide-react';
-import POSOrderEntry from '@/components/pos/POSOrderEntry';
-import POSOrderQueue from '@/components/pos/POSOrderQueue';
-import POSTableManager from '@/components/pos/POSTableManager';
-import POSPayment from '@/components/pos/POSPayment';
-import POSKitchenDisplay from '@/components/pos/POSKitchenDisplay';
+import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
+import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
+import POSTableManager from '@/components/pos/POSTableManager.jsx';
+import POSPayment from '@/components/pos/POSPayment.jsx';
+import POSKitchenDisplay from '@/components/pos/POSKitchenDisplay.jsx';
 import { toast } from 'sonner';
 
 export default function POSDashboard() {
