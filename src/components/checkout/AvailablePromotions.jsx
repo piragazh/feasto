@@ -48,7 +48,9 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
 
     // Auto-apply promotions when thresholds are met
     useEffect(() => {
-        const autoApply = async () => {
+        const autoApply = () => {
+            const toApply = [];
+
             for (const promo of availablePromotions) {
                 // Skip if already applied
                 if (appliedPromotions.find(p => p.id === promo.id)) continue;
@@ -60,7 +62,7 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                         continue;
                     }
 
-                    // Apply promotion
+                    // Calculate discount
                     let discount = 0;
                     if (promo.promotion_type === 'percentage_off') {
                         discount = (subtotal * promo.discount_value) / 100;
@@ -70,18 +72,26 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                         discount = 2.99; // Default delivery fee
                     }
 
-                    const promoWithDiscount = { ...promo, discount };
-                    onPromotionApply(prev => {
-                        // Avoid duplicates
-                        if (prev.find(p => p.id === promo.id)) return prev;
-                        return [...prev, promoWithDiscount];
-                    });
+                    toApply.push({ ...promo, discount });
                 }
+            }
+
+            // Apply all promotions at once
+            if (toApply.length > 0) {
+                onPromotionApply(prev => {
+                    const updated = [...prev];
+                    for (const promo of toApply) {
+                        if (!updated.find(p => p.id === promo.id)) {
+                            updated.push(promo);
+                        }
+                    }
+                    return updated;
+                });
             }
         };
 
         autoApply();
-    }, [subtotal, availablePromotions, appliedPromotions]);
+    }, [subtotal, availablePromotions]);
 
     if (loading || availablePromotions.length === 0) return null;
 
