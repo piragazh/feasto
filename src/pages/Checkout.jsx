@@ -491,22 +491,27 @@ export default function Checkout() {
 
         // For delivery, address is ALWAYS required
         if (orderType === 'delivery') {
-            // Check street address
-            const hasAddress = formData.delivery_address && String(formData.delivery_address).trim() !== '';
-            if (!hasAddress) {
-                console.log('BLOCKED: Delivery address missing');
+            // Check street address - strict validation
+            if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') {
+                console.log('BLOCKED: Delivery address missing or invalid');
                 toast.error('Please select your delivery address');
                 return;
             }
 
             // Only require door number for NEW addresses (not saved ones)
             if (!isExistingAddress) {
-                const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
-                if (!hasDoorNumber) {
+                if (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '') {
                     console.log('BLOCKED: Door number missing for new address');
-                    toast.error('Please provide your door number');
+                    toast.error('Please provide your door number (house/flat number)');
                     return;
                 }
+            }
+            
+            // Verify delivery coordinates exist
+            if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) {
+                console.log('BLOCKED: Delivery coordinates missing');
+                toast.error('Please select a valid delivery address with location');
+                return;
             }
         }
 
