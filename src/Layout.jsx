@@ -6,31 +6,43 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 
 // Google Tag Manager initialization
-const gtmId = import.meta.env.VITE_GTM_ID;
+const gtmId = import.meta.env.VITE_GTM_ID || window.__GTM_ID__;
 
 const initializeGTM = () => {
-    if (!gtmId) return;
+    if (!gtmId || gtmId === 'undefined') {
+        console.warn('GTM ID not configured. Set VITE_GTM_ID environment variable.');
+        return;
+    }
     
-    // GTM script (in head)
+    // Initialize dataLayer
+    window.dataLayer = window.dataLayer || [];
+    
+    // Define gtag function
+    window.gtag = function() { 
+        window.dataLayer.push(arguments); 
+    };
+    
+    // Set defaults
+    window.gtag('js', new Date());
+    
+    // Configure GTM with privacy settings
+    window.gtag('config', gtmId, { 
+        'anonymize_ip': true,
+        'allow_google_signals': false,
+        'send_page_view': true
+    });
+    
+    // Load GTM script
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${gtmId}`;
-    document.head.appendChild(script);
-
-    // GTM initialization code
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { window.dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', gtmId, { 
-        'anonymize_ip': true,
-        'allow_google_signals': false
-    });
-};
-
-// GTM No-script fallback
-const getGTMNoscript = () => {
-    if (!gtmId) return null;
-    return `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
+    script.onload = () => {
+        console.log('GTM script loaded successfully');
+    };
+    script.onerror = () => {
+        console.error('Failed to load GTM script');
+    };
+    document.head.insertBefore(script, document.head.firstChild);
 };
 import { 
     DropdownMenu, 
@@ -144,11 +156,15 @@ export default function Layout({ children, currentPageName }) {
 
     // Track page views with GTM
     useEffect(() => {
-        if (gtmId && window.gtag) {
-            window.gtag('event', 'page_view', {
-                'page_path': location.pathname,
-                'page_title': document.title
-            });
+        if (gtmId && gtmId !== 'undefined' && window.gtag && window.dataLayer) {
+            // Use setTimeout to ensure GTM is ready
+            setTimeout(() => {
+                window.gtag('event', 'page_view', {
+                    'page_path': location.pathname,
+                    'page_title': document.title,
+                    'send_to': gtmId
+                });
+            }, 100);
         }
     }, [location]);
 
@@ -242,7 +258,7 @@ export default function Layout({ children, currentPageName }) {
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
             {/* Google Tag Manager Noscript */}
-            {gtmId && (
+            {gtmId && gtmId !== 'undefined' && (
                 <noscript 
                     dangerouslySetInnerHTML={{
                         __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
