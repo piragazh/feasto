@@ -53,6 +53,17 @@ export default function RestaurantSettings({ restaurantId }) {
 
     React.useEffect(() => {
         if (restaurant) {
+            // Initialize hours with defaults for all days if they don't exist
+            const initializeHours = (hours) => {
+                const initialized = { ...hours };
+                DAYS.forEach(day => {
+                    if (!initialized[day]) {
+                        initialized[day] = { open: '09:00', close: '22:00', closed: false };
+                    }
+                });
+                return initialized;
+            };
+
             setFormData({
                 name: restaurant.name || '',
                 description: restaurant.description || '',
@@ -71,9 +82,9 @@ export default function RestaurantSettings({ restaurantId }) {
                 loyalty_program_enabled: restaurant.loyalty_program_enabled !== false,
                 loyalty_points_multiplier: restaurant.loyalty_points_multiplier || 1,
                 theme_primary_color: restaurant.theme_primary_color || '#f97316',
-                opening_hours: restaurant.opening_hours || {},
-                delivery_hours: restaurant.delivery_hours || {},
-                collection_hours: restaurant.collection_hours || {}
+                opening_hours: initializeHours(restaurant.opening_hours || {}),
+                delivery_hours: initializeHours(restaurant.delivery_hours || {}),
+                collection_hours: initializeHours(restaurant.collection_hours || {})
             });
         }
     }, [restaurant]);
@@ -606,7 +617,7 @@ export default function RestaurantSettings({ restaurantId }) {
                     <CardContent className="space-y-4">
                         {DAYS.map((day, idx) => {
                             const hoursKey = activeSection === 'opening' ? 'opening_hours' : activeSection === 'delivery' ? 'delivery_hours' : 'collection_hours';
-                            const dayData = formData[hoursKey]?.[day] || { open: '09:00', close: '22:00', closed: false };
+                            const dayData = formData[hoursKey]?.[day] || {};
 
                             return (
                                 <div key={day} className="border rounded-lg p-4 space-y-3">
