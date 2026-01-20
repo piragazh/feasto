@@ -479,6 +479,12 @@ export default function Checkout() {
             setShowCashConfirmation(true);
             return;
         }
+        
+        // For CARD: Form submit should NOT create order (StripePaymentForm handles it)
+        if (paymentMethod === 'card') {
+            console.log('Card payment - waiting for Stripe form submission');
+            return;
+        }
 
         // For other payment methods: Create order immediately
         await createOrder();
