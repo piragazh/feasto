@@ -253,22 +253,22 @@ Provide only the time range (e.g., "25-30 min").`;
                         <CardHeader>
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <CardTitle className="flex items-center gap-2 flex-wrap">
-                                        {order.order_type === 'collection' && order.order_number ? (
-                                            <>
-                                                <span className="text-2xl font-bold text-blue-600">{order.order_number}</span>
-                                                <Badge className="bg-blue-100 text-blue-800">🏪 Collection</Badge>
-                                            </>
-                                        ) : (
-                                            <>Order #{order.id.slice(-6)}</>
-                                        )}
-                                        <Badge className={getStatusColor(order.status)}>
-                                            {order.status.replace('_', ' ')}
-                                        </Badge>
-                                    </CardTitle>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {format(new Date(order.created_date), 'MMM d, h:mm a')}
-                                    </p>
+                                   <CardTitle className="flex items-center gap-2 flex-wrap">
+                                       {order.order_type === 'collection' && order.order_number ? (
+                                           <span className="text-2xl font-bold text-blue-600">{order.order_number}</span>
+                                       ) : (
+                                           <>Order #{order.id.slice(-6)}</>
+                                       )}
+                                       <Badge className={order.order_type === 'collection' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>
+                                           {order.order_type === 'collection' ? '🏪 Collection' : '🚚 Delivery'}
+                                       </Badge>
+                                       <Badge className={getStatusColor(order.status)}>
+                                           {order.status.replace('_', ' ')}
+                                       </Badge>
+                                   </CardTitle>
+                                   <p className="text-sm text-gray-500 mt-1">
+                                       {format(new Date(order.created_date), 'MMM d, h:mm a')}
+                                   </p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
