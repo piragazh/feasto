@@ -242,16 +242,25 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         const result = turf.difference(difference, otherPolygon);
                         
                         if (result && result.geometry) {
-                            difference = result;
+                            if (result.geometry.type === 'GeometryCollection') {
+                                // Handle geometry collection by extracting polygons
+                                const polygons = result.geometry.geometries.filter(g => g.type === 'Polygon');
+                                if (polygons.length > 0) {
+                                    difference = turf.polygon(polygons[0].coordinates);
+                                }
+                            } else {
+                                difference = result;
+                            }
                         }
                     } catch (e) {
-                        // Skip this subtraction on error
+                        console.error('Error subtracting zone:', e);
                     }
                 }
             }
 
             return difference;
         } catch (e) {
+            console.error('Error calculating zone difference:', e);
             return null;
         }
     };
