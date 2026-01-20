@@ -58,6 +58,18 @@ export default function LoyaltyRewards({ user }) {
         },
     });
 
+    const { data: tierBenefits = [] } = useQuery({
+        queryKey: ['tier-benefits', tier.name],
+        queryFn: async () => {
+            try {
+                const benefits = await base44.entities.LoyaltyTierBenefit.filter({ tier_name: tier.name, is_active: true });
+                return benefits;
+            } catch (e) {
+                return [];
+            }
+        },
+    });
+
     const getSetting = (key, defaultValue) => {
         const setting = settings.find(s => s.setting_key === key);
         return setting ? parseFloat(setting.setting_value) || defaultValue : defaultValue;
@@ -181,6 +193,31 @@ export default function LoyaltyRewards({ user }) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Tier Benefits */}
+            {tierBenefits.length > 0 && (
+                <Card className="border-2 border-orange-200 bg-orange-50">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Gift className="h-5 w-5 text-orange-600" />
+                            Your {tier.name} Tier Benefits
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid md:grid-cols-2 gap-3">
+                            {tierBenefits.map((benefit) => (
+                                <div
+                                    key={benefit.id}
+                                    className="p-3 rounded-lg bg-white border border-orange-100"
+                                >
+                                    <p className="font-semibold text-gray-900 text-sm">{benefit.benefit_name}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{benefit.benefit_description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Rewards Tabs */}
             <Tabs defaultValue="available" className="w-full">
