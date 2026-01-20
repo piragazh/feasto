@@ -26,6 +26,10 @@ export default function POSDashboard() {
     const loadUserAndRestaurant = async () => {
         try {
             const userData = await base44.auth.me();
+            if (!userData) {
+                base44.auth.redirectToLogin();
+                return;
+            }
             setUser(userData);
 
             // Check if user is restaurant manager
@@ -34,20 +38,29 @@ export default function POSDashboard() {
                 is_active: true
             });
 
-            if (managers.length > 0) {
-                const manager = managers[0];
-                if (manager.restaurant_ids?.length > 0) {
-                    const restaurants = await base44.entities.Restaurant.list();
-                    const restaurantData = restaurants.find(r => r.id === manager.restaurant_ids[0]);
-                    if (restaurantData) {
-                        setRestaurant(restaurantData);
-                        initializeTables(restaurantData);
-                    }
-                }
+            if (managers.length === 0) {
+                toast.error('You do not have access to the POS system');
+                base44.auth.redirectToLogin();
+                return;
+            }
+
+            const manager = managers[0];
+            if (!manager.restaurant_ids || manager.restaurant_ids.length === 0) {
+                toast.error('No restaurants assigned to your account');
+                return;
+            }
+
+            const restaurantData = await base44.entities.Restaurant.filter({ id: manager.restaurant_ids[0] });
+            if (restaurantData && restaurantData.length > 0) {
+                setRestaurant(restaurantData[0]);
+                initializeTables(restaurantData[0]);
+            } else {
+                toast.error('Restaurant not found');
             }
         } catch (e) {
+            console.error('POS loading error:', e);
             toast.error('Error loading POS system');
-            base44.auth.redirectToLogin();
+            setTimeout(() => base44.auth.redirectToLogin(), 1500);
         }
     };
 

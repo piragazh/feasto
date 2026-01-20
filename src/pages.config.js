@@ -13,13 +13,13 @@ import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import Messages from './pages/Messages';
 import OrderHistory from './pages/OrderHistory';
 import Orders from './pages/Orders';
+import POSDashboard from './pages/POSDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Restaurant from './pages/Restaurant';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import POSDashboard from './pages/POSDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -39,13 +39,13 @@ export const PAGES = {
     "Messages": Messages,
     "OrderHistory": OrderHistory,
     "Orders": Orders,
+    "POSDashboard": POSDashboard,
     "PrivacyPolicy": PrivacyPolicy,
     "Restaurant": Restaurant,
     "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "POSDashboard": POSDashboard,
 }
 
 export const pagesConfig = {
