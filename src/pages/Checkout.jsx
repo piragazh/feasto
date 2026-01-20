@@ -445,16 +445,8 @@ export default function Checkout() {
                 return;
             }
 
-            // For existing saved addresses, still ensure both fields are populated
-            if (isExistingAddress) {
-                const hasSavedDoor = formData.door_number && String(formData.door_number).trim() !== '';
-                if (!hasSavedDoor) {
-                    console.log('BLOCKED: Door number missing for saved address');
-                    toast.error('Please provide your door number');
-                    return;
-                }
-            } else {
-                // For new addresses, require door number
+            // Only require door number for NEW addresses (not saved ones)
+            if (!isExistingAddress) {
                 const hasDoorNumber = formData.door_number && String(formData.door_number).trim() !== '';
                 if (!hasDoorNumber) {
                     console.log('BLOCKED: Door number missing for new address');
