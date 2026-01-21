@@ -32,6 +32,7 @@ export default function POSKitchenDisplay({ restaurantId }) {
     const markAsPreparing = async (orderId) => {
         try {
             await base44.entities.Order.update(orderId, { status: 'preparing' });
+            toast.success('Started preparing');
             refetch();
         } catch (error) {
             toast.error('Failed to update order');
@@ -41,11 +42,66 @@ export default function POSKitchenDisplay({ restaurantId }) {
     const markAsReady = async (orderId) => {
         try {
             await base44.entities.Order.update(orderId, { status: 'ready_for_collection' });
+            toast.success('Order ready!');
             refetch();
-            toast.success('Order ready for collection!');
         } catch (error) {
             toast.error('Failed to update order');
         }
+    };
+
+    const OrderCard = ({ order, canStartPreparing, canMarkReady, isUrgentOrder }) => {
+        const waitMinutes = getWaitTime(order.created_date);
+
+        return (
+            <Card className={`${
+                isUrgentOrder 
+                    ? 'bg-red-900 border-2 border-red-500 shadow-lg shadow-red-500' 
+                    : 'bg-gray-700 border-2 border-gray-600'
+            }`}>
+                <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                            <p className="text-white font-bold text-2xl">#{order.id.slice(0, 8)}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <Clock className="h-4 w-4 text-gray-300" />
+                                <p className={`text-sm font-semibold ${isUrgentOrder ? 'text-red-200' : 'text-gray-300'}`}>
+                                    {waitMinutes}m ago
+                                </p>
+                            </div>
+                        </div>
+                        {isUrgentOrder && <Flame className="h-6 w-6 text-red-400" />}
+                    </div>
+
+                    <div className={`p-3 rounded mb-3 ${isUrgentOrder ? 'bg-red-800' : 'bg-gray-600'}`}>
+                        {order.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-white mb-2 pb-2 border-b border-gray-500 last:border-0">
+                                <span className="font-bold text-lg">{item.quantity}x</span>
+                                <span className="flex-1 ml-2 text-white">{item.name}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="space-y-2">
+                        {canStartPreparing && (
+                            <Button
+                                onClick={() => markAsPreparing(order.id)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 text-base"
+                            >
+                                Start Preparing
+                            </Button>
+                        )}
+                        {canMarkReady && (
+                            <Button
+                                onClick={() => markAsReady(order.id)}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-10 text-base"
+                            >
+                                Mark Ready
+                            </Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        );
     };
 
     return (
