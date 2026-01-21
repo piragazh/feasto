@@ -25,8 +25,12 @@ export default function PayoutManagement() {
     const queryClient = useQueryClient();
 
     const { data: restaurants = [], isLoading: loadingRestaurants } = useQuery({
-        queryKey: ['restaurants'],
-        queryFn: () => base44.asServiceRole.entities.Restaurant.list(),
+        queryKey: ['restaurants-payout'],
+        queryFn: async () => {
+            const data = await base44.asServiceRole.entities.Restaurant.list();
+            console.log('Restaurants loaded:', data?.length || 0);
+            return data || [];
+        },
     });
 
     const { data: payouts = [], isLoading } = useQuery({
