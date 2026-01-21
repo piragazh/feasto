@@ -11,7 +11,8 @@ import { ArrowLeft, MapPin, Clock, Phone, Package, CheckCircle, Loader2, Star } 
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import RateDriverDialog from '@/components/driver/RateDriverDialog';
-import LiveDriverMap from '@/components/tracking/LiveDriverMap';
+import LiveDriverTracking from '@/components/tracking/LiveDriverTracking';
+import DeliveryMilestoneNotifier from '@/components/tracking/DeliveryMilestoneNotifier';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -181,6 +182,9 @@ export default function TrackOrder() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {/* Milestone Notifier */}
+            <DeliveryMilestoneNotifier order={order} />
+            
             {/* Header */}
             <div className="bg-white border-b">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
@@ -262,26 +266,8 @@ export default function TrackOrder() {
                     </CardContent>
                 </Card>
 
-                {/* Live Driver Tracking Map */}
-                {order.status === 'out_for_delivery' && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <MapPin className="h-5 w-5 text-orange-500" />
-                                Live Tracking
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-96 rounded-lg overflow-hidden border">
-                                <LiveDriverMap order={order} driver={driver} />
-                            </div>
-                            <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span>Real-time location updates</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                {/* Live Driver Tracking */}
+                {order.status === 'out_for_delivery' && <LiveDriverTracking order={order} />}
 
                 {/* Restaurant Info */}
                 {restaurant && (
