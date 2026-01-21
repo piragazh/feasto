@@ -160,11 +160,38 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
                             : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
                     }`}
+                    disabled={isProcessing}
                 >
                     <CreditCard className="h-8 w-8 mr-2" />
-                    Card
+                    {isProcessing ? 'Processing...' : 'Card'}
                 </Button>
             </div>
+
+            <AlertDialog open={showCardConfirm} onOpenChange={setShowCardConfirm}>
+                <AlertDialogContent className="bg-gray-800 border-gray-700">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-blue-500" />
+                            Confirm Card Payment
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-300">
+                            Process card payment for £{cartTotal.toFixed(2)}?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={processCardPayment}
+                            disabled={isProcessing}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            {isProcessing ? 'Processing...' : 'Confirm Payment'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
