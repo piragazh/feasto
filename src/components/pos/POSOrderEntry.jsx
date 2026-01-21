@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Minus, ShoppingCart, X, DollarSign, CreditCard } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, X } from 'lucide-react';
 import { toast } from 'sonner';
 import POSItemCustomization from './POSItemCustomization';
+import POSPayment from './POSPayment';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
