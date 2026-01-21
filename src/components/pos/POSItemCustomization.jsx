@@ -82,27 +82,27 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                                 <RadioGroup 
                                     value={customizations[option.name] || ''}
                                     onValueChange={(value) => handleSingleSelect(option.name, value)}
-                                    className="space-y-3"
+                                    className={`space-y-${columns > 2 ? '1' : '2'}`}
                                 >
                                     {option.options?.map(opt => (
                                         <div 
                                             key={opt.label} 
-                                            className="flex items-center space-x-4 p-4 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
                                             onClick={() => handleSingleSelect(option.name, opt.label)}
                                         >
                                             <RadioGroupItem 
                                                 value={opt.label} 
                                                 id={opt.label}
-                                                className="w-6 h-6"
+                                                className={`${columns > 2 ? 'w-4 h-4' : 'w-5 h-5'}`}
                                             />
                                             <Label 
                                                 htmlFor={opt.label} 
-                                                className="text-lg md:text-xl text-white cursor-pointer flex-1 font-medium"
+                                                className={`text-white cursor-pointer flex-1 font-medium ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}
                                             >
                                                 {opt.label}
                                             </Label>
                                             {opt.price > 0 && (
-                                                <span className="text-xl font-bold text-orange-400">
+                                                <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}>
                                                     +£{opt.price.toFixed(2)}
                                                 </span>
                                             )}
@@ -110,27 +110,27 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                                     ))}
                                 </RadioGroup>
                             ) : (
-                                <div className="space-y-3">
+                                <div className={`space-y-${columns > 2 ? '1' : '2'}`}>
                                     {option.options?.map(opt => (
                                         <div 
                                             key={opt.label}
-                                            className="flex items-center space-x-4 p-4 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
                                             onClick={() => handleMultipleSelect(option.name, opt.label)}
                                         >
                                             <Checkbox
                                                 id={opt.label}
                                                 checked={customizations[option.name]?.includes(opt.label) || false}
                                                 onCheckedChange={() => handleMultipleSelect(option.name, opt.label)}
-                                                className="w-6 h-6"
+                                                className={`${columns > 2 ? 'w-4 h-4' : 'w-5 h-5'}`}
                                             />
                                             <Label 
                                                 htmlFor={opt.label} 
-                                                className="text-lg md:text-xl text-white cursor-pointer flex-1 font-medium"
+                                                className={`text-white cursor-pointer flex-1 font-medium ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}
                                             >
                                                 {opt.label}
                                             </Label>
                                             {opt.price > 0 && (
-                                                <span className="text-xl font-bold text-orange-400">
+                                                <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}>
                                                     +£{opt.price.toFixed(2)}
                                                 </span>
                                             )}
