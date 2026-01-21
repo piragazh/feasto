@@ -9,12 +9,11 @@ import { Trash2, Plus, Minus, ShoppingCart, X, DollarSign, CreditCard } from 'lu
 import { toast } from 'sonner';
 import POSItemCustomization from './POSItemCustomization';
 
-export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal }) {
+export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
      const [selectedCategory, setSelectedCategory] = useState('');
      const [customizationOpen, setCustomizationOpen] = useState(false);
      const [selectedItem, setSelectedItem] = useState(null);
-     const [orderType, setOrderType] = useState('takeaway');
      const [selectedTable, setSelectedTable] = useState(null);
      const [paymentMethod, setPaymentMethod] = useState(null);
      const [cashReceived, setCashReceived] = useState('');
@@ -303,60 +302,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             {/* Cart Section */}
              <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                 <div className="p-4 border-b border-gray-700 space-y-3">
+                 <div className="p-4 border-b border-gray-700">
                      <h2 className="text-white font-bold text-lg">Cart</h2>
-                     <div className="space-y-2">
-                         <label className="text-gray-400 text-sm block">Order Type</label>
-                         <div className="grid grid-cols-3 gap-2">
-                             <Button
-                                 variant={orderType === 'collection' ? 'default' : 'outline'}
-                                 onClick={() => {
-                                     setOrderType('collection');
-                                     setSelectedTable(null);
-                                 }}
-                                 className={orderType === 'collection' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white text-xs'}
-                                 size="sm"
-                             >
-                                 Collection
-                             </Button>
-                             <Button
-                                 variant={orderType === 'takeaway' ? 'default' : 'outline'}
-                                 onClick={() => {
-                                     setOrderType('takeaway');
-                                     setSelectedTable(null);
-                                 }}
-                                 className={orderType === 'takeaway' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white text-xs'}
-                                 size="sm"
-                             >
-                                 Takeaway
-                             </Button>
-                             <Button
-                                 variant={orderType === 'dine_in' ? 'default' : 'outline'}
-                                 onClick={() => setOrderType('dine_in')}
-                                 className={orderType === 'dine_in' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white text-xs'}
-                                 size="sm"
-                             >
-                                 Dine In
-                             </Button>
+                     {orderType === 'dine_in' && selectedTable && (
+                         <div className="bg-gray-700 p-2 rounded mt-2 text-center">
+                             <p className="text-gray-400 text-xs">Table: <span className="text-white font-bold">{selectedTable.table_number}</span></p>
                          </div>
-                         {orderType === 'dine_in' && (
-                             <select
-                                 value={selectedTable?.id || ''}
-                                 onChange={(e) => {
-                                     const table = tables.find(t => t.id === e.target.value);
-                                     setSelectedTable(table);
-                                 }}
-                                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-xs"
-                             >
-                                 <option value="">Select a table...</option>
-                                 {tables.filter(t => t.status === 'available').map(table => (
-                                     <option key={table.id} value={table.id}>
-                                         {table.table_number} (Seats: {table.capacity})
-                                     </option>
-                                 ))}
-                             </select>
-                         )}
-                     </div>
+                     )}
                  </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
