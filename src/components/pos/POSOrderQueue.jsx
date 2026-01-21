@@ -41,6 +41,14 @@ export default function POSOrderQueue({ restaurantId }) {
         }
     };
 
+    const handleSearch = (query) => {
+        const results = orders.filter(order => 
+            order.id.toLowerCase().includes(query.toLowerCase()) ||
+            order.notes?.toLowerCase().includes(query.toLowerCase())
+        );
+        setSearchResults(results.length > 0 ? results : []);
+    };
+
     const StatusBadge = ({ status }) => {
         const styles = {
             pending: 'bg-red-500',
