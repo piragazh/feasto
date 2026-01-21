@@ -189,21 +189,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     <div className="flex-1">
                                         <p className="text-white font-semibold text-sm">{item.name}</p>
                                         {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                            <div className="text-gray-300 text-xs mt-1 space-y-1">
+                                            <div className="text-gray-300 text-[10px] mt-1 space-y-0.5 max-h-12 overflow-hidden">
                                                 {Object.entries(item.customizations).map(([key, value]) => (
-                                                    <p key={key} className="line-clamp-1">
+                                                    <p key={key} className="line-clamp-1 truncate">
                                                         {key}: {Array.isArray(value) ? value.join(', ') : value}
                                                     </p>
                                                 ))}
                                             </div>
                                         )}
                                         {item.removedIngredients?.length > 0 && (
-                                            <p className="text-red-400 text-xs mt-1">
+                                            <p className="text-red-400 text-[10px] mt-0.5 line-clamp-1 truncate">
                                                 No: {item.removedIngredients.join(', ')}
                                             </p>
                                         )}
                                         {item.specialInstructions && (
-                                            <p className="text-blue-300 text-xs mt-1 italic">
+                                            <p className="text-blue-300 text-[10px] mt-0.5 italic line-clamp-1 truncate">
                                                 Note: {item.specialInstructions}
                                             </p>
                                         )}
