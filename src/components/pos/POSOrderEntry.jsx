@@ -139,23 +139,23 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         <X className="h-5 w-5" />
                                     </Button>
                                 </div>
-                                <div className="flex items-center justify-between bg-gray-600 rounded p-1">
+                                <div className="flex items-center justify-between bg-gray-600 rounded p-2 gap-2">
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                        className="h-6 w-6 text-white"
+                                        className="h-8 w-8 text-white hover:bg-gray-700 rounded-full transition-all"
                                     >
-                                        <Minus className="h-3 w-3" />
+                                        <Minus className="h-4 w-4" />
                                     </Button>
-                                    <span className="text-white font-bold">{item.quantity}</span>
+                                    <span className="text-white font-bold text-sm flex-1 text-center">{item.quantity}</span>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                        className="h-6 w-6 text-white"
+                                        className="h-8 w-8 text-white hover:bg-gray-700 rounded-full transition-all"
                                     >
-                                        <Plus className="h-3 w-3" />
+                                        <Plus className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </div>
