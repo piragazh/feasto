@@ -68,7 +68,7 @@ export default function POSLayout({ children, currentPageName }) {
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         className="bg-gray-900 text-white hover:bg-gray-800"
                     >
-                        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                        {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
                     </Button>
                 </div>
 
