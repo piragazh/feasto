@@ -97,7 +97,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             onClick={() => onAddItem(item)}
                             className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all"
                         >
-                            <CardContent className="p-3">
+                            <CardContent className="p-2">
                                 <div className="aspect-square bg-gray-600 rounded mb-2">
                                     {item.image_url && (
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded" />
