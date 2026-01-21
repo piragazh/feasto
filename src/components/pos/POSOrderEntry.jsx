@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Minus, ShoppingCart, X, DollarSign, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import POSItemCustomization from './POSItemCustomization';
-import POSOrderPayment from './POSOrderPayment';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal }) {
      const [searchQuery, setSearchQuery] = useState('');
