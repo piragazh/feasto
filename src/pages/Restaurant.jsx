@@ -121,24 +121,28 @@ export default function Restaurant() {
         },
         enabled: !!restaurantId,
         retry: 2,
+        staleTime: 5 * 60 * 1000, // Cache restaurant for 5 minutes
     });
 
     const { data: menuItems = [], isLoading: menuLoading } = useQuery({
         queryKey: ['menuItems', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId,
+        staleTime: 5 * 60 * 1000, // Cache menu for 5 minutes
     });
 
     const { data: mealDeals = [], isLoading: dealsLoading } = useQuery({
         queryKey: ['mealDeals', restaurantId],
         queryFn: () => base44.entities.MealDeal.filter({ restaurant_id: restaurantId, is_active: true }),
         enabled: !!restaurantId,
+        staleTime: 5 * 60 * 1000, // Cache deals for 5 minutes
     });
 
     const { data: promotions = [] } = useQuery({
         queryKey: ['promotions', restaurantId],
         queryFn: () => base44.entities.Promotion.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId,
+        staleTime: 3 * 60 * 1000, // Cache promotions for 3 minutes
     });
 
     const categories = React.useMemo(() => {

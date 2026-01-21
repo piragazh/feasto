@@ -102,7 +102,8 @@ export default function TrackOrder() {
             return drivers[0];
         },
         enabled: !!order?.driver_id && order?.status === 'out_for_delivery',
-        refetchInterval: 5000,
+        staleTime: 10000, // 10s cache
+        refetchInterval: 15000, // Refetch every 15s instead of 5s
     });
 
     const { data: restaurant } = useQuery({
@@ -112,6 +113,7 @@ export default function TrackOrder() {
             return restaurants[0];
         },
         enabled: !!order?.restaurant_id,
+        staleTime: 10 * 60 * 1000, // Cache restaurant data for 10 minutes
     });
 
     const { data: driverRatings = [] } = useQuery({

@@ -20,7 +20,8 @@ export default function LiveDriverTracking({ order }) {
             return drivers[0] || null;
         },
         enabled: !!order.driver_id && order.status === 'out_for_delivery',
-        refetchInterval: 5000, // Update every 5 seconds
+        staleTime: 8000, // 8s cache
+        refetchInterval: 12000, // Update every 12 seconds instead of 5
     });
 
     // Fetch live order updates (includes driver location)
@@ -31,7 +32,8 @@ export default function LiveDriverTracking({ order }) {
             return orders[0] || order;
         },
         enabled: order.status === 'out_for_delivery',
-        refetchInterval: 5000,
+        staleTime: 8000, // 8s cache
+        refetchInterval: 12000, // Update every 12 seconds instead of 5
     });
 
     const driverLocation = liveOrder?.driver_location || driver?.current_location;

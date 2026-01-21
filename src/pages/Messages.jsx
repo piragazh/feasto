@@ -114,7 +114,8 @@ export default function Messages() {
             });
         },
         enabled: !!user?.email,
-        refetchInterval: 3000,
+        staleTime: 10000, // 10s cache
+        refetchInterval: 15000, // Refetch every 15s instead of 3s
     });
 
     const filteredConversations = (conversations || []).filter(c =>

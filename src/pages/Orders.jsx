@@ -47,7 +47,14 @@ export default function Orders() {
                 return [];
             }
         },
-        refetchInterval: 30000,
+        staleTime: 30000, // Data fresh for 30s
+        refetchInterval: (data) => {
+            // Only refetch if there are active orders
+            const hasActive = data?.some(o => 
+                ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'].includes(o.status)
+            );
+            return hasActive ? 60000 : false; // Refetch every 60s if active, otherwise don't
+        },
     });
 
     const { data: reviews = [] } = useQuery({
@@ -61,6 +68,7 @@ export default function Orders() {
                 return [];
             }
         },
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
     const refundRequestMutation = useMutation({

@@ -62,7 +62,8 @@ export default function DriverApp() {
             return orders || [];
         },
         enabled: !!driver,
-        refetchInterval: 3000,
+        staleTime: 5000, // 5s cache
+        refetchInterval: 10000, // Update every 10 seconds instead of 3
     });
 
     const { data: availableOrders = [] } = useQuery({
@@ -72,7 +73,8 @@ export default function DriverApp() {
             driver_id: null
         }),
         enabled: !!driver && activeOrders.length === 0,
-        refetchInterval: 5000,
+        staleTime: 8000, // 8s cache
+        refetchInterval: 15000, // Update every 15 seconds instead of 5
     });
 
     const { data: completedOrders = [] } = useQuery({

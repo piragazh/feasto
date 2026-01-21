@@ -46,7 +46,8 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
             return [];
         },
         enabled: !!conversation?.id,
-        refetchInterval: 2000,
+        staleTime: 5000, // 5s cache
+        refetchInterval: 10000, // Refetch every 10s instead of 2s
     });
 
     useEffect(() => {
