@@ -148,8 +148,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <div className="border-t border-gray-600 pt-4">
                             <div className="flex justify-between mb-3 text-lg">
                                 <span className="text-white font-bold">Order Type</span>
-                                <Badge className="bg-blue-600">{orderType}</Badge>
+                                <Badge className="bg-blue-600">{orderType.replace('_', ' ').toUpperCase()}</Badge>
                             </div>
+                            {orderType === 'dine_in' && selectedTable && (
+                                <div className="bg-gray-700 p-2 rounded mb-3 text-center">
+                                    <p className="text-gray-400 text-xs mb-1">Table</p>
+                                    <p className="text-white font-bold">{selectedTable.table_number}</p>
+                                </div>
+                            )}
                             <div className="bg-gray-700 p-4 rounded">
                                 <p className="text-gray-400 text-sm mb-1">Total Amount</p>
                                 <p className="text-white text-4xl font-bold">£{cartTotal.toFixed(2)}</p>
@@ -348,22 +354,53 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 <div className="border-t border-gray-700 p-4 space-y-3">
                     <div className="space-y-2 mb-3">
                         <label className="text-gray-400 text-sm">Order Type</label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                             <Button
                                 variant={orderType === 'collection' ? 'default' : 'outline'}
-                                onClick={() => setOrderType('collection')}
+                                onClick={() => {
+                                    setOrderType('collection');
+                                    setSelectedTable(null);
+                                }}
                                 className={orderType === 'collection' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white'}
                             >
                                 Collection
                             </Button>
                             <Button
                                 variant={orderType === 'takeaway' ? 'default' : 'outline'}
-                                onClick={() => setOrderType('takeaway')}
+                                onClick={() => {
+                                    setOrderType('takeaway');
+                                    setSelectedTable(null);
+                                }}
                                 className={orderType === 'takeaway' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white'}
                             >
                                 Takeaway
                             </Button>
+                            <Button
+                                variant={orderType === 'dine_in' ? 'default' : 'outline'}
+                                onClick={() => setOrderType('dine_in')}
+                                className={orderType === 'dine_in' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white'}
+                            >
+                                Dine In
+                            </Button>
                         </div>
+
+                        {orderType === 'dine_in' && (
+                            <select
+                                value={selectedTable?.id || ''}
+                                onChange={(e) => {
+                                    const table = tables.find(t => t.id === e.target.value);
+                                    setSelectedTable(table);
+                                }}
+                                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                            >
+                                <option value="">Select a table...</option>
+                                {tables.filter(t => t.status === 'available').map(table => (
+                                    <option key={table.id} value={table.id}>
+                                        {table.table_number} (Seats: {table.capacity})
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                     </div>
                     <div className="bg-gray-700 p-3 rounded">
                         <p className="text-gray-400 text-sm mb-1">Total</p>
