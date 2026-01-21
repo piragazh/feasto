@@ -245,9 +245,9 @@ export default function Layout({ children, currentPageName }) {
         enabled: !!customDomainRestaurantId,
     });
 
-    const hideHeader = ['Checkout'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'PrivacyPolicy', 'TermsOfService'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard'].includes(currentPageName);
+    const hideHeader = ['Checkout', 'POSAdmin'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'PrivacyPolicy', 'TermsOfService', 'POSAdmin'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSAdmin'].includes(currentPageName);
     
     // Custom domain home link
     const homeUrl = customDomainRestaurantId 
@@ -476,7 +476,7 @@ export default function Layout({ children, currentPageName }) {
                 </header>
             )}
 
-            <main className="min-h-screen">{children}</main>
+            <main className={currentPageName === 'POSAdmin' ? 'h-screen' : 'min-h-screen'}>{children}</main>
 
                 {/* AI Chatbot Widget */}
                 <ChatbotWidget />
