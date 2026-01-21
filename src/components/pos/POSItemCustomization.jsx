@@ -8,10 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { X } from 'lucide-react';
 
 export default function POSItemCustomization({ item, open, onClose, onConfirm }) {
-    const [customizations, setCustomizations] = useState({});
+     const [customizations, setCustomizations] = useState({});
+     const [specialInstructions, setSpecialInstructions] = useState('');
+     const [removedIngredients, setRemovedIngredients] = useState([]);
 
-    const optionCount = item?.customization_options?.length || 0;
-    const columns = Math.min(Math.max(optionCount, 1), 4);
+     const optionCount = item?.customization_options?.length || 0;
+     const columns = Math.min(Math.max(optionCount, 1), 4);
 
     const handleConfirm = () => {
         onConfirm({ ...item, customizations });
