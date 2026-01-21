@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3 } from 'lucide-react';
+import POSLayout from '@/components/pos/POSLayout';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSTableManager from '@/components/pos/POSTableManager.jsx';
@@ -142,125 +139,62 @@ export default function POSDashboard() {
         );
     }
 
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'order-entry':
+                return (
+                    <POSOrderEntry 
+                        restaurantId={restaurant.id}
+                        cart={cart}
+                        onAddItem={addToCart}
+                        onRemoveItem={removeFromCart}
+                        onUpdateQuantity={updateQuantity}
+                        onClearCart={clearCart}
+                        cartTotal={cartTotal}
+                    />
+                );
+            case 'queue':
+                return <POSOrderQueue restaurantId={restaurant.id} />;
+            case 'tables':
+                return (
+                    <POSTableManager 
+                        tables={tables}
+                        cart={cart}
+                        cartTotal={cartTotal}
+                        onAddItem={addToCart}
+                        onRemoveItem={removeFromCart}
+                        onUpdateQuantity={updateQuantity}
+                    />
+                );
+            case 'payment':
+                return (
+                    <POSPayment 
+                        cart={cart}
+                        cartTotal={cartTotal}
+                        onPaymentComplete={clearCart}
+                    />
+                );
+            case 'kitchen':
+                return <POSKitchenDisplay restaurantId={restaurant.id} />;
+            case 'waitlist':
+                return <POSWaitlist />;
+            case 'reports':
+                return <POSReports restaurantId={restaurant.id} />;
+            default:
+                return null;
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gray-900">
-            {/* Header */}
-            <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-10 shadow-lg">
-                <div className="max-w-7xl mx-auto px-4 py-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                                <UtensilsCrossed className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-white">{restaurant.name} - POS</h1>
-                                <p className="text-xs text-gray-400">Point of Sale System</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Badge className="bg-orange-500 text-white">
-                                <ShoppingCart className="h-3 w-3 mr-1" />
-                                {cart.length} items
-                            </Badge>
-                            <Badge className="bg-blue-500 text-white">
-                                <DollarSign className="h-3 w-3 mr-1" />
-                                £{cartTotal.toFixed(2)}
-                            </Badge>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => base44.auth.logout()}
-                                className="text-gray-400 hover:text-white"
-                            >
-                                <LogOut className="h-5 w-5" />
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto p-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-7 bg-gray-800 border border-gray-700 mb-6">
-                        <TabsTrigger value="order-entry" className="text-white data-[state=active]:bg-orange-500">
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            Orders
-                        </TabsTrigger>
-                        <TabsTrigger value="queue" className="text-white data-[state=active]:bg-orange-500">
-                            <UtensilsCrossed className="h-4 w-4 mr-2" />
-                            Queue
-                        </TabsTrigger>
-                        <TabsTrigger value="tables" className="text-white data-[state=active]:bg-orange-500">
-                            <Monitor className="h-4 w-4 mr-2" />
-                            Tables
-                        </TabsTrigger>
-                        <TabsTrigger value="waitlist" className="text-white data-[state=active]:bg-orange-500">
-                            <Users className="h-4 w-4 mr-2" />
-                            Waitlist
-                        </TabsTrigger>
-                        <TabsTrigger value="payment" className="text-white data-[state=active]:bg-orange-500">
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            Payment
-                        </TabsTrigger>
-                        <TabsTrigger value="kitchen" className="text-white data-[state=active]:bg-orange-500">
-                            <Monitor className="h-4 w-4 mr-2" />
-                            Kitchen
-                        </TabsTrigger>
-                        <TabsTrigger value="reports" className="text-white data-[state=active]:bg-orange-500">
-                            <BarChart3 className="h-4 w-4 mr-2" />
-                            Reports
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="order-entry">
-                        <POSOrderEntry 
-                            restaurantId={restaurant.id}
-                            cart={cart}
-                            onAddItem={addToCart}
-                            onRemoveItem={removeFromCart}
-                            onUpdateQuantity={updateQuantity}
-                            onClearCart={clearCart}
-                            cartTotal={cartTotal}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="queue">
-                        <POSOrderQueue restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="tables">
-                        <POSTableManager 
-                            tables={tables}
-                            cart={cart}
-                            cartTotal={cartTotal}
-                            onAddItem={addToCart}
-                            onRemoveItem={removeFromCart}
-                            onUpdateQuantity={updateQuantity}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="payment">
-                        <POSPayment 
-                            cart={cart}
-                            cartTotal={cartTotal}
-                            onPaymentComplete={clearCart}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="kitchen">
-                        <POSKitchenDisplay restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="waitlist">
-                        <POSWaitlist />
-                    </TabsContent>
-
-                    <TabsContent value="reports">
-                        <POSReports restaurantId={restaurant.id} />
-                    </TabsContent>
-                </Tabs>
-            </div>
-        </div>
+        <POSLayout
+            currentTab={activeTab}
+            onTabChange={setActiveTab}
+            restaurant={restaurant}
+            user={user}
+            cart={cart}
+            cartTotal={cartTotal}
+        >
+            {renderContent()}
+        </POSLayout>
     );
 }
