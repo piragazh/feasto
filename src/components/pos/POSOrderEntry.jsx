@@ -97,14 +97,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             onClick={() => onAddItem(item)}
                             className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all"
                         >
-                            <CardContent className="p-1 flex gap-2">
-                                <div className="bg-gray-600 rounded w-12 h-12 flex-shrink-0">
+                            <CardContent className="p-2 flex gap-2 items-center">
+                                <div className="bg-gray-600 rounded w-16 h-16 flex-shrink-0 overflow-hidden">
                                     {item.image_url && (
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-white text-xs line-clamp-1">{item.name}</h3>
+                                    <h3 className="font-bold text-white text-sm line-clamp-2">{item.name}</h3>
                                     <p className="text-orange-400 font-bold text-xs">£{item.price.toFixed(2)}</p>
                                 </div>
                             </CardContent>
