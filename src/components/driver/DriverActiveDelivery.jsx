@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
-import { MapPin, Navigation, Phone, CheckCircle, Package, MessageSquare, Camera, Star } from 'lucide-react';
+import { MapPin, Navigation, Phone, CheckCircle, Package, MessageSquare, Camera, Star, Clock, Zap } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useRealtimeETA } from '@/components/tracking/ETACalculator';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverActiveDelivery({ order, driver, onComplete }) {
@@ -22,6 +23,13 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     const [proofPhoto, setProofPhoto] = useState(null);
     const [showRatingDialog, setShowRatingDialog] = useState(false);
     const queryClient = useQueryClient();
+
+    // Real-time ETA with traffic
+    const { eta, distance, loading: etaLoading } = useRealtimeETA(
+        currentLocation,
+        order.delivery_coordinates,
+        order.id
+    );
 
     useEffect(() => {
         // Update driver location every 10 seconds
@@ -173,26 +181,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
         }
     };
 
-    const calculateETA = () => {
-        if (!currentLocation || !order.delivery_coordinates) return 'Calculating...';
-        
-        // Simple ETA calculation based on distance (can be enhanced with real routing API)
-        const R = 6371; // Earth radius in km
-        const dLat = (order.delivery_coordinates.lat - currentLocation.lat) * Math.PI / 180;
-        const dLon = (order.delivery_coordinates.lng - currentLocation.lng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(currentLocation.lat * Math.PI / 180) * 
-                  Math.cos(order.delivery_coordinates.lat * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const distance = R * c;
-        
-        // Assume average speed of 20 km/h
-        const timeInHours = distance / 20;
-        const timeInMinutes = Math.ceil(timeInHours * 60);
-        
-        return timeInMinutes < 60 ? `${timeInMinutes} mins` : `${Math.ceil(timeInMinutes / 60)} hr`;
-    };
+
 
     return (
         <div className="space-y-4">
@@ -242,11 +231,37 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                         </div>
                     )}
 
+                    {/* ETA Card */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-blue-600" />
+                                <div>
+                                    <p className="text-xs text-blue-600 font-medium">Live ETA</p>
+                                    <p className="text-2xl font-bold text-blue-900">
+                                        {eta ? `${eta} min${eta !== 1 ? 's' : ''}` : 'Calculating...'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-blue-600 font-medium">Distance</p>
+                                <p className="text-xl font-bold text-blue-900">
+                                    {distance ? `${distance} km` : '---'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
+                            <Zap className="h-3 w-3" />
+                            <span>Traffic-aware routing</span>
+                            {etaLoading && <span className="ml-1 animate-pulse">Updating...</span>}
+                        </div>
+                    </div>
+
                     {/* Order Details */}
                     <div className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="font-semibold">{order.restaurant_name}</h3>
-                            <Badge variant="outline">ETA: {calculateETA()}</Badge>
+                            <Badge className="bg-orange-500">Order #{order.id.slice(-6)}</Badge>
                         </div>
                         
                         <div className="space-y-2 text-sm mb-3">

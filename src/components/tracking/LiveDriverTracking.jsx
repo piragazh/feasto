@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapContainer, TileLayer, Marker, Polyline, Circle } from 'react-leaflet';
-import { Navigation, MapPin, Clock, User, Phone, Bike, Star } from 'lucide-react';
-import { calculateDistance, calculateETA } from '@/components/driver/RouteOptimizer';
+import { Navigation, MapPin, Clock, User, Phone, Bike, Star, Zap } from 'lucide-react';
+import { useRealtimeETA } from '@/components/tracking/ETACalculator';
 import 'leaflet/dist/leaflet.css';
 
 export default function LiveDriverTracking({ order }) {
@@ -37,15 +37,16 @@ export default function LiveDriverTracking({ order }) {
     const driverLocation = liveOrder?.driver_location || driver?.current_location;
     const deliveryCoords = order.delivery_coordinates;
 
+    // Real-time ETA with traffic awareness
+    const { eta, distance, loading: etaLoading } = useRealtimeETA(
+        driverLocation,
+        deliveryCoords,
+        order.id
+    );
+
     // Calculate distance and check for proximity notifications
     useEffect(() => {
-        if (driverLocation && deliveryCoords && deliveryCoords.lat) {
-            const distance = calculateDistance(
-                driverLocation.lat,
-                driverLocation.lng,
-                deliveryCoords.lat,
-                deliveryCoords.lng
-            );
+        if (driverLocation && deliveryCoords && deliveryCoords.lat && distance) {
 
             // Notify when driver is within 1km (nearby)
             if (distance <= 1 && !lastNotified.nearby) {
@@ -74,7 +75,7 @@ export default function LiveDriverTracking({ order }) {
                 }
             }
         }
-    }, [driverLocation, deliveryCoords, lastNotified]);
+    }, [driverLocation, deliveryCoords, lastNotified, distance]);
 
     if (!driver || !driverLocation || !deliveryCoords || !deliveryCoords.lat) {
         return (
@@ -88,15 +89,6 @@ export default function LiveDriverTracking({ order }) {
             </Card>
         );
     }
-
-    const distance = calculateDistance(
-        driverLocation.lat,
-        driverLocation.lng,
-        deliveryCoords.lat,
-        deliveryCoords.lng
-    );
-
-    const eta = calculateETA(distance);
 
     return (
         <Card>
@@ -142,16 +134,23 @@ export default function LiveDriverTracking({ order }) {
                     <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                         <div className="flex items-center gap-2 text-blue-700 mb-1">
                             <Clock className="h-4 w-4" />
-                            <span className="text-xs font-medium">Estimated Arrival</span>
+                            <span className="text-xs font-medium">Live ETA</span>
+                            {etaLoading && <Zap className="h-3 w-3 animate-pulse" />}
                         </div>
-                        <p className="text-lg font-bold text-blue-900">{eta}</p>
+                        <p className="text-lg font-bold text-blue-900">
+                            {eta ? `${eta} min${eta !== 1 ? 's' : ''}` : 'Calculating...'}
+                        </p>
+                        <p className="text-[10px] text-blue-600 mt-0.5">Traffic-aware</p>
                     </div>
                     <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                         <div className="flex items-center gap-2 text-green-700 mb-1">
                             <MapPin className="h-4 w-4" />
-                            <span className="text-xs font-medium">Distance Away</span>
+                            <span className="text-xs font-medium">Distance</span>
                         </div>
-                        <p className="text-lg font-bold text-green-900">{distance.toFixed(1)} km</p>
+                        <p className="text-lg font-bold text-green-900">
+                            {distance ? `${distance} km` : 'Calculating...'}
+                        </p>
+                        <p className="text-[10px] text-green-600 mt-0.5">Real-time route</p>
                     </div>
                 </div>
 
