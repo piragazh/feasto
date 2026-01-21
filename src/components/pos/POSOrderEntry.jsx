@@ -16,8 +16,6 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [customizationOpen, setCustomizationOpen] = useState(false);
      const [selectedItem, setSelectedItem] = useState(null);
      const [selectedTable, setSelectedTable] = useState(null);
-     const [paymentMethod, setPaymentMethod] = useState(null);
-     const [cashReceived, setCashReceived] = useState('');
      const [showPayment, setShowPayment] = useState(false);
 
     const { data: menuItems = [] } = useQuery({
