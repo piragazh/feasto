@@ -29,6 +29,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         return matchesCategory && matchesSearch;
     });
 
+    const handleItemClick = (item) => {
+        if (item.customization_options?.length) {
+            setSelectedItem(item);
+            setCustomizationOpen(true);
+        } else {
+            onAddItem(item);
+        }
+    };
+
+    const handleCustomizationConfirm = (itemWithCustomizations) => {
+        onAddItem(itemWithCustomizations);
+        setCustomizationOpen(false);
+        setSelectedItem(null);
+    };
+
     const handleCompleteOrder = async () => {
         if (cart.length === 0) {
             toast.error('Cart is empty');
