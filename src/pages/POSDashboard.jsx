@@ -4,13 +4,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users } from 'lucide-react';
+import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3 } from 'lucide-react';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSTableManager from '@/components/pos/POSTableManager.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import POSKitchenDisplay from '@/components/pos/POSKitchenDisplay.jsx';
 import POSWaitlist from '@/components/pos/POSWaitlist.jsx';
+import POSReports from '@/components/pos/POSReports.jsx';
 import { toast } from 'sonner';
 
 export default function POSDashboard() {
@@ -173,7 +174,7 @@ export default function POSDashboard() {
             {/* Main Content */}
             <div className="max-w-7xl mx-auto p-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-6 bg-gray-800 border border-gray-700 mb-6">
+                    <TabsList className="grid w-full grid-cols-7 bg-gray-800 border border-gray-700 mb-6">
                         <TabsTrigger value="order-entry" className="text-white data-[state=active]:bg-orange-500">
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Orders
@@ -197,6 +198,10 @@ export default function POSDashboard() {
                         <TabsTrigger value="kitchen" className="text-white data-[state=active]:bg-orange-500">
                             <Monitor className="h-4 w-4 mr-2" />
                             Kitchen
+                        </TabsTrigger>
+                        <TabsTrigger value="reports" className="text-white data-[state=active]:bg-orange-500">
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Reports
                         </TabsTrigger>
                     </TabsList>
 
@@ -241,6 +246,10 @@ export default function POSDashboard() {
 
                     <TabsContent value="waitlist">
                         <POSWaitlist />
+                    </TabsContent>
+
+                    <TabsContent value="reports">
+                        <POSReports restaurantId={restaurant.id} />
                     </TabsContent>
                 </Tabs>
             </div>
