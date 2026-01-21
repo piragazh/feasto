@@ -14,7 +14,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart }) {
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [cashReceived, setCashReceived] = useState(0);
     const [showKeypad, setShowKeypad] = useState(false);
