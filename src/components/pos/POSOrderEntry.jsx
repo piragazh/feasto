@@ -134,9 +134,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => onRemoveItem(item.id)}
-                                        className="text-red-400 hover:text-red-300 h-8 w-8"
+                                        className="text-red-400 hover:text-red-500 hover:bg-red-500/10 h-8 w-8 rounded-full transition-all"
                                     >
-                                        <Trash2 className="h-4 w-4" />
+                                        <X className="h-5 w-5" />
                                     </Button>
                                 </div>
                                 <div className="flex items-center justify-between bg-gray-600 rounded p-1">
