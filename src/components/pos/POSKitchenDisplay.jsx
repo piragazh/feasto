@@ -8,15 +8,26 @@ import { Clock, CheckCircle2, AlertCircle, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function POSKitchenDisplay({ restaurantId }) {
-    const { data: orders = [], refetch } = useQuery({
-        queryKey: ['pos-kitchen-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
-        enabled: !!restaurantId,
-        refetchInterval: 3000,
-    });
+     const [sortBy, setSortBy] = useState('time');
 
-    const activeOrders = orders.filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status));
-    const readyOrders = orders.filter(o => o.status === 'ready_for_collection');
+     const { data: orders = [], refetch } = useQuery({
+         queryKey: ['pos-kitchen-orders', restaurantId],
+         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
+         enabled: !!restaurantId,
+         refetchInterval: 2000,
+     });
+
+     const pendingOrders = orders.filter(o => o.status === 'pending');
+     const preparingOrders = orders.filter(o => o.status === 'preparing');
+     const readyOrders = orders.filter(o => o.status === 'ready_for_collection');
+
+     const getWaitTime = (createdDate) => {
+         const elapsed = Date.now() - new Date(createdDate).getTime();
+         const minutes = Math.floor(elapsed / 60000);
+         return minutes;
+     };
+
+     const isUrgent = (order) => getWaitTime(order.created_date) > 15;
 
     const markAsPreparing = async (orderId) => {
         try {
