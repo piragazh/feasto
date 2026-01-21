@@ -99,10 +99,18 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
          }
      };
 
+     if (showPayment && cart.length > 0) {
+        return (
+            <POSPayment 
+                cart={cart} 
+                cartTotal={cartTotal} 
+                onPaymentComplete={handlePaymentComplete}
+            />
+        );
+     }
 
-
-    return (
-         <div className="grid grid-cols-3 gap-4 h-[calc(100vh-200px)]">
+     return (
+        <div className="grid grid-cols-3 gap-4 h-[calc(100vh-200px)]">
              {/* Menu Section */}
              <div className="col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-gray-700">
