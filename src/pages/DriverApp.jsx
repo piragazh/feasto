@@ -12,6 +12,7 @@ import {
     Award, Bike
 } from 'lucide-react';
 import DriverActiveDelivery from '@/components/driver/DriverActiveDelivery';
+import MultiOrderDelivery from '@/components/driver/MultiOrderDelivery';
 import DriverOrderList from '@/components/driver/DriverOrderList';
 import DriverStats from '@/components/driver/DriverStats';
 import DriverCommunication from '@/components/driver/DriverCommunication';
@@ -51,14 +52,14 @@ export default function DriverApp() {
         }
     };
 
-    const { data: activeOrder } = useQuery({
-        queryKey: ['driver-active-order', driver?.id],
+    const { data: activeOrders = [] } = useQuery({
+        queryKey: ['driver-active-orders', driver?.id],
         queryFn: async () => {
             const orders = await base44.entities.Order.filter({
                 driver_id: driver.id,
                 status: 'out_for_delivery'
             });
-            return orders[0] || null;
+            return orders || [];
         },
         enabled: !!driver,
         refetchInterval: 3000,
@@ -70,7 +71,7 @@ export default function DriverApp() {
             status: 'preparing',
             driver_id: null
         }),
-        enabled: !!driver && !activeOrder,
+        enabled: !!driver && activeOrders.length === 0,
         refetchInterval: 5000,
     });
 
@@ -104,7 +105,7 @@ export default function DriverApp() {
         mutationFn: (isAvailable) => 
             base44.entities.Driver.update(driver.id, { is_available: isAvailable }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['driver-active-order']);
+            queryClient.invalidateQueries(['driver-active-orders']);
             loadDriverData();
         },
     });
@@ -187,15 +188,26 @@ export default function DriverApp() {
 
             {/* Main Content */}
             <div className="max-w-4xl mx-auto px-4 py-6">
-                {activeOrder ? (
-                    <DriverActiveDelivery 
-                        order={activeOrder} 
-                        driver={driver}
-                        onComplete={() => {
-                            queryClient.invalidateQueries(['driver-active-order']);
-                            queryClient.invalidateQueries(['available-orders']);
-                        }}
-                    />
+                {activeOrders.length > 0 ? (
+                    activeOrders.length > 1 ? (
+                        <MultiOrderDelivery 
+                            orders={activeOrders} 
+                            driver={driver}
+                            onComplete={() => {
+                                queryClient.invalidateQueries(['driver-active-orders']);
+                                queryClient.invalidateQueries(['available-orders']);
+                            }}
+                        />
+                    ) : (
+                        <DriverActiveDelivery 
+                            order={activeOrders[0]} 
+                            driver={driver}
+                            onComplete={() => {
+                                queryClient.invalidateQueries(['driver-active-orders']);
+                                queryClient.invalidateQueries(['available-orders']);
+                            }}
+                        />
+                    )
                 ) : (
                     <>
                         {/* Quick Actions */}
