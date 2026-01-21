@@ -59,6 +59,17 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
         const current = customizations[optionName] || [];
         
         if (checked) {
+            // Check if adding this would exceed max_quantity
+            const totalSelected = Object.keys(itemQuantities)
+                .filter(k => k.startsWith(`${optionName}_`))
+                .reduce((sum, k) => sum + (itemQuantities[k] || 0), 0);
+            
+            const maxQty = option.max_quantity || 10;
+            if (totalSelected >= maxQty) {
+                toast.error(`Maximum ${maxQty} item${maxQty > 1 ? 's' : ''} allowed for ${optionName}`);
+                return;
+            }
+            
             newQuantities[quantityKey] = 1;
             if (!current.includes(choice)) {
                 setCustomizations(prev => ({
