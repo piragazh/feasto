@@ -1,13 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Edit2, Split, Percent, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import OrderSearch from './OrderSearch';
+import OrderEditDialog from './OrderEditDialog';
+import BillSplitDialog from './BillSplitDialog';
+import ApplyPromotionDialog from './ApplyPromotionDialog';
 
 export default function POSOrderQueue({ restaurantId }) {
+    const [searchResults, setSearchResults] = useState(null);
+    const [editingOrder, setEditingOrder] = useState(null);
+    const [splittingOrder, setSplittingOrder] = useState(null);
+    const [applyingPromo, setApplyingPromo] = useState(null);
+
     const { data: orders = [], refetch } = useQuery({
         queryKey: ['pos-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
