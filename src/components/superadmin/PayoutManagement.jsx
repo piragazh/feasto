@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 export default function PayoutManagement() {
     const [selectedRestaurant, setSelectedRestaurant] = useState('');
@@ -86,6 +87,14 @@ export default function PayoutManagement() {
                        ['delivered', 'collected'].includes(order.status);
             });
 
+            // Get previous paid payouts for this restaurant to calculate already paid amount
+            const previousPayouts = await base44.asServiceRole.entities.Payout.filter({
+                restaurant_id: restaurantId,
+                status: 'paid'
+            });
+
+            const totalAlreadyPaid = previousPayouts.reduce((sum, p) => sum + (p.net_payout || 0), 0);
+
             // Calculate totals from net pay
             let grossEarnings = 0;
             let platformCommission = 0;
@@ -126,6 +135,9 @@ export default function PayoutManagement() {
 
             netPayout -= refundsPaidByRestaurant;
 
+            // Deduct already paid amount from net payout
+            const finalNetPayout = Math.max(0, netPayout - totalAlreadyPaid);
+
             // Create payout record
             return base44.asServiceRole.entities.Payout.create({
                 restaurant_id: restaurantId,
@@ -138,7 +150,7 @@ export default function PayoutManagement() {
                 platform_commission: platformCommission,
                 refunds_paid_by_platform: refundsPaidByPlatform,
                 refunds_paid_by_restaurant: refundsPaidByRestaurant,
-                net_payout: netPayout,
+                net_payout: finalNetPayout,
                 status: 'pending'
             });
         },
@@ -152,6 +164,95 @@ export default function PayoutManagement() {
             setGeneratingFor(null);
         }
     });
+
+    const generatePayoutPDF = (payout) => {
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(22);
+        doc.text('PAYOUT STATEMENT', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(10);
+        doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 105, 28, { align: 'center' });
+        
+        // Restaurant Details
+        doc.setFontSize(14);
+        doc.text('Restaurant Details', 20, 45);
+        doc.setFontSize(10);
+        doc.text(`Name: ${payout.restaurant_name}`, 20, 55);
+        
+        // Period
+        doc.setFontSize(14);
+        doc.text('Payout Period', 20, 70);
+        doc.setFontSize(10);
+        doc.text(`From: ${format(new Date(payout.period_start), 'MMM dd, yyyy')}`, 20, 80);
+        doc.text(`To: ${format(new Date(payout.period_end), 'MMM dd, yyyy')}`, 20, 87);
+        doc.text(`Frequency: ${payout.payout_frequency || 'N/A'}`, 20, 94);
+        
+        // Financial Summary
+        doc.setFontSize(14);
+        doc.text('Financial Summary', 20, 110);
+        
+        let y = 120;
+        doc.setFontSize(10);
+        doc.text(`Total Orders: ${payout.total_orders}`, 20, y);
+        y += 7;
+        doc.text(`Gross Earnings: £${payout.gross_earnings?.toFixed(2)}`, 20, y);
+        y += 7;
+        doc.text(`Platform Commission: -£${payout.platform_commission?.toFixed(2)}`, 20, y);
+        
+        if (payout.refunds_paid_by_restaurant > 0) {
+            y += 7;
+            doc.text(`Refunds Deducted: -£${payout.refunds_paid_by_restaurant.toFixed(2)}`, 20, y);
+        }
+        
+        if (payout.refunds_paid_by_platform > 0) {
+            y += 7;
+            doc.text(`Platform-Covered Refunds: £${payout.refunds_paid_by_platform.toFixed(2)}`, 20, y);
+        }
+        
+        // Net Payout
+        y += 15;
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text(`NET PAYOUT: £${payout.net_payout?.toFixed(2)}`, 20, y);
+        doc.setFont(undefined, 'normal');
+        
+        // Payment Status
+        y += 15;
+        doc.setFontSize(14);
+        doc.text('Payment Status', 20, y);
+        y += 10;
+        doc.setFontSize(10);
+        doc.text(`Status: ${payout.status.toUpperCase()}`, 20, y);
+        
+        if (payout.status === 'paid' && payout.paid_date) {
+            y += 7;
+            doc.text(`Paid On: ${format(new Date(payout.paid_date), 'MMM dd, yyyy')}`, 20, y);
+            if (payout.payment_method) {
+                y += 7;
+                doc.text(`Payment Method: ${payout.payment_method}`, 20, y);
+            }
+        }
+        
+        if (payout.notes) {
+            y += 10;
+            doc.setFontSize(14);
+            doc.text('Notes', 20, y);
+            y += 10;
+            doc.setFontSize(10);
+            const splitNotes = doc.splitTextToSize(payout.notes, 170);
+            doc.text(splitNotes, 20, y);
+        }
+        
+        // Footer
+        doc.setFontSize(8);
+        doc.text('This is an automatically generated payout statement.', 105, 280, { align: 'center' });
+        
+        // Save
+        const filename = `payout-${payout.restaurant_name.replace(/\s+/g, '-')}-${format(new Date(payout.period_start), 'yyyy-MM-dd')}.pdf`;
+        doc.save(filename);
+    };
 
     const markPaidMutation = useMutation({
         mutationFn: ({ payoutId }) => 
@@ -383,19 +484,30 @@ export default function PayoutManagement() {
                                             </div>
                                         )}
 
-                                        {payout.status === 'pending' && (
+                                        <div className="flex items-center gap-2">
+                                            {payout.status === 'pending' && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => setPayoutDialog(payout)}
+                                                    className="bg-green-600 hover:bg-green-700"
+                                                >
+                                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                                    Mark as Paid
+                                                </Button>
+                                            )}
+
                                             <Button
                                                 size="sm"
-                                                onClick={() => setPayoutDialog(payout)}
-                                                className="bg-green-600 hover:bg-green-700"
+                                                variant="outline"
+                                                onClick={() => generatePayoutPDF(payout)}
                                             >
-                                                <CheckCircle className="h-4 w-4 mr-2" />
-                                                Mark as Paid
+                                                <Download className="h-4 w-4 mr-2" />
+                                                Download PDF
                                             </Button>
-                                        )}
+                                        </div>
 
                                         {payout.status === 'paid' && payout.paid_date && (
-                                            <p className="text-xs text-green-600">
+                                            <p className="text-xs text-green-600 mt-2">
                                                 Paid on {format(new Date(payout.paid_date), 'MMM d, yyyy')}
                                                 {payout.payment_method && ` via ${payout.payment_method}`}
                                             </p>
