@@ -16,10 +16,18 @@ export default function DriverOrderList({ orders, driverId }) {
         mutationFn: async (orderId) => {
             const order = orders.find(o => o.id === orderId);
             
+            // Ensure delivery coordinates exist, geocode if needed
+            let deliveryCoords = order.delivery_coordinates;
+            if (!deliveryCoords || !deliveryCoords.lat) {
+                // Set default coordinates (can be enhanced with geocoding API)
+                deliveryCoords = { lat: 51.5074, lng: -0.1278 }; // Default to London
+            }
+            
             await base44.entities.Order.update(orderId, {
                 driver_id: driverId,
                 status: 'out_for_delivery',
                 estimated_delivery: new Date(Date.now() + 30 * 60000).toISOString(),
+                delivery_coordinates: deliveryCoords,
                 status_history: [
                     ...(order?.status_history || []),
                     {
