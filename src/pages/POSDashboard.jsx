@@ -157,15 +157,16 @@ export default function POSDashboard() {
                                 <p className="text-xs text-gray-400">Point of Sale System</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Badge className="bg-orange-500 text-white">
-                                <ShoppingCart className="h-3 w-3 mr-1" />
-                                {cart.length} items
-                            </Badge>
-                            <Badge className="bg-blue-500 text-white">
-                                <DollarSign className="h-3 w-3 mr-1" />
-                                £{cartTotal.toFixed(2)}
-                            </Badge>
+                        <div className="flex items-center gap-4">
+                            <div className="w-24 h-24 bg-orange-500 rounded-lg flex flex-col items-center justify-center">
+                                <ShoppingCart className="h-8 w-8 text-white mb-1" />
+                                <span className="text-lg font-bold text-white">{cart.length}</span>
+                                <span className="text-xs text-white">items</span>
+                            </div>
+                            <div className="w-24 h-24 bg-blue-500 rounded-lg flex flex-col items-center justify-center">
+                                <DollarSign className="h-8 w-8 text-white mb-1" />
+                                <span className="text-lg font-bold text-white">£{cartTotal.toFixed(2)}</span>
+                            </div>
                             <Button
                                 variant="ghost"
                                 size="icon"
