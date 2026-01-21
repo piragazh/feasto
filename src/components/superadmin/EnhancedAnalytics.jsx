@@ -72,6 +72,8 @@ export default function EnhancedAnalytics() {
         
         filteredOrders.forEach(order => {
             const restaurantId = order.restaurant_id;
+            const restaurant = restaurants.find(r => r.id === restaurantId);
+            
             if (!breakdown[restaurantId]) {
                 breakdown[restaurantId] = {
                     restaurant_id: restaurantId,
@@ -82,12 +84,27 @@ export default function EnhancedAnalytics() {
                     order_count: 0,
                     payment_breakdown: { cash: 0, card: 0, apple_pay: 0, google_pay: 0 },
                     order_type_breakdown: { delivery: 0, collection: 0 },
+                    commission_rate: restaurant?.commission_rate || 15,
+                    commission_type: restaurant?.commission_type || 'percentage',
                 };
             }
 
-            breakdown[restaurantId].total_sales += order.total || 0;
-            breakdown[restaurantId].total_commission += order.platform_commission_amount || 0;
-            breakdown[restaurantId].net_pay += order.restaurant_earnings || 0;
+            const orderTotal = order.total || 0;
+            let commission = 0;
+            
+            // Calculate commission based on restaurant settings
+            if (restaurant) {
+                if (restaurant.commission_type === 'fixed') {
+                    commission = restaurant.fixed_commission_amount || 0;
+                } else {
+                    const rate = restaurant.commission_rate || 15;
+                    commission = orderTotal * (rate / 100);
+                }
+            }
+            
+            breakdown[restaurantId].total_sales += orderTotal;
+            breakdown[restaurantId].total_commission += commission;
+            breakdown[restaurantId].net_pay += (orderTotal - commission);
             breakdown[restaurantId].order_count += 1;
 
             const paymentMethod = order.payment_method || 'cash';
@@ -100,33 +117,64 @@ export default function EnhancedAnalytics() {
         });
 
         return Object.values(breakdown).sort((a, b) => b.total_sales - a.total_sales);
-    }, [filteredOrders]);
+    }, [filteredOrders, restaurants]);
 
     // Daily sales data
     const dailySales = useMemo(() => {
         const salesByDay = {};
         filteredOrders.forEach(order => {
             const day = moment(order.created_date).format('YYYY-MM-DD');
+            const restaurant = restaurants.find(r => r.id === order.restaurant_id);
+            const orderTotal = order.total || 0;
+            
+            let commission = 0;
+            if (restaurant) {
+                if (restaurant.commission_type === 'fixed') {
+                    commission = restaurant.fixed_commission_amount || 0;
+                } else {
+                    const rate = restaurant.commission_rate || 15;
+                    commission = orderTotal * (rate / 100);
+                }
+            }
+            
             if (!salesByDay[day]) {
                 salesByDay[day] = { date: day, sales: 0, commission: 0, net: 0, orders: 0 };
             }
-            salesByDay[day].sales += order.total || 0;
-            salesByDay[day].commission += order.platform_commission_amount || 0;
-            salesByDay[day].net += order.restaurant_earnings || 0;
+            salesByDay[day].sales += orderTotal;
+            salesByDay[day].commission += commission;
+            salesByDay[day].net += (orderTotal - commission);
             salesByDay[day].orders += 1;
         });
         return Object.values(salesByDay).sort((a, b) => moment(a.date).diff(moment(b.date)));
-    }, [filteredOrders]);
+    }, [filteredOrders, restaurants]);
 
     // Summary metrics
     const summary = useMemo(() => {
+        let totalSales = 0;
+        let totalCommission = 0;
+        
+        filteredOrders.forEach(order => {
+            const restaurant = restaurants.find(r => r.id === order.restaurant_id);
+            const orderTotal = order.total || 0;
+            totalSales += orderTotal;
+            
+            if (restaurant) {
+                if (restaurant.commission_type === 'fixed') {
+                    totalCommission += restaurant.fixed_commission_amount || 0;
+                } else {
+                    const rate = restaurant.commission_rate || 15;
+                    totalCommission += orderTotal * (rate / 100);
+                }
+            }
+        });
+        
         return {
-            total_sales: filteredOrders.reduce((sum, o) => sum + (o.total || 0), 0),
-            total_commission: filteredOrders.reduce((sum, o) => sum + (o.platform_commission_amount || 0), 0),
-            total_net_pay: filteredOrders.reduce((sum, o) => sum + (o.restaurant_earnings || 0), 0),
+            total_sales: totalSales,
+            total_commission: totalCommission,
+            total_net_pay: totalSales - totalCommission,
             total_orders: filteredOrders.length,
         };
-    }, [filteredOrders]);
+    }, [filteredOrders, restaurants]);
 
     // Payment method breakdown
     const paymentMethodData = useMemo(() => {
@@ -474,8 +522,15 @@ export default function EnhancedAnalytics() {
                                     <tr key={idx} className="border-b hover:bg-gray-50">
                                         <td className="py-3 px-4 font-semibold">{restaurant.restaurant_name}</td>
                                         <td className="text-right py-3 px-4">{restaurant.order_count}</td>
-                                        <td className="text-right py-3 px-4 font-bold text-green-600">£{restaurant.total_sales.toFixed(2)}</td>
-                                        <td className="text-right py-3 px-4 text-orange-600">£{restaurant.total_commission.toFixed(2)}</td>
+                                        <td className="text-right py-3 px-4 font-bold text-green-600">
+                                            £{restaurant.total_sales.toFixed(2)}
+                                        </td>
+                                        <td className="text-right py-3 px-4 text-orange-600">
+                                            £{restaurant.total_commission.toFixed(2)}
+                                            <span className="text-xs text-gray-500 block">
+                                                {restaurant.commission_type === 'percentage' ? `${restaurant.commission_rate}%` : `£${restaurant.commission_rate} fixed`}
+                                            </span>
+                                        </td>
                                         <td className="text-right py-3 px-4 font-bold text-blue-600">£{restaurant.net_pay.toFixed(2)}</td>
                                         <td className="text-right py-3 px-4 text-sm">£{restaurant.payment_breakdown.cash.toFixed(2)}</td>
                                         <td className="text-right py-3 px-4 text-sm">£{(restaurant.payment_breakdown.card + restaurant.payment_breakdown.apple_pay + restaurant.payment_breakdown.google_pay).toFixed(2)}</td>
