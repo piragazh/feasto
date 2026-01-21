@@ -147,6 +147,83 @@ export default function PayoutHistory() {
     const totalPaid = filteredPayouts.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.net_payout || 0), 0);
     const totalPending = filteredPayouts.filter(p => p.status === 'pending').reduce((sum, p) => sum + (p.net_payout || 0), 0);
 
+    // Calculate average payout time (from creation to payment)
+    const avgPayoutTime = useMemo(() => {
+        const paidPayouts = filteredPayouts.filter(p => p.status === 'paid' && p.paid_date && p.created_date);
+        if (paidPayouts.length === 0) return 0;
+        
+        const totalDays = paidPayouts.reduce((sum, p) => {
+            const created = new Date(p.created_date);
+            const paid = new Date(p.paid_date);
+            const days = Math.max(0, Math.round((paid - created) / (1000 * 60 * 60 * 24)));
+            return sum + days;
+        }, 0);
+        
+        return (totalDays / paidPayouts.length).toFixed(1);
+    }, [filteredPayouts]);
+
+    // Calculate payout success rate
+    const successRate = useMemo(() => {
+        if (filteredPayouts.length === 0) return 0;
+        const completed = filteredPayouts.filter(p => ['paid', 'processing'].includes(p.status)).length;
+        return ((completed / filteredPayouts.length) * 100).toFixed(1);
+    }, [filteredPayouts]);
+
+    // Per-restaurant analytics
+    const restaurantAnalytics = useMemo(() => {
+        const analytics = {};
+        
+        filteredPayouts.forEach(payout => {
+            const restId = payout.restaurant_id;
+            if (!analytics[restId]) {
+                analytics[restId] = {
+                    restaurant_id: restId,
+                    restaurant_name: payout.restaurant_name,
+                    total_payouts: 0,
+                    paid_count: 0,
+                    pending_count: 0,
+                    failed_count: 0,
+                    total_amount: 0,
+                    paid_amount: 0,
+                    avg_payout_amount: 0,
+                    success_rate: 0,
+                    avg_payout_time: 0,
+                    payout_times: [],
+                };
+            }
+            
+            analytics[restId].total_payouts += 1;
+            analytics[restId].total_amount += payout.net_payout || 0;
+            
+            if (payout.status === 'paid') {
+                analytics[restId].paid_count += 1;
+                analytics[restId].paid_amount += payout.net_payout || 0;
+                
+                if (payout.paid_date && payout.created_date) {
+                    const created = new Date(payout.created_date);
+                    const paid = new Date(payout.paid_date);
+                    const days = Math.max(0, Math.round((paid - created) / (1000 * 60 * 60 * 24)));
+                    analytics[restId].payout_times.push(days);
+                }
+            } else if (payout.status === 'pending') {
+                analytics[restId].pending_count += 1;
+            } else if (payout.status === 'failed') {
+                analytics[restId].failed_count += 1;
+            }
+        });
+        
+        // Calculate averages
+        Object.values(analytics).forEach(rest => {
+            rest.avg_payout_amount = rest.total_payouts > 0 ? rest.total_amount / rest.total_payouts : 0;
+            rest.success_rate = rest.total_payouts > 0 ? (rest.paid_count / rest.total_payouts) * 100 : 0;
+            rest.avg_payout_time = rest.payout_times.length > 0 
+                ? rest.payout_times.reduce((a, b) => a + b, 0) / rest.payout_times.length 
+                : 0;
+        });
+        
+        return Object.values(analytics).sort((a, b) => b.total_amount - a.total_amount);
+    }, [filteredPayouts]);
+
     // Generate chart data based on summary period
     const chartData = useMemo(() => {
         if (filteredPayouts.length === 0) return [];
@@ -240,7 +317,7 @@ export default function PayoutHistory() {
     return (
         <div className="space-y-6">
             {/* Summary Cards */}
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
@@ -292,6 +369,34 @@ export default function PayoutHistory() {
                             <div>
                                 <p className="text-sm text-gray-500">Total Records</p>
                                 <p className="text-xl font-bold">{filteredPayouts.length}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-indigo-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Avg Payout Time</p>
+                                <p className="text-xl font-bold text-indigo-600">{avgPayoutTime} days</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                <CheckCircle className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Success Rate</p>
+                                <p className="text-xl font-bold text-emerald-600">{successRate}%</p>
                             </div>
                         </div>
                     </CardContent>
@@ -443,6 +548,64 @@ export default function PayoutHistory() {
                                                 <td className="px-4 py-2 text-right font-semibold">£{row.totalPayouts.toFixed(2)}</td>
                                                 <td className="px-4 py-2 text-right text-green-600">£{row.paidAmount.toFixed(2)}</td>
                                                 <td className="px-4 py-2 text-right text-yellow-600">£{row.pendingAmount.toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Restaurant Analytics */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Restaurant Performance Analytics</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left text-sm font-semibold">Restaurant</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold">Total Payouts</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold">Total Amount</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold">Avg Amount</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold">Success Rate</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold">Avg Time</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {restaurantAnalytics.map((rest) => (
+                                            <tr key={rest.restaurant_id} className="border-t hover:bg-gray-50">
+                                                <td className="px-4 py-2 font-medium">{rest.restaurant_name}</td>
+                                                <td className="px-4 py-2 text-right">{rest.total_payouts}</td>
+                                                <td className="px-4 py-2 text-right font-semibold">£{rest.total_amount.toFixed(2)}</td>
+                                                <td className="px-4 py-2 text-right">£{rest.avg_payout_amount.toFixed(2)}</td>
+                                                <td className="px-4 py-2 text-right">
+                                                    <Badge 
+                                                        variant={rest.success_rate >= 90 ? "default" : rest.success_rate >= 70 ? "secondary" : "destructive"}
+                                                        className={rest.success_rate >= 90 ? "bg-green-100 text-green-800" : rest.success_rate >= 70 ? "bg-yellow-100 text-yellow-800" : ""}
+                                                    >
+                                                        {rest.success_rate.toFixed(0)}%
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-4 py-2 text-right text-indigo-600">
+                                                    {rest.avg_payout_time > 0 ? `${rest.avg_payout_time.toFixed(1)} days` : 'N/A'}
+                                                </td>
+                                                <td className="px-4 py-2 text-right text-xs">
+                                                    <div className="flex flex-col gap-1">
+                                                        {rest.paid_count > 0 && (
+                                                            <span className="text-green-600">✓ {rest.paid_count} paid</span>
+                                                        )}
+                                                        {rest.pending_count > 0 && (
+                                                            <span className="text-yellow-600">⏱ {rest.pending_count} pending</span>
+                                                        )}
+                                                        {rest.failed_count > 0 && (
+                                                            <span className="text-red-600">✗ {rest.failed_count} failed</span>
+                                                        )}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
