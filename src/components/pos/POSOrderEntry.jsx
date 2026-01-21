@@ -142,31 +142,25 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2">
                     {filteredItems.map(item => (
                         <div
                             key={item.id}
                             onClick={() => handleItemClick(item)}
-                            className="flex items-center gap-3 p-3 bg-gray-700 border border-gray-600 rounded-lg hover:border-orange-500 hover:bg-gray-650 hover:shadow-lg transition-all cursor-pointer group"
+                            className="flex items-center gap-2 p-2 bg-gray-700 border border-gray-600 rounded hover:border-orange-500 hover:shadow-md transition-all cursor-pointer group"
                         >
-                            <div className="w-16 h-16 flex-shrink-0 bg-gray-600 rounded-md overflow-hidden">
+                            <div className="w-12 h-12 flex-shrink-0 bg-gray-600 rounded overflow-hidden">
                                 {item.image_url ? (
                                     <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full bg-gray-500 flex items-center justify-center">
-                                        <ShoppingCart className="h-8 w-8 text-gray-400" />
+                                        <ShoppingCart className="h-5 w-5 text-gray-400" />
                                     </div>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-white text-base line-clamp-1 group-hover:text-orange-400 transition-colors">{item.name}</h3>
-                                {item.description && (
-                                    <p className="text-gray-400 text-xs line-clamp-1">{item.description}</p>
-                                )}
-                                <p className="text-orange-400 font-bold text-lg mt-1">£{item.price.toFixed(2)}</p>
-                            </div>
-                            <div className="flex-shrink-0 bg-orange-500 rounded-full p-2 group-hover:bg-orange-600 transition-colors">
-                                <Plus className="h-5 w-5 text-white" />
+                                <h3 className="font-bold text-white text-sm line-clamp-1 group-hover:text-orange-400 transition-colors">{item.name}</h3>
+                                <p className="text-orange-400 font-bold text-base">£{item.price.toFixed(2)}</p>
                             </div>
                         </div>
                     ))}
