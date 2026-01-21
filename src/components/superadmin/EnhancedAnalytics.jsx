@@ -77,7 +77,7 @@ export default function EnhancedAnalytics() {
             if (!breakdown[restaurantId]) {
                 breakdown[restaurantId] = {
                     restaurant_id: restaurantId,
-                    restaurant_name: order.restaurant_name,
+                    restaurant_name: order.restaurant_name || restaurant?.name || 'Unknown Restaurant',
                     total_sales: 0,
                     total_commission: 0,
                     net_pay: 0,
