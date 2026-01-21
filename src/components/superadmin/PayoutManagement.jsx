@@ -18,6 +18,9 @@ export default function PayoutManagement() {
     const [payoutDialog, setPayoutDialog] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
     const [notes, setNotes] = useState('');
+    const [payoutFrequency, setPayoutFrequency] = useState('weekly');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const queryClient = useQueryClient();
 
     const { data: restaurants = [] } = useQuery({
@@ -40,42 +43,88 @@ export default function PayoutManagement() {
 
     const generatePayoutMutation = useMutation({
         mutationFn: async (restaurantId) => {
-            // Calculate last month's period
+            // Calculate period based on frequency
             const now = new Date();
-            const periodStart = startOfMonth(subMonths(now, 1));
-            const periodEnd = endOfMonth(subMonths(now, 1));
+            let periodStart, periodEnd;
+            
+            if (startDate && endDate) {
+                // Custom date range
+                periodStart = new Date(startDate);
+                periodEnd = new Date(endDate);
+                periodEnd.setHours(23, 59, 59, 999);
+            } else if (payoutFrequency === 'daily') {
+                // Yesterday
+                periodStart = new Date(now);
+                periodStart.setDate(periodStart.getDate() - 1);
+                periodStart.setHours(0, 0, 0, 0);
+                periodEnd = new Date(periodStart);
+                periodEnd.setHours(23, 59, 59, 999);
+            } else if (payoutFrequency === 'weekly') {
+                // Last 7 days
+                periodEnd = new Date(now);
+                periodEnd.setHours(23, 59, 59, 999);
+                periodStart = new Date(periodEnd);
+                periodStart.setDate(periodStart.getDate() - 7);
+                periodStart.setHours(0, 0, 0, 0);
+            } else {
+                // Monthly (default)
+                periodStart = startOfMonth(subMonths(now, 1));
+                periodEnd = endOfMonth(subMonths(now, 1));
+            }
 
             // Get restaurant details
             const restaurant = restaurants.find(r => r.id === restaurantId);
             
-            // Get all completed orders in period
-            const orders = await base44.asServiceRole.entities.Order.filter({
-                restaurant_id: restaurantId,
-                status: ['delivered', 'collected', 'refunded']
-            });
-
+            // Get all orders in period
+            const orders = await base44.asServiceRole.entities.Order.list();
+            
             const periodOrders = orders.filter(order => {
                 const orderDate = new Date(order.created_date);
-                return orderDate >= periodStart && orderDate <= periodEnd;
+                return order.restaurant_id === restaurantId && 
+                       orderDate >= periodStart && 
+                       orderDate <= periodEnd &&
+                       ['delivered', 'collected'].includes(order.status);
             });
 
-            // Calculate totals
-            const grossEarnings = periodOrders
-                .filter(o => ['delivered', 'collected'].includes(o.status))
-                .reduce((sum, order) => sum + (order.total || 0), 0);
+            // Calculate totals from net pay
+            let grossEarnings = 0;
+            let platformCommission = 0;
+            let netPayout = 0;
 
-            const commissionRate = (restaurant.commission_rate || 15) / 100;
-            const platformCommission = grossEarnings * commissionRate;
+            periodOrders.forEach(order => {
+                const orderTotal = order.total || 0;
+                grossEarnings += orderTotal;
+                
+                // Calculate commission per order
+                let commission = 0;
+                if (restaurant.commission_type === 'fixed') {
+                    commission = restaurant.fixed_commission_amount || 0;
+                } else {
+                    const rate = restaurant.commission_rate || 15;
+                    commission = orderTotal * (rate / 100);
+                }
+                
+                platformCommission += commission;
+                netPayout += (orderTotal - commission);
+            });
 
-            const refundsPaidByRestaurant = periodOrders
-                .filter(o => o.status === 'refunded' && o.refund_paid_by === 'restaurant')
+            const refundedOrders = orders.filter(order => {
+                const orderDate = new Date(order.created_date);
+                return order.restaurant_id === restaurantId && 
+                       orderDate >= periodStart && 
+                       orderDate <= periodEnd &&
+                       order.status === 'refunded';
+            });
+
+            const refundsPaidByRestaurant = refundedOrders
+                .filter(o => o.refund_paid_by === 'restaurant')
                 .reduce((sum, order) => sum + (order.refund_amount || 0), 0);
 
-            const refundsPaidByPlatform = periodOrders
-                .filter(o => o.status === 'refunded' && o.refund_paid_by === 'platform')
+            const refundsPaidByPlatform = refundedOrders
+                .filter(o => o.refund_paid_by === 'platform')
                 .reduce((sum, order) => sum + (order.refund_amount || 0), 0);
 
-            const netPayout = grossEarnings - platformCommission - refundsPaidByRestaurant;
+            netPayout -= refundsPaidByRestaurant;
 
             // Create payout record
             return base44.asServiceRole.entities.Payout.create({
@@ -83,6 +132,7 @@ export default function PayoutManagement() {
                 restaurant_name: restaurant.name,
                 period_start: periodStart.toISOString(),
                 period_end: periodEnd.toISOString(),
+                payout_frequency: payoutFrequency,
                 total_orders: periodOrders.length,
                 gross_earnings: grossEarnings,
                 platform_commission: platformCommission,
@@ -208,32 +258,58 @@ export default function PayoutManagement() {
                 <CardContent>
                     {/* Generate Payout Section */}
                     <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 className="font-semibold text-blue-900 mb-2">Generate New Payout</h3>
-                        <p className="text-sm text-blue-700 mb-3">
-                            Generate payout for last month's completed orders
-                        </p>
-                        <div className="flex gap-2">
-                            <Select 
-                                value={generatingFor || ''} 
-                                onValueChange={setGeneratingFor}
-                            >
-                                <SelectTrigger className="w-64">
-                                    <SelectValue placeholder="Select restaurant" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {restaurants.map(r => (
-                                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Button
-                                onClick={() => generatingFor && generatePayoutMutation.mutate(generatingFor)}
-                                disabled={!generatingFor || generatePayoutMutation.isPending}
-                                className="bg-blue-600 hover:bg-blue-700"
-                            >
-                                Generate Payout
-                            </Button>
+                        <h3 className="font-semibold text-blue-900 mb-3">Generate New Payout</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="text-sm font-medium text-blue-900 mb-1 block">Restaurant</label>
+                                <Select value={generatingFor || ''} onValueChange={setGeneratingFor}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select restaurant" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {restaurants.map(r => (
+                                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-blue-900 mb-1 block">Payout Frequency</label>
+                                <Select value={payoutFrequency} onValueChange={setPayoutFrequency}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="daily">Daily (Yesterday)</SelectItem>
+                                        <SelectItem value="weekly">Weekly (Last 7 Days)</SelectItem>
+                                        <SelectItem value="monthly">Monthly (Last Month)</SelectItem>
+                                        <SelectItem value="custom">Custom Range</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+                        
+                        {payoutFrequency === 'custom' && (
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="text-sm font-medium text-blue-900 mb-1 block">Start Date</label>
+                                    <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-blue-900 mb-1 block">End Date</label>
+                                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                                </div>
+                            </div>
+                        )}
+                        
+                        <Button
+                            onClick={() => generatingFor && generatePayoutMutation.mutate(generatingFor)}
+                            disabled={!generatingFor || generatePayoutMutation.isPending || (payoutFrequency === 'custom' && (!startDate || !endDate))}
+                            className="bg-blue-600 hover:bg-blue-700 w-full"
+                        >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Generate Payout
+                        </Button>
                     </div>
 
                     {/* Payouts List */}
@@ -253,6 +329,11 @@ export default function PayoutManagement() {
                                                 <p className="text-sm text-gray-600">
                                                     {format(new Date(payout.period_start), 'MMM d')} - {format(new Date(payout.period_end), 'MMM d, yyyy')}
                                                 </p>
+                                                {payout.payout_frequency && (
+                                                    <Badge variant="outline" className="mt-1">
+                                                        {payout.payout_frequency}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <Badge className={statusConfig[payout.status]?.color}>
                                                 <StatusIcon className="h-3 w-3 mr-1" />
