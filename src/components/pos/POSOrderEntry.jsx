@@ -142,25 +142,33 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3 grid grid-cols-3 gap-3">
+                <div className="flex-1 overflow-y-auto p-2 space-y-2">
                     {filteredItems.map(item => (
-                        <Card
+                        <div
                             key={item.id}
                             onClick={() => handleItemClick(item)}
-                            className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all min-h-24"
+                            className="flex items-center gap-3 p-3 bg-gray-700 border border-gray-600 rounded-lg hover:border-orange-500 hover:bg-gray-650 hover:shadow-lg transition-all cursor-pointer group"
                         >
-                            <CardContent className="p-3 flex flex-col gap-2 h-full justify-between">
-                                <div className="bg-gray-600 rounded w-full h-20 flex-shrink-0 overflow-hidden">
-                                    {item.image_url && (
-                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded" />
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-white text-base line-clamp-2">{item.name}</h3>
-                                    <p className="text-orange-400 font-bold text-lg">£{item.price.toFixed(2)}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                            <div className="w-16 h-16 flex-shrink-0 bg-gray-600 rounded-md overflow-hidden">
+                                {item.image_url ? (
+                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-500 flex items-center justify-center">
+                                        <ShoppingCart className="h-8 w-8 text-gray-400" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-white text-base line-clamp-1 group-hover:text-orange-400 transition-colors">{item.name}</h3>
+                                {item.description && (
+                                    <p className="text-gray-400 text-xs line-clamp-1">{item.description}</p>
+                                )}
+                                <p className="text-orange-400 font-bold text-lg mt-1">£{item.price.toFixed(2)}</p>
+                            </div>
+                            <div className="flex-shrink-0 bg-orange-500 rounded-full p-2 group-hover:bg-orange-600 transition-colors">
+                                <Plus className="h-5 w-5 text-white" />
+                            </div>
+                        </div>
                     ))}
                 </div>
             </div>
