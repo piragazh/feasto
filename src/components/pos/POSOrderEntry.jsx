@@ -254,7 +254,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         placeholder="Search items..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 mb-3"
+                        className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 mb-3 text-lg h-14 px-4"
                     />
                     <div className="flex flex-wrap gap-2">
                         <Button
@@ -282,17 +282,17 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <Card
                             key={item.id}
                             onClick={() => handleItemClick(item)}
-                            className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all"
+                            className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all min-h-24"
                         >
-                            <CardContent className="p-2 flex gap-2 items-center">
-                                <div className="bg-gray-600 rounded w-16 h-16 flex-shrink-0 overflow-hidden">
+                            <CardContent className="p-3 flex flex-col gap-2 h-full justify-between">
+                                <div className="bg-gray-600 rounded w-full h-20 flex-shrink-0 overflow-hidden">
                                     {item.image_url && (
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-white text-sm line-clamp-2">{item.name}</h3>
-                                    <p className="text-orange-400 font-bold text-xs">£{item.price.toFixed(2)}</p>
+                                    <h3 className="font-bold text-white text-base line-clamp-2">{item.name}</h3>
+                                    <p className="text-orange-400 font-bold text-lg">£{item.price.toFixed(2)}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -323,12 +323,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         <p className="text-orange-400 text-sm">£{item.price.toFixed(2)}</p>
                                     </div>
                                     <Button
-                                        variant="ghost"
-                                        size="icon"
                                         onClick={() => onRemoveItem(item.id)}
-                                        className="text-red-400 hover:text-red-500 hover:bg-red-500/10 h-8 w-8 rounded-full transition-all"
+                                        className="text-red-400 hover:text-red-500 bg-red-500/10 hover:bg-red-500/20 h-12 w-12 rounded-full transition-all font-bold"
                                     >
-                                        <X className="h-5 w-5" />
+                                        <X className="h-6 w-6" />
                                     </Button>
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
