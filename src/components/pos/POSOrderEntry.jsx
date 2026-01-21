@@ -142,7 +142,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2">
+                <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     {filteredItems.map(item => (
                         <div
                             key={item.id}
