@@ -326,15 +326,34 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
 
                 <div className="border-t border-gray-700 p-4 space-y-3">
+                    <div className="space-y-2 mb-3">
+                        <label className="text-gray-400 text-sm">Order Type</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                variant={orderType === 'collection' ? 'default' : 'outline'}
+                                onClick={() => setOrderType('collection')}
+                                className={orderType === 'collection' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white'}
+                            >
+                                Collection
+                            </Button>
+                            <Button
+                                variant={orderType === 'takeaway' ? 'default' : 'outline'}
+                                onClick={() => setOrderType('takeaway')}
+                                className={orderType === 'takeaway' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 border-gray-600 text-white'}
+                            >
+                                Takeaway
+                            </Button>
+                        </div>
+                    </div>
                     <div className="bg-gray-700 p-3 rounded">
                         <p className="text-gray-400 text-sm mb-1">Total</p>
                         <p className="text-white text-3xl font-bold">£{cartTotal.toFixed(2)}</p>
                     </div>
                     <Button
-                        onClick={handleCompleteOrder}
+                        onClick={() => setShowPayment(true)}
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12"
                     >
-                        Complete Order
+                        Proceed to Payment
                     </Button>
                     <Button
                         onClick={onClearCart}
