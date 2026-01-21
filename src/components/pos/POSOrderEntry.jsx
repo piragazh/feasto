@@ -15,6 +15,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [customizationOpen, setCustomizationOpen] = useState(false);
      const [selectedItem, setSelectedItem] = useState(null);
      const [orderType, setOrderType] = useState('collection');
+     const [selectedTable, setSelectedTable] = useState(null);
      const [paymentMethod, setPaymentMethod] = useState(null);
      const [cashReceived, setCashReceived] = useState('');
      const [showPayment, setShowPayment] = useState(false);
@@ -22,6 +23,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const { data: menuItems = [] } = useQuery({
         queryKey: ['pos-menu-items', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true }),
+        enabled: !!restaurantId,
+    });
+
+    const { data: tables = [] } = useQuery({
+        queryKey: ['pos-tables', restaurantId],
+        queryFn: () => base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true }),
         enabled: !!restaurantId,
     });
 
@@ -67,8 +74,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             return;
         }
 
+        if (orderType === 'dine_in' && !selectedTable) {
+            toast.error('Please select a table for dine-in order');
+            return;
+        }
+
         try {
-            const order = await base44.entities.Order.create({
+            const orderData = {
                 restaurant_id: restaurantId,
                 items: cart.map(item => ({
                     menu_item_id: item.id,
@@ -84,13 +96,22 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 order_type: orderType,
                 payment_method: method,
                 notes: method === 'cash' && changeAmount > 0 ? `Change: £${changeAmount.toFixed(2)}` : ''
-            });
+            };
+
+            if (orderType === 'dine_in') {
+                orderData.table_id = selectedTable.id;
+                orderData.table_number = selectedTable.table_number;
+            }
+
+            const order = await base44.entities.Order.create(orderData);
 
             toast.success(`Order #${order.id.slice(0, 8)} created! Payment: ${method}`);
             onClearCart();
             setShowPayment(false);
             setPaymentMethod(null);
             setCashReceived('');
+            setSelectedTable(null);
+            setOrderType('collection');
         } catch (error) {
             toast.error('Failed to create order');
         }
