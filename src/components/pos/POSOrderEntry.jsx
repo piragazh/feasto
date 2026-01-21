@@ -260,7 +260,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <Button
                             variant={!selectedCategory ? "default" : "outline"}
                             onClick={() => setSelectedCategory('')}
-                            className="text-base h-11 px-4 bg-orange-500 hover:bg-orange-600"
+                            className="text-lg h-14 px-6 bg-orange-500 hover:bg-orange-600 font-bold"
                         >
                             All
                         </Button>
@@ -269,7 +269,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 key={cat}
                                 variant={selectedCategory === cat ? "default" : "outline"}
                                 onClick={() => setSelectedCategory(cat)}
-                                className={`text-base h-11 px-4 ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                className={`text-lg h-14 px-6 font-bold ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                             >
                                 {cat}
                             </Button>
@@ -331,23 +331,19 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         <X className="h-5 w-5" />
                                     </Button>
                                 </div>
-                                <div className="flex items-center justify-between bg-gray-600 rounded p-2 gap-2">
+                                <div className="flex items-center justify-between gap-2">
                                     <Button
-                                        variant="ghost"
-                                        size="icon"
                                         onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                        className="h-8 w-8 text-white hover:bg-gray-700 rounded-full transition-all"
+                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded"
                                     >
-                                        <Minus className="h-4 w-4" />
+                                        <Minus className="h-5 w-5" />
                                     </Button>
-                                    <span className="text-white font-bold text-sm flex-1 text-center">{item.quantity}</span>
+                                    <span className="text-white font-bold text-lg flex-1 text-center min-w-12">{item.quantity}</span>
                                     <Button
-                                        variant="ghost"
-                                        size="icon"
                                         onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                        className="h-8 w-8 text-white hover:bg-gray-700 rounded-full transition-all"
+                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded"
                                     >
-                                        <Plus className="h-4 w-4" />
+                                        <Plus className="h-5 w-5" />
                                     </Button>
                                 </div>
                             </div>
@@ -362,16 +358,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                     <Button
                         onClick={() => setShowPayment(true)}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12"
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-16 text-xl"
                     >
                         Proceed to Payment
                     </Button>
                     <Button
                         onClick={onClearCart}
-                        variant="outline"
-                        className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-14 text-lg"
                     >
-                        Clear
+                        Clear Cart
                     </Button>
                 </div>
             </div>
