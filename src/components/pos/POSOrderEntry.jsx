@@ -91,7 +91,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 delivery_fee: 0,
                 discount: 0,
                 total: cartTotal,
-                status: 'pending',
+                status: orderType === 'takeaway' ? 'confirmed' : 'pending',
                 order_type: orderType,
                 payment_method: method,
                 notes: method === 'cash' && changeAmount > 0 ? `Change: £${changeAmount.toFixed(2)}` : ''
