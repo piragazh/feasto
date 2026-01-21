@@ -39,81 +39,65 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     });
 
     const handleItemClick = (item) => {
-        if (item.customization_options?.length) {
-            setSelectedItem(item);
-            setCustomizationOpen(true);
-        } else {
-            onAddItem(item);
-        }
-    };
+         if (item.customization_options?.length) {
+             setSelectedItem(item);
+             setCustomizationOpen(true);
+         } else {
+             onAddItem(item);
+         }
+     };
 
-    const handleCustomizationConfirm = (itemWithCustomizations) => {
-        onAddItem(itemWithCustomizations);
-        setCustomizationOpen(false);
-        setSelectedItem(null);
-    };
+     const handleCustomizationConfirm = (itemWithCustomizations) => {
+         onAddItem(itemWithCustomizations);
+         setCustomizationOpen(false);
+         setSelectedItem(null);
+     };
 
-    const handleCashPayment = () => {
-        if (!cashReceived || parseFloat(cashReceived) < cartTotal) {
-            toast.error('Insufficient amount');
-            return;
-        }
-        const change = parseFloat(cashReceived) - cartTotal;
-        createOrder('cash', change);
-    };
+     const handlePaymentComplete = async () => {
+         if (cart.length === 0) {
+             toast.error('Cart is empty');
+             return;
+         }
 
-    const handleCardPayment = () => {
-        createOrder('card', 0);
-    };
+         if (orderType === 'dine_in' && !selectedTable) {
+             toast.error('Please select a table for dine-in order');
+             return;
+         }
 
-    const createOrder = async (method, changeAmount) => {
-        if (cart.length === 0) {
-            toast.error('Cart is empty');
-            return;
-        }
+         try {
+             const orderData = {
+                 restaurant_id: restaurantId,
+                 items: cart.map(item => ({
+                     menu_item_id: item.id,
+                     name: item.name,
+                     price: item.price,
+                     quantity: item.quantity
+                 })),
+                 subtotal: cartTotal,
+                 delivery_fee: 0,
+                 discount: 0,
+                 total: cartTotal,
+                 status: orderType === 'takeaway' ? 'confirmed' : 'pending',
+                 order_type: orderType,
+                 payment_method: 'cash'
+             };
 
-        if (orderType === 'dine_in' && !selectedTable) {
-            toast.error('Please select a table for dine-in order');
-            return;
-        }
+             if (orderType === 'dine_in') {
+                 orderData.table_id = selectedTable.id;
+                 orderData.table_number = selectedTable.table_number;
+             }
 
-        try {
-            const orderData = {
-                restaurant_id: restaurantId,
-                items: cart.map(item => ({
-                    menu_item_id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    quantity: item.quantity
-                })),
-                subtotal: cartTotal,
-                delivery_fee: 0,
-                discount: 0,
-                total: cartTotal,
-                status: orderType === 'takeaway' ? 'confirmed' : 'pending',
-                order_type: orderType,
-                payment_method: method,
-                notes: method === 'cash' && changeAmount > 0 ? `Change: £${changeAmount.toFixed(2)}` : ''
-            };
+             await base44.entities.Order.create(orderData);
 
-            if (orderType === 'dine_in') {
-                orderData.table_id = selectedTable.id;
-                orderData.table_number = selectedTable.table_number;
-            }
-
-            const order = await base44.entities.Order.create(orderData);
-
-            toast.success(`Order #${order.id.slice(0, 8)} created! Payment: ${method}`);
-            onClearCart();
-            setShowPayment(false);
-            setPaymentMethod(null);
-            setCashReceived('');
-            setSelectedTable(null);
-            setOrderType('collection');
-        } catch (error) {
-            toast.error('Failed to create order');
-        }
-    };
+             toast.success('Order created successfully!');
+             onClearCart();
+             setShowPayment(false);
+             setSelectedTable(null);
+             setOrderType('collection');
+         } catch (error) {
+             toast.error('Failed to create order');
+         }
+     };
 
 
 
