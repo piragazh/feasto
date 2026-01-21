@@ -120,11 +120,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         return (
             <div className="h-[calc(100vh-200px)] bg-gray-900 rounded-lg border border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-bold text-white">Payment</h1>
+                    <h1 className="text-4xl font-bold text-white">Payment</h1>
                     <Button
                         onClick={() => setShowPayment(false)}
-                        variant="outline"
-                        className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                        className="bg-gray-700 hover:bg-gray-600 text-white font-bold h-14 px-6 text-lg"
                     >
                         Back to Menu
                     </Button>
