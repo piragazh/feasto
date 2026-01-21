@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Building, User, Search, LayoutDashboard, UtensilsCrossed } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, User, Search, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 import RestaurantFormDialog from '@/components/admin/RestaurantFormDialog';
 import AssignOwnerDialog from '@/components/admin/AssignOwnerDialog';
@@ -187,15 +187,6 @@ export default function AdminRestaurants() {
                                         >
                                             <LayoutDashboard className="h-4 w-4 mr-2" />
                                             Open Dashboard
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => navigate(createPageUrl('POSDashboard') + `?restaurantId=${restaurant.id}`)}
-                                            className="w-full bg-orange-50 hover:bg-orange-100 border-orange-300"
-                                        >
-                                            <UtensilsCrossed className="h-4 w-4 mr-2" />
-                                            POS System
                                         </Button>
                                         <div className="flex gap-2">
                                             <Button
