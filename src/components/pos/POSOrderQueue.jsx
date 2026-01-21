@@ -106,6 +106,38 @@ export default function POSOrderQueue({ restaurantId }) {
 
                                         <p className="text-orange-400 font-bold mb-3">£{order.total.toFixed(2)}</p>
 
+                                        <div className="space-y-2 flex flex-col gap-1 mb-3">
+                                            <div className="grid grid-cols-3 gap-1">
+                                                <Button
+                                                    onClick={() => setEditingOrder(order)}
+                                                    size="sm"
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7"
+                                                    title="Edit items, add/remove, change quantities"
+                                                >
+                                                    <Edit2 className="h-3 w-3 mr-1" />
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    onClick={() => setSplittingOrder(order)}
+                                                    size="sm"
+                                                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7"
+                                                    title="Split bill between customers"
+                                                >
+                                                    <Split className="h-3 w-3 mr-1" />
+                                                    Split
+                                                </Button>
+                                                <Button
+                                                    onClick={() => setApplyingPromo(order)}
+                                                    size="sm"
+                                                    className="bg-green-600 hover:bg-green-700 text-white text-xs h-7"
+                                                    title="Apply discount or promotion"
+                                                >
+                                                    <Percent className="h-3 w-3 mr-1" />
+                                                    Promo
+                                                </Button>
+                                            </div>
+                                        </div>
+
                                         <div className="space-y-1 flex flex-col gap-1">
                                             {status === 'pending' && (
                                                 <Button
