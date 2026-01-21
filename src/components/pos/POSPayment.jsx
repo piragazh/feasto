@@ -88,8 +88,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     return (
         <div className="grid grid-cols-2 gap-6 h-full">
             {/* LEFT: Order Summary */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 flex flex-col">
-                <h2 className="text-white font-bold text-2xl mb-4">Order Summary</h2>
+                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-white font-bold text-2xl">Order Summary</h2>
+                            <Button
+                                onClick={onBackToCart}
+                                className="bg-gray-700 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded h-10"
+                            >
+                                Back to Cart
+                            </Button>
+                        </div>
 
                 <div className="space-y-2 mb-4 flex-1 overflow-y-auto">
                     {cart.map(item => (
