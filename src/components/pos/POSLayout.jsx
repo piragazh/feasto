@@ -60,17 +60,16 @@ export default function POSLayout({ children, currentPageName }) {
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Top Bar */}
-                <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                {/* Toggle Button */}
+                <div className="absolute top-4 left-4 z-10">
                     <Button 
                         variant="ghost" 
                         size="icon"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="bg-gray-900 text-white hover:bg-gray-800"
                     >
                         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                     </Button>
-                    <h2 className="text-lg font-semibold text-gray-900">{currentPageName}</h2>
-                    <div className="w-10" /> {/* Spacer for alignment */}
                 </div>
 
                 {/* Content Area */}
