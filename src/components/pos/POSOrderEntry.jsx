@@ -186,9 +186,28 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         cart.map(item => (
                             <div key={item.id} className="bg-gray-700 p-3 rounded border border-gray-600">
                                 <div className="flex justify-between items-start mb-2">
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="text-white font-semibold text-sm">{item.name}</p>
-                                        <p className="text-orange-400 text-sm">£{item.price.toFixed(2)}</p>
+                                        {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                            <div className="text-gray-300 text-xs mt-1 space-y-1">
+                                                {Object.entries(item.customizations).map(([key, value]) => (
+                                                    <p key={key} className="line-clamp-1">
+                                                        {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {item.removedIngredients?.length > 0 && (
+                                            <p className="text-red-400 text-xs mt-1">
+                                                No: {item.removedIngredients.join(', ')}
+                                            </p>
+                                        )}
+                                        {item.specialInstructions && (
+                                            <p className="text-blue-300 text-xs mt-1 italic">
+                                                Note: {item.specialInstructions}
+                                            </p>
+                                        )}
+                                        <p className="text-orange-400 text-sm mt-1">£{item.price.toFixed(2)}</p>
                                     </div>
                                     <Button
                                         onClick={() => onRemoveItem(item.id)}
