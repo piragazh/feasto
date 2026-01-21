@@ -248,9 +248,15 @@ export default function PayoutManagement() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value={null}>All Restaurants</SelectItem>
-                                {restaurants.map(r => (
-                                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                                ))}
+                                {loadingRestaurants ? (
+                                    <SelectItem value={null} disabled>Loading...</SelectItem>
+                                ) : restaurants.length > 0 ? (
+                                    restaurants.map(r => (
+                                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                    ))
+                                ) : (
+                                    <SelectItem value={null} disabled>No restaurants found</SelectItem>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
