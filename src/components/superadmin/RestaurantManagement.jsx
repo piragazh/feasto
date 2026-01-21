@@ -94,8 +94,8 @@ export default function RestaurantManagement() {
                 {filteredRestaurants.map(restaurant => (
                     <Card key={restaurant.id}>
                         <CardContent className="pt-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-4 flex-1">
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-start gap-4">
                                     {restaurant.image_url && (
                                         <img
                                             src={restaurant.image_url}
@@ -120,7 +120,7 @@ export default function RestaurantManagement() {
                                     </div>
                                 </div>
                                 
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2">
                                     <Button
                                         size="sm"
                                         variant="outline"
@@ -133,7 +133,7 @@ export default function RestaurantManagement() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => navigate(createPageUrl('POSDashboard') + `?restaurantId=${restaurant.id}`)}
-                                        className="bg-orange-50 hover:bg-orange-100 text-orange-700"
+                                        className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
                                     >
                                         <UtensilsCrossed className="h-4 w-4 mr-1" />
                                         POS
