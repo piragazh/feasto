@@ -49,7 +49,20 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         setSelectedItem(null);
     };
 
-    const handleCompleteOrder = async () => {
+    const handleCashPayment = () => {
+        if (!cashReceived || parseFloat(cashReceived) < cartTotal) {
+            toast.error('Insufficient amount');
+            return;
+        }
+        const change = parseFloat(cashReceived) - cartTotal;
+        createOrder('cash', change);
+    };
+
+    const handleCardPayment = () => {
+        createOrder('card', 0);
+    };
+
+    const createOrder = async (method, changeAmount) => {
         if (cart.length === 0) {
             toast.error('Cart is empty');
             return;
@@ -69,12 +82,16 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 discount: 0,
                 total: cartTotal,
                 status: 'pending',
-                order_type: 'collection',
-                payment_method: 'cash'
+                order_type: orderType,
+                payment_method: method,
+                notes: method === 'cash' && changeAmount > 0 ? `Change: £${changeAmount.toFixed(2)}` : ''
             });
 
-            toast.success(`Order #${order.id.slice(0, 8)} created!`);
+            toast.success(`Order #${order.id.slice(0, 8)} created! Payment: ${method}`);
             onClearCart();
+            setShowPayment(false);
+            setPaymentMethod(null);
+            setCashReceived('');
         } catch (error) {
             toast.error('Failed to create order');
         }
