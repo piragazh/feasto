@@ -73,7 +73,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <Button
                             variant={!selectedCategory ? "default" : "outline"}
                             onClick={() => setSelectedCategory('')}
-                            className="text-sm h-9 px-3 bg-orange-500 hover:bg-orange-600"
+                            className="text-base h-11 px-4 bg-orange-500 hover:bg-orange-600"
                         >
                             All
                         </Button>
@@ -82,7 +82,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 key={cat}
                                 variant={selectedCategory === cat ? "default" : "outline"}
                                 onClick={() => setSelectedCategory(cat)}
-                                className={`text-sm h-9 px-3 ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                className={`text-base h-11 px-4 ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                             >
                                 {cat}
                             </Button>
