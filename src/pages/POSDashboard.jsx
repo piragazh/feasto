@@ -20,6 +20,7 @@ export default function POSDashboard() {
     const [activeTab, setActiveTab] = useState('order-entry');
     const [cart, setCart] = useState([]);
     const [tables, setTables] = useState({});
+    const [orderType, setOrderType] = useState('takeaway');
 
     useEffect(() => {
         loadUserAndRestaurant();
@@ -158,6 +159,32 @@ export default function POSDashboard() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={orderType === 'collection' ? 'default' : 'outline'}
+                                    onClick={() => setOrderType('collection')}
+                                    className={orderType === 'collection' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}
+                                    size="sm"
+                                >
+                                    Collection
+                                </Button>
+                                <Button
+                                    variant={orderType === 'takeaway' ? 'default' : 'outline'}
+                                    onClick={() => setOrderType('takeaway')}
+                                    className={orderType === 'takeaway' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}
+                                    size="sm"
+                                >
+                                    Takeaway
+                                </Button>
+                                <Button
+                                    variant={orderType === 'dine_in' ? 'default' : 'outline'}
+                                    onClick={() => setOrderType('dine_in')}
+                                    className={orderType === 'dine_in' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}
+                                    size="sm"
+                                >
+                                    Dine In
+                                </Button>
+                            </div>
                             <div className="w-24 h-24 bg-orange-500 rounded-lg flex flex-col items-center justify-center">
                                 <ShoppingCart className="h-8 w-8 text-white mb-1" />
                                 <span className="text-lg font-bold text-white">{cart.length}</span>
@@ -223,6 +250,8 @@ export default function POSDashboard() {
                             onUpdateQuantity={updateQuantity}
                             onClearCart={clearCart}
                             cartTotal={cartTotal}
+                            orderType={orderType}
+                            setOrderType={setOrderType}
                         />
                     </TabsContent>
 
