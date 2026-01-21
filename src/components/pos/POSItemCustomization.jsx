@@ -39,9 +39,14 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="bg-gray-800 border-gray-700 max-w-2xl h-screen md:h-auto p-0 flex flex-col">
-                <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
-                    <DialogTitle className="text-2xl md:text-3xl font-bold text-white">
+            <DialogContent 
+                className="bg-gray-800 border-gray-700 h-screen md:h-auto p-0 flex flex-col"
+                style={{
+                    maxWidth: columns === 1 ? '90vw' : columns === 2 ? '95vw' : '98vw'
+                }}
+            >
+                <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-700 flex-shrink-0">
+                    <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-xl' : 'text-lg'}`}>
                         {item.name}
                     </DialogTitle>
                     <Button
