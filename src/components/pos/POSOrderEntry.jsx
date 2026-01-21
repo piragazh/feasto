@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Minus, ShoppingCart, X } from 'lucide-react';
 import { toast } from 'sonner';
+import POSItemCustomization from './POSItemCustomization';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal }) {
     const [searchQuery, setSearchQuery] = useState('');
