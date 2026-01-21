@@ -86,7 +86,9 @@ export default function PayoutManagement() {
                 const orderDate = new Date(order.created_date);
                 const matchesRestaurant = order.restaurant_id === restaurantId;
                 const matchesDate = orderDate >= periodStart && orderDate <= periodEnd;
-                const matchesStatus = ['delivered', 'collected'].includes(order.status);
+                // Include all orders except cancelled and refunded ones
+                const excludedStatuses = ['cancelled', 'refunded', 'pending'];
+                const matchesStatus = !excludedStatuses.includes(order.status);
                 
                 if (matchesRestaurant) {
                     console.log('Order:', order.id, 'Date:', orderDate, 'Status:', order.status, 
