@@ -350,13 +350,13 @@ export default function PayoutManagement() {
                             <SelectContent>
                                 <SelectItem value={null}>All Restaurants</SelectItem>
                                 {loadingRestaurants ? (
-                                    <SelectItem value={null} disabled>Loading...</SelectItem>
+                                    <SelectItem value="loading" disabled>Loading...</SelectItem>
                                 ) : restaurants.length > 0 ? (
                                     restaurants.map(r => (
                                         <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                                     ))
                                 ) : (
-                                    <SelectItem value={null} disabled>No restaurants found</SelectItem>
+                                    <SelectItem value="empty" disabled>No restaurants found</SelectItem>
                                 )}
                             </SelectContent>
                         </Select>
@@ -375,13 +375,13 @@ export default function PayoutManagement() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {loadingRestaurants ? (
-                                            <SelectItem value={null} disabled>Loading...</SelectItem>
+                                            <SelectItem value="loading" disabled>Loading...</SelectItem>
                                         ) : restaurants.length > 0 ? (
                                             restaurants.map(r => (
                                                 <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                                             ))
                                         ) : (
-                                            <SelectItem value={null} disabled>No restaurants found</SelectItem>
+                                            <SelectItem value="empty" disabled>No restaurants found</SelectItem>
                                         )}
                                     </SelectContent>
                                 </Select>
