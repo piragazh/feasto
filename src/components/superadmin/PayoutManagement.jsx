@@ -351,7 +351,7 @@ export default function PayoutManagement() {
                                 <SelectItem value={null}>All Restaurants</SelectItem>
                                 {loadingRestaurants ? (
                                     <SelectItem value="loading" disabled>Loading...</SelectItem>
-                                ) : restaurants.length > 0 ? (
+                                ) : restaurants && restaurants.length > 0 ? (
                                     restaurants.map(r => (
                                         <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                                     ))
@@ -376,7 +376,7 @@ export default function PayoutManagement() {
                                     <SelectContent>
                                         {loadingRestaurants ? (
                                             <SelectItem value="loading" disabled>Loading...</SelectItem>
-                                        ) : restaurants.length > 0 ? (
+                                        ) : restaurants && restaurants.length > 0 ? (
                                             restaurants.map(r => (
                                                 <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                                             ))
