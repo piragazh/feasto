@@ -59,15 +59,22 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                     </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div 
+                    className="flex-1 overflow-y-auto p-3 md:p-6"
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                        gap: columns > 2 ? '1rem' : '1.5rem'
+                    }}
+                >
                     {item.customization_options.map(option => (
-                        <div key={option.name} className="space-y-4">
-                            <div className="flex items-baseline gap-2">
-                                <Label className="text-xl md:text-2xl font-bold text-white">
+                        <div key={option.name} className="space-y-2">
+                            <div className="flex items-baseline gap-1">
+                                <Label className={`font-bold text-white ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
                                     {option.name}
                                 </Label>
                                 {option.required && (
-                                    <span className="text-red-500 text-lg font-bold">*</span>
+                                    <span className="text-red-500 font-bold">*</span>
                                 )}
                             </div>
 
