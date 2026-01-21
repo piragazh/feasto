@@ -27,11 +27,18 @@ export default function PayoutManagement() {
     const { data: restaurants = [], isLoading: loadingRestaurants } = useQuery({
         queryKey: ['restaurants-payout'],
         queryFn: async () => {
-            const data = await base44.asServiceRole.entities.Restaurant.list();
-            console.log('Restaurants loaded:', data?.length || 0);
-            return data || [];
+            try {
+                const data = await base44.asServiceRole.entities.Restaurant.list();
+                console.log('Restaurants loaded:', data);
+                return data || [];
+            } catch (error) {
+                console.error('Error loading restaurants:', error);
+                return [];
+            }
         },
     });
+    
+    console.log('Current restaurants state:', restaurants, 'Loading:', loadingRestaurants);
 
     const { data: payouts = [], isLoading } = useQuery({
         queryKey: ['payouts', selectedRestaurant],
