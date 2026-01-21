@@ -21,9 +21,8 @@ import PromotionOversight from '@/components/superadmin/PromotionOversight';
 import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
 import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManagement';
 import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Calculator } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift } from 'lucide-react';
 import { createPageUrl } from '@/utils';
-import AccountingDashboard from '@/components/superadmin/AccountingDashboard';
 
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
@@ -161,15 +160,7 @@ export default function SuperAdmin() {
                             className="flex items-center gap-2 text-white hover:bg-white/10"
                         >
                             <LayoutDashboard className="h-4 w-4" />
-                            Analytics
-                        </Button>
-                        <Button
-                            variant={activeTab === 'accounting' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('accounting')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Calculator className="h-4 w-4" />
-                            Accounting
+                            Accounting & Analytics
                         </Button>
                         <Button
                             variant={activeTab === 'refunds' ? 'secondary' : 'ghost'}
@@ -250,7 +241,6 @@ export default function SuperAdmin() {
                 {activeTab === 'cuisine' && <CuisineTypeManagement />}
                 {activeTab === 'domains' && <DomainManagement />}
                 {activeTab === 'analytics' && <EnhancedAnalytics />}
-                {activeTab === 'accounting' && <AccountingDashboard />}
                 {activeTab === 'drivers' && <EnhancedDriverManagement />}
                 {activeTab === 'refunds' && <PlatformRefundOversight />}
                 {activeTab === 'payouts' && <PayoutManagement />}
