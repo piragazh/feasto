@@ -77,8 +77,8 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                         gap: columns > 2 ? '1rem' : '1.5rem'
                     }}
                 >
-                    {item.customization_options.map(option => (
-                        <div key={option.name} className="space-y-2">
+                    {item.customization_options?.map(option => (
+                         <div key={option.name} className="space-y-2">
                             <div className="flex items-baseline gap-1">
                                 <Label className={`font-bold text-white ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
                                     {option.name}
