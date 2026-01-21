@@ -33,11 +33,11 @@ export default function PayoutManagement() {
         queryKey: ['payouts', selectedRestaurant],
         queryFn: () => {
             if (selectedRestaurant) {
-                return base44.asServiceRole.entities.Payout.filter({ 
+                return base44.entities.Payout.filter({ 
                     restaurant_id: selectedRestaurant 
                 }, '-created_date');
             }
-            return base44.asServiceRole.entities.Payout.list('-created_date', 50);
+            return base44.entities.Payout.list('-created_date', 50);
         },
         refetchInterval: 10000,
     });
@@ -77,7 +77,7 @@ export default function PayoutManagement() {
             const restaurant = restaurants.find(r => r.id === restaurantId);
             
             // Get all orders in period
-            const orders = await base44.asServiceRole.entities.Order.list();
+            const orders = await base44.entities.Order.list();
             
             const periodOrders = orders.filter(order => {
                 const orderDate = new Date(order.created_date);
@@ -88,7 +88,7 @@ export default function PayoutManagement() {
             });
 
             // Get previous paid payouts for this restaurant to calculate already paid amount
-            const previousPayouts = await base44.asServiceRole.entities.Payout.filter({
+            const previousPayouts = await base44.entities.Payout.filter({
                 restaurant_id: restaurantId,
                 status: 'paid'
             });
@@ -139,7 +139,7 @@ export default function PayoutManagement() {
             const finalNetPayout = Math.max(0, netPayout - totalAlreadyPaid);
 
             // Create payout record
-            return base44.asServiceRole.entities.Payout.create({
+            return base44.entities.Payout.create({
                 restaurant_id: restaurantId,
                 restaurant_name: restaurant.name,
                 period_start: periodStart.toISOString(),
@@ -256,7 +256,7 @@ export default function PayoutManagement() {
 
     const markPaidMutation = useMutation({
         mutationFn: ({ payoutId }) => 
-            base44.asServiceRole.entities.Payout.update(payoutId, {
+            base44.entities.Payout.update(payoutId, {
                 status: 'paid',
                 paid_date: new Date().toISOString(),
                 payment_method: paymentMethod,
