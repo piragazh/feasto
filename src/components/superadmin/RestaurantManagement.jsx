@@ -13,7 +13,8 @@ import {
     CheckCircle,
     Clock,
     DollarSign,
-    LayoutDashboard
+    LayoutDashboard,
+    UtensilsCrossed
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -127,6 +128,15 @@ export default function RestaurantManagement() {
                                     >
                                         <LayoutDashboard className="h-4 w-4 mr-1" />
                                         Dashboard
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => navigate(createPageUrl('POSDashboard') + `?restaurantId=${restaurant.id}`)}
+                                        className="bg-orange-50 hover:bg-orange-100 text-orange-700"
+                                    >
+                                        <UtensilsCrossed className="h-4 w-4 mr-1" />
+                                        POS
                                     </Button>
                                     <Button
                                         size="sm"

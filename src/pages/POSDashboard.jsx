@@ -36,11 +36,19 @@ export default function POSDashboard() {
 
             let restaurantId = null;
 
+            // Check URL parameter first (for admin access)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlRestaurantId = urlParams.get('restaurantId');
+
             // Check if user is admin
             if (userData.role === 'admin') {
-                const restaurants = await base44.entities.Restaurant.list();
-                if (restaurants.length > 0) {
-                    restaurantId = restaurants[0].id;
+                if (urlRestaurantId) {
+                    restaurantId = urlRestaurantId;
+                } else {
+                    const restaurants = await base44.entities.Restaurant.list();
+                    if (restaurants.length > 0) {
+                        restaurantId = restaurants[0].id;
+                    }
                 }
             } else {
                 // Check if user is restaurant manager
