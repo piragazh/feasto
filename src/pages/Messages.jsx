@@ -32,12 +32,86 @@ export default function Messages() {
         }
     };
 
+    // Fetch all message types - Order messages, Driver messages, Conversations
     const { data: conversations = [] } = useQuery({
-        queryKey: ['conversations', user?.email],
+        queryKey: ['all-messages', user?.email],
         queryFn: async () => {
             if (!user?.email) return [];
-            const allConvos = await base44.entities.Conversation.list('-last_message_time');
-            return allConvos.filter(c => c.participants?.includes(user.email));
+            
+            const allMessages = [];
+
+            // 1. Get conversations (support/general chats)
+            const convos = await base44.entities.Conversation.list('-last_message_time');
+            const userConvos = convos.filter(c => c.participants?.includes(user.email));
+            allMessages.push(...userConvos.map(c => ({
+                ...c,
+                type: 'conversation',
+                displayName: c.participants?.find(p => p !== user.email)?.split('@')[0] || 'Support',
+                icon: 'user'
+            })));
+
+            // 2. Get order-related messages
+            const orders = await base44.entities.Order.filter({ created_by: user.email });
+            const orderIds = orders.map(o => o.id);
+            
+            for (const orderId of orderIds) {
+                const orderMessages = await base44.entities.Message.filter({ order_id: orderId });
+                if (orderMessages.length > 0) {
+                    const order = orders.find(o => o.id === orderId);
+                    const lastMsg = orderMessages[orderMessages.length - 1];
+                    allMessages.push({
+                        id: `order-${orderId}`,
+                        type: 'order',
+                        order_id: orderId,
+                        restaurant_id: order?.restaurant_id,
+                        displayName: order?.restaurant_name || 'Restaurant',
+                        icon: 'restaurant',
+                        last_message: lastMsg?.message,
+                        last_message_time: lastMsg?.created_date,
+                        messages: orderMessages,
+                        unread_count: orderMessages.filter(m => 
+                            m.sender_type === 'restaurant' && !m.is_read
+                        ).length
+                    });
+                }
+            }
+
+            // 3. Get driver messages
+            for (const order of orders) {
+                if (order.driver_id && order.status === 'out_for_delivery') {
+                    const driverMessages = await base44.entities.DriverMessage.filter({ 
+                        order_id: order.id 
+                    });
+                    if (driverMessages.length > 0) {
+                        const lastMsg = driverMessages[driverMessages.length - 1];
+                        const drivers = await base44.entities.Driver.filter({ id: order.driver_id });
+                        const driver = drivers[0];
+                        
+                        allMessages.push({
+                            id: `driver-${order.id}`,
+                            type: 'driver',
+                            order_id: order.id,
+                            driver_id: order.driver_id,
+                            restaurant_id: order.restaurant_id,
+                            displayName: driver?.full_name || 'Driver',
+                            icon: 'driver',
+                            last_message: lastMsg?.message,
+                            last_message_time: lastMsg?.created_date,
+                            messages: driverMessages,
+                            unread_count: driverMessages.filter(m => 
+                                m.sender_type === 'driver' && !m.is_read
+                            ).length
+                        });
+                    }
+                }
+            }
+
+            // Sort by most recent message
+            return allMessages.sort((a, b) => {
+                const timeA = new Date(a.last_message_time || 0).getTime();
+                const timeB = new Date(b.last_message_time || 0).getTime();
+                return timeB - timeA;
+            });
         },
         enabled: !!user?.email,
         refetchInterval: 3000,
@@ -45,8 +119,8 @@ export default function Messages() {
 
     const filteredConversations = (conversations || []).filter(c =>
         !searchQuery || 
-        c.last_message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.participants?.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))
+        c.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.last_message?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     if (!user) {

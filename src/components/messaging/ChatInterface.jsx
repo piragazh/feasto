@@ -16,8 +16,35 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     const queryClient = useQueryClient();
 
     const { data: messages = [] } = useQuery({
-        queryKey: ['chat-messages', conversation?.id],
-        queryFn: () => base44.entities.ChatMessage.filter({ conversation_id: conversation.id }, 'created_date'),
+        queryKey: ['chat-messages', conversation?.id, conversation?.type],
+        queryFn: async () => {
+            if (conversation.type === 'conversation') {
+                return base44.entities.ChatMessage.filter({ conversation_id: conversation.id }, 'created_date');
+            } else if (conversation.type === 'order') {
+                const msgs = await base44.entities.Message.filter({ order_id: conversation.order_id }, 'created_date');
+                return msgs.map(m => ({
+                    id: m.id,
+                    sender_email: m.sender_type === 'restaurant' ? 'restaurant@system' : currentUser.email,
+                    sender_name: m.sender_type === 'restaurant' ? conversation.displayName : 'You',
+                    sender_type: m.sender_type,
+                    message: m.message,
+                    created_date: m.created_date,
+                    read_by: m.is_read ? [currentUser.email] : []
+                }));
+            } else if (conversation.type === 'driver') {
+                const msgs = await base44.entities.DriverMessage.filter({ order_id: conversation.order_id }, 'created_date');
+                return msgs.map(m => ({
+                    id: m.id,
+                    sender_email: m.sender_type === 'driver' ? 'driver@system' : 'restaurant@system',
+                    sender_name: m.sender_type === 'driver' ? conversation.displayName : 'Restaurant',
+                    sender_type: m.sender_type,
+                    message: m.message,
+                    created_date: m.created_date,
+                    read_by: m.is_read ? [currentUser.email] : []
+                }));
+            }
+            return [];
+        },
         enabled: !!conversation?.id,
         refetchInterval: 2000,
     });
@@ -39,45 +66,74 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
             !m.read_by?.includes(currentUser.email)
         );
 
-        for (const msg of unreadMessages) {
-            await base44.entities.ChatMessage.update(msg.id, {
-                read_by: [...(msg.read_by || []), currentUser.email]
+        if (conversation.type === 'conversation') {
+            for (const msg of unreadMessages) {
+                await base44.entities.ChatMessage.update(msg.id, {
+                    read_by: [...(msg.read_by || []), currentUser.email]
+                });
+            }
+            const newUnreadCount = { ...(conversation.unread_count || {}) };
+            newUnreadCount[currentUser.email] = 0;
+            await base44.entities.Conversation.update(conversation.id, {
+                unread_count: newUnreadCount
             });
+        } else if (conversation.type === 'order') {
+            for (const msg of unreadMessages) {
+                const originalMsg = await base44.entities.Message.filter({ id: msg.id });
+                if (originalMsg[0]) {
+                    await base44.entities.Message.update(msg.id, { is_read: true });
+                }
+            }
+        } else if (conversation.type === 'driver') {
+            for (const msg of unreadMessages) {
+                const originalMsg = await base44.entities.DriverMessage.filter({ id: msg.id });
+                if (originalMsg[0]) {
+                    await base44.entities.DriverMessage.update(msg.id, { is_read: true });
+                }
+            }
         }
 
-        // Update conversation unread count
-        const newUnreadCount = { ...(conversation.unread_count || {}) };
-        newUnreadCount[currentUser.email] = 0;
-        await base44.entities.Conversation.update(conversation.id, {
-            unread_count: newUnreadCount
-        });
-
-        queryClient.invalidateQueries(['conversations']);
+        queryClient.invalidateQueries(['all-messages']);
     };
 
     const sendMessageMutation = useMutation({
         mutationFn: async (messageData) => {
-            const newMessage = await base44.entities.ChatMessage.create(messageData);
-            
-            // Update conversation
-            const unreadCount = { ...(conversation.unread_count || {}) };
-            (conversation.participants || []).forEach(p => {
-                if (p !== currentUser.email) {
-                    unreadCount[p] = (unreadCount[p] || 0) + 1;
-                }
-            });
-
-            await base44.entities.Conversation.update(conversation.id, {
-                last_message: messageData.message || '📷 Image',
-                last_message_time: new Date().toISOString(),
-                unread_count: unreadCount
-            });
-
-            return newMessage;
+            if (conversation.type === 'conversation') {
+                const newMessage = await base44.entities.ChatMessage.create(messageData);
+                const unreadCount = { ...(conversation.unread_count || {}) };
+                (conversation.participants || []).forEach(p => {
+                    if (p !== currentUser.email) {
+                        unreadCount[p] = (unreadCount[p] || 0) + 1;
+                    }
+                });
+                await base44.entities.Conversation.update(conversation.id, {
+                    last_message: messageData.message || '📷 Image',
+                    last_message_time: new Date().toISOString(),
+                    unread_count: unreadCount
+                });
+                return newMessage;
+            } else if (conversation.type === 'order') {
+                return base44.entities.Message.create({
+                    order_id: conversation.order_id,
+                    restaurant_id: conversation.restaurant_id,
+                    sender_type: 'customer',
+                    message: messageData.message,
+                    is_read: false
+                });
+            } else if (conversation.type === 'driver') {
+                return base44.entities.DriverMessage.create({
+                    order_id: conversation.order_id,
+                    driver_id: conversation.driver_id,
+                    restaurant_id: conversation.restaurant_id,
+                    sender_type: 'customer',
+                    message: messageData.message,
+                    is_read: false
+                });
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['chat-messages']);
-            queryClient.invalidateQueries(['conversations']);
+            queryClient.invalidateQueries(['all-messages']);
             setMessage('');
             setImagePreview(null);
         },
@@ -88,14 +144,20 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
 
         const userType = currentUser.role === 'admin' ? 'restaurant' : 'customer';
 
-        sendMessageMutation.mutate({
-            conversation_id: conversation.id,
-            sender_email: currentUser.email,
-            sender_name: currentUser.full_name || currentUser.email,
-            sender_type: userType,
-            message: message.trim(),
-            image_url: imagePreview
-        });
+        if (conversation.type === 'conversation') {
+            sendMessageMutation.mutate({
+                conversation_id: conversation.id,
+                sender_email: currentUser.email,
+                sender_name: currentUser.full_name || currentUser.email,
+                sender_type: userType,
+                message: message.trim(),
+                image_url: imagePreview
+            });
+        } else {
+            sendMessageMutation.mutate({
+                message: message.trim()
+            });
+        }
     };
 
     const handleImageUpload = async (file) => {
@@ -112,9 +174,7 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     };
 
     const getParticipantName = () => {
-        const otherParticipants = conversation.participants?.filter(p => p !== currentUser.email) || [];
-        if (otherParticipants.length === 0) return 'You';
-        return otherParticipants[0].split('@')[0];
+        return conversation.displayName || 'Chat';
     };
 
     const getIcon = (type) => {
