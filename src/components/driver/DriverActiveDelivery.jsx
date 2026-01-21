@@ -159,13 +159,17 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     };
 
     const openNavigation = () => {
-        if (order.delivery_coordinates) {
+        if (order.delivery_coordinates && order.delivery_coordinates.lat && order.delivery_coordinates.lng) {
             const { lat, lng } = order.delivery_coordinates;
-            // Open in Google Maps or Apple Maps
             const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             window.open(url, '_blank');
+        } else if (order.delivery_address) {
+            // Fallback to address-based navigation
+            const encodedAddress = encodeURIComponent(order.delivery_address);
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+            window.open(url, '_blank');
         } else {
-            toast.error('Delivery coordinates not available');
+            toast.error('Navigation information not available');
         }
     };
 
@@ -206,7 +210,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Map */}
-                    {currentLocation && order.delivery_coordinates && (
+                    {currentLocation && order.delivery_coordinates && order.delivery_coordinates.lat && order.delivery_coordinates.lng ? (
                         <div className="h-64 rounded-lg overflow-hidden border">
                             <MapContainer 
                                 center={[currentLocation.lat, currentLocation.lng]} 
@@ -227,6 +231,14 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                                     dashArray="5, 10"
                                 />
                             </MapContainer>
+                        </div>
+                    ) : (
+                        <div className="h-64 rounded-lg overflow-hidden border bg-gray-100 flex items-center justify-center">
+                            <div className="text-center text-gray-500">
+                                <MapPin className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                <p className="text-sm">Map not available</p>
+                                <p className="text-xs">Use navigation button to view in maps</p>
+                            </div>
                         </div>
                     )}
 
