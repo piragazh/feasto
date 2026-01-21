@@ -90,7 +90,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3">
+                <div className="flex-1 overflow-y-auto p-2 grid grid-cols-4 gap-2">
                     {filteredItems.map(item => (
                         <Card
                             key={item.id}
@@ -98,13 +98,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all"
                         >
                             <CardContent className="p-1">
-                                <div className="aspect-square bg-gray-600 rounded mb-2">
+                                <div className="aspect-square bg-gray-600 rounded mb-1 h-16">
                                     {item.image_url && (
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded" />
                                     )}
                                 </div>
-                                <h3 className="font-bold text-white text-sm mb-1">{item.name}</h3>
-                                <p className="text-orange-400 font-bold text-lg">£{item.price.toFixed(2)}</p>
+                                <h3 className="font-bold text-white text-xs mb-0.5 line-clamp-1">{item.name}</h3>
+                                <p className="text-orange-400 font-bold text-xs">£{item.price.toFixed(2)}</p>
                             </CardContent>
                         </Card>
                     ))}
