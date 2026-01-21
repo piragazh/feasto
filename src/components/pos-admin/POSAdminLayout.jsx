@@ -66,28 +66,8 @@ export default function POSAdminLayout({ children, currentSection, onNavigate, r
             </div>
 
             {/* MAIN CONTENT */}
-            <div className="flex-1 flex flex-col">
-                {/* HEADER */}
-                <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                    <div className="px-6 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <h1 className="text-xl font-semibold text-gray-900">
-                                {menuItems.find(m => m.id === currentSection)?.label || 'Dashboard'}
-                            </h1>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                            <div className="text-right">
-                                <p className="font-medium text-gray-900">{user?.full_name || 'Admin'}</p>
-                                <p className="text-xs text-gray-500">{new Date().toLocaleDateString('en-GB')}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* CONTENT */}
-                <div className="flex-1 overflow-auto p-6">
-                    {children}
-                </div>
+            <div className="flex-1 overflow-auto">
+                {children}
             </div>
         </div>
     );
