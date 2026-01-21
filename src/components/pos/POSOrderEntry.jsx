@@ -11,10 +11,14 @@ import POSItemCustomization from './POSItemCustomization';
 import POSOrderPayment from './POSOrderPayment';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal }) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [customizationOpen, setCustomizationOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState(null);
+     const [searchQuery, setSearchQuery] = useState('');
+     const [selectedCategory, setSelectedCategory] = useState('');
+     const [customizationOpen, setCustomizationOpen] = useState(false);
+     const [selectedItem, setSelectedItem] = useState(null);
+     const [orderType, setOrderType] = useState('collection');
+     const [paymentMethod, setPaymentMethod] = useState(null);
+     const [cashReceived, setCashReceived] = useState('');
+     const [showPayment, setShowPayment] = useState(false);
 
     const { data: menuItems = [] } = useQuery({
         queryKey: ['pos-menu-items', restaurantId],
