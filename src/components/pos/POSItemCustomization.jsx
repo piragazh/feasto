@@ -142,17 +142,17 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                     ))}
                 </div>
 
-                <div className="flex gap-3 p-6 border-t border-gray-700 flex-shrink-0 bg-gray-800">
+                <div className={`flex gap-2 md:gap-3 p-3 md:p-6 border-t border-gray-700 flex-shrink-0 bg-gray-800`}>
                     <Button 
                         variant="outline" 
                         onClick={onClose}
-                        className="flex-1 h-16 text-lg bg-gray-700 border-gray-600 text-white hover:bg-gray-600 font-bold rounded-lg"
+                        className={`flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600 font-bold rounded-lg ${columns === 1 ? 'h-16 text-lg' : 'h-12 text-sm md:text-base'}`}
                     >
                         Cancel
                     </Button>
                     <Button 
                         onClick={handleConfirm}
-                        className="flex-1 h-16 text-lg bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg"
+                        className={`flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg ${columns === 1 ? 'h-16 text-lg' : 'h-12 text-sm md:text-base'}`}
                     >
                         Add to Cart
                     </Button>
