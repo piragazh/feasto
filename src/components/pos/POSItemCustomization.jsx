@@ -51,7 +51,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                     </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {item.customization_options.map(option => (
                         <div key={option.name} className="space-y-4">
                             <div className="flex items-baseline gap-2">
