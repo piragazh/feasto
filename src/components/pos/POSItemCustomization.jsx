@@ -9,6 +9,9 @@ import { X } from 'lucide-react';
 export default function POSItemCustomization({ item, open, onClose, onConfirm }) {
     const [customizations, setCustomizations] = useState({});
 
+    const optionCount = item?.customization_options?.length || 0;
+    const columns = Math.min(Math.max(optionCount, 1), 4);
+
     const handleConfirm = () => {
         onConfirm({ ...item, customizations });
         setCustomizations({});
