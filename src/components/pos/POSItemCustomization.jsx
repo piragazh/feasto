@@ -16,8 +16,15 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
      const columns = Math.min(Math.max(optionCount, 1), 4);
 
     const handleConfirm = () => {
-        onConfirm({ ...item, customizations });
+        onConfirm({ 
+            ...item, 
+            customizations,
+            specialInstructions: specialInstructions.trim(),
+            removedIngredients
+        });
         setCustomizations({});
+        setSpecialInstructions('');
+        setRemovedIngredients([]);
     };
 
     const handleSingleSelect = (optionName, selectedValue) => {
