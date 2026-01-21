@@ -754,16 +754,34 @@ export default function MenuManagement({ restaurantId }) {
                                                                                 ×
                                                                             </Button>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <Switch
-                                                                                checked={mealCustom.required}
-                                                                                onCheckedChange={(checked) => {
-                                                                                    const newCustoms = [...formData.customization_options];
-                                                                                    newCustoms[idx].meal_customizations[mealIdx].required = checked;
-                                                                                    setFormData({ ...formData, customization_options: newCustoms });
-                                                                                }}
-                                                                            />
-                                                                            <Label className="text-xs">Required</Label>
+                                                                        <div className="flex items-center gap-4">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Switch
+                                                                                    checked={mealCustom.required}
+                                                                                    onCheckedChange={(checked) => {
+                                                                                        const newCustoms = [...formData.customization_options];
+                                                                                        newCustoms[idx].meal_customizations[mealIdx].required = checked;
+                                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                                    }}
+                                                                                />
+                                                                                <Label className="text-xs">Required</Label>
+                                                                            </div>
+                                                                            {mealCustom.type !== 'single' && (
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <Label className="text-xs">Max Qty:</Label>
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        min="1"
+                                                                                        value={mealCustom.max_quantity || 1}
+                                                                                        onChange={(e) => {
+                                                                                            const newCustoms = [...formData.customization_options];
+                                                                                            newCustoms[idx].meal_customizations[mealIdx].max_quantity = parseInt(e.target.value) || 1;
+                                                                                            setFormData({ ...formData, customization_options: newCustoms });
+                                                                                        }}
+                                                                                        className="w-16 h-8 text-xs"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                         <div className="space-y-2">
                                                                             <Label className="text-xs">Load Options:</Label>
