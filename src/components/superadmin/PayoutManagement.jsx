@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 export default function PayoutManagement() {
     const [selectedRestaurant, setSelectedRestaurant] = useState('');
-    const [generatingFor, setGeneratingFor] = useState(null);
+    const [generatingFor, setGeneratingFor] = useState('');
     const [payoutDialog, setPayoutDialog] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
     const [notes, setNotes] = useState('');
@@ -23,7 +23,7 @@ export default function PayoutManagement() {
     const [endDate, setEndDate] = useState('');
     const queryClient = useQueryClient();
 
-    const { data: restaurants = [] } = useQuery({
+    const { data: restaurants = [], isLoading: loadingRestaurants } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.asServiceRole.entities.Restaurant.list(),
     });
@@ -267,9 +267,15 @@ export default function PayoutManagement() {
                                         <SelectValue placeholder="Select restaurant" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {restaurants.map(r => (
-                                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                                        ))}
+                                        {loadingRestaurants ? (
+                                            <SelectItem value={null} disabled>Loading...</SelectItem>
+                                        ) : restaurants.length > 0 ? (
+                                            restaurants.map(r => (
+                                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value={null} disabled>No restaurants found</SelectItem>
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
