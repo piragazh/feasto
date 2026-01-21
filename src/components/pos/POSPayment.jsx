@@ -1,31 +1,32 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { DollarSign, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import NumericKeypad from './NumericKeypad';
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
-    const [paymentMethod, setPaymentMethod] = useState('cash');
-    const [cashReceived, setCashReceived] = useState('');
-    const [cardAmount, setCardAmount] = useState(cartTotal);
+     const [paymentMethod, setPaymentMethod] = useState(null);
+     const [cashReceived, setCashReceived] = useState(0);
+     const [showKeypad, setShowKeypad] = useState(false);
 
-    const change = cashReceived ? parseFloat(cashReceived) - cartTotal : 0;
+    const change = cashReceived - cartTotal;
 
     const handleCashPayment = () => {
-        if (!cashReceived || parseFloat(cashReceived) < cartTotal) {
+        if (cashReceived < cartTotal) {
             toast.error('Insufficient amount');
             return;
         }
         toast.success(`Payment complete. Change: £${change.toFixed(2)}`);
         onPaymentComplete();
-        setCashReceived('');
+        setCashReceived(0);
+        setPaymentMethod(null);
     };
 
     const handleCardPayment = () => {
         toast.success('Card payment processed');
         onPaymentComplete();
+        setPaymentMethod(null);
     };
 
     if (cart.length === 0) {
@@ -36,35 +37,49 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
         );
     }
 
-    return (
-        <div className="grid grid-cols-2 gap-6">
-            {/* Order Summary */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-                <h2 className="text-white font-bold text-xl mb-4">Order Summary</h2>
-                
-                <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
-                    {cart.map(item => (
-                        <div key={item.id} className="flex justify-between text-gray-300">
-                            <span>{item.quantity}x {item.name}</span>
-                            <span>£{(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="border-t border-gray-600 pt-4">
-                    <div className="flex justify-between mb-3 text-lg">
-                        <span className="text-white font-bold">Subtotal</span>
-                        <span className="text-white">£{cartTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="bg-gray-700 p-4 rounded">
-                        <p className="text-gray-400 text-sm mb-1">Total Amount</p>
-                        <p className="text-white text-4xl font-bold">£{cartTotal.toFixed(2)}</p>
-                    </div>
-                </div>
+    if (showKeypad && paymentMethod === 'cash') {
+        return (
+            <div className="max-w-2xl mx-auto">
+                <NumericKeypad
+                    value={cashReceived}
+                    onChange={setCashReceived}
+                    onComplete={() => {
+                        if (cashReceived >= cartTotal) {
+                            handleCashPayment();
+                            setShowKeypad(false);
+                        } else {
+                            toast.error('Insufficient amount');
+                        }
+                    }}
+                />
             </div>
+        );
+    }
 
-            {/* Payment Methods */}
-            <div className="space-y-4">
+    return (
+         <div className="space-y-4">
+             {/* Order Summary */}
+             <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+                 <h2 className="text-white font-bold text-2xl mb-4">Order Summary</h2>
+
+                 <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                     {cart.map(item => (
+                         <div key={item.id} className="flex justify-between text-gray-300 text-lg">
+                             <span>{item.quantity}x {item.name}</span>
+                             <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                         </div>
+                     ))}
+                 </div>
+
+                 <div className="border-t border-gray-600 pt-4">
+                     <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-lg">
+                         <p className="text-blue-200 text-lg mb-2">Total Amount</p>
+                         <p className="text-white text-5xl font-bold">£{cartTotal.toFixed(2)}</p>
+                     </div>
+                 </div>
+             </div>
+
+             {/* Payment Methods */}
                 {/* Cash Payment */}
                 <Card className="bg-gray-800 border-gray-700">
                     <CardContent className="p-6">
