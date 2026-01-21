@@ -78,14 +78,25 @@ export default function PayoutManagement() {
             
             // Get all orders in period
             const orders = await base44.entities.Order.list();
+            console.log('Total orders fetched:', orders?.length);
+            console.log('Period:', periodStart, 'to', periodEnd);
+            console.log('Restaurant ID:', restaurantId);
             
             const periodOrders = orders.filter(order => {
                 const orderDate = new Date(order.created_date);
-                return order.restaurant_id === restaurantId && 
-                       orderDate >= periodStart && 
-                       orderDate <= periodEnd &&
-                       ['delivered', 'collected'].includes(order.status);
+                const matchesRestaurant = order.restaurant_id === restaurantId;
+                const matchesDate = orderDate >= periodStart && orderDate <= periodEnd;
+                const matchesStatus = ['delivered', 'collected'].includes(order.status);
+                
+                if (matchesRestaurant) {
+                    console.log('Order:', order.id, 'Date:', orderDate, 'Status:', order.status, 
+                               'Matches date:', matchesDate, 'Matches status:', matchesStatus);
+                }
+                
+                return matchesRestaurant && matchesDate && matchesStatus;
             });
+            
+            console.log('Filtered period orders:', periodOrders.length);
 
             // Get previous paid payouts for this restaurant to calculate already paid amount
             const previousPayouts = await base44.entities.Payout.filter({
