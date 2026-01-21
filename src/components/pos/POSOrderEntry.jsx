@@ -112,7 +112,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     {filteredItems.map(item => (
                         <Card
                             key={item.id}
-                            onClick={() => onAddItem(item)}
+                            onClick={() => handleItemClick(item)}
                             className="cursor-pointer bg-gray-700 border-gray-600 hover:border-orange-500 hover:shadow-lg transition-all"
                         >
                             <CardContent className="p-2 flex gap-2 items-center">
