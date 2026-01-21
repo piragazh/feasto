@@ -82,41 +82,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
         );
     }
 
-    if (showKeypad && paymentMethod === 'cash') {
-        return (
-            <div className="max-w-2xl mx-auto">
-                <NumericKeypad
-                    value={cashReceived}
-                    onChange={setCashReceived}
-                    onComplete={() => {
-                        if (cashReceived >= cartTotal) {
-                            handleCashPayment();
-                            setShowKeypad(false);
-                        } else {
-                            toast.error('Insufficient amount');
-                        }
-                    }}
-                />
-                <Button
-                    onClick={() => {
-                        setShowKeypad(false);
-                        setCashReceived(0);
-                    }}
-                    className="w-full mt-4 h-14 text-lg font-bold bg-gray-600 hover:bg-gray-700 text-white"
-                >
-                    Cancel
-                </Button>
-            </div>
-        );
-    }
+    const balance = cashReceived - cartTotal;
+    const canCompletePayment = cashReceived >= cartTotal;
 
     return (
-        <div className="space-y-4">
-            {/* Order Summary */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+        <div className="grid grid-cols-2 gap-6 h-full">
+            {/* LEFT: Order Summary */}
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 flex flex-col">
                 <h2 className="text-white font-bold text-2xl mb-4">Order Summary</h2>
 
-                <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                <div className="space-y-2 mb-4 flex-1 overflow-y-auto">
                     {cart.map(item => (
                         <div key={item.id} className="flex justify-between text-gray-300 text-lg">
                             <span>{item.quantity}x {item.name}</span>
@@ -125,7 +100,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
                     ))}
                 </div>
 
-                <div className="border-t border-gray-600 pt-4">
+                <div className="border-t border-gray-600 pt-4 mt-auto">
                     <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-lg">
                         <p className="text-blue-200 text-lg mb-2">Total Amount</p>
                         <p className="text-white text-5xl font-bold">£{cartTotal.toFixed(2)}</p>
@@ -133,38 +108,95 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
                 </div>
             </div>
 
-            {/* Payment Methods */}
-            <div className="grid grid-cols-2 gap-4">
-                <Button
-                    onClick={() => {
-                        setPaymentMethod('cash');
-                        setShowKeypad(true);
-                    }}
-                    className={`h-24 text-2xl font-bold rounded-lg transition-all ${
-                        paymentMethod === 'cash'
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
-                    }`}
-                >
-                    <DollarSign className="h-8 w-8 mr-2" />
-                    Cash
-                </Button>
+            {/* RIGHT: Payment Methods & Keypad */}
+            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6 flex flex-col">
+                {/* Payment Method Buttons */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <Button
+                        onClick={() => {
+                            setPaymentMethod('cash');
+                        }}
+                        className={`h-20 text-xl font-bold rounded-lg transition-all ${
+                            paymentMethod === 'cash'
+                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
+                        }`}
+                    >
+                        <DollarSign className="h-6 w-6 mr-2" />
+                        Cash
+                    </Button>
 
-                <Button
-                    onClick={() => {
-                        setPaymentMethod('card');
-                        handleCardPayment();
-                    }}
-                    className={`h-24 text-2xl font-bold rounded-lg transition-all ${
-                        paymentMethod === 'card'
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                            : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
-                    }`}
-                    disabled={isProcessing}
-                >
-                    <CreditCard className="h-8 w-8 mr-2" />
-                    {isProcessing ? 'Processing...' : 'Card'}
-                </Button>
+                    <Button
+                        onClick={() => {
+                            setPaymentMethod('card');
+                            handleCardPayment();
+                        }}
+                        className={`h-20 text-xl font-bold rounded-lg transition-all ${
+                            paymentMethod === 'card'
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
+                        }`}
+                        disabled={isProcessing}
+                    >
+                        <CreditCard className="h-6 w-6 mr-2" />
+                        {isProcessing ? 'Processing...' : 'Card'}
+                    </Button>
+                </div>
+
+                {/* Cash Input Section */}
+                {paymentMethod === 'cash' && (
+                    <div className="flex-1 flex flex-col">
+                        {/* Amount Display */}
+                        <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 rounded-lg mb-4">
+                            <p className="text-green-200 text-sm mb-1">Amount Received</p>
+                            <p className="text-white text-4xl font-bold">£{cashReceived.toFixed(2)}</p>
+                        </div>
+
+                        {/* Balance Display */}
+                        <div className={`p-4 rounded-lg mb-4 ${
+                            canCompletePayment 
+                                ? 'bg-blue-600' 
+                                : 'bg-red-600'
+                        }`}>
+                            <p className="text-gray-100 text-sm mb-1">
+                                {canCompletePayment ? 'Balance (Change)' : 'Amount Due'}
+                            </p>
+                            <p className={`text-2xl font-bold ${
+                                canCompletePayment 
+                                    ? 'text-green-200' 
+                                    : 'text-red-200'
+                            }`}>
+                                £{Math.abs(balance).toFixed(2)}
+                            </p>
+                        </div>
+
+                        {/* Numeric Keypad */}
+                        <div className="flex-1 flex flex-col">
+                            <NumericKeypad
+                                value={cashReceived}
+                                onChange={setCashReceived}
+                                onComplete={() => {
+                                    if (cashReceived >= cartTotal) {
+                                        handleCashPayment();
+                                    } else {
+                                        toast.error('Insufficient amount');
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Cancel Button */}
+                        <Button
+                            onClick={() => {
+                                setPaymentMethod(null);
+                                setCashReceived(0);
+                            }}
+                            className="w-full mt-4 h-12 text-lg font-bold bg-gray-700 hover:bg-gray-600 text-white"
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <AlertDialog open={showCardConfirm} onOpenChange={setShowCardConfirm}>
