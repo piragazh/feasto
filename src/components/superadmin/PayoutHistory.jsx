@@ -20,8 +20,8 @@ export default function PayoutHistory() {
     const [summaryPeriod, setSummaryPeriod] = useState('monthly'); // 'monthly' or 'yearly'
 
     const { data: restaurants = [] } = useQuery({
-        queryKey: ['restaurants'],
-        queryFn: () => base44.asServiceRole.entities.Restaurant.list(),
+        queryKey: ['restaurants-history'],
+        queryFn: () => base44.entities.Restaurant.list(),
     });
 
     const { data: allPayouts = [], isLoading } = useQuery({
