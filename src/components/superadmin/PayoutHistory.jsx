@@ -26,7 +26,7 @@ export default function PayoutHistory() {
 
     const { data: allPayouts = [], isLoading } = useQuery({
         queryKey: ['all-payouts'],
-        queryFn: () => base44.asServiceRole.entities.Payout.list('-created_date', 500),
+        queryFn: () => base44.entities.Payout.list('-created_date', 500),
         refetchInterval: 30000,
     });
 
