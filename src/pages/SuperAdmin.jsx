@@ -15,6 +15,7 @@ import EnhancedAnalytics from '@/components/superadmin/EnhancedAnalytics';
 import EnhancedDriverManagement from '@/components/superadmin/EnhancedDriverManagement';
 import PlatformRefundOversight from '@/components/superadmin/PlatformRefundOversight';
 import PayoutManagement from '@/components/superadmin/PayoutManagement';
+import PayoutHistory from '@/components/superadmin/PayoutHistory';
 import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManagement';
 import ReviewModeration from '@/components/restaurant/ReviewModeration';
 import PromotionOversight from '@/components/superadmin/PromotionOversight';
@@ -244,6 +245,7 @@ export default function SuperAdmin() {
                 {activeTab === 'drivers' && <EnhancedDriverManagement />}
                 {activeTab === 'refunds' && <PlatformRefundOversight />}
                 {activeTab === 'payouts' && <PayoutManagement />}
+                {activeTab === 'payout-history' && <PayoutHistory />}
                 {activeTab === 'reviews' && <ReviewModeration isAdmin={true} />}
                 {activeTab === 'promotions' && <PromotionOversight />}
                 {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
