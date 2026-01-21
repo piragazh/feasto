@@ -69,11 +69,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 mb-3"
                     />
-                    <div className="flex gap-2 overflow-x-auto">
+                    <div className="flex flex-wrap gap-2">
                         <Button
                             variant={!selectedCategory ? "default" : "outline"}
                             onClick={() => setSelectedCategory('')}
-                            className="whitespace-nowrap bg-orange-500 hover:bg-orange-600"
+                            className="text-xs h-7 px-2 bg-orange-500 hover:bg-orange-600"
                         >
                             All
                         </Button>
@@ -82,7 +82,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 key={cat}
                                 variant={selectedCategory === cat ? "default" : "outline"}
                                 onClick={() => setSelectedCategory(cat)}
-                                className={`whitespace-nowrap ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                className={`text-xs h-7 px-2 ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                             >
                                 {cat}
                             </Button>
