@@ -171,6 +171,39 @@ export default function POSOrderQueue({ restaurantId }) {
                     </div>
                 </div>
             ))}
-        </div>
-    );
-}
+            </div>
+
+            {/* Edit Dialog */}
+            {editingOrder && (
+                <OrderEditDialog
+                    order={editingOrder}
+                    open={!!editingOrder}
+                    onClose={() => setEditingOrder(null)}
+                    onUpdate={refetch}
+                    restaurantId={restaurantId}
+                />
+            )}
+
+            {/* Bill Split Dialog */}
+            {splittingOrder && (
+                <BillSplitDialog
+                    order={splittingOrder}
+                    open={!!splittingOrder}
+                    onClose={() => setSplittingOrder(null)}
+                    onUpdate={refetch}
+                />
+            )}
+
+            {/* Promotion Dialog */}
+            {applyingPromo && (
+                <ApplyPromotionDialog
+                    order={applyingPromo}
+                    open={!!applyingPromo}
+                    onClose={() => setApplyingPromo(null)}
+                    onUpdate={refetch}
+                    restaurantId={restaurantId}
+                />
+            )}
+            </div>
+            );
+            }
