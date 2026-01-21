@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { 
     Navigation, MapPin, Phone, MessageSquare, CheckCircle, 
-    DollarSign, Package, Clock, User, LogOut
+    DollarSign, Package, Clock, User, LogOut, TrendingUp, Star,
+    Award, Bike
 } from 'lucide-react';
 import DriverActiveDelivery from '@/components/driver/DriverActiveDelivery';
 import DriverOrderList from '@/components/driver/DriverOrderList';
@@ -73,6 +74,32 @@ export default function DriverApp() {
         refetchInterval: 5000,
     });
 
+    const { data: completedOrders = [] } = useQuery({
+        queryKey: ['driver-completed-orders', driver?.id],
+        queryFn: () => base44.entities.Order.filter({
+            driver_id: driver.id,
+            status: 'delivered'
+        }),
+        enabled: !!driver,
+    });
+
+    const todayEarnings = completedOrders
+        .filter(order => {
+            const orderDate = new Date(order.actual_delivery_time || order.updated_date);
+            const today = new Date();
+            return orderDate.toDateString() === today.toDateString();
+        })
+        .reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
+
+    const weekEarnings = completedOrders
+        .filter(order => {
+            const orderDate = new Date(order.actual_delivery_time || order.updated_date);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return orderDate >= weekAgo;
+        })
+        .reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
+
     const toggleAvailabilityMutation = useMutation({
         mutationFn: (isAvailable) => 
             base44.entities.Driver.update(driver.id, { is_available: isAvailable }),
@@ -96,38 +123,63 @@ export default function DriverApp() {
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Header */}
-            <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                                <Navigation className="h-5 w-5 text-white" />
+                            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center ring-2 ring-white/30">
+                                <Bike className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-lg font-bold text-gray-900">{driver.full_name}</h1>
-                                <p className="text-xs text-gray-500">Driver App</p>
+                                <h1 className="text-lg font-bold">{driver.full_name}</h1>
+                                <div className="flex items-center gap-2 text-xs text-orange-100">
+                                    <Star className="h-3 w-3 fill-current" />
+                                    <span>{driver.rating?.toFixed(1) || '5.0'}</span>
+                                    <span>•</span>
+                                    <span>{driver.total_deliveries || 0} deliveries</span>
+                                </div>
                             </div>
                         </div>
                         
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">
-                                    {driver.is_available ? 'Available' : 'Offline'}
+                            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                                <span className="text-sm font-medium">
+                                    {driver.is_available ? 'Online' : 'Offline'}
                                 </span>
                                 <Switch
                                     checked={driver.is_available}
                                     onCheckedChange={(checked) => 
                                         toggleAvailabilityMutation.mutate(checked)
                                     }
+                                    className="data-[state=checked]:bg-green-400"
                                 />
                             </div>
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => base44.auth.logout()}
+                                className="text-white hover:bg-white/20"
                             >
                                 <LogOut className="h-5 w-5" />
                             </Button>
+                        </div>
+                    </div>
+
+                    {/* Quick Stats Bar */}
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <DollarSign className="h-4 w-4" />
+                                <span className="text-xs font-medium opacity-90">Today</span>
+                            </div>
+                            <p className="text-2xl font-bold">£{todayEarnings.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <TrendingUp className="h-4 w-4" />
+                                <span className="text-xs font-medium opacity-90">This Week</span>
+                            </div>
+                            <p className="text-2xl font-bold">£{weekEarnings.toFixed(2)}</p>
                         </div>
                     </div>
                 </div>
@@ -145,17 +197,45 @@ export default function DriverApp() {
                         }}
                     />
                 ) : (
+                    <>
+                        {/* Quick Actions */}
+                        {driver.is_available && availableOrders.length > 0 && (
+                            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 mb-4">
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                                                <Package className="h-5 w-5 text-white" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-green-900">
+                                                    {availableOrders.length} {availableOrders.length === 1 ? 'Order' : 'Orders'} Available
+                                                </h3>
+                                                <p className="text-sm text-green-700">Ready for pickup</p>
+                                            </div>
+                                        </div>
+                                        <Badge className="bg-green-500 text-white animate-pulse">
+                                            New
+                                        </Badge>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
                     <Tabs defaultValue="orders" className="space-y-4">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="orders">
+                        <TabsList className="grid w-full grid-cols-3 bg-white shadow-sm">
+                            <TabsTrigger value="orders" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
                                 <Package className="h-4 w-4 mr-2" />
                                 Available
+                                {availableOrders.length > 0 && (
+                                    <Badge className="ml-2 bg-red-500 text-white">{availableOrders.length}</Badge>
+                                )}
                             </TabsTrigger>
-                            <TabsTrigger value="stats">
+                            <TabsTrigger value="stats" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
                                 <DollarSign className="h-4 w-4 mr-2" />
                                 Earnings
                             </TabsTrigger>
-                            <TabsTrigger value="messages">
+                            <TabsTrigger value="messages" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
                                 <MessageSquare className="h-4 w-4 mr-2" />
                                 Messages
                             </TabsTrigger>
@@ -163,21 +243,39 @@ export default function DriverApp() {
 
                         <TabsContent value="orders">
                             {!driver.is_available ? (
-                                <Card>
+                                <Card className="border-2 border-dashed">
                                     <CardContent className="text-center py-12">
-                                        <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Clock className="h-10 w-10 text-gray-400" />
+                                        </div>
                                         <h3 className="text-xl font-semibold text-gray-700 mb-2">
                                             You're Offline
                                         </h3>
-                                        <p className="text-gray-500 mb-4">
+                                        <p className="text-gray-500 mb-6">
                                             Turn on availability to see and accept orders
                                         </p>
                                         <Button 
                                             onClick={() => toggleAvailabilityMutation.mutate(true)}
-                                            className="bg-orange-500 hover:bg-orange-600"
+                                            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
+                                            size="lg"
                                         >
+                                            <CheckCircle className="h-5 w-5 mr-2" />
                                             Go Online
                                         </Button>
+                                    </CardContent>
+                                </Card>
+                            ) : availableOrders.length === 0 ? (
+                                <Card>
+                                    <CardContent className="text-center py-12">
+                                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <CheckCircle className="h-10 w-10 text-green-500" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                                            All Caught Up!
+                                        </h3>
+                                        <p className="text-gray-500">
+                                            No orders available right now. New orders will appear here automatically.
+                                        </p>
                                     </CardContent>
                                 </Card>
                             ) : (
@@ -196,6 +294,7 @@ export default function DriverApp() {
                             <DriverCommunication driverId={driver.id} />
                         </TabsContent>
                     </Tabs>
+                    </>
                 )}
             </div>
         </div>
