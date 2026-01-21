@@ -7,12 +7,8 @@ import { Button } from "@/components/ui/button";
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
-    const gtmId = (import.meta.env.VITE_GTM_ID || '').trim();
-    console.log('GTM ID value:', gtmId, 'Type:', typeof gtmId, 'Length:', gtmId?.length);
-    if (!gtmId || gtmId === 'undefined' || gtmId.length === 0) {
-        console.error('GTM ID not configured. Current value:', gtmId);
-        return;
-    }
+    const gtmId = 'GTM-PJ3JPPSN';
+    console.log('GTM ID value:', gtmId);
     
     // Store for later use
     window.__gtmId = gtmId;
