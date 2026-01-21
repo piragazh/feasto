@@ -54,6 +54,11 @@ export default function EnhancedAnalytics() {
         queryFn: () => base44.entities.Restaurant.list(),
     });
 
+    const { data: payouts = [] } = useQuery({
+        queryKey: ['accounting-payouts'],
+        queryFn: () => base44.entities.Payout.list(),
+    });
+
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             const orderDate = moment(order.created_date);
@@ -86,6 +91,7 @@ export default function EnhancedAnalytics() {
                     order_type_breakdown: { delivery: 0, collection: 0 },
                     commission_rate: restaurant?.commission_rate || 15,
                     commission_type: restaurant?.commission_type || 'percentage',
+                    already_paid: 0,
                 };
             }
 
@@ -116,8 +122,15 @@ export default function EnhancedAnalytics() {
                 (breakdown[restaurantId].order_type_breakdown[orderType] || 0) + (order.total || 0);
         });
 
+        // Add already paid amounts from payouts
+        payouts.forEach(payout => {
+            if (payout.status === 'paid' && breakdown[payout.restaurant_id]) {
+                breakdown[payout.restaurant_id].already_paid += payout.net_payout || 0;
+            }
+        });
+
         return Object.values(breakdown).sort((a, b) => b.total_sales - a.total_sales);
-    }, [filteredOrders, restaurants]);
+    }, [filteredOrders, restaurants, payouts]);
 
     // Daily sales data
     const dailySales = useMemo(() => {
@@ -213,13 +226,14 @@ export default function EnhancedAnalytics() {
             ['Average Order Value', `£${(summary.total_sales / summary.total_orders || 0).toFixed(2)}`],
             [],
             ['RESTAURANT BREAKDOWN'],
-            ['Restaurant Name', 'Orders', 'Total Sales', 'Commission', 'Net Pay', 'Cash', 'Card', 'Apple Pay', 'Google Pay', 'Delivery', 'Collection', 'Avg Order'],
+            ['Restaurant Name', 'Orders', 'Total Sales', 'Commission', 'Net Pay', 'Already Paid', 'Cash', 'Card', 'Apple Pay', 'Google Pay', 'Delivery', 'Collection', 'Avg Order'],
             ...restaurantBreakdown.map(r => [
                 r.restaurant_name,
                 r.order_count,
                 `£${r.total_sales.toFixed(2)}`,
                 `£${r.total_commission.toFixed(2)}`,
                 `£${r.net_pay.toFixed(2)}`,
+                `£${r.already_paid.toFixed(2)}`,
                 `£${r.payment_breakdown.cash.toFixed(2)}`,
                 `£${r.payment_breakdown.card.toFixed(2)}`,
                 `£${r.payment_breakdown.apple_pay.toFixed(2)}`,
@@ -510,6 +524,7 @@ export default function EnhancedAnalytics() {
                                     <th className="text-right py-3 px-4">Total Sales</th>
                                     <th className="text-right py-3 px-4">Commission</th>
                                     <th className="text-right py-3 px-4">Net Pay</th>
+                                    <th className="text-right py-3 px-4">Already Paid</th>
                                     <th className="text-right py-3 px-4">Cash</th>
                                     <th className="text-right py-3 px-4">Card</th>
                                     <th className="text-right py-3 px-4">Delivery</th>
@@ -532,6 +547,7 @@ export default function EnhancedAnalytics() {
                                             </span>
                                         </td>
                                         <td className="text-right py-3 px-4 font-bold text-blue-600">£{restaurant.net_pay.toFixed(2)}</td>
+                                        <td className="text-right py-3 px-4 font-semibold text-green-600">£{restaurant.already_paid.toFixed(2)}</td>
                                         <td className="text-right py-3 px-4 text-sm">£{restaurant.payment_breakdown.cash.toFixed(2)}</td>
                                         <td className="text-right py-3 px-4 text-sm">£{(restaurant.payment_breakdown.card + restaurant.payment_breakdown.apple_pay + restaurant.payment_breakdown.google_pay).toFixed(2)}</td>
                                         <td className="text-right py-3 px-4 text-sm">£{restaurant.order_type_breakdown.delivery.toFixed(2)}</td>
@@ -547,6 +563,9 @@ export default function EnhancedAnalytics() {
                                     <td className="text-right py-3 px-4 text-green-600">£{summary.total_sales.toFixed(2)}</td>
                                     <td className="text-right py-3 px-4 text-orange-600">£{summary.total_commission.toFixed(2)}</td>
                                     <td className="text-right py-3 px-4 text-blue-600">£{summary.total_net_pay.toFixed(2)}</td>
+                                    <td className="text-right py-3 px-4 text-green-600">
+                                        £{restaurantBreakdown.reduce((sum, r) => sum + r.already_paid, 0).toFixed(2)}
+                                    </td>
                                     <td className="text-right py-3 px-4" colSpan="5"></td>
                                 </tr>
                             </tfoot>
