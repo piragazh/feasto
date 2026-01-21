@@ -180,6 +180,14 @@ export default function SuperAdmin() {
                             Payouts
                         </Button>
                         <Button
+                            variant={activeTab === 'payout-history' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('payout-history')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <DollarSign className="h-4 w-4" />
+                            Payout History
+                        </Button>
+                        <Button
                             variant={activeTab === 'admin-restaurants' ? 'secondary' : 'ghost'}
                             onClick={() => setActiveTab('admin-restaurants')}
                             className="flex items-center gap-2 text-white hover:bg-white/10"
