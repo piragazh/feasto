@@ -201,6 +201,18 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </Button>
                 </div>
             </div>
+
+            {selectedItem && (
+                <POSItemCustomization
+                    item={selectedItem}
+                    open={customizationOpen}
+                    onClose={() => {
+                        setCustomizationOpen(false);
+                        setSelectedItem(null);
+                    }}
+                    onConfirm={handleCustomizationConfirm}
+                />
+            )}
         </div>
     );
 }
