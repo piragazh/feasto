@@ -59,9 +59,24 @@ export default function POSOrderQueue({ restaurantId }) {
         return <Badge className={styles[status] || 'bg-gray-500'}>{status}</Badge>;
     };
 
+    const displayOrders = searchResults !== null ? { search: searchResults } : statusGroups;
+
     return (
-        <div className="grid grid-cols-4 gap-4">
-            {Object.entries(statusGroups).map(([status, statusOrders]) => (
+        <div>
+            <OrderSearch onSearch={handleSearch} />
+
+            {searchResults !== null && (
+                <Button
+                    onClick={() => setSearchResults(null)}
+                    variant="outline"
+                    className="mb-4 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                >
+                    Clear Search
+                </Button>
+            )}
+
+            <div className={`grid gap-4 ${searchResults !== null ? 'grid-cols-1' : 'grid-cols-4'}`}>
+                {Object.entries(displayOrders).map(([status, statusOrders]) => (
                 <div key={status} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
                     <h3 className="text-white font-bold mb-4 capitalize text-center p-2 bg-gray-700 rounded">
                         {status.replace('_', ' ')} ({statusOrders.length})
