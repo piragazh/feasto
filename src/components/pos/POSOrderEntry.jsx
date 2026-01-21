@@ -105,6 +105,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 cart={cart} 
                 cartTotal={cartTotal} 
                 onPaymentComplete={handlePaymentComplete}
+                onBackToCart={() => setShowPayment(false)}
             />
         );
      }
