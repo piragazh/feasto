@@ -1,17 +1,37 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard } from 'lucide-react';
+import { DollarSign, CreditCard, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [cashReceived, setCashReceived] = useState(0);
     const [showKeypad, setShowKeypad] = useState(false);
+    const [showCardConfirm, setShowCardConfirm] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const change = cashReceived - cartTotal;
 
     const handleCashPayment = () => {
+        if (cart.length === 0) {
+            toast.error('Cart is empty');
+            return;
+        }
+        if (cartTotal <= 0) {
+            toast.error('Invalid total amount');
+            return;
+        }
         if (cashReceived < cartTotal) {
             toast.error('Insufficient amount');
             return;
@@ -22,10 +42,36 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete }) {
         setPaymentMethod(null);
     };
 
-    const handleCardPayment = () => {
-        toast.success('Card payment processed');
-        onPaymentComplete();
-        setPaymentMethod(null);
+    const validateCardPayment = () => {
+        if (cart.length === 0) {
+            toast.error('Cart is empty');
+            return false;
+        }
+        if (cartTotal <= 0) {
+            toast.error('Invalid total amount');
+            return false;
+        }
+        return true;
+    };
+
+    const handleCardPayment = async () => {
+        if (!validateCardPayment()) return;
+        
+        setShowCardConfirm(true);
+    };
+
+    const processCardPayment = async () => {
+        setIsProcessing(true);
+        try {
+            toast.success('Card payment processed');
+            onPaymentComplete();
+            setPaymentMethod(null);
+            setShowCardConfirm(false);
+        } catch (error) {
+            toast.error('Card payment failed');
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     if (cart.length === 0) {
