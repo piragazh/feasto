@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard, AlertCircle } from 'lucide-react';
+import { DollarSign, CreditCard, AlertCircle, Smartphone, Wallet, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
 import {
@@ -17,8 +17,7 @@ import {
 export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart }) {
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [cashReceived, setCashReceived] = useState(0);
-    const [showKeypad, setShowKeypad] = useState(false);
-    const [showCardConfirm, setShowCardConfirm] = useState(false);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
     const change = cashReceived - cartTotal;
@@ -54,21 +53,27 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         return true;
     };
 
-    const handleCardPayment = async () => {
+    const handleDigitalPayment = async (method, methodName) => {
         if (!validateCardPayment()) return;
-        
-        setShowCardConfirm(true);
+        setPaymentMethod(method);
+        setShowConfirmDialog(true);
     };
 
-    const processCardPayment = async () => {
+    const processDigitalPayment = async () => {
         setIsProcessing(true);
         try {
-            toast.success('Card payment processed');
+            const methodNames = {
+                card: 'Card',
+                apple_pay: 'Apple Pay',
+                google_pay: 'Google Pay',
+                pay_later: 'Pay Later'
+            };
+            toast.success(`${methodNames[paymentMethod]} payment processed`);
             onPaymentComplete();
             setPaymentMethod(null);
-            setShowCardConfirm(false);
+            setShowConfirmDialog(false);
         } catch (error) {
-            toast.error('Card payment failed');
+            toast.error('Payment failed');
         } finally {
             setIsProcessing(false);
         }
@@ -119,35 +124,53 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             {/* RIGHT: Payment Methods & Keypad */}
             <div className="bg-gray-900 rounded-lg border border-gray-700 p-6 flex flex-col">
                 {/* Payment Method Buttons */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-3 mb-6">
                     <Button
-                        onClick={() => {
-                            setPaymentMethod('cash');
-                        }}
-                        className={`h-20 text-xl font-bold rounded-lg transition-all ${
+                        onClick={() => setPaymentMethod('cash')}
+                        className={`h-16 text-lg font-bold rounded-lg transition-all ${
                             paymentMethod === 'cash'
                                 ? 'bg-green-600 hover:bg-green-700 text-white'
                                 : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
                         }`}
                     >
-                        <DollarSign className="h-6 w-6 mr-2" />
+                        <DollarSign className="h-5 w-5 mr-2" />
                         Cash
                     </Button>
 
                     <Button
-                        onClick={() => {
-                            setPaymentMethod('card');
-                            handleCardPayment();
-                        }}
-                        className={`h-20 text-xl font-bold rounded-lg transition-all ${
-                            paymentMethod === 'card'
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                : 'bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600'
-                        }`}
+                        onClick={() => handleDigitalPayment('card', 'Card')}
+                        className="h-16 text-lg font-bold rounded-lg transition-all bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600"
                         disabled={isProcessing}
                     >
-                        <CreditCard className="h-6 w-6 mr-2" />
-                        {isProcessing ? 'Processing...' : 'Card'}
+                        <CreditCard className="h-5 w-5 mr-2" />
+                        Card
+                    </Button>
+
+                    <Button
+                        onClick={() => handleDigitalPayment('apple_pay', 'Apple Pay')}
+                        className="h-16 text-lg font-bold rounded-lg transition-all bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600"
+                        disabled={isProcessing}
+                    >
+                        <Smartphone className="h-5 w-5 mr-2" />
+                        Apple Pay
+                    </Button>
+
+                    <Button
+                        onClick={() => handleDigitalPayment('google_pay', 'Google Pay')}
+                        className="h-16 text-lg font-bold rounded-lg transition-all bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600"
+                        disabled={isProcessing}
+                    >
+                        <Wallet className="h-5 w-5 mr-2" />
+                        Google Pay
+                    </Button>
+
+                    <Button
+                        onClick={() => handleDigitalPayment('pay_later', 'Pay Later')}
+                        className="h-16 text-lg font-bold rounded-lg transition-all bg-gray-700 hover:bg-gray-600 text-white border-2 border-gray-600 col-span-2"
+                        disabled={isProcessing}
+                    >
+                        <Clock className="h-5 w-5 mr-2" />
+                        Pay Later
                     </Button>
                 </div>
 
@@ -207,15 +230,18 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 )}
             </div>
 
-            <AlertDialog open={showCardConfirm} onOpenChange={setShowCardConfirm}>
+            <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
                 <AlertDialogContent className="bg-gray-800 border-gray-700">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-white flex items-center gap-2">
                             <AlertCircle className="h-5 w-5 text-blue-500" />
-                            Confirm Card Payment
+                            Confirm Payment
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-gray-300">
-                            Process card payment for £{cartTotal.toFixed(2)}?
+                            {paymentMethod === 'pay_later' 
+                                ? `Mark order as "Pay Later" for £${cartTotal.toFixed(2)}?`
+                                : `Process payment for £${cartTotal.toFixed(2)}?`
+                            }
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -223,7 +249,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction 
-                            onClick={processCardPayment}
+                            onClick={processDigitalPayment}
                             disabled={isProcessing}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
