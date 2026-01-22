@@ -159,28 +159,25 @@ export default function POSDashboard() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="flex gap-2">
+                            <div className="flex gap-3 justify-start">
                                 <Button
                                     variant={orderType === 'collection' ? 'default' : 'outline'}
                                     onClick={() => setOrderType('collection')}
-                                    className={orderType === 'collection' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}
-                                    size="sm"
+                                    className={`h-14 px-6 text-base font-bold ${orderType === 'collection' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                                 >
                                     Collection
                                 </Button>
                                 <Button
                                     variant={orderType === 'takeaway' ? 'default' : 'outline'}
                                     onClick={() => setOrderType('takeaway')}
-                                    className={orderType === 'takeaway' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}
-                                    size="sm"
+                                    className={`h-14 px-6 text-base font-bold ${orderType === 'takeaway' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                                 >
                                     Takeaway
                                 </Button>
                                 <Button
                                     variant={orderType === 'dine_in' ? 'default' : 'outline'}
                                     onClick={() => setOrderType('dine_in')}
-                                    className={orderType === 'dine_in' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}
-                                    size="sm"
+                                    className={`h-14 px-6 text-base font-bold ${orderType === 'dine_in' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                                 >
                                     Dine In
                                 </Button>
