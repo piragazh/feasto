@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Flame, Leaf, Gift } from 'lucide-react';
+import { Plus, Flame, Leaf, Gift, Settings2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function MenuItemCard({ item, promotion, onAddToCart }) {
@@ -43,7 +43,10 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                         <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
                     )}
                     {hasCustomizations && isAvailable && (
-                        <Badge variant="outline" className="text-xs">Customizable</Badge>
+                        <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-xs gap-1 font-medium">
+                            <Settings2 className="h-3 w-3" />
+                            Customizable
+                        </Badge>
                     )}
                 </div>
                 {item.description && (
