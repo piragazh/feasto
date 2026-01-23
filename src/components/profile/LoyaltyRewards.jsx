@@ -30,7 +30,10 @@ export default function LoyaltyRewards({ user }) {
 
     const { data: settings = [] } = useQuery({
         queryKey: ['loyalty-settings'],
-        queryFn: () => base44.entities.SystemSettings.list(),
+        queryFn: async () => {
+            const data = await base44.entities.SystemSettings.list();
+            return Array.isArray(data) ? data : [];
+        },
     });
 
     const { data: redeemCoupons = [] } = useQuery({
