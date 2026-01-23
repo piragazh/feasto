@@ -66,10 +66,10 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
                                 }
                             }}
                             size="sm"
-                            className="bg-orange-500 hover:bg-orange-600 h-8"
+                            className="bg-orange-500 hover:bg-orange-600 h-8 text-xs font-semibold"
                         >
                             <Plus className="h-4 w-4 mr-1" />
-                            {hasCategoryRules ? 'Customize' : 'Add'}
+                            {hasCategoryRules ? '✨ Customize Deal' : 'Add to Cart'}
                         </Button>
                     </div>
                 </div>
