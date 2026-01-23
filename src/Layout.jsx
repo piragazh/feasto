@@ -377,8 +377,8 @@ export default function Layout({ children, currentPageName }) {
 
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-                                            <Menu className="h-5 w-5 md:hidden" />
+                                        <Button variant="ghost" size="icon" className="rounded-full h-11 w-11 md:h-9 md:w-9">
+                                            <Menu className="h-6 w-6 md:hidden" />
                                             <User className="h-5 w-5 hidden md:block" />
                                         </Button>
                                     </DropdownMenuTrigger>
