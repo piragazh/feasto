@@ -155,7 +155,7 @@ export default function Layout({ children, currentPageName }) {
             document.head.appendChild(canonical);
         }
         canonical.href = window.location.href;
-    }, [location]);
+    }, [location, customDomainRestaurant]);
 
     useEffect(() => {
         initializeGTM();
