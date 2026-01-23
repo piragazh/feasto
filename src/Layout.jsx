@@ -324,40 +324,7 @@ export default function Layout({ children, currentPageName }) {
                                 )}
                             </Link>
 
-                            <nav className="hidden md:flex items-center gap-8">
-                                <Link 
-                                    to={homeUrl} 
-                                    className={`text-sm font-medium transition-colors ${
-                                        currentPageName === 'Home' || currentPageName === 'Restaurant'
-                                            ? 'text-orange-500' 
-                                            : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                                >
-                                    {customDomainRestaurantId ? 'Home' : 'Restaurants'}
-                                </Link>
-                                <Link 
-                                    to={createPageUrl('Orders')} 
-                                    className={`text-sm font-medium transition-colors ${
-                                        currentPageName === 'Orders' 
-                                            ? 'text-orange-500' 
-                                            : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                                >
-                                    My Orders
-                                </Link>
-                                {user?.role === 'admin' && (
-                                    <Link 
-                                        to={createPageUrl('ManageCoupons')} 
-                                        className={`text-sm font-medium transition-colors ${
-                                            currentPageName === 'ManageCoupons' 
-                                                ? 'text-orange-500' 
-                                                : 'text-gray-600 hover:text-gray-900'
-                                        }`}
-                                    >
-                                        Coupons
-                                    </Link>
-                                )}
-                            </nav>
+
 
                             <div className="flex items-center gap-2">
                                 <div className="hidden md:flex items-center gap-3">
