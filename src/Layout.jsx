@@ -63,6 +63,17 @@ export default function Layout({ children, currentPageName }) {
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
+    // Fetch restaurant data if custom domain is set
+    const { data: customDomainRestaurant } = useQuery({
+        queryKey: ['custom-domain-restaurant', customDomainRestaurantId],
+        queryFn: async () => {
+            if (!customDomainRestaurantId) return null;
+            const restaurants = await base44.entities.Restaurant.filter({ id: customDomainRestaurantId });
+            return restaurants?.[0] || null;
+        },
+        enabled: !!customDomainRestaurantId,
+    });
+
     // SEO Meta Tags
     useEffect(() => {
         // Set favicon for custom domain
@@ -247,17 +258,6 @@ export default function Layout({ children, currentPageName }) {
             setCustomDomainChecked(true);
         }
     };
-
-    // Fetch restaurant data if custom domain is set
-    const { data: customDomainRestaurant } = useQuery({
-        queryKey: ['custom-domain-restaurant', customDomainRestaurantId],
-        queryFn: async () => {
-            if (!customDomainRestaurantId) return null;
-            const restaurants = await base44.entities.Restaurant.filter({ id: customDomainRestaurantId });
-            return restaurants?.[0] || null;
-        },
-        enabled: !!customDomainRestaurantId,
-    });
 
     const hideHeader = ['Checkout', 'POSDashboard'].includes(currentPageName);
     const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService'].includes(currentPageName);
