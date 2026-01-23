@@ -43,7 +43,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                         <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
                     )}
                     {hasCustomizations && isAvailable && (
-                        <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-xs gap-1 font-medium">
+                        <Badge variant="outline" className="text-xs gap-1 text-orange-600 border-orange-300">
                             <Settings2 className="h-3 w-3" />
                             Customizable
                         </Badge>
