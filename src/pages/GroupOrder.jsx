@@ -37,7 +37,7 @@ export default function GroupOrder() {
         queryKey: ['group-order', shareCode],
         queryFn: async () => {
             const orders = await base44.entities.GroupOrder.filter({ share_code: shareCode });
-            return orders[0];
+            return Array.isArray(orders) ? orders[0] : null;
         },
         enabled: !!shareCode,
         refetchInterval: 3000,
