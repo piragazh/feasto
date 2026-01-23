@@ -13,9 +13,9 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group relative bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-200 p-3 hover:shadow-lg transition-all duration-300"
+            className="group relative bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-200 p-3 hover:shadow-lg transition-all duration-300 h-full flex flex-col"
         >
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-1">
                 {deal.image_url && (
                     <img
                         src={deal.image_url}
@@ -28,8 +28,7 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
                     <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-bold text-base text-gray-900">{deal.name}</h3>
                         <Badge className="bg-orange-500 text-white text-xs flex-shrink-0">
-                            <Percent className="h-3 w-3 mr-1" />
-                            {discount}%
+                            {discount}% OFF
                         </Badge>
                     </div>
                     
