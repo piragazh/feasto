@@ -1100,7 +1100,7 @@ export default function Restaurant() {
                                  <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
                                      {matchingKey}
                                  </h3>
-                                 <div className="space-y-2">
+                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                                      {categoryItems.map(item => (
                                          <MenuItemCard 
                                              key={item.id} 
