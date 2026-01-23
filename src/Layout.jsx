@@ -65,9 +65,23 @@ export default function Layout({ children, currentPageName }) {
 
     // SEO Meta Tags
     useEffect(() => {
+        // Set favicon for custom domain
+        if (customDomainRestaurant?.logo_url) {
+            let favicon = document.querySelector('link[rel="icon"]');
+            if (!favicon) {
+                favicon = document.createElement('link');
+                favicon.rel = 'icon';
+                document.head.appendChild(favicon);
+            }
+            favicon.href = customDomainRestaurant.logo_url;
+        }
+
         // Set title and meta tags
         if (customDomainRestaurant?.name) {
-            document.title = `${customDomainRestaurant.name} - Order Online`;
+            const titleText = customDomainRestaurant.description 
+                ? `${customDomainRestaurant.name} - ${customDomainRestaurant.description}`
+                : `${customDomainRestaurant.name} - Order Online`;
+            document.title = titleText;
         } else {
             document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
         }
@@ -98,11 +112,11 @@ export default function Layout({ children, currentPageName }) {
 
         // Open Graph tags
         const ogTags = [
-            { property: 'og:title', content: 'MealDrop - Food Delivery' },
-            { property: 'og:description', content: 'Order food online from your favourite restaurants' },
+            { property: 'og:title', content: customDomainRestaurant?.name || 'MealDrop - Food Delivery' },
+            { property: 'og:description', content: customDomainRestaurant?.description || 'Order food online from your favourite restaurants' },
             { property: 'og:type', content: 'website' },
             { property: 'og:url', content: window.location.href },
-            { property: 'og:image', content: 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
+            { property: 'og:image', content: customDomainRestaurant?.logo_url || customDomainRestaurant?.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
         ];
 
         ogTags.forEach(({ property, content }) => {
@@ -118,9 +132,9 @@ export default function Layout({ children, currentPageName }) {
         // Twitter Card tags
         const twitterTags = [
             { name: 'twitter:card', content: 'summary_large_image' },
-            { name: 'twitter:title', content: 'MealDrop - Food Delivery' },
-            { name: 'twitter:description', content: 'Order food online from your favourite restaurants' },
-            { name: 'twitter:image', content: 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
+            { name: 'twitter:title', content: customDomainRestaurant?.name || 'MealDrop - Food Delivery' },
+            { name: 'twitter:description', content: customDomainRestaurant?.description || 'Order food online from your favourite restaurants' },
+            { name: 'twitter:image', content: customDomainRestaurant?.logo_url || customDomainRestaurant?.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
         ];
 
         twitterTags.forEach(({ name, content }) => {
