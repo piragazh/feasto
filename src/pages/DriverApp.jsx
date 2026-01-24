@@ -36,21 +36,15 @@ export default function DriverApp() {
             const userData = await base44.auth.me();
             setUser(userData);
             
-            if (!userData.driver_id) {
-                // Create driver profile if not exists
-                const newDriver = await base44.entities.Driver.create({
-                    full_name: userData.full_name,
-                    phone: userData.phone || '',
-                    vehicle_type: 'bike',
-                    is_available: true,
-                    current_location: { lat: 0, lng: 0 }
-                });
-                
-                await base44.auth.updateMe({ driver_id: newDriver.id });
-                setDriver(newDriver);
-            } else {
-                const drivers = await base44.entities.Driver.filter({ id: userData.driver_id });
+            // Find driver by email (not created_by or driver_id)
+            const drivers = await base44.entities.Driver.filter({ email: userData.email });
+            
+            if (drivers && drivers.length > 0) {
                 setDriver(drivers[0]);
+            } else {
+                // No driver profile found
+                toast.error('No driver profile found. Please contact your restaurant manager to add you as a driver.');
+                setTimeout(() => base44.auth.logout(), 3000);
             }
         } catch (e) {
             base44.auth.redirectToLogin();
