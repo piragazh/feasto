@@ -381,46 +381,68 @@ export default function DriverApp() {
                 )}
             </div>
 
-            {/* PWA Install Prompt */}
-            {driver.is_available && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
-                    <div className="max-w-4xl mx-auto px-4 py-3">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-3 h-3 rounded-full animate-pulse ${driver.is_available ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-900">
-                                        {activeOrders.length > 0 ? `${activeOrders.length} Active Delivery` : 'Ready for Orders'}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                        {activeOrders.length > 0 ? 'Tap to view details' : `${availableOrders.length} orders available`}
-                                    </p>
-                                </div>
+            {/* Persistent Bottom Status Bar */}
+            <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-gray-800 border-t border-gray-700 shadow-2xl z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+                <div className="max-w-4xl mx-auto px-4 py-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${driver.is_available ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                            <div>
+                                <p className="text-sm font-semibold text-white">
+                                    {activeOrders.length > 0 
+                                        ? `${activeOrders.length} Active ${activeOrders.length === 1 ? 'Delivery' : 'Deliveries'}` 
+                                        : driver.is_available 
+                                            ? 'Ready for Orders' 
+                                            : 'Offline'}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    {activeOrders.length > 0 
+                                        ? 'In progress' 
+                                        : driver.is_available 
+                                            ? `${availableOrders.length} available` 
+                                            : 'Go online to receive orders'}
+                                </p>
                             </div>
-                            {activeOrders.length === 0 && availableOrders.length > 0 && (
-                                <Badge className="bg-green-500 text-white animate-bounce">
-                                    {availableOrders.length} New
-                                </Badge>
-                            )}
                         </div>
+                        {driver.is_available && activeOrders.length === 0 && availableOrders.length > 0 && (
+                            <Badge className="bg-green-500 text-white animate-bounce shadow-lg">
+                                {availableOrders.length} New
+                            </Badge>
+                        )}
+                        {activeOrders.length > 0 && (
+                            <Badge className="bg-orange-500 text-white shadow-lg">
+                                En Route
+                            </Badge>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
 
             {/* Customer Messaging Dialog */}
             <Dialog open={!!messagingOrder} onOpenChange={() => setMessagingOrder(null)}>
-                <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle>Message Customer</DialogTitle>
-                        <p className="text-sm text-gray-500">
-                            Order #{messagingOrder?.id?.slice(-6)} • {messagingOrder?.delivery_address}
-                        </p>
+                <DialogContent className="max-w-md h-[85vh] flex flex-col p-0">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <DialogTitle className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-blue-600" />
+                            Message Customer
+                        </DialogTitle>
+                        <div className="flex items-start gap-2 mt-2">
+                            <MapPin className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
+                            <div className="text-sm text-gray-600">
+                                <p className="font-semibold">Order #{messagingOrder?.id?.slice(-6)}</p>
+                                <p className="text-xs">{messagingOrder?.delivery_address}</p>
+                            </div>
+                        </div>
                     </DialogHeader>
                     
-                    <div className="flex-1 overflow-y-auto space-y-3 py-4 max-h-[400px]">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
                         {orderMessages.length === 0 ? (
-                            <div className="text-center text-gray-500 text-sm py-8">
-                                No messages yet. Start the conversation!
+                            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                                    <MessageSquare className="h-8 w-8 text-blue-500" />
+                                </div>
+                                <p className="text-gray-600 font-medium">No messages yet</p>
+                                <p className="text-sm text-gray-500 mt-1">Start the conversation with the customer</p>
                             </div>
                         ) : (
                             orderMessages.map((msg) => (
@@ -428,13 +450,13 @@ export default function DriverApp() {
                                     key={msg.id}
                                     className={`flex ${msg.sender_type === 'restaurant' ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                    <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
                                         msg.sender_type === 'restaurant' 
-                                            ? 'bg-blue-500 text-white' 
-                                            : 'bg-gray-100 text-gray-900'
+                                            ? 'bg-blue-500 text-white rounded-br-sm' 
+                                            : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                                     }`}>
-                                        <p className="text-sm">{msg.message}</p>
-                                        <p className={`text-xs mt-1 ${
+                                        <p className="text-sm leading-relaxed">{msg.message}</p>
+                                        <p className={`text-xs mt-1.5 ${
                                             msg.sender_type === 'restaurant' ? 'text-blue-100' : 'text-gray-500'
                                         }`}>
                                             {new Date(msg.created_date).toLocaleTimeString([], { 
@@ -448,29 +470,32 @@ export default function DriverApp() {
                         )}
                     </div>
 
-                    <div className="border-t pt-4 space-y-3">
+                    <div className="border-t bg-white px-4 py-4 space-y-3">
                         {/* Quick Templates */}
                         <div className="flex flex-wrap gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setCustomerMessage("I'm on my way!")}
+                                className="text-xs"
                             >
-                                On my way
+                                🚗 On my way
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setCustomerMessage("I'm outside. Please come down.")}
+                                className="text-xs"
                             >
-                                I'm outside
+                                📍 I'm outside
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setCustomerMessage("Could you provide more delivery details?")}
+                                className="text-xs"
                             >
-                                Need details
+                                ❓ Need details
                             </Button>
                         </div>
 
@@ -479,7 +504,7 @@ export default function DriverApp() {
                                 placeholder="Type your message..."
                                 value={customerMessage}
                                 onChange={(e) => setCustomerMessage(e.target.value)}
-                                className="flex-1 min-h-[60px]"
+                                className="flex-1 min-h-[60px] resize-none rounded-xl border-gray-300 focus:border-blue-500"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
@@ -490,9 +515,10 @@ export default function DriverApp() {
                             <Button 
                                 onClick={handleSendMessage}
                                 disabled={!customerMessage.trim() || sendMessageMutation.isPending}
-                                className="bg-blue-500 hover:bg-blue-600"
+                                className="bg-blue-500 hover:bg-blue-600 rounded-xl h-[60px] px-4"
+                                size="lg"
                             >
-                                <Send className="h-4 w-4" />
+                                <Send className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
