@@ -104,11 +104,18 @@ export default function DriverApp() {
         .reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
 
     const toggleAvailabilityMutation = useMutation({
-        mutationFn: (isAvailable) => 
-            base44.entities.Driver.update(driver.id, { is_available: isAvailable }),
-        onSuccess: () => {
+        mutationFn: async (isAvailable) => {
+            await base44.entities.Driver.update(driver.id, { is_available: isAvailable });
+            return isAvailable;
+        },
+        onSuccess: (isAvailable) => {
             queryClient.invalidateQueries(['driver-active-orders']);
-            loadDriverData();
+            queryClient.invalidateQueries(['available-orders']);
+            setDriver({ ...driver, is_available: isAvailable });
+            toast.success(isAvailable ? 'You are now online' : 'You are now offline');
+        },
+        onError: (error) => {
+            toast.error('Failed to update availability: ' + error.message);
         },
     });
 
