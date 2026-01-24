@@ -9,11 +9,9 @@ export default function TermsOfService() {
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <Link to={createPageUrl('Home')}>
-                        <Button size="icon" variant="ghost" className="rounded-full">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                    </Link>
+                    <Button size="icon" variant="ghost" className="rounded-full" onClick={() => window.history.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
                     <h1 className="text-xl font-bold text-gray-900">Terms of Service</h1>
                 </div>
             </div>

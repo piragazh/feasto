@@ -9,12 +9,10 @@ export default function PrivacyPolicy() {
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4">
-                    <Link to={createPageUrl('Home')}>
-                        <Button variant="ghost" size="sm" className="gap-2">
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to Home
-                        </Button>
-                    </Link>
+                    <Button variant="ghost" size="sm" className="gap-2" onClick={() => window.history.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </Button>
                 </div>
             </div>
 
