@@ -11,6 +11,7 @@ import LoyaltyProgram from './pages/LoyaltyProgram';
 import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import Messages from './pages/Messages';
+import NotFound from './pages/NotFound';
 import OrderHistory from './pages/OrderHistory';
 import Orders from './pages/Orders';
 import POSDashboard from './pages/POSDashboard';
@@ -20,7 +21,7 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import NotFound from './pages/NotFound';
+import CookiesPolicy from './pages/CookiesPolicy';
 import __Layout from './Layout.jsx';
 
 
@@ -38,6 +39,7 @@ export const PAGES = {
     "ManageCoupons": ManageCoupons,
     "ManageRestaurantManagers": ManageRestaurantManagers,
     "Messages": Messages,
+    "NotFound": NotFound,
     "OrderHistory": OrderHistory,
     "Orders": Orders,
     "POSDashboard": POSDashboard,
@@ -47,7 +49,7 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "NotFound": NotFound,
+    "CookiesPolicy": CookiesPolicy,
 }
 
 export const pagesConfig = {

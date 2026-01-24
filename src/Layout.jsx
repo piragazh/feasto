@@ -486,6 +486,11 @@ export default function Layout({ children, currentPageName }) {
                                             Terms of Service
                                         </Link>
                                     </li>
+                                    <li>
+                                        <Link to={createPageUrl('CookiesPolicy')} className="hover:text-white transition-colors">
+                                            Cookies Policy
+                                        </Link>
+                                    </li>
                                 </ul>
                             </div>
                             <div>
