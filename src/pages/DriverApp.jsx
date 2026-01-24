@@ -37,12 +37,13 @@ export default function DriverApp() {
             const userData = await base44.auth.me();
             setUser(userData);
             
-            // Find driver by email
-            const drivers = await base44.entities.Driver.filter({ email: userData.email });
+            // Find driver by email (case-insensitive)
+            const allDrivers = await base44.entities.Driver.list();
+            const driver = allDrivers.find(d => d.email?.toLowerCase() === userData.email.toLowerCase());
             
-            if (drivers && drivers.length > 0) {
-                console.log('Driver loaded:', drivers[0]);
-                setDriver(drivers[0]);
+            if (driver) {
+                console.log('Driver loaded:', driver);
+                setDriver(driver);
             } else {
                 console.log('No driver found for email:', userData.email);
                 // No driver profile found - show error state
