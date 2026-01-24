@@ -105,17 +105,21 @@ export default function DriverApp() {
 
     const toggleAvailabilityMutation = useMutation({
         mutationFn: async (isAvailable) => {
+            if (!driver?.id) {
+                throw new Error('Driver ID not found');
+            }
             await base44.entities.Driver.update(driver.id, { is_available: isAvailable });
             return isAvailable;
         },
         onSuccess: (isAvailable) => {
             queryClient.invalidateQueries(['driver-active-orders']);
             queryClient.invalidateQueries(['available-orders']);
-            setDriver({ ...driver, is_available: isAvailable });
+            setDriver(prev => prev && prev !== 'not_found' ? { ...prev, is_available: isAvailable } : prev);
             toast.success(isAvailable ? 'You are now online' : 'You are now offline');
         },
         onError: (error) => {
-            toast.error('Failed to update availability: ' + error.message);
+            toast.error('Failed to update availability');
+            console.error('Toggle availability error:', error);
         },
     });
 
@@ -232,9 +236,14 @@ export default function DriverApp() {
                                 </span>
                                 <Switch
                                     checked={driver.is_available}
-                                    onCheckedChange={(checked) => 
-                                        toggleAvailabilityMutation.mutate(checked)
-                                    }
+                                    onCheckedChange={(checked) => {
+                                        if (driver?.id) {
+                                            toggleAvailabilityMutation.mutate(checked);
+                                        } else {
+                                            toast.error('Driver profile not loaded');
+                                        }
+                                    }}
+                                    disabled={toggleAvailabilityMutation.isPending || !driver?.id}
                                     className="data-[state=checked]:bg-green-400"
                                 />
                             </div>
@@ -365,7 +374,14 @@ export default function DriverApp() {
                                             Turn on availability to see and accept orders
                                         </p>
                                         <Button 
-                                            onClick={() => toggleAvailabilityMutation.mutate(true)}
+                                            onClick={() => {
+                                                if (driver?.id) {
+                                                    toggleAvailabilityMutation.mutate(true);
+                                                } else {
+                                                    toast.error('Driver profile not loaded');
+                                                }
+                                            }}
+                                            disabled={toggleAvailabilityMutation.isPending || !driver?.id}
                                             className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
                                             size="lg"
                                         >
