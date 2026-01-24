@@ -259,9 +259,9 @@ export default function Layout({ children, currentPageName }) {
         }
     };
 
-    const hideHeader = ['Checkout', 'POSDashboard'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard'].includes(currentPageName);
+    const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp'].includes(currentPageName);
     
     // Custom domain home link
     const homeUrl = customDomainRestaurantId 

@@ -124,9 +124,21 @@ export default function DriverApp() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="min-h-screen bg-gray-50 pb-safe">
+            <style>{`
+                html, body {
+                    overscroll-behavior: none;
+                    -webkit-overflow-scrolling: touch;
+                    touch-action: manipulation;
+                }
+                @supports (padding: env(safe-area-inset-top)) {
+                    .pb-safe { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+                    .sticky-header { padding-top: env(safe-area-inset-top); }
+                }
+            `}</style>
+            
             {/* Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg sticky top-0 z-10">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg sticky top-0 z-50 sticky-header">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -189,7 +201,7 @@ export default function DriverApp() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-4xl mx-auto px-4 py-6">
+            <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
                 {activeOrders.length > 0 ? (
                     activeOrders.length > 1 ? (
                         <MultiOrderDelivery 
@@ -311,6 +323,32 @@ export default function DriverApp() {
                     </>
                 )}
             </div>
+
+            {/* PWA Install Prompt */}
+            {driver.is_available && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+                    <div className="max-w-4xl mx-auto px-4 py-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full animate-pulse ${driver.is_available ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                        {activeOrders.length > 0 ? `${activeOrders.length} Active Delivery` : 'Ready for Orders'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {activeOrders.length > 0 ? 'Tap to view details' : `${availableOrders.length} orders available`}
+                                    </p>
+                                </div>
+                            </div>
+                            {activeOrders.length === 0 && availableOrders.length > 0 && (
+                                <Badge className="bg-green-500 text-white animate-bounce">
+                                    {availableOrders.length} New
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
