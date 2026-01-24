@@ -200,11 +200,13 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                 <CardContent className="space-y-4">
                     {/* Map */}
                     {currentLocation && order.delivery_coordinates && order.delivery_coordinates.lat && order.delivery_coordinates.lng ? (
-                        <div className="h-64 rounded-lg overflow-hidden border">
+                        <div className="h-64 rounded-lg overflow-hidden border relative z-0">
                             <MapContainer 
                                 center={[currentLocation.lat, currentLocation.lng]} 
                                 zoom={13} 
-                                style={{ height: '100%', width: '100%' }}
+                                style={{ height: '100%', width: '100%', zIndex: 0 }}
+                                zoomControl={true}
+                                scrollWheelZoom={false}
                             >
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <Marker position={[currentLocation.lat, currentLocation.lng]}>
