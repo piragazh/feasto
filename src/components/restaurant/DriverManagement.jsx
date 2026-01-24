@@ -33,7 +33,20 @@ export default function DriverManagement({ restaurantId }) {
     });
 
     const createDriverMutation = useMutation({
-        mutationFn: (driverData) => base44.entities.Driver.create(driverData),
+        mutationFn: async (driverData) => {
+            // First, invite the driver as a user if email is provided
+            if (driverData.email) {
+                try {
+                    await base44.users.inviteUser(driverData.email, "user");
+                    toast.success('Invitation sent to driver email');
+                } catch (error) {
+                    toast.error('Could not send invitation: ' + error.message);
+                }
+            }
+            
+            // Then create the driver record
+            return base44.entities.Driver.create(driverData);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['drivers']);
             toast.success('Driver added successfully');
@@ -71,8 +84,8 @@ export default function DriverManagement({ restaurantId }) {
     };
 
     const handleSubmit = () => {
-        if (!formData.full_name || !formData.phone) {
-            toast.error('Please fill in required fields');
+        if (!formData.full_name || !formData.phone || !formData.email) {
+            toast.error('Please fill in all required fields (name, phone, email)');
             return;
         }
 
@@ -253,7 +266,7 @@ export default function DriverManagement({ restaurantId }) {
                             />
                         </div>
                         <div>
-                            <Label htmlFor="email">Email (Optional)</Label>
+                            <Label htmlFor="email">Email *</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -261,6 +274,9 @@ export default function DriverManagement({ restaurantId }) {
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 placeholder="driver@example.com"
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Required for driver login. An invitation will be sent.
+                            </p>
                         </div>
                         <div>
                             <Label htmlFor="vehicle_type">Vehicle Type</Label>
