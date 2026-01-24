@@ -16,13 +16,17 @@ import { useRealtimeETA } from '@/components/tracking/ETACalculator';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverActiveDelivery({ order, driver, onComplete }) {
-    const [currentLocation, setCurrentLocation] = useState(driver.current_location);
+    const [currentLocation, setCurrentLocation] = useState(driver?.current_location || null);
     const [showChat, setShowChat] = useState(false);
     const [messageText, setMessageText] = useState('');
     const [showProofDialog, setShowProofDialog] = useState(false);
     const [proofPhoto, setProofPhoto] = useState(null);
     const [showRatingDialog, setShowRatingDialog] = useState(false);
     const queryClient = useQueryClient();
+
+    if (!driver || !driver.id) {
+        return null;
+    }
 
     // Real-time ETA with traffic
     const { eta, distance, loading: etaLoading } = useRealtimeETA(
@@ -68,6 +72,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
             order_id: order.id,
             driver_id: driver.id
         }),
+        enabled: !!driver?.id && !!order?.id,
         refetchInterval: 3000,
     });
 

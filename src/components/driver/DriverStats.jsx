@@ -12,11 +12,13 @@ export default function DriverStats({ driverId }) {
             driver_id: driverId,
             status: 'delivered'
         }, '-created_date'),
+        enabled: !!driverId,
     });
 
     const { data: ratings = [] } = useQuery({
         queryKey: ['driver-ratings', driverId],
         queryFn: () => base44.entities.DriverRating.filter({ driver_id: driverId }),
+        enabled: !!driverId,
     });
 
     // Today's stats
