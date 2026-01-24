@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,18 +37,18 @@ export default function DriverApp() {
             const userData = await base44.auth.me();
             setUser(userData);
             
-            // Find driver by email (not created_by or driver_id)
+            // Find driver by email
             const drivers = await base44.entities.Driver.filter({ email: userData.email });
             
             if (drivers && drivers.length > 0) {
                 setDriver(drivers[0]);
             } else {
-                // No driver profile found
-                toast.error('No driver profile found. Please contact your restaurant manager to add you as a driver.');
-                setTimeout(() => base44.auth.logout(), 3000);
+                // No driver profile found - show error state
+                setDriver('not_found');
             }
         } catch (e) {
-            base44.auth.redirectToLogin();
+            // Not authenticated - Base44 will handle redirect to login automatically
+            console.error('Auth error:', e);
         }
     };
 
@@ -151,10 +152,33 @@ export default function DriverApp() {
 
     if (!user || !driver) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading driver app...</p>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    {driver === 'not_found' ? (
+                        <Card>
+                            <CardContent className="pt-8 pb-8">
+                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <User className="h-8 w-8 text-orange-500" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-2">Driver Profile Not Found</h2>
+                                <p className="text-gray-600 mb-6">
+                                    Your account is not registered as a driver yet. Please contact your restaurant manager to add you as a driver.
+                                </p>
+                                <Button 
+                                    onClick={() => base44.auth.logout(createPageUrl('Home'))}
+                                    variant="outline"
+                                >
+                                    <LogOut className="h-4 w-4 mr-2" />
+                                    Sign Out
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <>
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading driver app...</p>
+                        </>
+                    )}
                 </div>
             </div>
         );
