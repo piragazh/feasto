@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw, AlertCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, Bike, MapPin, RefreshCw, Star, Navigation, RotateCcw, AlertCircle, MessageSquare, Filter, X, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +17,9 @@ import OrderStatusTimeline from '@/components/restaurant/OrderStatusTimeline';
 import RequestRefundDialog from '@/components/customer/RequestRefundDialog';
 import CustomerMessaging from '@/components/customer/CustomerMessaging';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -33,6 +36,14 @@ export default function Orders() {
     const [reviewingOrder, setReviewingOrder] = useState(null);
     const [refundingOrder, setRefundingOrder] = useState(null);
     const [messagingOrder, setMessagingOrder] = useState(null);
+    
+    // Filters and sorting
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [restaurantFilter, setRestaurantFilter] = useState('all');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [sortBy, setSortBy] = useState('date-desc');
+    const [showFilters, setShowFilters] = useState(false);
     
     const { data: orders = [], isLoading, refetch, error } = useQuery({
         queryKey: ['orders'],
@@ -110,22 +121,207 @@ export default function Orders() {
         refundRequestMutation.mutate(refundData);
     };
 
+    // Get unique restaurants for filter
+    const restaurants = React.useMemo(() => {
+        const unique = new Set();
+        orders.forEach(order => {
+            if (order?.restaurant_name) {
+                unique.add(order.restaurant_name);
+            }
+        });
+        return Array.from(unique).sort();
+    }, [orders]);
+
+    // Filter and sort orders
+    const filteredAndSortedOrders = React.useMemo(() => {
+        let filtered = orders.filter(order => {
+            // Status filter
+            if (statusFilter !== 'all' && order?.status !== statusFilter) {
+                return false;
+            }
+
+            // Restaurant filter
+            if (restaurantFilter !== 'all' && order?.restaurant_name !== restaurantFilter) {
+                return false;
+            }
+
+            // Date range filter
+            if (dateFrom) {
+                const orderDate = new Date(order?.created_date);
+                const fromDate = new Date(dateFrom);
+                if (orderDate < fromDate) return false;
+            }
+
+            if (dateTo) {
+                const orderDate = new Date(order?.created_date);
+                const toDate = new Date(dateTo);
+                toDate.setHours(23, 59, 59, 999); // End of day
+                if (orderDate > toDate) return false;
+            }
+
+            return true;
+        });
+
+        // Sort
+        filtered.sort((a, b) => {
+            switch (sortBy) {
+                case 'date-desc':
+                    return new Date(b?.created_date || 0) - new Date(a?.created_date || 0);
+                case 'date-asc':
+                    return new Date(a?.created_date || 0) - new Date(b?.created_date || 0);
+                case 'amount-desc':
+                    return (b?.total || 0) - (a?.total || 0);
+                case 'amount-asc':
+                    return (a?.total || 0) - (b?.total || 0);
+                default:
+                    return 0;
+            }
+        });
+
+        return filtered;
+    }, [orders, statusFilter, restaurantFilter, dateFrom, dateTo, sortBy]);
+
+    const activeFiltersCount = [
+        statusFilter !== 'all',
+        restaurantFilter !== 'all',
+        dateFrom,
+        dateTo
+    ].filter(Boolean).length;
+
+    const clearFilters = () => {
+        setStatusFilter('all');
+        setRestaurantFilter('all');
+        setDateFrom('');
+        setDateTo('');
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link to={createPageUrl('Home')}>
-                            <Button size="icon" variant="ghost" className="rounded-full">
-                                <ArrowLeft className="h-5 w-5" />
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                            <Link to={createPageUrl('Home')}>
+                                <Button size="icon" variant="ghost" className="rounded-full">
+                                    <ArrowLeft className="h-5 w-5" />
+                                </Button>
+                            </Link>
+                            <h1 className="text-xl font-bold text-gray-900">Your Orders</h1>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setShowFilters(!showFilters)}
+                                className="relative"
+                            >
+                                <Filter className="h-4 w-4 mr-2" />
+                                Filters
+                                {activeFiltersCount > 0 && (
+                                    <Badge className="ml-2 bg-orange-500 text-white h-5 w-5 p-0 flex items-center justify-center">
+                                        {activeFiltersCount}
+                                    </Badge>
+                                )}
                             </Button>
-                        </Link>
-                        <h1 className="text-xl font-bold text-gray-900">Your Orders</h1>
+                            <Button variant="ghost" size="icon" onClick={() => refetch()} className="rounded-full">
+                                <RefreshCw className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => refetch()} className="rounded-full">
-                        <RefreshCw className="h-5 w-5" />
-                    </Button>
+
+                    {/* Filters Panel */}
+                    {showFilters && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="border-t pt-4 space-y-4"
+                        >
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                {/* Status Filter */}
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
+                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Statuses</SelectItem>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                                            <SelectItem value="preparing">Preparing</SelectItem>
+                                            <SelectItem value="out_for_delivery">On the Way</SelectItem>
+                                            <SelectItem value="delivered">Delivered</SelectItem>
+                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Restaurant Filter */}
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Restaurant</label>
+                                    <Select value={restaurantFilter} onValueChange={setRestaurantFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Restaurants</SelectItem>
+                                            {restaurants.map(name => (
+                                                <SelectItem key={name} value={name}>{name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Date From */}
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">From Date</label>
+                                    <Input
+                                        type="date"
+                                        value={dateFrom}
+                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        max={dateTo || undefined}
+                                    />
+                                </div>
+
+                                {/* Date To */}
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">To Date</label>
+                                    <Input
+                                        type="date"
+                                        value={dateTo}
+                                        onChange={(e) => setDateTo(e.target.value)}
+                                        min={dateFrom || undefined}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Sort and Clear */}
+                            <div className="flex items-center justify-between pt-2">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-medium text-gray-700">Sort by:</label>
+                                    <Select value={sortBy} onValueChange={setSortBy}>
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="date-desc">Latest First</SelectItem>
+                                            <SelectItem value="date-asc">Oldest First</SelectItem>
+                                            <SelectItem value="amount-desc">Highest Amount</SelectItem>
+                                            <SelectItem value="amount-asc">Lowest Amount</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {activeFiltersCount > 0 && (
+                                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                                        <X className="h-4 w-4 mr-2" />
+                                        Clear Filters
+                                    </Button>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
                 </div>
             </div>
 
@@ -136,20 +332,40 @@ export default function Orders() {
                             <Skeleton key={i} className="h-48 w-full rounded-2xl" />
                         ))}
                     </div>
-                ) : orders.length === 0 ? (
+                ) : filteredAndSortedOrders.length === 0 ? (
                     <div className="text-center py-16">
                         <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Package className="h-12 w-12 text-gray-400" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders yet</h3>
-                        <p className="text-gray-500 mb-6">Start ordering from your favorite restaurants!</p>
-                        <Link to={createPageUrl('Home')}>
-                            <Button className="bg-orange-500 hover:bg-orange-600">Browse Restaurants</Button>
-                        </Link>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {orders.length === 0 ? 'No orders yet' : 'No orders match your filters'}
+                        </h3>
+                        <p className="text-gray-500 mb-6">
+                            {orders.length === 0 
+                                ? 'Start ordering from your favorite restaurants!' 
+                                : 'Try adjusting your filters to see more orders'}
+                        </p>
+                        {orders.length === 0 ? (
+                            <Link to={createPageUrl('Home')}>
+                                <Button className="bg-orange-500 hover:bg-orange-600">Browse Restaurants</Button>
+                            </Link>
+                        ) : (
+                            <Button onClick={clearFilters} variant="outline">
+                                Clear All Filters
+                            </Button>
+                        )}
                     </div>
                 ) : (
-                    <div className="space-y-3 sm:space-y-4">
-                        {orders.filter(order => order && order.id && order.restaurant_name).map((order, index) => {
+                    <>
+                        {/* Results Summary */}
+                        <div className="mb-4 flex items-center justify-between text-sm text-gray-600">
+                            <span>
+                                Showing {filteredAndSortedOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+
+                        <div className="space-y-3 sm:space-y-4">
+                        {filteredAndSortedOrders.filter(order => order && order.id && order.restaurant_name).map((order, index) => {
                             const status = statusConfig[order?.status] || statusConfig.pending;
                             const StatusIcon = status?.icon || Clock;
                             
@@ -285,11 +501,10 @@ export default function Orders() {
                                                         <div className="border-t pt-4 flex flex-col sm:flex-row gap-2">
                                                             <Button
                                                                 onClick={() => reorderOrder(order)}
-                                                                variant="outline"
-                                                                className="flex-1"
+                                                                className="flex-1 bg-orange-500 hover:bg-orange-600"
                                                             >
                                                                 <RotateCcw className="h-4 w-4 mr-2" />
-                                                                Reorder
+                                                                Quick Reorder
                                                             </Button>
                                                             {order?.status === 'delivered' && !reviews.find(r => r.order_id === order?.id) && (
                                                                 <Button
@@ -318,7 +533,8 @@ export default function Orders() {
                                 </motion.div>
                             );
                         })}
-                    </div>
+                        </div>
+                    </>
                 )}
             </div>
 
