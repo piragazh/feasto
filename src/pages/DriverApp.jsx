@@ -9,17 +9,22 @@ import { Switch } from "@/components/ui/switch";
 import { 
     Navigation, MapPin, Phone, MessageSquare, CheckCircle, 
     DollarSign, Package, Clock, User, LogOut, TrendingUp, Star,
-    Award, Bike
+    Award, Bike, Send
 } from 'lucide-react';
 import DriverActiveDelivery from '@/components/driver/DriverActiveDelivery';
 import MultiOrderDelivery from '@/components/driver/MultiOrderDelivery';
 import DriverOrderList from '@/components/driver/DriverOrderList';
 import DriverStats from '@/components/driver/DriverStats';
 import DriverCommunication from '@/components/driver/DriverCommunication';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from 'sonner';
 
 export default function DriverApp() {
     const [user, setUser] = useState(null);
     const [driver, setDriver] = useState(null);
+    const [messagingOrder, setMessagingOrder] = useState(null);
+    const [customerMessage, setCustomerMessage] = useState('');
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -112,6 +117,44 @@ export default function DriverApp() {
         },
     });
 
+    const { data: orderMessages = [] } = useQuery({
+        queryKey: ['order-messages', messagingOrder?.id],
+        queryFn: async () => {
+            if (!messagingOrder) return [];
+            const messages = await base44.entities.Message.filter({ order_id: messagingOrder.id }, '-created_date');
+            return Array.isArray(messages) ? messages : [];
+        },
+        enabled: !!messagingOrder,
+        refetchInterval: 5000,
+    });
+
+    const sendMessageMutation = useMutation({
+        mutationFn: async ({ orderId, restaurantId, message }) => {
+            return await base44.entities.Message.create({
+                order_id: orderId,
+                restaurant_id: restaurantId,
+                sender_type: 'restaurant',
+                message: message,
+                is_read: false
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['order-messages']);
+            setCustomerMessage('');
+            toast.success('Message sent to customer');
+        },
+    });
+
+    const handleSendMessage = () => {
+        if (!customerMessage.trim() || !messagingOrder) return;
+        
+        sendMessageMutation.mutate({
+            orderId: messagingOrder.id,
+            restaurantId: messagingOrder.restaurant_id,
+            message: customerMessage
+        });
+    };
+
     if (!user || !driver) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -203,25 +246,39 @@ export default function DriverApp() {
             {/* Main Content */}
             <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
                 {activeOrders.length > 0 ? (
-                    activeOrders.length > 1 ? (
-                        <MultiOrderDelivery 
-                            orders={activeOrders} 
-                            driver={driver}
-                            onComplete={() => {
-                                queryClient.invalidateQueries(['driver-active-orders']);
-                                queryClient.invalidateQueries(['available-orders']);
-                            }}
-                        />
-                    ) : (
-                        <DriverActiveDelivery 
-                            order={activeOrders[0]} 
-                            driver={driver}
-                            onComplete={() => {
-                                queryClient.invalidateQueries(['driver-active-orders']);
-                                queryClient.invalidateQueries(['available-orders']);
-                            }}
-                        />
-                    )
+                    <>
+                        {/* Quick Message Button */}
+                        <div className="mb-4">
+                            <Button 
+                                onClick={() => setMessagingOrder(activeOrders[0])}
+                                className="w-full bg-blue-500 hover:bg-blue-600 shadow-lg"
+                                size="lg"
+                            >
+                                <MessageSquare className="h-5 w-5 mr-2" />
+                                Message Customer
+                            </Button>
+                        </div>
+
+                        {activeOrders.length > 1 ? (
+                            <MultiOrderDelivery 
+                                orders={activeOrders} 
+                                driver={driver}
+                                onComplete={() => {
+                                    queryClient.invalidateQueries(['driver-active-orders']);
+                                    queryClient.invalidateQueries(['available-orders']);
+                                }}
+                            />
+                        ) : (
+                            <DriverActiveDelivery 
+                                order={activeOrders[0]} 
+                                driver={driver}
+                                onComplete={() => {
+                                    queryClient.invalidateQueries(['driver-active-orders']);
+                                    queryClient.invalidateQueries(['available-orders']);
+                                }}
+                            />
+                        )}
+                    </>
                 ) : (
                     <>
                         {/* Quick Actions */}
