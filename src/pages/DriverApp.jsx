@@ -93,28 +93,32 @@ export default function DriverApp() {
         enabled: !!driver && driver !== 'not_found' && !!driver.id,
     });
 
-    // Calculate earnings based on payment config per restaurant
-    const calculateEarnings = (orders) => {
-        return orders.reduce((total, order) => {
+    // Calculate earnings for all three methods
+    const calculateAllEarnings = (orders) => {
+        const earnings = { byDelivery: 0, byHour: 0, byMile: 0 };
+        
+        orders.forEach(order => {
             const config = driver?.payment_config?.[order.restaurant_id];
-            if (!config) return total + (order.delivery_fee || 0);
-
-            if (config.method === 'per_delivery') {
-                return total + (config.per_delivery_fee || 0);
-            } else if (config.method === 'per_hour') {
-                // Calculate hours based on delivery time
-                const start = new Date(order.created_date);
-                const end = new Date(order.actual_delivery_time || order.updated_date);
-                const hours = (end - start) / (1000 * 60 * 60);
-                return total + (hours * (config.hourly_rate || 0));
-            } else if (config.method === 'per_mile') {
-                // Estimate miles (rough calculation - ideally should track actual)
-                // For now, use delivery_fee as proxy or calculate from coordinates
-                const miles = 5; // Default assumption - should be tracked properly
-                return total + (miles * (config.per_mile_rate || 0));
+            if (!config) {
+                earnings.byDelivery += order.delivery_fee || 0;
+                return;
             }
-            return total + (order.delivery_fee || 0);
-        }, 0);
+
+            // Per delivery
+            earnings.byDelivery += config.per_delivery_fee || 0;
+
+            // Per hour
+            const start = new Date(order.created_date);
+            const end = new Date(order.actual_delivery_time || order.updated_date);
+            const hours = (end - start) / (1000 * 60 * 60);
+            earnings.byHour += hours * (config.hourly_rate || 0);
+
+            // Per mile (estimate 5 miles per delivery for now)
+            const miles = 5;
+            earnings.byMile += miles * (config.per_mile_rate || 0);
+        });
+
+        return earnings;
     };
 
     const todayOrders = completedOrders.filter(order => {
@@ -130,8 +134,8 @@ export default function DriverApp() {
         return orderDate >= weekAgo;
     });
 
-    const todayEarnings = calculateEarnings(todayOrders);
-    const weekEarnings = calculateEarnings(weekOrders);
+    const todayEarnings = calculateAllEarnings(todayOrders);
+    const weekEarnings = calculateAllEarnings(weekOrders);
 
     const toggleAvailabilityMutation = useMutation({
         mutationFn: async (isAvailable) => {
@@ -291,20 +295,21 @@ export default function DriverApp() {
                     </div>
 
                     {/* Quick Stats Bar */}
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <DollarSign className="h-4 w-4" />
-                                <span className="text-xs font-medium opacity-90">Today</span>
-                            </div>
-                            <p className="text-2xl font-bold">£{todayEarnings.toFixed(2)}</p>
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                            <div className="text-[10px] font-medium opacity-90 mb-0.5">Per Delivery</div>
+                            <p className="text-lg font-bold">£{todayEarnings.byDelivery.toFixed(2)}</p>
+                            <div className="text-[9px] opacity-75">Today</div>
                         </div>
-                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <TrendingUp className="h-4 w-4" />
-                                <span className="text-xs font-medium opacity-90">This Week</span>
-                            </div>
-                            <p className="text-2xl font-bold">£{weekEarnings.toFixed(2)}</p>
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                            <div className="text-[10px] font-medium opacity-90 mb-0.5">Per Hour</div>
+                            <p className="text-lg font-bold">£{todayEarnings.byHour.toFixed(2)}</p>
+                            <div className="text-[9px] opacity-75">Today</div>
+                        </div>
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                            <div className="text-[10px] font-medium opacity-90 mb-0.5">Per Mile</div>
+                            <p className="text-lg font-bold">£{todayEarnings.byMile.toFixed(2)}</p>
+                            <div className="text-[9px] opacity-75">Today</div>
                         </div>
                     </div>
                 </div>

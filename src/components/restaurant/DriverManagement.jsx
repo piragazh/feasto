@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Bike, Car, Truck, Phone, Mail, Star, Package, Clock, Plus, Edit, Trash2 } from 'lucide-react';
+import { Bike, Car, Truck, Phone, Mail, Star, Package, Clock, Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function DriverManagement({ restaurantId }) {
@@ -21,9 +21,8 @@ export default function DriverManagement({ restaurantId }) {
         email: '',
         vehicle_type: 'bike',
         is_available: true,
-        payment_method: 'per_delivery',
-        hourly_rate: 0,
-        per_mile_rate: 0,
+        hourly_rate: 12,
+        per_mile_rate: 1.5,
         per_delivery_fee: 5,
     });
     const queryClient = useQueryClient();
@@ -53,7 +52,6 @@ export default function DriverManagement({ restaurantId }) {
                 const updatedPaymentConfig = {
                     ...(existingDriver.payment_config || {}),
                     [restaurantId]: {
-                        method: driverData.payment_method,
                         hourly_rate: driverData.hourly_rate || 0,
                         per_mile_rate: driverData.per_mile_rate || 0,
                         per_delivery_fee: driverData.per_delivery_fee || 0,
@@ -78,7 +76,6 @@ export default function DriverManagement({ restaurantId }) {
                 
                 const paymentConfig = {
                     [restaurantId]: {
-                        method: driverData.payment_method,
                         hourly_rate: driverData.hourly_rate || 0,
                         per_mile_rate: driverData.per_mile_rate || 0,
                         per_delivery_fee: driverData.per_delivery_fee || 0,
@@ -109,7 +106,6 @@ export default function DriverManagement({ restaurantId }) {
             const updatedPaymentConfig = {
                 ...(data.payment_config || {}),
                 [restaurantId]: {
-                    method: data.payment_method,
                     hourly_rate: data.hourly_rate || 0,
                     per_mile_rate: data.per_mile_rate || 0,
                     per_delivery_fee: data.per_delivery_fee || 0,
@@ -161,9 +157,8 @@ export default function DriverManagement({ restaurantId }) {
             email: '',
             vehicle_type: 'bike',
             is_available: true,
-            payment_method: 'per_delivery',
-            hourly_rate: 0,
-            per_mile_rate: 0,
+            hourly_rate: 12,
+            per_mile_rate: 1.5,
             per_delivery_fee: 5,
         });
     };
@@ -190,9 +185,8 @@ export default function DriverManagement({ restaurantId }) {
             email: driver.email || '',
             vehicle_type: driver.vehicle_type,
             is_available: driver.is_available,
-            payment_method: paymentConfig.method || 'per_delivery',
-            hourly_rate: paymentConfig.hourly_rate || 0,
-            per_mile_rate: paymentConfig.per_mile_rate || 0,
+            hourly_rate: paymentConfig.hourly_rate || 12,
+            per_mile_rate: paymentConfig.per_mile_rate || 1.5,
             per_delivery_fee: paymentConfig.per_delivery_fee || 5,
             payment_config: driver.payment_config
         });
@@ -296,17 +290,21 @@ export default function DriverManagement({ restaurantId }) {
                                     {(() => {
                                         const config = driver.payment_config?.[restaurantId];
                                         if (!config) return null;
-                                        const methodLabels = {
-                                            per_delivery: `£${config.per_delivery_fee || 0}/delivery`,
-                                            per_hour: `£${config.hourly_rate || 0}/hour`,
-                                            per_mile: `£${config.per_mile_rate || 0}/mile`
-                                        };
                                         return (
-                                            <div className="flex items-center justify-between text-sm bg-blue-50 p-2 rounded">
-                                                <span className="text-blue-700 text-xs">Pay Rate</span>
-                                                <span className="font-semibold text-blue-900 text-xs">
-                                                    {methodLabels[config.method]}
-                                                </span>
+                                            <div className="bg-blue-50 p-2 rounded space-y-1">
+                                                <div className="text-xs text-blue-700 font-medium mb-1">Pay Rates</div>
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-blue-600">Per Delivery:</span>
+                                                    <span className="font-semibold text-blue-900">£{config.per_delivery_fee || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-blue-600">Per Hour:</span>
+                                                    <span className="font-semibold text-blue-900">£{config.hourly_rate || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-blue-600">Per Mile:</span>
+                                                    <span className="font-semibold text-blue-900">£{config.per_mile_rate || 0}</span>
+                                                </div>
                                             </div>
                                         );
                                     })()}
@@ -414,65 +412,43 @@ export default function DriverManagement({ restaurantId }) {
 
                         <div className="border-t pt-4 space-y-4">
                             <h3 className="font-semibold text-sm">Payment Configuration</h3>
+                            <p className="text-xs text-gray-500">Set all rates - driver will see earnings calculated for each method</p>
                             
                             <div>
-                                <Label htmlFor="payment_method">Payment Method</Label>
-                                <Select
-                                    value={formData.payment_method}
-                                    onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="per_delivery">💰 Per Delivery</SelectItem>
-                                        <SelectItem value="per_hour">⏰ Per Hour</SelectItem>
-                                        <SelectItem value="per_mile">📏 Per Mile</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor="per_delivery_fee">Per Delivery Fee (£)</Label>
+                                <Input
+                                    id="per_delivery_fee"
+                                    type="number"
+                                    step="0.01"
+                                    value={formData.per_delivery_fee}
+                                    onChange={(e) => setFormData({ ...formData, per_delivery_fee: parseFloat(e.target.value) || 0 })}
+                                    placeholder="5.00"
+                                />
                             </div>
 
-                            {formData.payment_method === 'per_delivery' && (
-                                <div>
-                                    <Label htmlFor="per_delivery_fee">Amount Per Delivery (£)</Label>
-                                    <Input
-                                        id="per_delivery_fee"
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.per_delivery_fee}
-                                        onChange={(e) => setFormData({ ...formData, per_delivery_fee: parseFloat(e.target.value) || 0 })}
-                                        placeholder="5.00"
-                                    />
-                                </div>
-                            )}
+                            <div>
+                                <Label htmlFor="hourly_rate">Hourly Rate (£)</Label>
+                                <Input
+                                    id="hourly_rate"
+                                    type="number"
+                                    step="0.01"
+                                    value={formData.hourly_rate}
+                                    onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="12.00"
+                                />
+                            </div>
 
-                            {formData.payment_method === 'per_hour' && (
-                                <div>
-                                    <Label htmlFor="hourly_rate">Hourly Rate (£)</Label>
-                                    <Input
-                                        id="hourly_rate"
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.hourly_rate}
-                                        onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
-                                        placeholder="12.00"
-                                    />
-                                </div>
-                            )}
-
-                            {formData.payment_method === 'per_mile' && (
-                                <div>
-                                    <Label htmlFor="per_mile_rate">Rate Per Mile (£)</Label>
-                                    <Input
-                                        id="per_mile_rate"
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.per_mile_rate}
-                                        onChange={(e) => setFormData({ ...formData, per_mile_rate: parseFloat(e.target.value) || 0 })}
-                                        placeholder="1.50"
-                                    />
-                                </div>
-                            )}
+                            <div>
+                                <Label htmlFor="per_mile_rate">Per Mile Rate (£)</Label>
+                                <Input
+                                    id="per_mile_rate"
+                                    type="number"
+                                    step="0.01"
+                                    value={formData.per_mile_rate}
+                                    onChange={(e) => setFormData({ ...formData, per_mile_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="1.50"
+                                />
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
