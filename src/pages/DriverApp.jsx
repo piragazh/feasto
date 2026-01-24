@@ -61,7 +61,7 @@ export default function DriverApp() {
             });
             return orders || [];
         },
-        enabled: !!driver,
+        enabled: !!driver && driver !== 'not_found' && !!driver.id,
         staleTime: 5000, // 5s cache
         refetchInterval: 10000, // Update every 10 seconds instead of 3
     });
@@ -72,7 +72,7 @@ export default function DriverApp() {
             status: 'preparing',
             driver_id: null
         }),
-        enabled: !!driver && activeOrders.length === 0,
+        enabled: !!driver && driver !== 'not_found' && !!driver.id && activeOrders.length === 0,
         staleTime: 8000, // 8s cache
         refetchInterval: 15000, // Update every 15 seconds instead of 5
     });
@@ -83,7 +83,7 @@ export default function DriverApp() {
             driver_id: driver.id,
             status: 'delivered'
         }),
-        enabled: !!driver,
+        enabled: !!driver && driver !== 'not_found' && !!driver.id,
     });
 
     const todayEarnings = completedOrders
