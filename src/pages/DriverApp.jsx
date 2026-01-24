@@ -243,7 +243,7 @@ export default function DriverApp() {
                                             toast.error('Driver profile not loaded');
                                         }
                                     }}
-                                    disabled={toggleAvailabilityMutation.isPending || !driver?.id}
+                                    disabled={toggleAvailabilityMutation.isPending}
                                     className="data-[state=checked]:bg-green-400"
                                 />
                             </div>
@@ -381,7 +381,7 @@ export default function DriverApp() {
                                                     toast.error('Driver profile not loaded');
                                                 }
                                             }}
-                                            disabled={toggleAvailabilityMutation.isPending || !driver?.id}
+                                            disabled={toggleAvailabilityMutation.isPending}
                                             className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
                                             size="lg"
                                         >
