@@ -28,28 +28,48 @@ export default function DriverManagement({ restaurantId }) {
         queryKey: ['drivers', restaurantId],
         queryFn: async () => {
             const allDrivers = await base44.entities.Driver.list();
-            return allDrivers;
+            // Filter to show only drivers associated with this restaurant
+            return allDrivers.filter(d => d.restaurant_ids?.includes(restaurantId));
         },
     });
 
     const createDriverMutation = useMutation({
         mutationFn: async (driverData) => {
-            // First, invite the driver as a user if email is provided
-            if (driverData.email) {
-                try {
-                    await base44.users.inviteUser(driverData.email, "user");
-                    toast.success('Invitation sent to driver email');
-                } catch (error) {
-                    toast.error('Could not send invitation: ' + error.message);
-                }
-            }
+            // Check if driver with this email already exists
+            const allDrivers = await base44.entities.Driver.list();
+            const existingDriver = allDrivers.find(d => d.email?.toLowerCase() === driverData.email.toLowerCase());
             
-            // Then create the driver record
-            return base44.entities.Driver.create(driverData);
+            if (existingDriver) {
+                // Driver exists - add this restaurant to their list
+                if (existingDriver.restaurant_ids?.includes(restaurantId)) {
+                    throw new Error('Driver is already associated with this restaurant');
+                }
+                
+                const updatedRestaurantIds = [...(existingDriver.restaurant_ids || []), restaurantId];
+                await base44.entities.Driver.update(existingDriver.id, {
+                    restaurant_ids: updatedRestaurantIds
+                });
+                return { ...existingDriver, restaurant_ids: updatedRestaurantIds };
+            } else {
+                // New driver - create with this restaurant
+                if (driverData.email) {
+                    try {
+                        await base44.users.inviteUser(driverData.email, "user");
+                        toast.success('Invitation sent to driver email');
+                    } catch (error) {
+                        console.log('Invitation error (user may already exist):', error.message);
+                    }
+                }
+                
+                return base44.entities.Driver.create({
+                    ...driverData,
+                    restaurant_ids: [restaurantId]
+                });
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['drivers']);
-            toast.success('Driver added successfully');
+            toast.success('Driver added to your restaurant');
             setIsAddDialogOpen(false);
             resetForm();
         },
@@ -66,10 +86,24 @@ export default function DriverManagement({ restaurantId }) {
     });
 
     const deleteDriverMutation = useMutation({
-        mutationFn: (id) => base44.entities.Driver.delete(id),
+        mutationFn: async (id) => {
+            const driver = drivers.find(d => d.id === id);
+            if (!driver) return;
+            
+            // Remove this restaurant from driver's list
+            const updatedRestaurantIds = (driver.restaurant_ids || []).filter(rid => rid !== restaurantId);
+            
+            if (updatedRestaurantIds.length === 0) {
+                // No more restaurants - delete the driver
+                return base44.entities.Driver.delete(id);
+            } else {
+                // Still has other restaurants - just remove this one
+                return base44.entities.Driver.update(id, { restaurant_ids: updatedRestaurantIds });
+            }
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['drivers']);
-            toast.success('Driver removed');
+            toast.success('Driver removed from your restaurant');
         },
     });
 
@@ -108,7 +142,7 @@ export default function DriverManagement({ restaurantId }) {
     };
 
     const handleDelete = (id) => {
-        if (confirm('Are you sure you want to remove this driver?')) {
+        if (confirm('Remove this driver from your restaurant? They will no longer see your orders.')) {
             deleteDriverMutation.mutate(id);
         }
     };
@@ -273,9 +307,10 @@ export default function DriverManagement({ restaurantId }) {
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 placeholder="driver@example.com"
+                                disabled={!!editingDriver}
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                                Required for driver login. An invitation will be sent.
+                                {editingDriver ? 'Cannot change email for existing drivers' : 'If driver exists, they will be added to your restaurant'}
                             </p>
                         </div>
                         <div>

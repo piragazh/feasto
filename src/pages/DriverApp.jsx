@@ -70,14 +70,18 @@ export default function DriverApp() {
     });
 
     const { data: availableOrders = [] } = useQuery({
-        queryKey: ['available-orders'],
-        queryFn: () => base44.entities.Order.filter({
-            status: 'preparing',
-            driver_id: null
-        }),
-        enabled: !!driver && driver !== 'not_found' && !!driver.id && activeOrders.length === 0,
-        staleTime: 8000, // 8s cache
-        refetchInterval: 15000, // Update every 15 seconds instead of 5
+        queryKey: ['available-orders', driver?.restaurant_ids],
+        queryFn: async () => {
+            const orders = await base44.entities.Order.filter({
+                status: 'preparing',
+                driver_id: null
+            });
+            // Filter to only show orders from restaurants this driver works for
+            return orders.filter(order => driver.restaurant_ids?.includes(order.restaurant_id));
+        },
+        enabled: !!driver && driver !== 'not_found' && !!driver.id && activeOrders.length === 0 && driver.restaurant_ids?.length > 0,
+        staleTime: 8000,
+        refetchInterval: 15000,
     });
 
     const { data: completedOrders = [] } = useQuery({
