@@ -406,6 +406,98 @@ export default function DriverApp() {
                     </div>
                 </div>
             )}
+
+            {/* Customer Messaging Dialog */}
+            <Dialog open={!!messagingOrder} onOpenChange={() => setMessagingOrder(null)}>
+                <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Message Customer</DialogTitle>
+                        <p className="text-sm text-gray-500">
+                            Order #{messagingOrder?.id?.slice(-6)} • {messagingOrder?.delivery_address}
+                        </p>
+                    </DialogHeader>
+                    
+                    <div className="flex-1 overflow-y-auto space-y-3 py-4 max-h-[400px]">
+                        {orderMessages.length === 0 ? (
+                            <div className="text-center text-gray-500 text-sm py-8">
+                                No messages yet. Start the conversation!
+                            </div>
+                        ) : (
+                            orderMessages.map((msg) => (
+                                <div 
+                                    key={msg.id}
+                                    className={`flex ${msg.sender_type === 'restaurant' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                        msg.sender_type === 'restaurant' 
+                                            ? 'bg-blue-500 text-white' 
+                                            : 'bg-gray-100 text-gray-900'
+                                    }`}>
+                                        <p className="text-sm">{msg.message}</p>
+                                        <p className={`text-xs mt-1 ${
+                                            msg.sender_type === 'restaurant' ? 'text-blue-100' : 'text-gray-500'
+                                        }`}>
+                                            {new Date(msg.created_date).toLocaleTimeString([], { 
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="border-t pt-4 space-y-3">
+                        {/* Quick Templates */}
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCustomerMessage("I'm on my way!")}
+                            >
+                                On my way
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCustomerMessage("I'm outside. Please come down.")}
+                            >
+                                I'm outside
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCustomerMessage("Could you provide more delivery details?")}
+                            >
+                                Need details
+                            </Button>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <Textarea
+                                placeholder="Type your message..."
+                                value={customerMessage}
+                                onChange={(e) => setCustomerMessage(e.target.value)}
+                                className="flex-1 min-h-[60px]"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSendMessage();
+                                    }
+                                }}
+                            />
+                            <Button 
+                                onClick={handleSendMessage}
+                                disabled={!customerMessage.trim() || sendMessageMutation.isPending}
+                                className="bg-blue-500 hover:bg-blue-600"
+                            >
+                                <Send className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
