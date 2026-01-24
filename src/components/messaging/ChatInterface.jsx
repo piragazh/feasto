@@ -18,36 +18,44 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     const { data: messages = [] } = useQuery({
         queryKey: ['chat-messages', conversation?.id, conversation?.type],
         queryFn: async () => {
-            if (conversation.type === 'conversation') {
-                return base44.entities.ChatMessage.filter({ conversation_id: conversation.id }, 'created_date');
-            } else if (conversation.type === 'order') {
-                const msgs = await base44.entities.Message.filter({ order_id: conversation.order_id }, 'created_date');
-                return msgs.map(m => ({
-                    id: m.id,
-                    sender_email: m.sender_type === 'restaurant' ? 'restaurant@system' : currentUser.email,
-                    sender_name: m.sender_type === 'restaurant' ? conversation.displayName : 'You',
-                    sender_type: m.sender_type,
-                    message: m.message,
-                    created_date: m.created_date,
-                    read_by: m.is_read ? [currentUser.email] : []
-                }));
-            } else if (conversation.type === 'driver') {
-                const msgs = await base44.entities.DriverMessage.filter({ order_id: conversation.order_id }, 'created_date');
-                return msgs.map(m => ({
-                    id: m.id,
-                    sender_email: m.sender_type === 'driver' ? 'driver@system' : 'restaurant@system',
-                    sender_name: m.sender_type === 'driver' ? conversation.displayName : 'Restaurant',
-                    sender_type: m.sender_type,
-                    message: m.message,
-                    created_date: m.created_date,
-                    read_by: m.is_read ? [currentUser.email] : []
-                }));
+            try {
+                if (conversation.type === 'conversation') {
+                    const msgs = await base44.entities.ChatMessage.filter({ conversation_id: conversation.id }, 'created_date');
+                    return Array.isArray(msgs) ? msgs : [];
+                } else if (conversation.type === 'order') {
+                    const msgs = await base44.entities.Message.filter({ order_id: conversation.order_id }, 'created_date');
+                    const validMsgs = Array.isArray(msgs) ? msgs : [];
+                    return validMsgs.map(m => ({
+                        id: m.id,
+                        sender_email: m.sender_type === 'restaurant' ? 'restaurant@system' : currentUser.email,
+                        sender_name: m.sender_type === 'restaurant' ? conversation.displayName : 'You',
+                        sender_type: m.sender_type,
+                        message: m.message,
+                        created_date: m.created_date,
+                        read_by: m.is_read ? [currentUser.email] : []
+                    }));
+                } else if (conversation.type === 'driver') {
+                    const msgs = await base44.entities.DriverMessage.filter({ order_id: conversation.order_id }, 'created_date');
+                    const validMsgs = Array.isArray(msgs) ? msgs : [];
+                    return validMsgs.map(m => ({
+                        id: m.id,
+                        sender_email: m.sender_type === 'driver' ? 'driver@system' : 'restaurant@system',
+                        sender_name: m.sender_type === 'driver' ? conversation.displayName : 'Restaurant',
+                        sender_type: m.sender_type,
+                        message: m.message,
+                        created_date: m.created_date,
+                        read_by: m.is_read ? [currentUser.email] : []
+                    }));
+                }
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                toast.error('Failed to load messages');
             }
             return [];
         },
         enabled: !!conversation?.id,
-        staleTime: 5000, // 5s cache
-        refetchInterval: 10000, // Refetch every 10s instead of 2s
+        staleTime: 5000,
+        refetchInterval: 10000,
     });
 
     useEffect(() => {
@@ -62,39 +70,39 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     const markMessagesAsRead = async () => {
         if (!messages || messages.length === 0 || !conversation?.id) return;
         
-        const unreadMessages = messages.filter(m => 
-            m.sender_email !== currentUser.email && 
-            !m.read_by?.includes(currentUser.email)
-        );
+        try {
+            const unreadMessages = messages.filter(m => 
+                m.sender_email !== currentUser.email && 
+                !m.read_by?.includes(currentUser.email)
+            );
 
-        if (conversation.type === 'conversation') {
-            for (const msg of unreadMessages) {
-                await base44.entities.ChatMessage.update(msg.id, {
-                    read_by: [...(msg.read_by || []), currentUser.email]
+            if (unreadMessages.length === 0) return;
+
+            if (conversation.type === 'conversation') {
+                for (const msg of unreadMessages) {
+                    await base44.entities.ChatMessage.update(msg.id, {
+                        read_by: [...(msg.read_by || []), currentUser.email]
+                    });
+                }
+                const newUnreadCount = { ...(conversation.unread_count || {}) };
+                newUnreadCount[currentUser.email] = 0;
+                await base44.entities.Conversation.update(conversation.id, {
+                    unread_count: newUnreadCount
                 });
-            }
-            const newUnreadCount = { ...(conversation.unread_count || {}) };
-            newUnreadCount[currentUser.email] = 0;
-            await base44.entities.Conversation.update(conversation.id, {
-                unread_count: newUnreadCount
-            });
-        } else if (conversation.type === 'order') {
-            for (const msg of unreadMessages) {
-                const originalMsg = await base44.entities.Message.filter({ id: msg.id });
-                if (originalMsg[0]) {
+            } else if (conversation.type === 'order') {
+                for (const msg of unreadMessages) {
                     await base44.entities.Message.update(msg.id, { is_read: true });
                 }
-            }
-        } else if (conversation.type === 'driver') {
-            for (const msg of unreadMessages) {
-                const originalMsg = await base44.entities.DriverMessage.filter({ id: msg.id });
-                if (originalMsg[0]) {
+            } else if (conversation.type === 'driver') {
+                for (const msg of unreadMessages) {
                     await base44.entities.DriverMessage.update(msg.id, { is_read: true });
                 }
             }
-        }
 
-        queryClient.invalidateQueries(['all-messages']);
+            queryClient.invalidateQueries(['all-messages']);
+        } catch (error) {
+            console.error('Error marking messages as read:', error);
+        }
     };
 
     const sendMessageMutation = useMutation({

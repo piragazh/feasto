@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Search, Plus, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 import ConversationList from '@/components/messaging/ConversationList';
 import ChatInterface from '@/components/messaging/ChatInterface';
 import NewConversationDialog from '@/components/messaging/NewConversationDialog';
@@ -40,52 +41,75 @@ export default function Messages() {
             
             const allMessages = [];
 
-            // 1. Get conversations (support/general chats)
-            const convos = await base44.entities.Conversation.list('-last_message_time');
-            const userConvos = convos.filter(c => c.participants?.includes(user.email));
-            allMessages.push(...userConvos.map(c => ({
-                ...c,
-                type: 'conversation',
-                displayName: c.participants?.find(p => p !== user.email)?.split('@')[0] || 'Support',
-                icon: 'user'
-            })));
+            try {
+                // 1. Get conversations (support/general chats)
+                const convos = await base44.entities.Conversation.list('-last_message_time');
+                const userConvos = Array.isArray(convos) ? convos.filter(c => c.participants?.includes(user.email)) : [];
+                allMessages.push(...userConvos.map(c => ({
+                    ...c,
+                    type: 'conversation',
+                    displayName: c.participants?.find(p => p !== user.email)?.split('@')[0] || 'Support',
+                    icon: 'user'
+                })));
 
-            // 2. Get order-related messages
-            const orders = await base44.entities.Order.filter({ created_by: user.email });
-            const orderIds = orders.map(o => o.id);
-            
-            for (const orderId of orderIds) {
-                const orderMessages = await base44.entities.Message.filter({ order_id: orderId });
-                if (orderMessages.length > 0) {
-                    const order = orders.find(o => o.id === orderId);
-                    const lastMsg = orderMessages[orderMessages.length - 1];
-                    allMessages.push({
-                        id: `order-${orderId}`,
-                        type: 'order',
-                        order_id: orderId,
-                        restaurant_id: order?.restaurant_id,
-                        displayName: order?.restaurant_name || 'Restaurant',
-                        icon: 'restaurant',
-                        last_message: lastMsg?.message,
-                        last_message_time: lastMsg?.created_date,
-                        messages: orderMessages,
-                        unread_count: orderMessages.filter(m => 
-                            m.sender_type === 'restaurant' && !m.is_read
-                        ).length
+                // 2. Get order-related messages
+                const orders = await base44.entities.Order.filter({ created_by: user.email });
+                const validOrders = Array.isArray(orders) ? orders : [];
+                
+                // Batch fetch all order messages at once
+                const allOrderMessages = await base44.entities.Message.list('-created_date', 1000);
+                const orderMessagesMap = {};
+                
+                if (Array.isArray(allOrderMessages)) {
+                    allOrderMessages.forEach(msg => {
+                        if (!orderMessagesMap[msg.order_id]) {
+                            orderMessagesMap[msg.order_id] = [];
+                        }
+                        orderMessagesMap[msg.order_id].push(msg);
                     });
                 }
-            }
+                
+                for (const order of validOrders) {
+                    const orderMessages = orderMessagesMap[order.id] || [];
+                    if (orderMessages.length > 0) {
+                        const lastMsg = orderMessages[orderMessages.length - 1];
+                        allMessages.push({
+                            id: `order-${order.id}`,
+                            type: 'order',
+                            order_id: order.id,
+                            restaurant_id: order.restaurant_id,
+                            displayName: order.restaurant_name || 'Restaurant',
+                            icon: 'restaurant',
+                            last_message: lastMsg?.message,
+                            last_message_time: lastMsg?.created_date,
+                            messages: orderMessages,
+                            unread_count: orderMessages.filter(m => 
+                                m.sender_type === 'restaurant' && !m.is_read
+                            ).length
+                        });
+                    }
+                }
 
-            // 3. Get driver messages
-            for (const order of orders) {
-                if (order.driver_id && order.status === 'out_for_delivery') {
-                    const driverMessages = await base44.entities.DriverMessage.filter({ 
-                        order_id: order.id 
+                // 3. Get driver messages for active deliveries
+                const activeOrders = validOrders.filter(o => o.driver_id && o.status === 'out_for_delivery');
+                const allDriverMessages = await base44.entities.DriverMessage.list('-created_date', 1000);
+                const driverMessagesMap = {};
+                
+                if (Array.isArray(allDriverMessages)) {
+                    allDriverMessages.forEach(msg => {
+                        if (!driverMessagesMap[msg.order_id]) {
+                            driverMessagesMap[msg.order_id] = [];
+                        }
+                        driverMessagesMap[msg.order_id].push(msg);
                     });
+                }
+                
+                for (const order of activeOrders) {
+                    const driverMessages = driverMessagesMap[order.id] || [];
                     if (driverMessages.length > 0) {
                         const lastMsg = driverMessages[driverMessages.length - 1];
                         const drivers = await base44.entities.Driver.filter({ id: order.driver_id });
-                        const driver = drivers[0];
+                        const driver = Array.isArray(drivers) ? drivers[0] : null;
                         
                         allMessages.push({
                             id: `driver-${order.id}`,
@@ -104,6 +128,9 @@ export default function Messages() {
                         });
                     }
                 }
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                toast.error('Failed to load messages');
             }
 
             // Sort by most recent message
@@ -114,8 +141,8 @@ export default function Messages() {
             });
         },
         enabled: !!user?.email,
-        staleTime: 10000, // 10s cache
-        refetchInterval: 15000, // Refetch every 15s instead of 3s
+        staleTime: 10000,
+        refetchInterval: 15000,
     });
 
     const filteredConversations = (conversations || []).filter(c =>

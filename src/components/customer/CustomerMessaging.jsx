@@ -25,9 +25,12 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
 
     const { data: messages = [], isLoading } = useQuery({
         queryKey: ['messages', orderId],
-        queryFn: () => base44.entities.Message.filter({ order_id: orderId }, '-created_date'),
+        queryFn: async () => {
+            const msgs = await base44.entities.Message.filter({ order_id: orderId }, '-created_date');
+            return Array.isArray(msgs) ? msgs : [];
+        },
         enabled: !!orderId,
-        refetchInterval: 3000,
+        refetchInterval: 10000,
     });
 
     const sendMutation = useMutation({
