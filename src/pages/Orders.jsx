@@ -39,18 +39,22 @@ export default function Orders() {
         queryFn: async () => {
             try {
                 const user = await base44.auth.me();
-                if (!user?.email) return [];
+                if (!user?.email) {
+                    base44.auth.redirectToLogin();
+                    return [];
+                }
                 const result = await base44.entities.Order.filter({ created_by: user.email }, '-created_date');
-                return (result || []).filter(order => order && order.id && order.restaurant_name);
+                return Array.isArray(result) ? result.filter(order => order && order.id && order.restaurant_name) : [];
             } catch (e) {
                 console.error('Error fetching orders:', e);
+                base44.auth.redirectToLogin();
                 return [];
             }
         },
         staleTime: 30000, // Data fresh for 30s
         refetchInterval: (data) => {
             // Only refetch if there are active orders
-            const hasActive = data?.some(o => 
+            const hasActive = Array.isArray(data) && data.some(o => 
                 ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'].includes(o.status)
             );
             return hasActive ? 60000 : false; // Refetch every 60s if active, otherwise don't
