@@ -167,21 +167,22 @@ export default function DriverApp() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-safe">
+        <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
             <style>{`
                 html, body {
                     overscroll-behavior: none;
                     -webkit-overflow-scrolling: touch;
                     touch-action: manipulation;
+                    overflow: hidden;
                 }
                 @supports (padding: env(safe-area-inset-top)) {
-                    .pb-safe { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
                     .sticky-header { padding-top: env(safe-area-inset-top); }
+                    .sticky-footer { padding-bottom: env(safe-area-inset-bottom); }
                 }
             `}</style>
             
-            {/* Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg sticky top-0 z-50 sticky-header">
+            {/* Header - Fixed */}
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg sticky-header flex-shrink-0">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -243,8 +244,9 @@ export default function DriverApp() {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
+            {/* Main Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="max-w-4xl mx-auto px-4 py-6">
                 {activeOrders.length > 0 ? (
                     <>
                         {/* Quick Message Button */}
@@ -379,10 +381,11 @@ export default function DriverApp() {
                     </Tabs>
                     </>
                 )}
+                </div>
             </div>
 
-            {/* Persistent Bottom Status Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-gray-800 border-t border-gray-700 shadow-2xl z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+            {/* Persistent Bottom Status Bar - Fixed */}
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 border-t border-gray-700 shadow-2xl sticky-footer flex-shrink-0">
                 <div className="max-w-4xl mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
