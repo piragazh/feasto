@@ -41,8 +41,10 @@ export default function DriverApp() {
             const drivers = await base44.entities.Driver.filter({ email: userData.email });
             
             if (drivers && drivers.length > 0) {
+                console.log('Driver loaded:', drivers[0]);
                 setDriver(drivers[0]);
             } else {
+                console.log('No driver found for email:', userData.email);
                 // No driver profile found - show error state
                 setDriver('not_found');
             }
@@ -237,10 +239,12 @@ export default function DriverApp() {
                                 <Switch
                                     checked={driver.is_available}
                                     onCheckedChange={(checked) => {
+                                        console.log('Toggle clicked, driver:', driver);
                                         if (driver?.id) {
                                             toggleAvailabilityMutation.mutate(checked);
                                         } else {
-                                            toast.error('Driver profile not loaded');
+                                            toast.error('Driver profile not loaded. Driver ID: ' + (driver?.id || 'undefined'));
+                                            console.error('Driver state:', driver);
                                         }
                                     }}
                                     disabled={toggleAvailabilityMutation.isPending}
