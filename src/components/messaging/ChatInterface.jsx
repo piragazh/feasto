@@ -195,10 +195,11 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
     };
 
     return (
-        <Card className="h-[600px] flex flex-col">
-            <CardHeader className="border-b">
+        <Card className="h-[600px] flex flex-col overflow-hidden">
+            <CardHeader className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-blue-900">
+                        <MessageSquare className="h-5 w-5 text-blue-600" />
                         {getParticipantName()}
                     </CardTitle>
                     <Button size="icon" variant="ghost" onClick={onClose}>
@@ -207,36 +208,29 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
                 </div>
             </CardHeader>
             
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
                 {!messages || messages.length === 0 ? (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500">No messages yet. Start the conversation!</p>
+                    <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                            <MessageSquare className="h-8 w-8 text-blue-500" />
+                        </div>
+                        <p className="text-gray-600 font-medium">No messages yet</p>
+                        <p className="text-sm text-gray-500 mt-1">Start the conversation!</p>
                     </div>
                 ) : (
                     messages.map((msg) => {
                         const isOwnMessage = msg.sender_email === currentUser.email;
-                        const Icon = getIcon(msg.sender_type);
 
                         return (
                             <div
                                 key={msg.id}
-                                className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+                                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                             >
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                    msg.sender_type === 'restaurant' ? 'bg-blue-100' :
-                                    msg.sender_type === 'driver' ? 'bg-green-100' : 'bg-gray-100'
+                                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
+                                    isOwnMessage 
+                                        ? 'bg-blue-500 text-white rounded-br-sm' 
+                                        : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                                 }`}>
-                                    <Icon className={`h-4 w-4 ${
-                                        msg.sender_type === 'restaurant' ? 'text-blue-600' :
-                                        msg.sender_type === 'driver' ? 'text-green-600' : 'text-gray-600'
-                                    }`} />
-                                </div>
-                                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
-                                    <div className={`rounded-2xl px-4 py-2 ${
-                                        isOwnMessage 
-                                            ? 'bg-orange-500 text-white' 
-                                            : 'bg-gray-100 text-gray-900'
-                                    }`}>
                                         {msg.image_url && (
                                             <img 
                                                 src={msg.image_url} 
@@ -244,12 +238,11 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
                                                 className="rounded-lg mb-2 max-w-full"
                                             />
                                         )}
-                                        {msg.message && <p className="text-sm">{msg.message}</p>}
+                                        {msg.message && <p className="text-sm leading-relaxed">{msg.message}</p>}
+                                        <p className={`text-xs mt-1.5 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+                                            {moment(msg.created_date).format('h:mm A')}
+                                        </p>
                                     </div>
-                                    <span className="text-xs text-gray-500 mt-1">
-                                        {moment(msg.created_date).format('h:mm A')}
-                                    </span>
-                                </div>
                             </div>
                         );
                     })
@@ -257,7 +250,7 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
                 <div ref={messagesEndRef} />
             </CardContent>
 
-            <div className="border-t p-4">
+            <div className="border-t bg-white p-4">
                 {imagePreview && (
                     <div className="mb-2 relative inline-block">
                         <img src={imagePreview} alt="Preview" className="h-20 rounded-lg" />
@@ -300,12 +293,12 @@ export default function ChatInterface({ conversation, currentUser, onClose }) {
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                        className="flex-1"
+                        className="flex-1 rounded-xl border-gray-300 focus:border-blue-500 h-12"
                     />
                     <Button
                         onClick={handleSend}
                         disabled={(!message.trim() && !imagePreview) || sendMessageMutation.isPending}
-                        className="bg-orange-500 hover:bg-orange-600"
+                        className="bg-blue-500 hover:bg-blue-600 rounded-xl h-12 px-4"
                     >
                         <Send className="h-5 w-5" />
                     </Button>

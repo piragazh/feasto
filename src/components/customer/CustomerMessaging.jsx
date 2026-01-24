@@ -82,24 +82,27 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
+        <Card className="h-[600px] flex flex-col overflow-hidden">
+            <CardHeader className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+                <CardTitle className="flex items-center gap-2 text-blue-900">
+                    <MessageSquare className="h-5 w-5 text-blue-600" />
                     Messages with Restaurant
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {/* Messages List */}
-                    <div className="max-h-96 overflow-y-auto space-y-3">
+            <CardContent className="flex-1 p-4 overflow-y-auto bg-gray-50 space-y-3">
                         {isLoading ? (
                             <>
                                 <Skeleton className="h-20 w-full" />
                                 <Skeleton className="h-20 w-full" />
                             </>
                         ) : messages.length === 0 ? (
-                            <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
+                            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                                    <MessageSquare className="h-8 w-8 text-blue-500" />
+                                </div>
+                                <p className="text-gray-600 font-medium">No messages yet</p>
+                                <p className="text-sm text-gray-500 mt-1">Start the conversation with the restaurant</p>
+                            </div>
                         ) : (
                             messages.map((msg) => {
                                 const isCustomer = msg.sender_type === 'customer';
@@ -110,7 +113,7 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
                                         key={msg.id}
                                         className={`flex ${isCustomer ? 'justify-end' : 'justify-start'}`}
                                     >
-                                        <div className={`max-w-[80%] ${isCustomer ? 'bg-orange-100' : 'bg-gray-100'} rounded-lg p-3`}>
+                                        <div className={`max-w-[75%] rounded-2xl p-3 shadow-sm ${isCustomer ? 'bg-blue-500 text-white rounded-br-sm' : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'}`}>
                                             <div className="flex items-start justify-between gap-2 mb-1">
                                                 <Badge variant={isCustomer ? 'default' : 'secondary'} className="text-xs">
                                                     {isCustomer ? 'You' : 'Restaurant'}
@@ -165,9 +168,9 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <p className="text-sm text-gray-800">{msg.message}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        {format(new Date(msg.created_date), 'MMM d, h:mm a')}
+                                                    <p className="text-sm leading-relaxed">{msg.message}</p>
+                                                    <p className={`text-xs mt-1.5 ${isCustomer ? 'text-blue-100' : 'text-gray-500'}`}>
+                                                        {format(new Date(msg.created_date), 'h:mm a')}
                                                     </p>
                                                 </>
                                             )}
@@ -176,31 +179,32 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
                                 );
                             })
                         )}
-                    </div>
 
                     {/* Send Message */}
-                    <div className="flex gap-2">
-                        <Textarea
-                            placeholder="Type your message..."
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            rows={2}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                        />
-                        <Button
-                            onClick={handleSend}
-                            disabled={!newMessage.trim() || sendMutation.isPending}
-                            className="bg-orange-500 hover:bg-orange-600"
-                        >
-                            <Send className="h-4 w-4" />
-                        </Button>
+                    <div className="border-t bg-white p-4 mt-auto">
+                        <div className="flex gap-2">
+                            <Textarea
+                                placeholder="Type your message..."
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                className="flex-1 min-h-[60px] resize-none rounded-xl border-gray-300 focus:border-blue-500"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                            />
+                            <Button
+                                onClick={handleSend}
+                                disabled={!newMessage.trim() || sendMutation.isPending}
+                                className="bg-blue-500 hover:bg-blue-600 rounded-xl h-[60px] px-4"
+                                size="lg"
+                            >
+                                <Send className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
-                </div>
 
                 {/* Delete Confirmation */}
                 <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
