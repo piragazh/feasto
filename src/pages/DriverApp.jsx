@@ -93,22 +93,45 @@ export default function DriverApp() {
         enabled: !!driver && driver !== 'not_found' && !!driver.id,
     });
 
-    const todayEarnings = completedOrders
-        .filter(order => {
-            const orderDate = new Date(order.actual_delivery_time || order.updated_date);
-            const today = new Date();
-            return orderDate.toDateString() === today.toDateString();
-        })
-        .reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
+    // Calculate earnings based on payment config per restaurant
+    const calculateEarnings = (orders) => {
+        return orders.reduce((total, order) => {
+            const config = driver?.payment_config?.[order.restaurant_id];
+            if (!config) return total + (order.delivery_fee || 0);
 
-    const weekEarnings = completedOrders
-        .filter(order => {
-            const orderDate = new Date(order.actual_delivery_time || order.updated_date);
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            return orderDate >= weekAgo;
-        })
-        .reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
+            if (config.method === 'per_delivery') {
+                return total + (config.per_delivery_fee || 0);
+            } else if (config.method === 'per_hour') {
+                // Calculate hours based on delivery time
+                const start = new Date(order.created_date);
+                const end = new Date(order.actual_delivery_time || order.updated_date);
+                const hours = (end - start) / (1000 * 60 * 60);
+                return total + (hours * (config.hourly_rate || 0));
+            } else if (config.method === 'per_mile') {
+                // Estimate miles (rough calculation - ideally should track actual)
+                // For now, use delivery_fee as proxy or calculate from coordinates
+                const miles = 5; // Default assumption - should be tracked properly
+                return total + (miles * (config.per_mile_rate || 0));
+            }
+            return total + (order.delivery_fee || 0);
+        }, 0);
+    };
+
+    const todayOrders = completedOrders.filter(order => {
+        const orderDate = new Date(order.actual_delivery_time || order.updated_date);
+        const today = new Date();
+        return orderDate.toDateString() === today.toDateString();
+    });
+
+    const weekOrders = completedOrders.filter(order => {
+        const orderDate = new Date(order.actual_delivery_time || order.updated_date);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return orderDate >= weekAgo;
+    });
+
+    const todayEarnings = calculateEarnings(todayOrders);
+    const weekEarnings = calculateEarnings(weekOrders);
 
     const toggleAvailabilityMutation = useMutation({
         mutationFn: async (isAvailable) => {
