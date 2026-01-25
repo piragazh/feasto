@@ -244,12 +244,8 @@ export default function Layout({ children, currentPageName }) {
 
             if (domainRestaurant) {
                 setCustomDomainRestaurantId(domainRestaurant.id);
-
-                // If on custom domain, redirect to restaurant page if not already there
-                const restaurantUrl = createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`;
-                if (!window.location.pathname.includes('/Restaurant') || !window.location.search.includes(domainRestaurant.id)) {
-                    window.location.href = restaurantUrl;
-                }
+                // Store in sessionStorage for Home page to detect
+                sessionStorage.setItem('customDomainRestaurantId', domainRestaurant.id);
             }
 
             setCustomDomainChecked(true);
