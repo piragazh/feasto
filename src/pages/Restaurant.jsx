@@ -30,7 +30,12 @@ import { toast } from 'sonner';
 export default function Restaurant() {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
-    const restaurantId = urlParams.get('id');
+    let restaurantId = urlParams.get('id');
+    
+    // Check for custom domain restaurant ID from sessionStorage
+    if (!restaurantId) {
+        restaurantId = sessionStorage.getItem('customDomainRestaurantId');
+    }
     
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
