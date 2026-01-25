@@ -13,6 +13,7 @@ import PersonalizedRecommendations from '@/components/home/PersonalizedRecommend
 import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
 import RestaurantCard from '@/components/home/RestaurantCard';
 import EnhancedSearchBar from '@/components/home/EnhancedSearchBar';
+import Restaurant from './Restaurant';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function Home() {
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
     const [menuItemSearch, setMenuItemSearch] = useState('');
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
     // Fetch menu items for advanced search with extended cache
     const { data: allMenuItems = [] } = useQuery({
@@ -40,6 +42,11 @@ export default function Home() {
 
     useEffect(() => {
         getUserLocation();
+        // Check if custom domain restaurant
+        const customDomainId = sessionStorage.getItem('customDomainRestaurantId');
+        if (customDomainId) {
+            setCustomDomainRestaurantId(customDomainId);
+        }
     }, []);
 
     const getUserLocation = () => {
@@ -134,6 +141,11 @@ export default function Home() {
             if (sortBy === 'distance' && a.distance && b.distance) return a.distance - b.distance;
             return 0;
         });
+
+    // If on custom domain, render Restaurant page directly (SEO-friendly)
+    if (customDomainRestaurantId) {
+        return <Restaurant />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
