@@ -7,11 +7,15 @@ export default function MediaScreen() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [restaurantId, setRestaurantId] = useState(null);
+    const [screenName, setScreenName] = useState(null);
+    const [lastContentUpdate, setLastContentUpdate] = useState(null);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('restaurantId');
+        const screen = urlParams.get('screen');
         setRestaurantId(id);
+        setScreenName(screen || 'default');
     }, []);
 
     // Fetch restaurant
@@ -25,18 +29,33 @@ export default function MediaScreen() {
         refetchInterval: 60000, // Refresh every minute
     });
 
-    // Fetch promotional content
+    // Fetch promotional content with smart caching
     const { data: content = [] } = useQuery({
-        queryKey: ['promotional-content', restaurantId],
+        queryKey: ['promotional-content', restaurantId, screenName],
         queryFn: async () => {
             const items = await base44.entities.PromotionalContent.filter({ 
                 restaurant_id: restaurantId, 
-                is_active: true 
+                is_active: true,
+                screen_name: screenName
             });
-            return items.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+            const sorted = items.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+            
+            // Check if content has changed
+            const currentTimestamp = Math.max(...sorted.map(item => 
+                new Date(item.updated_date || item.created_date).getTime()
+            ));
+            
+            if (lastContentUpdate !== currentTimestamp) {
+                setLastContentUpdate(currentTimestamp);
+                setCurrentIndex(0); // Reset to first item when content changes
+            }
+            
+            return sorted;
         },
-        enabled: !!restaurantId,
-        refetchInterval: 30000, // Refresh every 30 seconds
+        enabled: !!restaurantId && !!screenName,
+        staleTime: 60000, // Cache for 1 minute
+        gcTime: 300000, // Keep in cache for 5 minutes
+        refetchInterval: 60000, // Check for updates every minute
     });
 
     // Fetch weather
@@ -89,7 +108,7 @@ export default function MediaScreen() {
                 <div className="text-center">
                     <h1 className="text-3xl font-bold mb-4">Media Screen</h1>
                     <p className="text-gray-400">Please provide a restaurantId in the URL</p>
-                    <p className="text-sm text-gray-500 mt-2">Example: ?restaurantId=YOUR_ID</p>
+                    <p className="text-sm text-gray-500 mt-2">Example: ?restaurantId=YOUR_ID&screen=Main</p>
                 </div>
             </div>
         );

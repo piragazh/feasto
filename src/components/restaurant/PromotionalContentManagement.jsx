@@ -7,15 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Upload, Eye, MoveUp, MoveDown, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Upload, Eye, MoveUp, MoveDown, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
+import { Textarea } from "@/components/ui/textarea";
 
 export default function PromotionalContentManagement({ restaurantId }) {
     const queryClient = useQueryClient();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [selectedScreen, setSelectedScreen] = useState('default');
+    const [showAIDialog, setShowAIDialog] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -23,17 +28,26 @@ export default function PromotionalContentManagement({ restaurantId }) {
         media_type: 'image',
         duration: 10,
         display_order: 0,
-        is_active: true
+        is_active: true,
+        screen_name: 'default'
     });
 
     // Fetch promotional content
-    const { data: content = [] } = useQuery({
+    const { data: allContent = [] } = useQuery({
         queryKey: ['promotional-content', restaurantId],
         queryFn: async () => {
             const items = await base44.entities.PromotionalContent.filter({ restaurant_id: restaurantId });
             return items.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
         },
     });
+
+    // Filter by selected screen
+    const content = allContent.filter(item => 
+        (item.screen_name || 'default') === selectedScreen
+    );
+
+    // Get unique screen names
+    const screenNames = [...new Set(allContent.map(item => item.screen_name || 'default'))];
 
     // Create mutation
     const createMutation = useMutation({
@@ -104,6 +118,38 @@ export default function PromotionalContentManagement({ restaurantId }) {
         }
     };
 
+    const handleGenerateAI = async () => {
+        if (!aiPrompt.trim()) {
+            toast.error('Please enter a prompt');
+            return;
+        }
+
+        setIsGeneratingAI(true);
+        try {
+            // Generate AI image
+            const response = await base44.integrations.Core.GenerateImage({
+                prompt: `Create a professional restaurant promotional image: ${aiPrompt}. High quality, appetizing, modern design.`
+            });
+
+            setFormData(prev => ({
+                ...prev,
+                media_url: response.url,
+                media_type: 'image',
+                title: aiPrompt.slice(0, 50),
+                ai_generated: true,
+                ai_prompt: aiPrompt
+            }));
+
+            toast.success('AI content generated successfully!');
+            setShowAIDialog(false);
+            setAiPrompt('');
+        } catch (error) {
+            toast.error('Failed to generate AI content');
+        } finally {
+            setIsGeneratingAI(false);
+        }
+    };
+
     const resetForm = () => {
         setFormData({
             title: '',
@@ -112,10 +158,12 @@ export default function PromotionalContentManagement({ restaurantId }) {
             media_type: 'image',
             duration: 10,
             display_order: content.length,
-            is_active: true
+            is_active: true,
+            screen_name: selectedScreen
         });
         setEditingContent(null);
         setIsDialogOpen(false);
+        setAiPrompt('');
     };
 
     const handleEdit = (item) => {
@@ -127,7 +175,10 @@ export default function PromotionalContentManagement({ restaurantId }) {
             media_type: item.media_type,
             duration: item.duration || 10,
             display_order: item.display_order || 0,
-            is_active: item.is_active
+            is_active: item.is_active,
+            screen_name: item.screen_name || 'default',
+            ai_generated: item.ai_generated || false,
+            ai_prompt: item.ai_prompt || ''
         });
         setIsDialogOpen(true);
     };
@@ -151,7 +202,7 @@ export default function PromotionalContentManagement({ restaurantId }) {
         });
     };
 
-    const mediaScreenUrl = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}`;
+    const mediaScreenUrl = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screen=${selectedScreen}`;
 
     return (
         <div className="space-y-6">
@@ -161,19 +212,95 @@ export default function PromotionalContentManagement({ restaurantId }) {
                     <p className="text-sm text-gray-600">Manage promotional content for in-store displays</p>
                 </div>
                 <div className="flex gap-2">
+                    <select
+                        value={selectedScreen}
+                        onChange={(e) => setSelectedScreen(e.target.value)}
+                        className="px-4 py-2 border rounded-lg bg-white"
+                    >
+                        {screenNames.map(name => (
+                            <option key={name} value={name}>{name}</option>
+                        ))}
+                        <option value="new">+ Add New Screen</option>
+                    </select>
+                    {selectedScreen === 'new' && (
+                        <Input
+                            placeholder="Enter screen name..."
+                            onBlur={(e) => {
+                                if (e.target.value) {
+                                    setSelectedScreen(e.target.value);
+                                } else {
+                                    setSelectedScreen('default');
+                                }
+                            }}
+                            autoFocus
+                            className="w-48"
+                        />
+                    )}
                     <Button
                         variant="outline"
                         onClick={() => window.open(mediaScreenUrl, '_blank')}
                         className="gap-2"
                     >
                         <ExternalLink className="h-4 w-4" />
-                        Open Media Screen
+                        Open Screen
                     </Button>
+                    <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <Sparkles className="h-4 w-4" />
+                                AI Generate
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Generate Content with AI</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                <div>
+                                    <Label>Describe the image you want to create</Label>
+                                    <Textarea
+                                        value={aiPrompt}
+                                        onChange={(e) => setAiPrompt(e.target.value)}
+                                        placeholder="e.g., A delicious burger with fresh vegetables, fries on the side, modern minimalist style"
+                                        rows={4}
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowAIDialog(false);
+                                            setAiPrompt('');
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleGenerateAI}
+                                        disabled={isGeneratingAI || !aiPrompt.trim()}
+                                        className="gap-2"
+                                    >
+                                        {isGeneratingAI ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Generating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="h-4 w-4" />
+                                                Generate
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
                             <Button className="gap-2" onClick={() => {
                                 resetForm();
-                                setFormData(prev => ({ ...prev, display_order: content.length }));
+                                setFormData(prev => ({ ...prev, display_order: content.length, screen_name: selectedScreen }));
                             }}>
                                 <Plus className="h-4 w-4" />
                                 Add Content
@@ -196,6 +323,19 @@ export default function PromotionalContentManagement({ restaurantId }) {
                                 </div>
 
                                 <div>
+                                    <Label>Screen Location</Label>
+                                    <select
+                                        value={formData.screen_name}
+                                        onChange={(e) => setFormData({ ...formData, screen_name: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg"
+                                    >
+                                        {screenNames.map(name => (
+                                            <option key={name} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
                                     <Label>Description (Optional)</Label>
                                     <Input
                                         value={formData.description}
@@ -203,6 +343,16 @@ export default function PromotionalContentManagement({ restaurantId }) {
                                         placeholder="Internal notes about this content"
                                     />
                                 </div>
+
+                                {formData.ai_generated && (
+                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                        <div className="flex items-center gap-2 text-purple-700 text-sm font-medium mb-1">
+                                            <Sparkles className="h-4 w-4" />
+                                            AI Generated Content
+                                        </div>
+                                        <p className="text-xs text-purple-600">{formData.ai_prompt}</p>
+                                    </div>
+                                )}
 
                                 <div>
                                     <Label>Upload Media</Label>
@@ -276,7 +426,15 @@ export default function PromotionalContentManagement({ restaurantId }) {
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                        <CardTitle className="text-lg">{item.title || 'Untitled'}</CardTitle>
+                                        <div className="flex items-center gap-2">
+                                            <CardTitle className="text-lg">{item.title || 'Untitled'}</CardTitle>
+                                            {item.ai_generated && (
+                                                <Badge variant="secondary" className="gap-1">
+                                                    <Sparkles className="h-3 w-3" />
+                                                    AI
+                                                </Badge>
+                                            )}
+                                        </div>
                                         {item.description && (
                                             <p className="text-sm text-gray-500 mt-1">{item.description}</p>
                                         )}
