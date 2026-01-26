@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import MultiZoneDisplay from './MultiZoneDisplay';
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
@@ -123,40 +122,20 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     return (
         <div className="h-screen w-screen bg-black relative overflow-hidden">
-            <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent z-10 p-6"
-            >
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent z-10 p-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         {restaurant?.logo_url && (
-                            <motion.img 
-                                initial={{ scale: 0, rotate: -180 }}
-                                animate={{ scale: 1, rotate: 0 }}
-                                transition={{ duration: 0.6, delay: 0.2 }}
+                            <img 
                                 src={restaurant.logo_url} 
                                 alt={restaurant.name}
                                 className="h-16 w-16 rounded-lg object-cover"
                             />
                         )}
-                        <motion.h1 
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.6, delay: 0.3 }}
-                            className="text-3xl font-bold text-white"
-                        >
-                            {restaurant?.name}
-                        </motion.h1>
+                        <h1 className="text-3xl font-bold text-white">{restaurant?.name}</h1>
                     </div>
                     
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.4 }}
-                        className="flex items-center gap-6 text-white"
-                    >
+                    <div className="flex items-center gap-6 text-white">
                         <div className="text-right">
                             <div className="text-2xl font-bold">
                                 {currentTime.toLocaleTimeString('en-GB', { 
@@ -182,59 +161,43 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                 </div>
                             </div>
                         )}
-                    </motion.div>
+                    </div>
                 </div>
-            </motion.div>
+            </div>
 
             <div className="h-full w-full flex items-center justify-center">
-                <AnimatePresence mode="wait">
-                    {currentContent.media_type === 'video' ? (
-                        <motion.video
-                            key={currentContent.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.1 }}
-                            transition={{ duration: 0.7, ease: "easeInOut" }}
-                            src={currentContent.media_url}
-                            autoPlay
-                            muted
-                            loop
-                            className="max-h-full max-w-full object-contain"
-                        />
-                    ) : (
-                        <motion.img
-                            key={currentContent.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.1 }}
-                            transition={{ duration: 0.7, ease: "easeInOut" }}
-                            src={currentContent.media_url}
-                            alt={currentContent.title}
-                            className="max-h-full max-w-full object-contain"
-                        />
-                    )}
-                </AnimatePresence>
+                {currentContent.media_type === 'video' ? (
+                    <video
+                        key={currentContent.id}
+                        src={currentContent.media_url}
+                        autoPlay
+                        muted
+                        loop
+                        className="max-h-full max-w-full object-contain"
+                    />
+                ) : (
+                    <img
+                        key={currentContent.id}
+                        src={currentContent.media_url}
+                        alt={currentContent.title}
+                        className="max-h-full max-w-full object-contain"
+                    />
+                )}
             </div>
 
             {content.length > 1 && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.5 }}
-                    className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2"
-                >
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
                     {content.map((_, index) => (
-                        <motion.div
+                        <div
                             key={index}
-                            animate={{ 
-                                width: index === currentIndex ? 32 : 8,
-                                opacity: index === currentIndex ? 1 : 0.5
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className="h-2 rounded-full bg-white"
+                            className={`h-2 rounded-full transition-all ${
+                                index === currentIndex 
+                                    ? 'w-8 bg-white' 
+                                    : 'w-2 bg-white/50'
+                            }`}
                         />
                     ))}
-                </motion.div>
+                </div>
             )}
         </div>
     );
