@@ -45,6 +45,12 @@ export default function ContentManagement({ restaurantId }) {
         enabled: !!restaurantId,
     });
 
+    const { data: screens = [] } = useQuery({
+        queryKey: ['screens', restaurantId],
+        queryFn: () => base44.entities.Screen.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
     useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
@@ -61,9 +67,9 @@ export default function ContentManagement({ restaurantId }) {
         ? sortedContent 
         : sortedContent.filter(c => c.screen_name === selectedScreen);
 
-    const screenNames = [...new Set(allContent.map(c => c.screen_name).filter(Boolean))];
+    const screenNames = screens.map(s => s.screen_name);
     const maxScreensAllowed = restaurant?.max_screens_allowed || 1;
-    const canAddNewScreen = screenNames.length < maxScreensAllowed;
+    const canAddNewScreen = screens.length < maxScreensAllowed;
 
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.PromotionalContent.create(data),
@@ -252,48 +258,73 @@ export default function ContentManagement({ restaurantId }) {
             return;
         }
 
-        if (screenAction.type === 'add') {
-            if (screenNames.includes(screenName)) {
-                toast.error('Screen name already exists');
-                return;
-            }
-            if (!canAddNewScreen) {
-                toast.error(`Maximum ${maxScreensAllowed} screens allowed`);
-                return;
-            }
-            toast.success('Screen added. You can now add content to it.');
-        } else if (screenAction.type === 'rename') {
-            if (screenNames.includes(screenName) && screenName !== screenAction.oldName) {
-                toast.error('Screen name already exists');
-                return;
-            }
-            
-            const contentToUpdate = allContent.filter(c => c.screen_name === screenAction.oldName);
-            
-            for (const content of contentToUpdate) {
-                await updateMutation.mutateAsync({
-                    id: content.id,
-                    data: { screen_name: screenName }
-                });
-            }
-            toast.success('Screen renamed successfully');
-        } else if (screenAction.type === 'delete') {
-            const contentToDelete = allContent.filter(c => c.screen_name === screenName);
-            
-            if (contentToDelete.length > 0) {
-                const confirm = window.confirm(`This will delete ${contentToDelete.length} content item(s). Continue?`);
-                if (!confirm) return;
-                
-                for (const content of contentToDelete) {
-                    await deleteMutation.mutateAsync(content.id);
+        try {
+            if (screenAction.type === 'add') {
+                if (screenNames.includes(screenName)) {
+                    toast.error('Screen name already exists');
+                    return;
                 }
+                if (!canAddNewScreen) {
+                    toast.error(`Maximum ${maxScreensAllowed} screens allowed`);
+                    return;
+                }
+                
+                await createScreenMutation.mutateAsync({
+                    restaurant_id: restaurantId,
+                    screen_name: screenName,
+                    is_active: true
+                });
+                
+                toast.success('Screen added successfully!');
+            } else if (screenAction.type === 'rename') {
+                if (screenNames.includes(screenName) && screenName !== screenAction.oldName) {
+                    toast.error('Screen name already exists');
+                    return;
+                }
+                
+                const screen = screens.find(s => s.screen_name === screenAction.oldName);
+                if (screen) {
+                    await updateScreenMutation.mutateAsync({
+                        id: screen.id,
+                        data: { screen_name: screenName }
+                    });
+                }
+                
+                const contentToUpdate = allContent.filter(c => c.screen_name === screenAction.oldName);
+                for (const content of contentToUpdate) {
+                    await updateMutation.mutateAsync({
+                        id: content.id,
+                        data: { screen_name: screenName }
+                    });
+                }
+                
+                toast.success('Screen renamed successfully');
+            } else if (screenAction.type === 'delete') {
+                const screen = screens.find(s => s.screen_name === screenName);
+                const contentToDelete = allContent.filter(c => c.screen_name === screenName);
+                
+                if (contentToDelete.length > 0) {
+                    const confirm = window.confirm(`This will delete ${contentToDelete.length} content item(s). Continue?`);
+                    if (!confirm) return;
+                    
+                    for (const content of contentToDelete) {
+                        await deleteMutation.mutateAsync(content.id);
+                    }
+                }
+                
+                if (screen) {
+                    await deleteScreenMutation.mutateAsync(screen.id);
+                }
+                
+                toast.success('Screen deleted successfully');
             }
-            toast.success('Screen deleted successfully');
-        }
 
-        setShowScreenDialog(false);
-        setScreenName('');
-        setScreenAction(null);
+            setShowScreenDialog(false);
+            setScreenName('');
+            setScreenAction(null);
+        } catch (error) {
+            toast.error('Failed to update screen');
+        }
     };
 
     const getScreenStats = (screenName) => {
