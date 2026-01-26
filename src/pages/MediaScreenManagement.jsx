@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Monitor } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import PromotionalContentManagement from '@/components/restaurant/PromotionalContentManagement';
+import ContentManagement from '@/components/mediascreen/ContentManagement';
 
 export default function MediaScreenManagement() {
     const navigate = useNavigate();
@@ -114,7 +114,7 @@ export default function MediaScreenManagement() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <PromotionalContentManagement restaurantId={restaurant.id} />
+                <ContentManagement restaurantId={restaurant.id} />
             </div>
         </div>
     );

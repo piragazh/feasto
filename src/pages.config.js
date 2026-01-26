@@ -19,11 +19,11 @@ import Orders from './pages/Orders';
 import POSDashboard from './pages/POSDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Restaurant from './pages/Restaurant';
-import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
 import MediaScreenManagement from './pages/MediaScreenManagement';
+import RestaurantDashboard from './pages/RestaurantDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -49,11 +49,11 @@ export const PAGES = {
     "POSDashboard": POSDashboard,
     "PrivacyPolicy": PrivacyPolicy,
     "Restaurant": Restaurant,
-    "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
     "MediaScreenManagement": MediaScreenManagement,
+    "RestaurantDashboard": RestaurantDashboard,
 }
 
 export const pagesConfig = {
