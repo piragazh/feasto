@@ -105,6 +105,27 @@ export default function ContentManagement({ restaurantId }) {
         },
     });
 
+    const createScreenMutation = useMutation({
+        mutationFn: (data) => base44.entities.Screen.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['screens']);
+        },
+    });
+
+    const updateScreenMutation = useMutation({
+        mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['screens']);
+        },
+    });
+
+    const deleteScreenMutation = useMutation({
+        mutationFn: (id) => base44.entities.Screen.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['screens']);
+        },
+    });
+
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
