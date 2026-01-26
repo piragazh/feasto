@@ -66,29 +66,7 @@ export default function MediaScreenManagement() {
         );
     }
 
-    if (!restaurant.media_screen_enabled) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <Card className="max-w-md">
-                    <CardContent className="pt-6 text-center">
-                        <Monitor className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold mb-2">Media Screen Not Enabled</h2>
-                        <p className="text-gray-600">
-                            This feature is not enabled for your restaurant. Please contact support to enable media screen access.
-                        </p>
-                        <Button
-                            onClick={() => navigate(createPageUrl('RestaurantDashboard'))}
-                            variant="outline"
-                            className="mt-4"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Dashboard
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
+
 
     return (
         <div className="min-h-screen bg-gray-50">
