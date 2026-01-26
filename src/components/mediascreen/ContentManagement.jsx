@@ -694,6 +694,7 @@ export default function ContentManagement({ restaurantId }) {
                 onClose={() => setShowAIDialog(false)}
                 onContentGenerated={handleAIContentGenerated}
                 restaurantName={restaurant?.name || 'Restaurant'}
+                existingContent={editingContent}
             />
 
             <FileManager
