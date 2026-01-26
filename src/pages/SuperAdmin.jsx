@@ -17,7 +17,7 @@ import PlatformRefundOversight from '@/components/superadmin/PlatformRefundOvers
 import PayoutManagement from '@/components/superadmin/PayoutManagement';
 import PayoutHistory from '@/components/superadmin/PayoutHistory';
 import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManagement';
-import ReviewModeration from '@/components/restaurant/ReviewModeration';
+import ReviewModerationSuper from '@/components/superadmin/ReviewModeration';
 import PromotionOversight from '@/components/superadmin/PromotionOversight';
 import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
 import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManagement';
@@ -254,7 +254,7 @@ export default function SuperAdmin() {
                 {activeTab === 'refunds' && <PlatformRefundOversight />}
                 {activeTab === 'payouts' && <PayoutManagement />}
                 {activeTab === 'payout-history' && <PayoutHistory />}
-                {activeTab === 'reviews' && <ReviewModeration isAdmin={true} />}
+                {activeTab === 'reviews' && <ReviewModerationSuper />}
                 {activeTab === 'promotions' && <PromotionOversight />}
                 {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
                 {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
