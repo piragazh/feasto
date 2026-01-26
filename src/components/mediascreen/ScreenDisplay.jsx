@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import MultiZoneDisplay from './MultiZoneDisplay';
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
