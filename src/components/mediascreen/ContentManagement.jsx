@@ -14,6 +14,7 @@ import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy,
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
 import FileManager from './FileManager';
+import LayoutDesigner from './LayoutDesigner';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
@@ -22,11 +23,13 @@ export default function ContentManagement({ restaurantId }) {
     const [showAIDialog, setShowAIDialog] = useState(false);
     const [showScreenDialog, setShowScreenDialog] = useState(false);
     const [showFileManager, setShowFileManager] = useState(false);
+    const [showLayoutDesigner, setShowLayoutDesigner] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
     const [restaurant, setRestaurant] = useState(null);
     const [screenAction, setScreenAction] = useState(null);
     const [screenName, setScreenName] = useState('');
+    const [editingScreenLayout, setEditingScreenLayout] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -355,6 +358,28 @@ export default function ContentManagement({ restaurantId }) {
         return { total: screenContent.length, active: activeContent, duration: totalDuration };
     };
 
+    const handleEditLayout = (screenName) => {
+        const screen = screens.find(s => s.screen_name === screenName);
+        setEditingScreenLayout(screen);
+        setShowLayoutDesigner(true);
+    };
+
+    const handleSaveLayout = async (layout) => {
+        if (!editingScreenLayout) return;
+
+        try {
+            await updateScreenMutation.mutateAsync({
+                id: editingScreenLayout.id,
+                data: { layout_template: layout }
+            });
+            toast.success('Layout saved successfully!');
+            setShowLayoutDesigner(false);
+            setEditingScreenLayout(null);
+        } catch (error) {
+            toast.error('Failed to save layout');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <Card>
@@ -446,6 +471,15 @@ export default function ContentManagement({ restaurantId }) {
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col gap-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleEditLayout(name)}
+                                                                className="text-xs h-8 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                                                            >
+                                                                <Settings className="h-3.5 w-3.5 mr-1" />
+                                                                Layout
+                                                            </Button>
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
@@ -711,6 +745,16 @@ export default function ContentManagement({ restaurantId }) {
                     }));
                     toast.success('File selected');
                 }}
+            />
+
+            <LayoutDesigner
+                open={showLayoutDesigner}
+                onClose={() => {
+                    setShowLayoutDesigner(false);
+                    setEditingScreenLayout(null);
+                }}
+                onSave={handleSaveLayout}
+                initialLayout={editingScreenLayout?.layout_template}
             />
 
             <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>

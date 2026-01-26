@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
+import MultiZoneDisplay from './MultiZoneDisplay';
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -11,6 +12,19 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         queryKey: ['restaurant', restaurantId],
         queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0]),
         enabled: !!restaurantId,
+        staleTime: 60000,
+    });
+
+    const { data: screen } = useQuery({
+        queryKey: ['screen', restaurantId, screenName],
+        queryFn: async () => {
+            const screens = await base44.entities.Screen.filter({ 
+                restaurant_id: restaurantId,
+                screen_name: screenName
+            });
+            return screens[0];
+        },
+        enabled: !!restaurantId && !!screenName,
         staleTime: 60000,
     });
 
@@ -81,6 +95,18 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
+    // If screen has a multi-zone layout, use MultiZoneDisplay
+    if (screen?.layout_template?.zones && screen.layout_template.zones.length > 0) {
+        return (
+            <MultiZoneDisplay
+                restaurantId={restaurantId}
+                screenName={screenName}
+                layout={screen.layout_template}
+            />
+        );
+    }
+
+    // Otherwise, use classic single-content display
     if (content.length === 0) {
         return (
             <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 text-white">
