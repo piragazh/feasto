@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Loader2 } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import AIContentGenerator from './AIContentGenerator';
 
 export default function ContentManagement({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -19,8 +20,7 @@ export default function ContentManagement({ restaurantId }) {
     const [showAIDialog, setShowAIDialog] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
-    const [aiPrompt, setAiPrompt] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [restaurant, setRestaurant] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -36,6 +36,16 @@ export default function ContentManagement({ restaurantId }) {
     const { data: allContent = [] } = useQuery({
         queryKey: ['promotional-content', restaurantId],
         queryFn: () => base44.entities.PromotionalContent.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
+    useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            if (restaurants[0]) setRestaurant(restaurants[0]);
+            return restaurants[0];
+        },
         enabled: !!restaurantId,
     });
 
@@ -111,34 +121,13 @@ export default function ContentManagement({ restaurantId }) {
         }
     };
 
-    const handleGenerateAI = async () => {
-        if (!aiPrompt) {
-            toast.error('Please enter a prompt');
-            return;
-        }
-
-        setIsGenerating(true);
-        try {
-            const { url } = await base44.integrations.Core.GenerateImage({ 
-                prompt: aiPrompt 
-            });
-            
-            setFormData(prev => ({ 
-                ...prev, 
-                media_url: url,
-                media_type: 'image',
-                ai_generated: true,
-                ai_prompt: aiPrompt
-            }));
-            
-            toast.success('Image generated successfully!');
-            setShowAIDialog(false);
-            setShowDialog(true);
-        } catch (error) {
-            toast.error('Failed to generate image');
-        } finally {
-            setIsGenerating(false);
-        }
+    const handleAIContentGenerated = (aiContent) => {
+        setFormData(prev => ({ 
+            ...prev, 
+            ...aiContent
+        }));
+        setShowAIDialog(false);
+        setShowDialog(true);
     };
 
     const resetForm = () => {
@@ -394,41 +383,12 @@ export default function ContentManagement({ restaurantId }) {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Generate Content with AI</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label>Describe what you want to create</Label>
-                            <Textarea
-                                value={aiPrompt}
-                                onChange={(e) => setAiPrompt(e.target.value)}
-                                placeholder="e.g., A vibrant image promoting our new burger menu with flames and fresh ingredients"
-                                rows={4}
-                            />
-                        </div>
-                        <Button 
-                            onClick={handleGenerateAI} 
-                            className="w-full"
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Generating...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Generate Image
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <AIContentGenerator
+                open={showAIDialog}
+                onClose={() => setShowAIDialog(false)}
+                onContentGenerated={handleAIContentGenerated}
+                restaurantName={restaurant?.name || 'Restaurant'}
+            />
         </div>
     );
 }
