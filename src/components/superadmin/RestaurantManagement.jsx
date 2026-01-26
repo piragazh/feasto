@@ -132,6 +132,32 @@ export default function RestaurantManagement() {
                                     </div>
                                 </div>
 
+                                {restaurant.media_screen_enabled && (
+                                    <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                        <Monitor className="h-5 w-5 text-purple-600" />
+                                        <div className="flex-1">
+                                            <Label className="text-sm font-medium">Max Screens Allowed</Label>
+                                            <p className="text-xs text-gray-500">Number of media screens this restaurant can create</p>
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="20"
+                                            value={restaurant.max_screens_allowed || 1}
+                                            onChange={(e) => {
+                                                const value = parseInt(e.target.value) || 1;
+                                                base44.entities.Restaurant.update(restaurant.id, { 
+                                                    max_screens_allowed: value 
+                                                }).then(() => {
+                                                    queryClient.invalidateQueries(['all-restaurants']);
+                                                    toast.success('Screen limit updated');
+                                                });
+                                            }}
+                                            className="w-20"
+                                        />
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                     <Monitor className="h-5 w-5 text-gray-600" />
                                     <div className="flex-1">

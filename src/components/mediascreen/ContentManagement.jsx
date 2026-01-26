@@ -56,6 +56,8 @@ export default function ContentManagement({ restaurantId }) {
         : sortedContent.filter(c => c.screen_name === selectedScreen);
 
     const screenNames = [...new Set(allContent.map(c => c.screen_name).filter(Boolean))];
+    const maxScreensAllowed = restaurant?.max_screens_allowed || 1;
+    const canAddNewScreen = screenNames.length < maxScreensAllowed;
 
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.PromotionalContent.create(data),
@@ -107,6 +109,14 @@ export default function ContentManagement({ restaurantId }) {
         if (!formData.media_url || !formData.screen_name) {
             toast.error('Please provide media and screen name');
             return;
+        }
+
+        // Check screen limit when adding new screen
+        if (!editingContent && !screenNames.includes(formData.screen_name)) {
+            if (!canAddNewScreen) {
+                toast.error(`Maximum ${maxScreensAllowed} screen${maxScreensAllowed > 1 ? 's' : ''} allowed. Please contact admin to increase limit.`);
+                return;
+            }
         }
 
         const data = {
@@ -190,7 +200,7 @@ export default function ContentManagement({ restaurantId }) {
                         <div>
                             <CardTitle>Promotional Content</CardTitle>
                             <p className="text-sm text-gray-500 mt-1">
-                                Manage media for your restaurant screens
+                                Manage media for your restaurant screens ({screenNames.length}/{maxScreensAllowed} screens used)
                             </p>
                         </div>
                         <div className="flex gap-2">
@@ -338,11 +348,30 @@ export default function ContentManagement({ restaurantId }) {
 
                         <div>
                             <Label>Screen Name</Label>
+                            <Select
+                                value={formData.screen_name}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, screen_name: value }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select or type new screen name" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {screenNames.map(name => (
+                                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <Input
                                 value={formData.screen_name}
                                 onChange={(e) => setFormData(prev => ({ ...prev, screen_name: e.target.value }))}
-                                placeholder="e.g., Main Entrance, Counter, Drive-Thru"
+                                placeholder="Or type new screen name (e.g., Main Entrance)"
+                                className="mt-2"
                             />
+                            {!canAddNewScreen && !screenNames.includes(formData.screen_name) && formData.screen_name && (
+                                <p className="text-xs text-red-600 mt-1">
+                                    Maximum {maxScreensAllowed} screen{maxScreensAllowed > 1 ? 's' : ''} allowed
+                                </p>
+                            )}
                         </div>
 
                         <div>
