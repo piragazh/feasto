@@ -240,19 +240,19 @@ export default function ContentManagement({ restaurantId }) {
         toast.success('Screen URL copied to clipboard');
     };
 
-    const handleScreenAction = (action, name = '') => {
-        setScreenAction(action);
+    const handleScreenAction = (action, name = '', oldName = '') => {
+        setScreenAction({ type: action, oldName });
         setScreenName(name);
         setShowScreenDialog(true);
     };
 
     const handleScreenSubmit = async () => {
-        if (!screenName.trim()) {
+        if (screenAction.type !== 'delete' && !screenName.trim()) {
             toast.error('Please enter a screen name');
             return;
         }
 
-        if (screenAction === 'add') {
+        if (screenAction.type === 'add') {
             if (screenNames.includes(screenName)) {
                 toast.error('Screen name already exists');
                 return;
@@ -262,9 +262,13 @@ export default function ContentManagement({ restaurantId }) {
                 return;
             }
             toast.success('Screen added. You can now add content to it.');
-        } else if (screenAction === 'rename') {
-            const oldName = screenAction.oldName;
-            const contentToUpdate = allContent.filter(c => c.screen_name === oldName);
+        } else if (screenAction.type === 'rename') {
+            if (screenNames.includes(screenName) && screenName !== screenAction.oldName) {
+                toast.error('Screen name already exists');
+                return;
+            }
+            
+            const contentToUpdate = allContent.filter(c => c.screen_name === screenAction.oldName);
             
             for (const content of contentToUpdate) {
                 await updateMutation.mutateAsync({
@@ -273,7 +277,7 @@ export default function ContentManagement({ restaurantId }) {
                 });
             }
             toast.success('Screen renamed successfully');
-        } else if (screenAction === 'delete') {
+        } else if (screenAction.type === 'delete') {
             const contentToDelete = allContent.filter(c => c.screen_name === screenName);
             
             if (contentToDelete.length > 0) {
@@ -290,6 +294,13 @@ export default function ContentManagement({ restaurantId }) {
         setShowScreenDialog(false);
         setScreenName('');
         setScreenAction(null);
+    };
+
+    const getScreenStats = (screenName) => {
+        const screenContent = allContent.filter(c => c.screen_name === screenName);
+        const activeContent = screenContent.filter(c => c.is_active).length;
+        const totalDuration = screenContent.reduce((sum, c) => sum + (c.duration || 10), 0);
+        return { total: screenContent.length, active: activeContent, duration: totalDuration };
     };
 
     return (
@@ -325,62 +336,96 @@ export default function ContentManagement({ restaurantId }) {
                 </CardHeader>
                 <CardContent>
                     {screenNames.length > 0 && (
-                        <Card className="mb-6 bg-blue-50 border-blue-200">
+                        <Card className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
                             <CardContent className="pt-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Settings className="h-5 w-5 text-blue-600" />
-                                    <h3 className="font-semibold text-blue-900">Your Screens</h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Settings className="h-5 w-5 text-blue-600" />
+                                        <h3 className="font-semibold text-blue-900">Screen Manager</h3>
+                                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                            {screenNames.length}/{maxScreensAllowed}
+                                        </Badge>
+                                    </div>
+                                    {canAddNewScreen && (
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleScreenAction('add')}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <Plus className="h-4 w-4 mr-1" />
+                                            Add Screen
+                                        </Button>
+                                    )}
                                 </div>
-                                <div className="grid gap-2">
+                                <div className="grid gap-3">
                                     {screenNames.map(name => {
-                                        const contentCount = allContent.filter(c => c.screen_name === name).length;
+                                        const stats = getScreenStats(name);
+                                        const isEmpty = stats.total === 0;
                                         return (
-                                            <div key={name} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                                                <div className="flex-1">
-                                                    <p className="font-medium">{name}</p>
-                                                    <p className="text-xs text-gray-500">{contentCount} content item(s)</p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => copyScreenUrl(name)}
-                                                    >
-                                                        <Copy className="h-4 w-4 mr-1" />
-                                                        Copy URL
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            setScreenAction({ action: 'rename', oldName: name });
-                                                            setScreenName(name);
-                                                            setShowScreenDialog(true);
-                                                        }}
-                                                    >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleScreenAction('delete', name)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
+                                            <div key={name} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="p-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <h4 className="font-semibold text-gray-900 truncate">{name}</h4>
+                                                                {isEmpty ? (
+                                                                    <Badge variant="outline" className="bg-gray-50 text-gray-500 text-xs">
+                                                                        Empty
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                                                                        Active
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <div className="grid grid-cols-3 gap-3 text-xs text-gray-600">
+                                                                <div>
+                                                                    <span className="text-gray-500">Content:</span>
+                                                                    <span className="ml-1 font-medium text-gray-900">{stats.total}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-gray-500">Active:</span>
+                                                                    <span className="ml-1 font-medium text-green-600">{stats.active}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-gray-500">Duration:</span>
+                                                                    <span className="ml-1 font-medium text-gray-900">{stats.duration}s</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => copyScreenUrl(name)}
+                                                                className="text-xs h-8"
+                                                            >
+                                                                <Copy className="h-3.5 w-3.5 mr-1" />
+                                                                URL
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleScreenAction('rename', name, name)}
+                                                                className="text-xs h-8"
+                                                            >
+                                                                <Edit className="h-3.5 w-3.5 mr-1" />
+                                                                Rename
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleScreenAction('delete', name)}
+                                                                className="text-xs h-8 text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
                                     })}
-                                    {canAddNewScreen && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => handleScreenAction('add')}
-                                            className="w-full border-dashed"
-                                        >
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Add New Screen ({screenNames.length}/{maxScreensAllowed})
-                                        </Button>
-                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -619,21 +664,21 @@ export default function ContentManagement({ restaurantId }) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
-                            {screenAction === 'add' ? 'Add New Screen' : 
-                             screenAction === 'delete' ? 'Delete Screen' : 
+                            {screenAction?.type === 'add' ? 'Add New Screen' : 
+                             screenAction?.type === 'delete' ? 'Delete Screen' : 
                              'Rename Screen'}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                        {screenAction === 'delete' ? (
-                            <div>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Are you sure you want to delete the screen "{screenName}"?
+                        {screenAction?.type === 'delete' ? (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <p className="text-sm text-gray-700 mb-3">
+                                    Are you sure you want to delete <strong>"{screenName}"</strong>?
                                 </p>
                                 {allContent.filter(c => c.screen_name === screenName).length > 0 && (
-                                    <p className="text-sm text-red-600">
-                                        This will also delete all content associated with this screen.
-                                    </p>
+                                    <div className="bg-white rounded p-3 text-sm text-red-700 border border-red-200">
+                                        ⚠️ This will permanently delete {allContent.filter(c => c.screen_name === screenName).length} content item(s) associated with this screen.
+                                    </div>
                                 )}
                             </div>
                         ) : (
@@ -643,24 +688,30 @@ export default function ContentManagement({ restaurantId }) {
                                     value={screenName}
                                     onChange={(e) => setScreenName(e.target.value)}
                                     placeholder="e.g., Main Entrance, Counter, Drive-Thru"
+                                    className="mt-1"
                                 />
-                                {!canAddNewScreen && screenAction === 'add' && (
-                                    <p className="text-xs text-red-600 mt-1">
-                                        Maximum {maxScreensAllowed} screen{maxScreensAllowed > 1 ? 's' : ''} allowed
-                                    </p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Choose a descriptive name for easy identification
+                                </p>
+                                {!canAddNewScreen && screenAction?.type === 'add' && (
+                                    <div className="bg-orange-50 border border-orange-200 rounded p-3 mt-3">
+                                        <p className="text-xs text-orange-700">
+                                            ⚠️ Maximum {maxScreensAllowed} screen{maxScreensAllowed > 1 ? 's' : ''} allowed for your plan
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         )}
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 pt-2">
                             <Button 
                                 onClick={handleScreenSubmit} 
                                 className="flex-1"
-                                variant={screenAction === 'delete' ? 'destructive' : 'default'}
+                                variant={screenAction?.type === 'delete' ? 'destructive' : 'default'}
                             >
-                                {screenAction === 'add' ? 'Add Screen' : 
-                                 screenAction === 'delete' ? 'Delete Screen' : 
-                                 'Rename Screen'}
+                                {screenAction?.type === 'add' ? 'Add Screen' : 
+                                 screenAction?.type === 'delete' ? 'Delete Screen' : 
+                                 'Save Changes'}
                             </Button>
                             <Button 
                                 onClick={() => {
