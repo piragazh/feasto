@@ -12,6 +12,7 @@ import LoyaltyProgram from './pages/LoyaltyProgram';
 import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
 import MediaScreen from './pages/MediaScreen';
+import MediaScreenManagement from './pages/MediaScreenManagement';
 import Messages from './pages/Messages';
 import NotFound from './pages/NotFound';
 import OrderHistory from './pages/OrderHistory';
@@ -19,11 +20,10 @@ import Orders from './pages/Orders';
 import POSDashboard from './pages/POSDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Restaurant from './pages/Restaurant';
+import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import MediaScreenManagement from './pages/MediaScreenManagement';
-import RestaurantDashboard from './pages/RestaurantDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -42,6 +42,7 @@ export const PAGES = {
     "ManageCoupons": ManageCoupons,
     "ManageRestaurantManagers": ManageRestaurantManagers,
     "MediaScreen": MediaScreen,
+    "MediaScreenManagement": MediaScreenManagement,
     "Messages": Messages,
     "NotFound": NotFound,
     "OrderHistory": OrderHistory,
@@ -49,11 +50,10 @@ export const PAGES = {
     "POSDashboard": POSDashboard,
     "PrivacyPolicy": PrivacyPolicy,
     "Restaurant": Restaurant,
+    "RestaurantDashboard": RestaurantDashboard,
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "MediaScreenManagement": MediaScreenManagement,
-    "RestaurantDashboard": RestaurantDashboard,
 }
 
 export const pagesConfig = {

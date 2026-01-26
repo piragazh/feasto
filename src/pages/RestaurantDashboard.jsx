@@ -32,6 +32,7 @@ import CouponsManagement from '@/components/restaurant/CouponsManagement';
 import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
 import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
+import ReviewManagement from '@/components/restaurant/ReviewManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
 import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
 import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
@@ -418,7 +419,7 @@ export default function RestaurantDashboard() {
                     </TabsContent>
 
                     <TabsContent value="reviews">
-                        <ReviewsManagement restaurantId={restaurant.id} />
+                        <ReviewManagement restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="analytics">
