@@ -20,7 +20,8 @@ import {
     AlertCircle,
     Tag,
     MapPin,
-    Award
+    Award,
+    Monitor
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import OrderQueue from '@/components/restaurant/OrderQueue';
@@ -48,6 +49,7 @@ import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManageme
 import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
 import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
+import PromotionalContentManagement from '@/components/restaurant/PromotionalContentManagement';
 import { toast } from 'sonner';
 
 export default function RestaurantDashboard() {
@@ -354,6 +356,11 @@ export default function RestaurantDashboard() {
                                 <MapPin className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 Zones
                             </TabsTrigger>
+                            <TabsTrigger value="media-screen" className="whitespace-nowrap text-xs sm:text-sm">
+                                <Monitor className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Media Screen</span>
+                                <span className="sm:hidden">📺</span>
+                            </TabsTrigger>
                             <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm">
                                 <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Settings</span>
@@ -446,6 +453,10 @@ export default function RestaurantDashboard() {
                                 lng: restaurant.longitude
                             } : null}
                         />
+                    </TabsContent>
+
+                    <TabsContent value="media-screen">
+                        <PromotionalContentManagement restaurantId={restaurant.id} />
                     </TabsContent>
 
                     <TabsContent value="settings">
