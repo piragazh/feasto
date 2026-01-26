@@ -243,6 +243,31 @@ export default function RestaurantDashboard() {
                 </div>
             </div>
 
+            {/* Quick Access Cards */}
+            {restaurant?.media_screen_enabled && (
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
+                    <Card 
+                        className="cursor-pointer hover:shadow-lg transition-all bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200" 
+                        onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}
+                    >
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+                                    <Monitor className="h-6 w-6 text-white" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-900">Media Screen Management</h3>
+                                    <p className="text-sm text-gray-600">Manage promotional content for in-store displays</p>
+                                </div>
+                                <Button variant="outline" className="shrink-0">
+                                    Open Module
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
             {/* Main Content */}
             <div className="max-w-7xl mx-auto p-3 sm:p-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
