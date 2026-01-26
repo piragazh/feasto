@@ -66,6 +66,10 @@ export default function ContentManagement({ restaurantId }) {
             toast.success('Content created successfully');
             resetForm();
         },
+        onError: (error) => {
+            console.error('Create error:', error);
+            toast.error('Failed to create content: ' + (error.message || 'Unknown error'));
+        },
     });
 
     const updateMutation = useMutation({
@@ -74,6 +78,10 @@ export default function ContentManagement({ restaurantId }) {
             queryClient.invalidateQueries(['promotional-content']);
             toast.success('Content updated successfully');
             resetForm();
+        },
+        onError: (error) => {
+            console.error('Update error:', error);
+            toast.error('Failed to update content: ' + (error.message || 'Unknown error'));
         },
     });
 
@@ -105,9 +113,14 @@ export default function ContentManagement({ restaurantId }) {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!formData.media_url || !formData.screen_name) {
             toast.error('Please provide media and screen name');
+            return;
+        }
+
+        if (!restaurantId) {
+            toast.error('Restaurant ID is missing');
             return;
         }
 
@@ -120,14 +133,27 @@ export default function ContentManagement({ restaurantId }) {
         }
 
         const data = {
-            ...formData,
             restaurant_id: restaurantId,
+            title: formData.title || 'Untitled',
+            description: formData.description || '',
+            screen_name: formData.screen_name.trim(),
+            media_url: formData.media_url,
+            media_type: formData.media_type,
+            duration: formData.duration || 10,
+            display_order: formData.display_order || 0,
+            is_active: formData.is_active !== false,
         };
 
-        if (editingContent) {
-            updateMutation.mutate({ id: editingContent.id, data });
-        } else {
-            createMutation.mutate(data);
+        console.log('Submitting data:', data);
+
+        try {
+            if (editingContent) {
+                await updateMutation.mutateAsync({ id: editingContent.id, data });
+            } else {
+                await createMutation.mutateAsync(data);
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
         }
     };
 
