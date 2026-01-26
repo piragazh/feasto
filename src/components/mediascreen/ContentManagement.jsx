@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
+import FileManager from './FileManager';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
@@ -20,6 +21,7 @@ export default function ContentManagement({ restaurantId }) {
     const [showDialog, setShowDialog] = useState(false);
     const [showAIDialog, setShowAIDialog] = useState(false);
     const [showScreenDialog, setShowScreenDialog] = useState(false);
+    const [showFileManager, setShowFileManager] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
     const [restaurant, setRestaurant] = useState(null);
@@ -105,6 +107,15 @@ export default function ContentManagement({ restaurantId }) {
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
             const mediaType = file.type.startsWith('video/') ? 'video' : 
                             file.type === 'image/gif' ? 'gif' : 'image';
+            
+            // Save file metadata to MediaFile entity
+            await base44.entities.MediaFile.create({
+                restaurant_id: restaurantId,
+                file_url: file_url,
+                file_name: file.name,
+                file_type: file.type,
+                file_size: file.size
+            });
             
             setFormData(prev => ({ 
                 ...prev, 
@@ -292,7 +303,11 @@ export default function ContentManagement({ restaurantId }) {
                                 Manage media for your restaurant screens ({screenNames.length}/{maxScreensAllowed} screens used)
                             </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => setShowFileManager(true)} variant="outline">
+                                <FolderOpen className="h-4 w-4 mr-2" />
+                                File Manager
+                            </Button>
                             <Button onClick={() => handleScreenAction('add')} variant="outline">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Manage Screens
@@ -531,14 +546,24 @@ export default function ContentManagement({ restaurantId }) {
 
                         <div>
                             <Label>Upload Media</Label>
-                            <Input
-                                type="file"
-                                accept="image/*,video/*"
-                                onChange={handleFileUpload}
-                            />
+                            <div className="flex gap-2">
+                                <Input
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    onChange={handleFileUpload}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowFileManager(true)}
+                                >
+                                    <FolderOpen className="h-4 w-4" />
+                                </Button>
+                            </div>
                             {formData.media_url && (
                                 <div className="mt-2">
-                                    <p className="text-sm text-green-600">File uploaded successfully</p>
+                                    <p className="text-sm text-green-600">File selected</p>
                                 </div>
                             )}
                         </div>
@@ -572,6 +597,22 @@ export default function ContentManagement({ restaurantId }) {
                 onClose={() => setShowAIDialog(false)}
                 onContentGenerated={handleAIContentGenerated}
                 restaurantName={restaurant?.name || 'Restaurant'}
+            />
+
+            <FileManager
+                restaurantId={restaurantId}
+                open={showFileManager}
+                onClose={() => setShowFileManager(false)}
+                onSelectFile={(fileUrl, fileType) => {
+                    const mediaType = fileType.startsWith('video/') ? 'video' : 
+                                    fileType === 'image/gif' ? 'gif' : 'image';
+                    setFormData(prev => ({ 
+                        ...prev, 
+                        media_url: fileUrl,
+                        media_type: mediaType 
+                    }));
+                    toast.success('File selected');
+                }}
             />
 
             <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>
