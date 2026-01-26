@@ -10,17 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
+import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
     const queryClient = useQueryClient();
     const [showDialog, setShowDialog] = useState(false);
     const [showAIDialog, setShowAIDialog] = useState(false);
+    const [showScreenDialog, setShowScreenDialog] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
     const [restaurant, setRestaurant] = useState(null);
+    const [screenAction, setScreenAction] = useState(null);
+    const [screenName, setScreenName] = useState('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -218,6 +222,65 @@ export default function ContentManagement({ restaurantId }) {
         });
     };
 
+    const copyScreenUrl = (screenName) => {
+        const baseUrl = window.location.origin;
+        const url = `${baseUrl}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screenName=${encodeURIComponent(screenName)}`;
+        navigator.clipboard.writeText(url);
+        toast.success('Screen URL copied to clipboard');
+    };
+
+    const handleScreenAction = (action, name = '') => {
+        setScreenAction(action);
+        setScreenName(name);
+        setShowScreenDialog(true);
+    };
+
+    const handleScreenSubmit = async () => {
+        if (!screenName.trim()) {
+            toast.error('Please enter a screen name');
+            return;
+        }
+
+        if (screenAction === 'add') {
+            if (screenNames.includes(screenName)) {
+                toast.error('Screen name already exists');
+                return;
+            }
+            if (!canAddNewScreen) {
+                toast.error(`Maximum ${maxScreensAllowed} screens allowed`);
+                return;
+            }
+            toast.success('Screen added. You can now add content to it.');
+        } else if (screenAction === 'rename') {
+            const oldName = screenAction.oldName;
+            const contentToUpdate = allContent.filter(c => c.screen_name === oldName);
+            
+            for (const content of contentToUpdate) {
+                await updateMutation.mutateAsync({
+                    id: content.id,
+                    data: { screen_name: screenName }
+                });
+            }
+            toast.success('Screen renamed successfully');
+        } else if (screenAction === 'delete') {
+            const contentToDelete = allContent.filter(c => c.screen_name === screenName);
+            
+            if (contentToDelete.length > 0) {
+                const confirm = window.confirm(`This will delete ${contentToDelete.length} content item(s). Continue?`);
+                if (!confirm) return;
+                
+                for (const content of contentToDelete) {
+                    await deleteMutation.mutateAsync(content.id);
+                }
+            }
+            toast.success('Screen deleted successfully');
+        }
+
+        setShowScreenDialog(false);
+        setScreenName('');
+        setScreenAction(null);
+    };
+
     return (
         <div className="space-y-6">
             <Card>
@@ -230,6 +293,10 @@ export default function ContentManagement({ restaurantId }) {
                             </p>
                         </div>
                         <div className="flex gap-2">
+                            <Button onClick={() => handleScreenAction('add')} variant="outline">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Manage Screens
+                            </Button>
                             <Button onClick={() => setShowAIDialog(true)} variant="outline">
                                 <Sparkles className="h-4 w-4 mr-2" />
                                 Generate with AI
@@ -242,6 +309,68 @@ export default function ContentManagement({ restaurantId }) {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {screenNames.length > 0 && (
+                        <Card className="mb-6 bg-blue-50 border-blue-200">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Settings className="h-5 w-5 text-blue-600" />
+                                    <h3 className="font-semibold text-blue-900">Your Screens</h3>
+                                </div>
+                                <div className="grid gap-2">
+                                    {screenNames.map(name => {
+                                        const contentCount = allContent.filter(c => c.screen_name === name).length;
+                                        return (
+                                            <div key={name} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                                                <div className="flex-1">
+                                                    <p className="font-medium">{name}</p>
+                                                    <p className="text-xs text-gray-500">{contentCount} content item(s)</p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => copyScreenUrl(name)}
+                                                    >
+                                                        <Copy className="h-4 w-4 mr-1" />
+                                                        Copy URL
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setScreenAction({ action: 'rename', oldName: name });
+                                                            setScreenName(name);
+                                                            setShowScreenDialog(true);
+                                                        }}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleScreenAction('delete', name)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {canAddNewScreen && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => handleScreenAction('add')}
+                                            className="w-full border-dashed"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add New Screen ({screenNames.length}/{maxScreensAllowed})
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     <div className="mb-4">
                         <Label>Filter by Screen</Label>
                         <Select value={selectedScreen} onValueChange={setSelectedScreen}>
@@ -444,6 +573,68 @@ export default function ContentManagement({ restaurantId }) {
                 onContentGenerated={handleAIContentGenerated}
                 restaurantName={restaurant?.name || 'Restaurant'}
             />
+
+            <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {screenAction === 'add' ? 'Add New Screen' : 
+                             screenAction === 'delete' ? 'Delete Screen' : 
+                             'Rename Screen'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {screenAction === 'delete' ? (
+                            <div>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Are you sure you want to delete the screen "{screenName}"?
+                                </p>
+                                {allContent.filter(c => c.screen_name === screenName).length > 0 && (
+                                    <p className="text-sm text-red-600">
+                                        This will also delete all content associated with this screen.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div>
+                                <Label>Screen Name</Label>
+                                <Input
+                                    value={screenName}
+                                    onChange={(e) => setScreenName(e.target.value)}
+                                    placeholder="e.g., Main Entrance, Counter, Drive-Thru"
+                                />
+                                {!canAddNewScreen && screenAction === 'add' && (
+                                    <p className="text-xs text-red-600 mt-1">
+                                        Maximum {maxScreensAllowed} screen{maxScreensAllowed > 1 ? 's' : ''} allowed
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex gap-2">
+                            <Button 
+                                onClick={handleScreenSubmit} 
+                                className="flex-1"
+                                variant={screenAction === 'delete' ? 'destructive' : 'default'}
+                            >
+                                {screenAction === 'add' ? 'Add Screen' : 
+                                 screenAction === 'delete' ? 'Delete Screen' : 
+                                 'Rename Screen'}
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    setShowScreenDialog(false);
+                                    setScreenName('');
+                                    setScreenAction(null);
+                                }} 
+                                variant="outline"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
