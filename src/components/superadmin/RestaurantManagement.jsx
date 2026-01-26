@@ -14,7 +14,8 @@ import {
     Clock,
     DollarSign,
     LayoutDashboard,
-    UtensilsCrossed
+    UtensilsCrossed,
+    Monitor
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -25,6 +26,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function RestaurantManagement() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +38,15 @@ export default function RestaurantManagement() {
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
+    });
+
+    const updateMediaScreenStatus = useMutation({
+        mutationFn: ({ restaurantId, enabled }) => 
+            base44.entities.Restaurant.update(restaurantId, { media_screen_enabled: enabled }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['all-restaurants']);
+            toast.success('Media screen access updated');
+        },
     });
 
     const generateOnboardingLink = useMutation({
@@ -118,6 +130,23 @@ export default function RestaurantManagement() {
                                         </div>
                                         <p className="text-sm text-gray-600 mt-2">{restaurant.address}</p>
                                     </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <Monitor className="h-5 w-5 text-gray-600" />
+                                    <div className="flex-1">
+                                        <Label className="text-sm font-medium">Media Screen Access</Label>
+                                        <p className="text-xs text-gray-500">Enable promotional display screens</p>
+                                    </div>
+                                    <Switch
+                                        checked={restaurant.media_screen_enabled || false}
+                                        onCheckedChange={(checked) => 
+                                            updateMediaScreenStatus.mutate({ 
+                                                restaurantId: restaurant.id, 
+                                                enabled: checked 
+                                            })
+                                        }
+                                    />
                                 </div>
                                 
                                 <div className="flex flex-wrap gap-2">
