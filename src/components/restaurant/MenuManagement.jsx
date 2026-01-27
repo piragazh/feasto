@@ -397,7 +397,7 @@ Requirements:
         setReplacingBackground(true);
         try {
             const themeColor = restaurant.theme_primary_color;
-            const prompt = `Professional food photography of ${formData.name || 'dish'}, beautifully plated, with a clean, solid ${themeColor} colored background, restaurant quality, high-end presentation, centered composition, soft lighting, ultra detailed, 8k`;
+            const prompt = `Keep the exact same food item from the reference image - preserve its appearance, colors, garnishes, and plating exactly as shown. Only replace the background with a clean, solid ${themeColor} color. Optionally enhance the composition by centering or repositioning the food item for better visual appeal. Professional restaurant photography, studio lighting, high quality, 8k`;
 
             const result = await base44.integrations.Core.GenerateImage({ 
                 prompt,
