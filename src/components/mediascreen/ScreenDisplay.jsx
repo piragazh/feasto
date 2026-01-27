@@ -7,6 +7,7 @@ import MultiZoneDisplay from './MultiZoneDisplay';
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [videoLoopCount, setVideoLoopCount] = useState(0);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
@@ -64,18 +65,37 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     }, []);
 
     useEffect(() => {
+        setVideoLoopCount(0);
+    }, [currentIndex]);
+
+    const handleVideoEnd = (item) => {
+        if (content.length <= 1) return;
+        
+        const targetLoops = item.video_loop_count || 1;
+        setVideoLoopCount(prev => {
+            const newCount = prev + 1;
+            if (newCount >= targetLoops) {
+                setTimeout(() => {
+                    setCurrentIndex((prevIndex) => (prevIndex + 1) % content.length);
+                }, 100);
+                return 0;
+            }
+            return newCount;
+        });
+    };
+
+    useEffect(() => {
         if (content.length === 0) return;
 
         const currentContent = content[currentIndex];
-        const duration = currentContent?.media_type === 'video' 
-            ? (currentContent?.video_loop_count || 1) * 30000 
-            : (currentContent?.duration || 10) * 1000;
-
-        const timer = setTimeout(() => {
-            setCurrentIndex((prev) => (prev + 1) % content.length);
-        }, duration);
-
-        return () => clearTimeout(timer);
+        
+        if (currentContent?.media_type !== 'video') {
+            const duration = (currentContent?.duration || 10) * 1000;
+            const timer = setTimeout(() => {
+                setCurrentIndex((prev) => (prev + 1) % content.length);
+            }, duration);
+            return () => clearTimeout(timer);
+        }
     }, [currentIndex, content]);
 
     const getWeatherIcon = (description) => {
@@ -203,7 +223,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                     src={item.media_url}
                                     autoPlay
                                     muted
-                                    loop
+                                    loop={content.length === 1}
+                                    onEnded={() => handleVideoEnd(item)}
                                     className="max-h-full max-w-full object-contain"
                                 />
                             ) : (

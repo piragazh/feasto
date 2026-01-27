@@ -6,6 +6,7 @@ import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
 function ZoneRenderer({ zone, restaurant, content, weather }) {
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [videoLoopCount, setVideoLoopCount] = useState(0);
 
     useEffect(() => {
         if (zone.type === 'clock') {
@@ -15,16 +16,36 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
     }, [zone.type]);
 
     useEffect(() => {
+        setVideoLoopCount(0);
+    }, [carouselIndex]);
+
+    const handleVideoEnd = (item) => {
+        if (content.length <= 1) return;
+        
+        const targetLoops = item.video_loop_count || 1;
+        setVideoLoopCount(prev => {
+            const newCount = prev + 1;
+            if (newCount >= targetLoops) {
+                setTimeout(() => {
+                    setCarouselIndex((prevIndex) => (prevIndex + 1) % content.length);
+                }, 100);
+                return 0;
+            }
+            return newCount;
+        });
+    };
+
+    useEffect(() => {
         if ((zone.type === 'carousel' || zone.type === 'media') && content.length > 1) {
             const currentItem = content[carouselIndex % content.length];
-            const duration = currentItem?.media_type === 'video' 
-                ? (currentItem?.video_loop_count || 1) * 30000 
-                : (currentItem?.duration || 10) * 1000;
-
-            const timer = setTimeout(() => {
-                setCarouselIndex((prev) => (prev + 1) % content.length);
-            }, duration);
-            return () => clearTimeout(timer);
+            
+            if (currentItem?.media_type !== 'video') {
+                const duration = (currentItem?.duration || 10) * 1000;
+                const timer = setTimeout(() => {
+                    setCarouselIndex((prev) => (prev + 1) % content.length);
+                }, duration);
+                return () => clearTimeout(timer);
+            }
         }
     }, [zone.type, content.length, carouselIndex]);
 
@@ -49,6 +70,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                         autoPlay
                         muted
                         loop={content.length === 1}
+                        onEnded={() => handleVideoEnd(mediaItem)}
                         className="w-full h-full object-cover"
                     />
                 ) : (
@@ -66,10 +88,12 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                     <div className="relative w-full h-full">
                         {carouselItem.media_type === 'video' ? (
                             <video
+                                key={`${carouselItem.id}-${carouselIndex}`}
                                 src={carouselItem.media_url}
                                 autoPlay
                                 muted
-                                loop
+                                loop={content.length === 1}
+                                onEnded={() => handleVideoEnd(carouselItem)}
                                 className="w-full h-full object-cover"
                             />
                         ) : (
