@@ -15,13 +15,18 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
     }, [zone.type]);
 
     useEffect(() => {
-        if (zone.type === 'carousel' && content.length > 1) {
-            const timer = setInterval(() => {
+        if ((zone.type === 'carousel' || zone.type === 'media') && content.length > 1) {
+            const currentItem = content[carouselIndex % content.length];
+            const duration = currentItem?.media_type === 'video' 
+                ? 30000 
+                : (currentItem?.duration || 10) * 1000;
+
+            const timer = setTimeout(() => {
                 setCarouselIndex((prev) => (prev + 1) % content.length);
-            }, 5000);
-            return () => clearInterval(timer);
+            }, duration);
+            return () => clearTimeout(timer);
         }
-    }, [zone.type, content]);
+    }, [zone.type, content.length, carouselIndex]);
 
     const getWeatherIcon = (description) => {
         const desc = description?.toLowerCase() || '';
@@ -36,13 +41,14 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
         switch (zone.type) {
             case 'media':
                 if (content.length === 0) return null;
-                const mediaItem = content[0];
+                const mediaItem = content[carouselIndex % content.length];
                 return mediaItem.media_type === 'video' ? (
                     <video
+                        key={`${mediaItem.id}-${carouselIndex}`}
                         src={mediaItem.media_url}
                         autoPlay
                         muted
-                        loop
+                        loop={content.length === 1}
                         className="w-full h-full object-cover"
                     />
                 ) : (
