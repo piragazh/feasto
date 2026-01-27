@@ -241,7 +241,7 @@ export default function MenuManagement({ restaurantId }) {
             // Optimize image before uploading
             const optimizedFile = await optimizeImage(file);
             const result = await base44.integrations.Core.UploadFile({ file: optimizedFile });
-            setFormData({ ...formData, image_url: result.file_url });
+            setFormData({ ...formData, image_url: result.file_url, ai_generated_image: false });
             toast.success('Image uploaded and optimized');
         } catch (error) {
             toast.error('Failed to upload image');
@@ -421,6 +421,7 @@ Requirements:
             price: '',
             category: '',
             image_url: '',
+            ai_generated_image: false,
             is_popular: false,
             is_vegetarian: false,
             is_spicy: false,
@@ -445,6 +446,7 @@ Requirements:
             price: item.price.toString(),
             category: item.category || '',
             image_url: item.image_url || '',
+            ai_generated_image: item.ai_generated_image || false,
             is_popular: item.is_popular || false,
             is_vegetarian: item.is_vegetarian || false,
             is_spicy: item.is_spicy || false,
@@ -1280,18 +1282,26 @@ Requirements:
                                     className="h-4 w-4 rounded border-gray-300 mt-1"
                                 />
                             </div>
-                            {item.image_url ? (
-                                <img
-                                    src={item.image_url}
-                                    alt={item.name}
-                                    className="w-full h-32 object-cover rounded-lg mb-3"
-                                    loading="lazy"
-                                />
-                            ) : (
-                                <div className="w-full h-32 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg mb-3 flex items-center justify-center">
-                                    <ImageIcon className="h-12 w-12 text-orange-300" />
-                                </div>
-                            )}
+                            <div className="relative">
+                                {item.image_url ? (
+                                    <img
+                                        src={item.image_url}
+                                        alt={item.name}
+                                        className="w-full h-32 object-cover rounded-lg mb-3"
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    <div className="w-full h-32 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg mb-3 flex items-center justify-center">
+                                        <ImageIcon className="h-12 w-12 text-orange-300" />
+                                    </div>
+                                )}
+                                {item.ai_generated_image && (
+                                    <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                                        <Sparkles className="h-3 w-3" />
+                                        AI
+                                    </div>
+                                )}
+                            </div>
                             <div className="flex items-start justify-between mb-2">
                                 <h3 className="font-semibold">{item.name}</h3>
                                 {item.is_available === false && (
