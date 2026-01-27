@@ -178,23 +178,28 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                     } else if (transition === 'slide') {
                         transitionClass = isActive 
                             ? 'opacity-100 translate-x-0' 
-                            : 'opacity-0 translate-x-full';
+                            : 'opacity-0 -translate-x-full';
                     } else if (transition === 'zoom') {
                         transitionClass = isActive 
                             ? 'opacity-100 scale-100' 
-                            : 'opacity-0 scale-75';
+                            : 'opacity-0 scale-90';
                     } else {
                         transitionClass = isActive ? 'opacity-100' : 'opacity-0';
+                    }
+
+                    if (!isActive && transition === 'fade') {
+                        return null;
                     }
 
                     return (
                         <div
                             key={item.id}
                             className={`absolute inset-0 flex items-center justify-center transition-all duration-1000 ease-in-out ${transitionClass}`}
-                            style={{ pointerEvents: isActive ? 'auto' : 'none' }}
+                            style={{ pointerEvents: isActive ? 'auto' : 'none', zIndex: isActive ? 2 : 1 }}
                         >
                             {item.media_type === 'video' ? (
                                 <video
+                                    key={`${item.id}-${isActive}`}
                                     src={item.media_url}
                                     autoPlay
                                     muted
