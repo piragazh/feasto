@@ -32,9 +32,7 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
     }, [initialPrompt]);
 
     const contentTypes = [
-        { value: 'image', label: 'Static Image', icon: Image, description: 'High-quality promotional image' },
-        { value: 'animated', label: 'Animated Content', icon: Film, description: 'Eye-catching animated visuals' },
-        { value: 'video', label: 'Video Content', icon: Video, description: 'Short promotional video' }
+        { value: 'image', label: 'Static Image', icon: Image, description: 'High-quality promotional image' }
     ];
 
     const stylePresets = [
@@ -64,11 +62,7 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
 
         try {
             const stylePrompt = stylePresets.find(s => s.value === style)?.prompt || '';
-            const fullPrompt = contentType === 'animated' 
-                ? `${prompt}, ${stylePrompt}, animated, dynamic motion, smooth transitions, looping animation`
-                : contentType === 'video'
-                ? `${prompt}, ${stylePrompt}, cinematic, professional video production, engaging narrative`
-                : `${prompt}, ${stylePrompt}, professional photography, high resolution, 4K quality`;
+            const fullPrompt = `${prompt}, ${stylePrompt}, professional photography, high resolution, 4K quality, promotional material, eye-catching`;
 
             const { url } = await base44.integrations.Core.GenerateImage({ 
                 prompt: fullPrompt 
@@ -87,12 +81,9 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
     const handleUseContent = () => {
         if (!generatedUrl) return;
 
-        const mediaType = contentType === 'animated' ? 'gif' : 
-                         contentType === 'video' ? 'video' : 'image';
-
         onContentGenerated({
             media_url: generatedUrl,
-            media_type: mediaType,
+            media_type: 'image',
             duration: duration,
             ai_generated: true,
             ai_prompt: prompt,
@@ -268,33 +259,10 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
                     </TabsList>
 
                     <TabsContent value="create" className="space-y-6 mt-6">
-                    {/* Content Type Selection */}
-                    <div>
-                        <Label className="text-base font-semibold mb-3 block">Content Type</Label>
-                        <div className="grid grid-cols-3 gap-3">
-                            {contentTypes.map((type) => {
-                                const Icon = type.icon;
-                                return (
-                                    <Card
-                                        key={type.value}
-                                        className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                                            contentType === type.value 
-                                                ? 'border-purple-500 bg-purple-50' 
-                                                : 'border-gray-200'
-                                        }`}
-                                        onClick={() => setContentType(type.value)}
-                                    >
-                                        <div className="text-center">
-                                            <Icon className={`h-8 w-8 mx-auto mb-2 ${
-                                                contentType === type.value ? 'text-purple-500' : 'text-gray-400'
-                                            }`} />
-                                            <p className="font-semibold text-sm">{type.label}</p>
-                                            <p className="text-xs text-gray-500 mt-1">{type.description}</p>
-                                        </div>
-                                    </Card>
-                                );
-                            })}
-                        </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-800">
+                            <strong>ℹ️ Note:</strong> AI generates static images only. For animated GIFs or videos, please upload them manually in the content form.
+                        </p>
                     </div>
 
                     {/* Quick Templates */}
@@ -345,19 +313,17 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
                             </Select>
                         </div>
 
-                        {contentType !== 'video' && (
-                            <div>
-                                <Label>Display Duration (seconds)</Label>
-                                <Input
-                                    type="number"
-                                    value={duration}
-                                    onChange={(e) => setDuration(parseInt(e.target.value) || 10)}
-                                    min="3"
-                                    max="60"
-                                    className="mt-2"
-                                />
-                            </div>
-                        )}
+                        <div>
+                            <Label>Display Duration (seconds)</Label>
+                            <Input
+                                type="number"
+                                value={duration}
+                                onChange={(e) => setDuration(parseInt(e.target.value) || 10)}
+                                min="3"
+                                max="60"
+                                className="mt-2"
+                            />
+                        </div>
                     </div>
 
                     {/* Preview */}
