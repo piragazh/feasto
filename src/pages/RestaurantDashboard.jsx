@@ -50,6 +50,7 @@ import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManageme
 import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
 import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
+import BrandingManager from '@/components/restaurant/BrandingManager';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -507,10 +508,14 @@ export default function RestaurantDashboard() {
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="mb-4">
                             <TabsTrigger value="settings">Restaurant Settings</TabsTrigger>
+                            <TabsTrigger value="branding">Branding</TabsTrigger>
                             <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
                         </TabsList>
                         <TabsContent value="settings">
                             <RestaurantSettings restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="branding">
+                            <BrandingManager restaurantId={restaurant.id} />
                         </TabsContent>
                         <TabsContent value="zones">
                             <DeliveryZoneManagement 
