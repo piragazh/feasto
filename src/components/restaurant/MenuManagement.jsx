@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
 import CustomOptionTemplates from './CustomOptionTemplates';
+import AIMenuPerformanceAnalytics from './AIMenuPerformanceAnalytics';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -527,6 +528,8 @@ CRITICAL REQUIREMENTS:
 
     return (
         <div className="space-y-6">
+            <AIMenuPerformanceAnalytics restaurantId={restaurantId} />
+            
             <AIMenuInsights restaurantId={restaurantId} />
             
             <CustomOptionTemplates restaurantId={restaurantId} />
