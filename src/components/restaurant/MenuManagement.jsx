@@ -28,6 +28,7 @@ export default function MenuManagement({ restaurantId }) {
     const [generatingDescription, setGeneratingDescription] = useState(false);
     const [generatingImage, setGeneratingImage] = useState(false);
     const [replacingBackground, setReplacingBackground] = useState(false);
+    const [enhancingImage, setEnhancingImage] = useState(false);
     const [aiIngredients, setAiIngredients] = useState('');
     const [aiTone, setAiTone] = useState('enticing');
     const [formData, setFormData] = useState({
@@ -412,6 +413,29 @@ Requirements:
         }
     };
 
+    const enhanceImage = async () => {
+        if (!formData.image_url) {
+            toast.error('Please add an image first');
+            return;
+        }
+
+        setEnhancingImage(true);
+        try {
+            const prompt = `Enhance this food photography to professional restaurant quality. Improve lighting, colors, sharpness, and overall appeal. Make the food look more appetizing and vibrant. Keep the same dish and composition but optimize the presentation, garnishing, and visual quality. Professional photography, studio quality, high resolution, 8k`;
+
+            const result = await base44.integrations.Core.GenerateImage({ 
+                prompt,
+                existing_image_urls: [formData.image_url]
+            });
+            setFormData({ ...formData, image_url: result.url, ai_generated_image: true });
+            toast.success('Image enhanced!');
+        } catch (error) {
+            toast.error('Failed to enhance image');
+        } finally {
+            setEnhancingImage(false);
+        }
+    };
+
     const handleBulkDelete = () => {
         if (confirm(`Delete ${selectedItems.length} selected items?`)) {
             bulkDeleteMutation.mutate(selectedItems);
@@ -676,30 +700,43 @@ Requirements:
                                 <div className="col-span-2">
                                     <div className="flex items-center justify-between mb-2">
                                         <Label>Image</Label>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap">
                                             <Button
                                                 type="button"
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={generateImage}
-                                                disabled={generatingImage || replacingBackground || !formData.name}
+                                                disabled={generatingImage || replacingBackground || enhancingImage || !formData.name}
                                                 className="gap-2"
                                             >
                                                 <Wand2 className="h-4 w-4" />
                                                 {generatingImage ? 'Generating...' : 'AI Generate'}
                                             </Button>
                                             {formData.image_url && (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={replaceBackground}
-                                                    disabled={generatingImage || replacingBackground}
-                                                    className="gap-2"
-                                                >
-                                                    <Sparkles className="h-4 w-4" />
-                                                    {replacingBackground ? 'Processing...' : 'Replace BG'}
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={enhanceImage}
+                                                        disabled={generatingImage || replacingBackground || enhancingImage}
+                                                        className="gap-2"
+                                                    >
+                                                        <Sparkles className="h-4 w-4" />
+                                                        {enhancingImage ? 'Enhancing...' : 'Enhance'}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={replaceBackground}
+                                                        disabled={generatingImage || replacingBackground || enhancingImage}
+                                                        className="gap-2"
+                                                    >
+                                                        <Sparkles className="h-4 w-4" />
+                                                        {replacingBackground ? 'Processing...' : 'Replace BG'}
+                                                    </Button>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -711,16 +748,17 @@ Requirements:
                                                 const file = e.target.files?.[0];
                                                 if (file) handleImageUpload(file);
                                             }}
-                                            disabled={uploadingImage || generatingImage || replacingBackground}
+                                            disabled={uploadingImage || generatingImage || replacingBackground || enhancingImage}
                                         />
                                         <Input
                                             value={formData.image_url}
                                             onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                                             placeholder="Or paste image URL"
-                                            disabled={generatingImage || replacingBackground}
+                                            disabled={generatingImage || replacingBackground || enhancingImage}
                                         />
                                         {uploadingImage && <p className="text-xs text-gray-500">Uploading and optimizing image...</p>}
                                         {generatingImage && <p className="text-xs text-gray-500">AI is generating your image...</p>}
+                                        {enhancingImage && <p className="text-xs text-gray-500">AI is enhancing image quality...</p>}
                                         {replacingBackground && <p className="text-xs text-gray-500">AI is replacing background to match theme color...</p>}
                                         {formData.image_url && (
                                             <div className="space-y-1">
