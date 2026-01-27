@@ -203,7 +203,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                     src={item.media_url}
                                     autoPlay
                                     muted
-                                    loop={content.length === 1}
+                                    loop
                                     className="max-h-full max-w-full object-contain"
                                 />
                             ) : (
