@@ -1167,13 +1167,17 @@ export default function MenuManagement({ restaurantId }) {
                                     className="h-4 w-4 rounded border-gray-300 mt-1"
                                 />
                             </div>
-                            {item.image_url && (
+                            {item.image_url ? (
                                 <img
                                     src={item.image_url}
                                     alt={item.name}
                                     className="w-full h-32 object-cover rounded-lg mb-3"
                                     loading="lazy"
                                 />
+                            ) : (
+                                <div className="w-full h-32 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg mb-3 flex items-center justify-center">
+                                    <Image className="h-12 w-12 text-orange-300" />
+                                </div>
                             )}
                             <div className="flex items-start justify-between mb-2">
                                 <h3 className="font-semibold">{item.name}</h3>
