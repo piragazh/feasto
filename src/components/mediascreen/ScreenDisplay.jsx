@@ -165,24 +165,52 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 </div>
             </div>
 
-            <div className="h-full w-full flex items-center justify-center">
-                {currentContent.media_type === 'video' ? (
-                    <video
-                        key={currentContent.id}
-                        src={currentContent.media_url}
-                        autoPlay
-                        muted
-                        loop
-                        className="max-h-full max-w-full object-contain"
-                    />
-                ) : (
-                    <img
-                        key={currentContent.id}
-                        src={currentContent.media_url}
-                        alt={currentContent.title}
-                        className="max-h-full max-w-full object-contain"
-                    />
-                )}
+            <div className="h-full w-full flex items-center justify-center relative">
+                {content.map((item, index) => {
+                    const isActive = index === currentIndex;
+                    const transition = item.transition || 'fade';
+                    
+                    let transitionClass = '';
+                    if (transition === 'fade') {
+                        transitionClass = isActive 
+                            ? 'opacity-100 scale-100' 
+                            : 'opacity-0 scale-100';
+                    } else if (transition === 'slide') {
+                        transitionClass = isActive 
+                            ? 'opacity-100 translate-x-0' 
+                            : 'opacity-0 translate-x-full';
+                    } else if (transition === 'zoom') {
+                        transitionClass = isActive 
+                            ? 'opacity-100 scale-100' 
+                            : 'opacity-0 scale-75';
+                    } else {
+                        transitionClass = isActive ? 'opacity-100' : 'opacity-0';
+                    }
+
+                    return (
+                        <div
+                            key={item.id}
+                            className={`absolute inset-0 flex items-center justify-center transition-all duration-1000 ease-in-out ${transitionClass}`}
+                            style={{ pointerEvents: isActive ? 'auto' : 'none' }}
+                        >
+                            {item.media_type === 'video' ? (
+                                <video
+                                    src={item.media_url}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            ) : (
+                                <img
+                                    src={item.media_url}
+                                    alt={item.title}
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             {content.length > 1 && (

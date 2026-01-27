@@ -40,6 +40,7 @@ export default function ContentManagement({ restaurantId }) {
         media_url: '',
         media_type: 'image',
         duration: 10,
+        transition: 'fade',
         display_order: 0,
         is_active: true
     });
@@ -187,6 +188,7 @@ export default function ContentManagement({ restaurantId }) {
             media_url: formData.media_url,
             media_type: formData.media_type,
             duration: formData.duration || 10,
+            transition: formData.transition || 'fade',
             display_order: formData.display_order || 0,
             is_active: formData.is_active !== false,
         };
@@ -221,6 +223,7 @@ export default function ContentManagement({ restaurantId }) {
             media_url: '',
             media_type: 'image',
             duration: 10,
+            transition: 'fade',
             display_order: 0,
             is_active: true
         });
@@ -236,6 +239,7 @@ export default function ContentManagement({ restaurantId }) {
             media_url: content.media_url || '',
             media_type: content.media_type || 'image',
             duration: content.duration || 10,
+            transition: content.transition || 'fade',
             display_order: content.display_order || 0,
             is_active: content.is_active !== false
         });
@@ -716,17 +720,36 @@ export default function ContentManagement({ restaurantId }) {
                             )}
                         </div>
 
-                        {formData.media_type !== 'video' && (
+                        <div className="grid grid-cols-2 gap-4">
+                            {formData.media_type !== 'video' && (
+                                <div>
+                                    <Label>Duration (seconds)</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.duration}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
+                                        min="1"
+                                    />
+                                </div>
+                            )}
                             <div>
-                                <Label>Duration (seconds)</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.duration}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                                    min="1"
-                                />
+                                <Label>Transition Effect</Label>
+                                <Select
+                                    value={formData.transition}
+                                    onValueChange={(value) => setFormData(prev => ({ ...prev, transition: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="fade">Fade</SelectItem>
+                                        <SelectItem value="slide">Slide</SelectItem>
+                                        <SelectItem value="zoom">Zoom</SelectItem>
+                                        <SelectItem value="none">None</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        )}
+                        </div>
 
                         <div className="flex gap-2">
                             <Button onClick={handleSubmit} className="flex-1">
