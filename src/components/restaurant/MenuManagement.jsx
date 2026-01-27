@@ -233,14 +233,86 @@ export default function MenuManagement({ restaurantId }) {
     const handleImageUpload = async (file) => {
         setUploadingImage(true);
         try {
-            const result = await base44.integrations.Core.UploadFile({ file });
+            // Optimize image before uploading
+            const optimizedFile = await optimizeImage(file);
+            const result = await base44.integrations.Core.UploadFile({ file: optimizedFile });
             setFormData({ ...formData, image_url: result.file_url });
-            toast.success('Image uploaded');
+            toast.success('Image uploaded and optimized');
         } catch (error) {
             toast.error('Failed to upload image');
         } finally {
             setUploadingImage(false);
         }
+    };
+
+    const optimizeImage = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set max dimensions for menu images
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Calculate new dimensions while maintaining aspect ratio
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw image with optimization
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to WebP format for better compression (with fallback to JPEG)
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                const optimizedFile = new File([blob], file.name.replace(/\.\w+$/, '.webp'), {
+                                    type: 'image/webp',
+                                    lastModified: Date.now()
+                                });
+                                resolve(optimizedFile);
+                            } else {
+                                // Fallback to JPEG if WebP not supported
+                                canvas.toBlob(
+                                    (jpegBlob) => {
+                                        const fallbackFile = new File([jpegBlob], file.name.replace(/\.\w+$/, '.jpg'), {
+                                            type: 'image/jpeg',
+                                            lastModified: Date.now()
+                                        });
+                                        resolve(fallbackFile);
+                                    },
+                                    'image/jpeg',
+                                    0.85
+                                );
+                            }
+                        },
+                        'image/webp',
+                        0.85
+                    );
+                };
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     };
 
     const handleBulkDelete = () => {
