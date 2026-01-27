@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
@@ -8,6 +8,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [videoLoopCount, setVideoLoopCount] = useState(0);
+    const heartbeatIntervalRef = useRef(null);
+    const commandCheckIntervalRef = useRef(null);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
@@ -16,7 +18,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         staleTime: 60000,
     });
 
-    const { data: screen } = useQuery({
+    const { data: screen, refetch: refetchScreen } = useQuery({
         queryKey: ['screen', restaurantId, screenName],
         queryFn: async () => {
             const screens = await base44.entities.Screen.filter({ 
@@ -63,6 +65,87 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Heartbeat mechanism
+    useEffect(() => {
+        if (!screen?.id) return;
+
+        const sendHeartbeat = async () => {
+            try {
+                await base44.entities.Screen.update(screen.id, {
+                    last_heartbeat: new Date().toISOString(),
+                    screen_info: {
+                        browser: navigator.userAgent.split(' ').slice(-2).join(' '),
+                        resolution: `${window.screen.width}x${window.screen.height}`,
+                        os: navigator.platform
+                    }
+                });
+            } catch (error) {
+                console.error('Heartbeat failed:', error);
+            }
+        };
+
+        // Send initial heartbeat
+        sendHeartbeat();
+
+        // Send heartbeat every 30 seconds
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+
+        return () => {
+            if (heartbeatIntervalRef.current) {
+                clearInterval(heartbeatIntervalRef.current);
+            }
+        };
+    }, [screen?.id]);
+
+    // Command listener
+    useEffect(() => {
+        if (!screen?.id) return;
+
+        const checkCommands = async () => {
+            try {
+                const screens = await base44.entities.Screen.filter({ 
+                    id: screen.id
+                });
+                const currentScreen = screens[0];
+
+                if (currentScreen?.pending_command) {
+                    const command = currentScreen.pending_command;
+                    
+                    // Clear the command immediately
+                    await base44.entities.Screen.update(screen.id, {
+                        pending_command: null,
+                        command_timestamp: null
+                    });
+
+                    // Execute command
+                    switch (command) {
+                        case 'refresh_content':
+                            refetchScreen();
+                            window.location.reload();
+                            break;
+                        case 'reboot':
+                        case 'reload':
+                            window.location.reload();
+                            break;
+                        default:
+                            console.warn('Unknown command:', command);
+                    }
+                }
+            } catch (error) {
+                console.error('Command check failed:', error);
+            }
+        };
+
+        // Check for commands every 5 seconds
+        commandCheckIntervalRef.current = setInterval(checkCommands, 5000);
+
+        return () => {
+            if (commandCheckIntervalRef.current) {
+                clearInterval(commandCheckIntervalRef.current);
+            }
+        };
+    }, [screen?.id, refetchScreen]);
 
     useEffect(() => {
         setVideoLoopCount(0);

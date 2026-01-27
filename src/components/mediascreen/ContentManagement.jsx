@@ -18,6 +18,7 @@ import FileManager from './FileManager';
 import LayoutDesigner from './LayoutDesigner';
 import EnhancedFileUploader from './EnhancedFileUploader';
 import VideoEditor from './VideoEditor';
+import ScreenControl from './ScreenControl';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
@@ -452,6 +453,8 @@ export default function ContentManagement({ restaurantId }) {
 
     return (
         <div className="space-y-6">
+            <ScreenControl restaurantId={restaurantId} />
+            
             <AIContentAssistant 
                 restaurant={restaurant}
                 onUseIdea={handleUseIdea}
