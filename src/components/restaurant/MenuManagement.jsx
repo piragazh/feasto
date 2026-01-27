@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
@@ -25,6 +25,10 @@ export default function MenuManagement({ restaurantId }) {
     const [filterAvailable, setFilterAvailable] = useState('all');
     const [selectedItems, setSelectedItems] = useState([]);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [generatingDescription, setGeneratingDescription] = useState(false);
+    const [generatingImage, setGeneratingImage] = useState(false);
+    const [aiIngredients, setAiIngredients] = useState('');
+    const [aiTone, setAiTone] = useState('enticing');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -315,6 +319,68 @@ export default function MenuManagement({ restaurantId }) {
         });
     };
 
+    const generateDescription = async () => {
+        if (!formData.name) {
+            toast.error('Please enter item name first');
+            return;
+        }
+
+        setGeneratingDescription(true);
+        try {
+            const toneInstructions = {
+                enticing: 'Write an enticing, mouth-watering description that makes customers want to order this dish',
+                descriptive: 'Write a clear, informative description that accurately describes the dish',
+                simple: 'Write a brief, straightforward description in simple language'
+            };
+
+            const prompt = `Create a compelling, SEO-friendly menu item description for a restaurant.
+
+Item Name: ${formData.name}
+Category: ${formData.category || 'Not specified'}
+${aiIngredients ? `Ingredients/Keywords: ${aiIngredients}` : ''}
+${formData.is_vegetarian ? 'Note: This is a vegetarian dish' : ''}
+${formData.is_spicy ? 'Note: This is a spicy dish' : ''}
+
+Tone: ${toneInstructions[aiTone]}
+
+Requirements:
+- 2-3 sentences maximum
+- Highlight key ingredients and flavors
+- Make it appealing and SEO-friendly
+- Use descriptive, sensory language
+- Don't use markdown or special formatting
+- Just return the description text, nothing else`;
+
+            const result = await base44.integrations.Core.InvokeLLM({ prompt });
+            setFormData({ ...formData, description: result.trim() });
+            toast.success('Description generated!');
+        } catch (error) {
+            toast.error('Failed to generate description');
+        } finally {
+            setGeneratingDescription(false);
+        }
+    };
+
+    const generateImage = async () => {
+        if (!formData.name) {
+            toast.error('Please enter item name first');
+            return;
+        }
+
+        setGeneratingImage(true);
+        try {
+            const prompt = `Professional, appetizing photograph of ${formData.name}${formData.category ? ` (${formData.category} dish)` : ''}, beautifully plated on a clean white plate, restaurant quality food photography, natural lighting, garnished, high-end presentation, ultra detailed, 8k`;
+
+            const result = await base44.integrations.Core.GenerateImage({ prompt });
+            setFormData({ ...formData, image_url: result.url });
+            toast.success('Image generated!');
+        } catch (error) {
+            toast.error('Failed to generate image');
+        } finally {
+            setGeneratingImage(false);
+        }
+    };
+
     const handleBulkDelete = () => {
         if (confirm(`Delete ${selectedItems.length} selected items?`)) {
             bulkDeleteMutation.mutate(selectedItems);
@@ -510,12 +576,43 @@ export default function MenuManagement({ restaurantId }) {
                                     />
                                 </div>
                                 <div className="col-span-2">
-                                    <Label>Description</Label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <Label>Description</Label>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={generateDescription}
+                                            disabled={generatingDescription || !formData.name}
+                                            className="gap-2"
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            {generatingDescription ? 'Generating...' : 'AI Generate'}
+                                        </Button>
+                                    </div>
                                     <Textarea
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         rows={3}
+                                        placeholder="Describe your menu item..."
                                     />
+                                    <div className="flex gap-2 mt-2">
+                                        <Input
+                                            placeholder="Ingredients/keywords (e.g., tomato, mozzarella, basil)"
+                                            value={aiIngredients}
+                                            onChange={(e) => setAiIngredients(e.target.value)}
+                                            className="flex-1 text-xs"
+                                        />
+                                        <select
+                                            value={aiTone}
+                                            onChange={(e) => setAiTone(e.target.value)}
+                                            className="h-9 rounded-md border border-input bg-background px-3 text-xs"
+                                        >
+                                            <option value="enticing">Enticing</option>
+                                            <option value="descriptive">Descriptive</option>
+                                            <option value="simple">Simple</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div>
                                     <Label>Price (£) *</Label>
@@ -544,7 +641,20 @@ export default function MenuManagement({ restaurantId }) {
                                     )}
                                 </div>
                                 <div className="col-span-2">
-                                    <Label>Image</Label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <Label>Image</Label>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={generateImage}
+                                            disabled={generatingImage || !formData.name}
+                                            className="gap-2"
+                                        >
+                                            <Wand2 className="h-4 w-4" />
+                                            {generatingImage ? 'Generating...' : 'AI Generate'}
+                                        </Button>
+                                    </div>
                                     <div className="space-y-2">
                                         <Input
                                             type="file"
@@ -553,16 +663,18 @@ export default function MenuManagement({ restaurantId }) {
                                                 const file = e.target.files?.[0];
                                                 if (file) handleImageUpload(file);
                                             }}
-                                            disabled={uploadingImage}
+                                            disabled={uploadingImage || generatingImage}
                                         />
                                         <Input
                                             value={formData.image_url}
                                             onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                                             placeholder="Or paste image URL"
+                                            disabled={generatingImage}
                                         />
-                                        {uploadingImage && <p className="text-xs text-gray-500">Uploading image...</p>}
+                                        {uploadingImage && <p className="text-xs text-gray-500">Uploading and optimizing image...</p>}
+                                        {generatingImage && <p className="text-xs text-gray-500">AI is generating your image...</p>}
                                         {formData.image_url && (
-                                            <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-20 w-20 object-cover rounded" />
+                                            <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-32 w-32 object-cover rounded" />
                                         )}
                                     </div>
                                 </div>
