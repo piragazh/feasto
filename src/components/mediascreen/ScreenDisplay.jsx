@@ -68,7 +68,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
         const currentContent = content[currentIndex];
         const duration = currentContent?.media_type === 'video' 
-            ? 30000 
+            ? (currentContent?.video_loop_count || 1) * 30000 
             : (currentContent?.duration || 10) * 1000;
 
         const timer = setTimeout(() => {
