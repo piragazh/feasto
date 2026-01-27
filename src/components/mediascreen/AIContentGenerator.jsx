@@ -15,6 +15,7 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
     const [contentType, setContentType] = useState('image');
     const [prompt, setPrompt] = useState(initialPrompt);
     const [style, setStyle] = useState('vibrant');
+    const [aspectRatio, setAspectRatio] = useState('16:9');
     const [duration, setDuration] = useState(10);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedUrl, setGeneratedUrl] = useState(null);
@@ -62,7 +63,10 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
 
         try {
             const stylePrompt = stylePresets.find(s => s.value === style)?.prompt || '';
-            const fullPrompt = `${prompt}, ${stylePrompt}, professional photography, high resolution, 4K quality, promotional material, eye-catching`;
+            const aspectRatioPrompt = aspectRatio === '16:9' 
+                ? 'widescreen 16:9 aspect ratio, horizontal composition' 
+                : 'standard 4:3 aspect ratio, traditional screen format';
+            const fullPrompt = `${prompt}, ${stylePrompt}, ${aspectRatioPrompt}, professional photography, high resolution, 4K quality, promotional material, eye-catching`;
 
             const { url } = await base44.integrations.Core.GenerateImage({ 
                 prompt: fullPrompt 
@@ -296,7 +300,7 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
                     </div>
 
                     {/* Style Selection */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <div>
                             <Label>Visual Style</Label>
                             <Select value={style} onValueChange={setStyle}>
@@ -309,6 +313,19 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
                                             {preset.label}
                                         </SelectItem>
                                     ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <Label>Aspect Ratio</Label>
+                            <Select value={aspectRatio} onValueChange={setAspectRatio}>
+                                <SelectTrigger className="mt-2">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="16:9">16:9 (Widescreen)</SelectItem>
+                                    <SelectItem value="4:3">4:3 (Standard)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
