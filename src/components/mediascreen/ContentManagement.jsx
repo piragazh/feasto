@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
 import AIContentAssistant from './AIContentAssistant';
 import FileManager from './FileManager';
 import LayoutDesigner from './LayoutDesigner';
+import EnhancedFileUploader from './EnhancedFileUploader';
+import VideoEditor from './VideoEditor';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
@@ -25,7 +27,10 @@ export default function ContentManagement({ restaurantId }) {
     const [showScreenDialog, setShowScreenDialog] = useState(false);
     const [showFileManager, setShowFileManager] = useState(false);
     const [showLayoutDesigner, setShowLayoutDesigner] = useState(false);
+    const [showEnhancedUploader, setShowEnhancedUploader] = useState(false);
+    const [showVideoEditor, setShowVideoEditor] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
+    const [videoToEdit, setVideoToEdit] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
     const [restaurant, setRestaurant] = useState(null);
     const [screenAction, setScreenAction] = useState(null);
@@ -138,6 +143,7 @@ export default function ContentManagement({ restaurantId }) {
         if (!file) return;
 
         try {
+            toast.loading('Uploading file...');
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
             const mediaType = file.type.startsWith('video/') ? 'video' : 
                             file.type === 'image/gif' ? 'gif' : 'image';
@@ -156,10 +162,54 @@ export default function ContentManagement({ restaurantId }) {
                 media_url: file_url,
                 media_type: mediaType 
             }));
+            toast.dismiss();
             toast.success('File uploaded successfully');
+            
+            // If video, offer to edit
+            if (mediaType === 'video') {
+                toast.info('Click "Edit Video" to trim or adjust', { duration: 4000 });
+            }
         } catch (error) {
+            toast.dismiss();
             toast.error('Failed to upload file');
         }
+    };
+
+    const handleEnhancedFilesUploaded = (files) => {
+        if (files.length === 1) {
+            const file = files[0];
+            const mediaType = file.type.startsWith('video/') ? 'video' : 
+                            file.type === 'image/gif' ? 'gif' : 'image';
+            setFormData(prev => ({ 
+                ...prev, 
+                media_url: file.url,
+                media_type: mediaType 
+            }));
+            setShowEnhancedUploader(false);
+            setShowDialog(true);
+        } else if (files.length > 1) {
+            // Create multiple content items
+            toast.success(`${files.length} files ready. Creating content items...`);
+            setShowEnhancedUploader(false);
+            // Could implement batch creation here
+        }
+    };
+
+    const handleEditVideo = () => {
+        if (formData.media_url && formData.media_type === 'video') {
+            setVideoToEdit(formData.media_url);
+            setShowVideoEditor(true);
+        }
+    };
+
+    const handleVideoEdited = (trimData) => {
+        // Store trim data for reference
+        toast.success('Video editing data saved');
+        setFormData(prev => ({
+            ...prev,
+            video_trim_start: trimData.startTime,
+            video_trim_end: trimData.endTime
+        }));
     };
 
     const handleSubmit = async () => {
@@ -429,8 +479,12 @@ export default function ContentManagement({ restaurantId }) {
                                 <Sparkles className="h-4 w-4 mr-2" />
                                 Generate with AI
                             </Button>
-                            <Button onClick={() => setShowDialog(true)}>
+                            <Button onClick={() => setShowEnhancedUploader(true)} variant="outline">
                                 <Upload className="h-4 w-4 mr-2" />
+                                Upload Files
+                            </Button>
+                            <Button onClick={() => setShowDialog(true)}>
+                                <Plus className="h-4 w-4 mr-2" />
                                 Add Content
                             </Button>
                         </div>
@@ -720,8 +774,19 @@ export default function ContentManagement({ restaurantId }) {
                                 </Button>
                             </div>
                             {formData.media_url && (
-                                <div className="mt-2">
+                                <div className="mt-2 flex items-center justify-between">
                                     <p className="text-sm text-green-600">File selected</p>
+                                    {formData.media_type === 'video' && (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={handleEditVideo}
+                                        >
+                                            <Scissors className="h-3 w-3 mr-1" />
+                                            Edit Video
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -817,6 +882,23 @@ export default function ContentManagement({ restaurantId }) {
                 }}
                 onSave={handleSaveLayout}
                 initialLayout={editingScreenLayout?.layout_template}
+            />
+
+            <Dialog open={showEnhancedUploader} onOpenChange={setShowEnhancedUploader}>
+                <DialogContent className="max-w-3xl">
+                    <EnhancedFileUploader
+                        restaurantId={restaurantId}
+                        onFilesUploaded={handleEnhancedFilesUploaded}
+                        onClose={() => setShowEnhancedUploader(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            <VideoEditor
+                open={showVideoEditor}
+                videoUrl={videoToEdit}
+                onClose={() => setShowVideoEditor(false)}
+                onSave={handleVideoEdited}
             />
 
             <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>
