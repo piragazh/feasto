@@ -118,7 +118,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    const currentContent = content[currentIndex % content.length];
+    const currentContent = content[currentIndex];
 
     return (
         <div className="h-screen w-screen bg-black relative overflow-hidden">
@@ -166,27 +166,60 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             </div>
 
             <div className="h-full w-full flex items-center justify-center relative">
-                {currentContent.media_type === 'video' ? (
-                    <video
-                        key={`video-${currentContent.id}-${currentIndex}`}
-                        src={currentContent.media_url}
-                        autoPlay
-                        muted
-                        playsInline
-                        className="max-h-full max-w-full object-contain"
-                    />
-                ) : (
-                    <img
-                        key={`img-${currentContent.id}-${currentIndex}`}
-                        src={currentContent.media_url}
-                        alt={currentContent.title}
-                        className="max-h-full max-w-full object-contain"
-                    />
-                )}
+                {content.map((item, index) => {
+                    const isActive = index === currentIndex;
+                    const transition = item.transition || 'fade';
+                    
+                    let transitionClass = '';
+                    if (transition === 'fade') {
+                        transitionClass = isActive 
+                            ? 'opacity-100 scale-100' 
+                            : 'opacity-0 scale-100';
+                    } else if (transition === 'slide') {
+                        transitionClass = isActive 
+                            ? 'opacity-100 translate-x-0' 
+                            : 'opacity-0 -translate-x-full';
+                    } else if (transition === 'zoom') {
+                        transitionClass = isActive 
+                            ? 'opacity-100 scale-100' 
+                            : 'opacity-0 scale-90';
+                    } else {
+                        transitionClass = isActive ? 'opacity-100' : 'opacity-0';
+                    }
+
+                    if (!isActive && transition === 'fade') {
+                        return null;
+                    }
+
+                    return (
+                        <div
+                            key={item.id}
+                            className={`absolute inset-0 flex items-center justify-center transition-all duration-1000 ease-in-out ${transitionClass}`}
+                            style={{ pointerEvents: isActive ? 'auto' : 'none', zIndex: isActive ? 2 : 1 }}
+                        >
+                            {item.media_type === 'video' ? (
+                                <video
+                                    key={`${item.id}-${isActive}`}
+                                    src={item.media_url}
+                                    autoPlay
+                                    muted
+                                    loop={content.length === 1}
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            ) : (
+                                <img
+                                    src={item.media_url}
+                                    alt={item.title}
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             {content.length > 1 && (
-                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
                     {content.map((_, index) => (
                         <div
                             key={index}
