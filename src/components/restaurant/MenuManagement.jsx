@@ -562,7 +562,7 @@ export default function MenuManagement({ restaurantId }) {
                                         />
                                         {uploadingImage && <p className="text-xs text-gray-500">Uploading image...</p>}
                                         {formData.image_url && (
-                                            <img src={formData.image_url} alt="Preview" className="h-20 w-20 object-cover rounded" />
+                                            <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-20 w-20 object-cover rounded" />
                                         )}
                                     </div>
                                 </div>
