@@ -40,6 +40,7 @@ export default function ContentManagement({ restaurantId }) {
         media_url: '',
         media_type: 'image',
         duration: 10,
+        video_loop_count: 1,
         transition: 'fade',
         display_order: 0,
         is_active: true
@@ -188,6 +189,7 @@ export default function ContentManagement({ restaurantId }) {
             media_url: formData.media_url,
             media_type: formData.media_type,
             duration: formData.duration || 10,
+            video_loop_count: formData.media_type === 'video' ? (formData.video_loop_count || 1) : undefined,
             transition: formData.transition || 'fade',
             display_order: formData.display_order || 0,
             is_active: formData.is_active !== false,
@@ -223,6 +225,7 @@ export default function ContentManagement({ restaurantId }) {
             media_url: '',
             media_type: 'image',
             duration: 10,
+            video_loop_count: 1,
             transition: 'fade',
             display_order: 0,
             is_active: true
@@ -239,6 +242,7 @@ export default function ContentManagement({ restaurantId }) {
             media_url: content.media_url || '',
             media_type: content.media_type || 'image',
             duration: content.duration || 10,
+            video_loop_count: content.video_loop_count || 1,
             transition: content.transition || 'fade',
             display_order: content.display_order || 0,
             is_active: content.is_active !== false
@@ -588,7 +592,9 @@ export default function ContentManagement({ restaurantId }) {
                                             <div className="flex flex-wrap gap-2 mt-2">
                                                 <Badge variant="outline">{content.screen_name}</Badge>
                                                 <Badge variant="outline">{content.media_type}</Badge>
-                                                {content.media_type !== 'video' && (
+                                                {content.media_type === 'video' ? (
+                                                    <Badge variant="outline">Loop: {content.video_loop_count || 1}x</Badge>
+                                                ) : (
                                                     <Badge variant="outline">{content.duration}s</Badge>
                                                 )}
                                                 {content.ai_generated && (
@@ -721,7 +727,19 @@ export default function ContentManagement({ restaurantId }) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            {formData.media_type !== 'video' && (
+                            {formData.media_type === 'video' ? (
+                                <div>
+                                    <Label>Loop Count</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.video_loop_count}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, video_loop_count: parseInt(e.target.value) || 1 }))}
+                                        min="1"
+                                        max="10"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">How many times to loop the video</p>
+                                </div>
+                            ) : (
                                 <div>
                                     <Label>Duration (seconds)</Label>
                                     <Input

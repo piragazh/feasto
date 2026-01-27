@@ -18,7 +18,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
         if ((zone.type === 'carousel' || zone.type === 'media') && content.length > 1) {
             const currentItem = content[carouselIndex % content.length];
             const duration = currentItem?.media_type === 'video' 
-                ? 30000 
+                ? (currentItem?.video_loop_count || 1) * 30000 
                 : (currentItem?.duration || 10) * 1000;
 
             const timer = setTimeout(() => {
