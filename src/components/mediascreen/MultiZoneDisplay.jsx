@@ -66,10 +66,11 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                     <div className="relative w-full h-full">
                         {carouselItem.media_type === 'video' ? (
                             <video
+                                key={`carousel-${carouselItem.id}-${carouselIndex}`}
                                 src={carouselItem.media_url}
                                 autoPlay
                                 muted
-                                loop
+                                loop={content.length === 1}
                                 className="w-full h-full object-cover"
                             />
                         ) : (
