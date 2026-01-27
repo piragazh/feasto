@@ -455,11 +455,6 @@ export default function ContentManagement({ restaurantId }) {
         <div className="space-y-6">
             <ScreenControl restaurantId={restaurantId} />
             
-            <AIContentAssistant 
-                restaurant={restaurant}
-                onUseIdea={handleUseIdea}
-            />
-            
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -849,17 +844,33 @@ export default function ContentManagement({ restaurantId }) {
                 </DialogContent>
             </Dialog>
 
-            <AIContentGenerator
-                open={showAIDialog}
-                onClose={() => {
-                    setShowAIDialog(false);
-                    setAIPrompt('');
-                }}
-                onContentGenerated={handleAIContentGenerated}
-                restaurantName={restaurant?.name || 'Restaurant'}
-                existingContent={editingContent}
-                initialPrompt={aiPrompt}
-            />
+            <Dialog open={showAIDialog} onOpenChange={() => {
+                setShowAIDialog(false);
+                setAIPrompt('');
+            }}>
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Generate with AI</DialogTitle>
+                    </DialogHeader>
+                    
+                    <AIContentAssistant 
+                        restaurant={restaurant}
+                        onUseIdea={handleUseIdea}
+                    />
+                    
+                    <AIContentGenerator
+                        open={true}
+                        onClose={() => {
+                            setShowAIDialog(false);
+                            setAIPrompt('');
+                        }}
+                        onContentGenerated={handleAIContentGenerated}
+                        restaurantName={restaurant?.name || 'Restaurant'}
+                        existingContent={editingContent}
+                        initialPrompt={aiPrompt}
+                    />
+                </DialogContent>
+            </Dialog>
 
             <FileManager
                 restaurantId={restaurantId}
