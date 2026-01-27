@@ -549,7 +549,7 @@ Keep each recommendation concise (1-2 sentences) and actionable.`;
                             )}
                         </CardContent>
                     </Card>
-                </CardContent>
+                </TabsContent>
             </Tabs>
         </div>
     );
