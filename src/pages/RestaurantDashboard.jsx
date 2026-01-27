@@ -57,6 +57,7 @@ export default function RestaurantDashboard() {
     const [user, setUser] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
     const [activeTab, setActiveTab] = useState('orders');
+    const [activeSection, setActiveSection] = useState('main');
     const [newOrdersCount, setNewOrdersCount] = useState(0);
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -244,248 +245,179 @@ export default function RestaurantDashboard() {
                 </div>
             </div>
 
-            {/* Quick Access Cards */}
-            {restaurant?.media_screen_enabled && (
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
-                    <Card 
-                        className="cursor-pointer hover:shadow-lg transition-all bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200" 
-                        onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}
-                    >
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
-                                    <Monitor className="h-6 w-6 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">Media Screen Management</h3>
-                                    <p className="text-sm text-gray-600">Manage promotional content for in-store displays</p>
-                                </div>
-                                <Button variant="outline" className="shrink-0">
-                                    Open Module
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* Navigation Sections */}
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
+                <div className="bg-white rounded-lg shadow-sm p-2 mb-4">
+                    <div className="flex gap-2 overflow-x-auto">
+                        <Button
+                            variant={activeSection === 'main' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('main')}
+                            className="whitespace-nowrap"
+                        >
+                            <ShoppingBag className="h-4 w-4 mr-2" />
+                            Main
+                        </Button>
+                        <Button
+                            variant={activeSection === 'menu' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('menu')}
+                            className="whitespace-nowrap"
+                        >
+                            <UtensilsCrossed className="h-4 w-4 mr-2" />
+                            Menu & Deals
+                        </Button>
+                        <Button
+                            variant={activeSection === 'marketing' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('marketing')}
+                            className="whitespace-nowrap"
+                        >
+                            <Tag className="h-4 w-4 mr-2" />
+                            Marketing
+                        </Button>
+                        <Button
+                            variant={activeSection === 'analytics' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('analytics')}
+                            className="whitespace-nowrap"
+                        >
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Analytics
+                        </Button>
+                        <Button
+                            variant={activeSection === 'operations' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('operations')}
+                            className="whitespace-nowrap"
+                        >
+                            <Users className="h-4 w-4 mr-2" />
+                            Operations
+                        </Button>
+                        <Button
+                            variant={activeSection === 'settings' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('settings')}
+                            className="whitespace-nowrap"
+                        >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Settings
+                        </Button>
+                    </div>
                 </div>
-            )}
+            </div>
 
             {/* Main Content */}
             <div className="max-w-7xl mx-auto p-3 sm:p-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <div className="flex flex-col gap-2 mb-4 sm:mb-6">
-                        <TabsList className="bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
-                            <TabsTrigger value="orders" className="relative whitespace-nowrap text-xs sm:text-sm">
-                                <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Live Orders</span>
-                                <span className="sm:hidden">Orders</span>
-                                {pendingOrders.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {pendingOrders.length}
-                                    </span>
-                                )}
-                            </TabsTrigger>
-                            <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm">
-                                <UtensilsCrossed className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Menu Items</span>
-                                <span className="sm:hidden">Menu</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="deals" className="whitespace-nowrap text-xs sm:text-sm">
-                                <span className="hidden sm:inline">Meal Deals</span>
-                                <span className="sm:hidden">Deals</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="coupons" className="whitespace-nowrap text-xs sm:text-sm">
-                                Coupons
-                            </TabsTrigger>
-                            <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm">
-                                <History className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Past Orders</span>
-                                <span className="sm:hidden">History</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="messages" className="relative whitespace-nowrap text-xs sm:text-sm">
-                                <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Messages</span>
-                                <span className="sm:hidden">Chat</span>
-                                {unreadMessagesCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {unreadMessagesCount}
-                                    </span>
-                                )}
-                            </TabsTrigger>
-                            <TabsTrigger value="reviews" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Star className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Reviews</span>
-                                <span className="sm:hidden">⭐</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm">
-                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Analytics</span>
-                                <span className="sm:hidden">📊</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="order-analytics" className="whitespace-nowrap text-xs sm:text-sm">
-                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Order Insights</span>
-                                <span className="sm:hidden">📈</span>
-                            </TabsTrigger>
-                                <TabsTrigger value="driver-performance" className="whitespace-nowrap text-xs sm:text-sm">
-                                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Performance</span>
-                                <span className="sm:hidden">📈</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsList className="bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
-                            <TabsTrigger value="drivers" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Navigation className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Driver Tracking</span>
-                                <span className="sm:hidden">Track</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="driver-management" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Manage Drivers</span>
-                                <span className="sm:hidden">Drivers</span>
-                            </TabsTrigger>
-                        
-                            <TabsTrigger value="crm" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                CRM
-                            </TabsTrigger>
-                            <TabsTrigger value="refunds" className="relative whitespace-nowrap text-xs sm:text-sm">
-                                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Refunds</span>
-                                <span className="sm:hidden">💰</span>
-                                {refundRequests.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {refundRequests.length}
-                                    </span>
-                                )}
-                            </TabsTrigger>
-                            <TabsTrigger value="promotions" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Tag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Promotions</span>
-                                <span className="sm:hidden">🏷️</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="ai-marketing" className="whitespace-nowrap text-xs sm:text-sm">
-                                <span className="hidden sm:inline">AI Marketing</span>
-                                <span className="sm:hidden">✨</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="batching" className="whitespace-nowrap text-xs sm:text-sm">
-                                <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Order Batching</span>
-                                <span className="sm:hidden">Batch</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="modifications" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Modifications</span>
-                                <span className="sm:hidden">Mods</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="zones" className="whitespace-nowrap text-xs sm:text-sm">
-                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                Zones
-                            </TabsTrigger>
-                            {restaurant?.media_screen_enabled && (
-                                <TabsTrigger value="media" className="whitespace-nowrap text-xs sm:text-sm">
-                                    <Monitor className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                    <span className="hidden sm:inline">Media Screens</span>
-                                    <span className="sm:hidden">📺</span>
-                                </TabsTrigger>
-                            )}
-                            <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm">
-                                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Settings</span>
-                                <span className="sm:hidden">⚙️</span>
-                            </TabsTrigger>
-                        </TabsList>
+                {/* MAIN SECTION */}
+                {activeSection === 'main' && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab('orders')}>
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center relative">
+                                            <ShoppingBag className="h-6 w-6 text-white" />
+                                            {pendingOrders.length > 0 && (
+                                                <span className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                                    {pendingOrders.length}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-lg">Live Orders</h3>
+                                            <p className="text-sm text-gray-500">Manage incoming orders</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab('messages')}>
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center relative">
+                                            <MessageSquare className="h-6 w-6 text-white" />
+                                            {unreadMessagesCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                                    {unreadMessagesCount}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-lg">Messages</h3>
+                                            <p className="text-sm text-gray-500">Customer & admin chats</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab('history')}>
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                                            <History className="h-6 w-6 text-white" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-lg">Order History</h3>
+                                            <p className="text-sm text-gray-500">View past orders</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+
+                            <TabsContent value="orders">
+                                <OrderQueue restaurantId={restaurant.id} onOrderUpdate={() => {}} />
+                            </TabsContent>
+                            <TabsContent value="messages">
+                                <RestaurantMessages restaurantId={restaurant.id} />
+                            </TabsContent>
+                            <TabsContent value="history">
+                                <PastOrders restaurantId={restaurant.id} />
+                            </TabsContent>
+                        </Tabs>
                     </div>
+                )}
 
-                    <TabsContent value="orders">
-                        <OrderQueue 
-                            restaurantId={restaurant.id} 
-                            onOrderUpdate={() => {}} 
-                        />
-                    </TabsContent>
+                {/* MENU & DEALS SECTION */}
+                {activeSection === 'menu' && (
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="menu">Menu Items</TabsTrigger>
+                            <TabsTrigger value="deals">Meal Deals</TabsTrigger>
+                            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="menu">
+                            <MenuManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="deals">
+                            <AIMealDealSuggestions restaurantId={restaurant.id} />
+                            <MealDealsManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="reviews">
+                            <ReviewManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                    </Tabs>
+                )}
 
-                    <TabsContent value="menu">
-                        <MenuManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="deals">
-                        <AIMealDealSuggestions restaurantId={restaurant.id} />
-                        <MealDealsManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="coupons">
-                        <CouponsManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="history">
-                        <PastOrders restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="messages">
-                        <RestaurantMessages restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="reviews">
-                        <ReviewManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="analytics">
-                         <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
-                     </TabsContent>
-
-                    <TabsContent value="order-analytics">
-                         <OrderAnalyticsDashboard restaurantId={restaurant.id} />
-                     </TabsContent>
-
-                    <TabsContent value="drivers">
-                        <DriverTracking restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="driver-management">
-                        <DriverManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="driver-performance">
-                        <DriverPerformance restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="crm">
-                        <CustomerCRM restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="refunds">
-                        <RefundManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="promotions">
-                        <PromotionManagement restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="ai-marketing">
-                        <AIMarketingAssistant restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="batching">
-                        <OrderBatching restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="modifications">
-                        <OrderModification restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="zones">
-                        <DeliveryZoneManagement 
-                            restaurantId={restaurant.id}
-                            restaurantLocation={restaurant.latitude && restaurant.longitude ? {
-                                lat: restaurant.latitude,
-                                lng: restaurant.longitude
-                            } : null}
-                        />
-                    </TabsContent>
-
-                    {restaurant?.media_screen_enabled && (
-                        <TabsContent value="media">
-                            <div className="space-y-4">
+                {/* MARKETING SECTION */}
+                {activeSection === 'marketing' && (
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="coupons">Coupons</TabsTrigger>
+                            <TabsTrigger value="promotions">Promotions</TabsTrigger>
+                            <TabsTrigger value="ai-marketing">AI Assistant</TabsTrigger>
+                            {restaurant?.media_screen_enabled && (
+                                <TabsTrigger value="media">Media Screens</TabsTrigger>
+                            )}
+                        </TabsList>
+                        <TabsContent value="coupons">
+                            <CouponsManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="promotions">
+                            <PromotionManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="ai-marketing">
+                            <AIMarketingAssistant restaurantId={restaurant.id} />
+                        </TabsContent>
+                        {restaurant?.media_screen_enabled && (
+                            <TabsContent value="media">
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
@@ -506,14 +438,91 @@ export default function RestaurantDashboard() {
                                         </Button>
                                     </CardContent>
                                 </Card>
-                            </div>
-                        </TabsContent>
-                    )}
+                            </TabsContent>
+                        )}
+                    </Tabs>
+                )}
 
-                    <TabsContent value="settings">
-                        <RestaurantSettings restaurantId={restaurant.id} />
-                    </TabsContent>
-                </Tabs>
+                {/* ANALYTICS SECTION */}
+                {activeSection === 'analytics' && (
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="analytics">Overview</TabsTrigger>
+                            <TabsTrigger value="order-analytics">Order Insights</TabsTrigger>
+                            <TabsTrigger value="driver-performance">Driver Performance</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="analytics">
+                            <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="order-analytics">
+                            <OrderAnalyticsDashboard restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="driver-performance">
+                            <DriverPerformance restaurantId={restaurant.id} />
+                        </TabsContent>
+                    </Tabs>
+                )}
+
+                {/* OPERATIONS SECTION */}
+                {activeSection === 'operations' && (
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="mb-4 flex-wrap">
+                            <TabsTrigger value="drivers">Driver Tracking</TabsTrigger>
+                            <TabsTrigger value="driver-management">Manage Drivers</TabsTrigger>
+                            <TabsTrigger value="crm">CRM</TabsTrigger>
+                            <TabsTrigger value="refunds" className="relative">
+                                Refunds
+                                {refundRequests.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
+                                        {refundRequests.length}
+                                    </span>
+                                )}
+                            </TabsTrigger>
+                            <TabsTrigger value="batching">Order Batching</TabsTrigger>
+                            <TabsTrigger value="modifications">Modifications</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="drivers">
+                            <DriverTracking restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="driver-management">
+                            <DriverManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="crm">
+                            <CustomerCRM restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="refunds">
+                            <RefundManagement restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="batching">
+                            <OrderBatching restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="modifications">
+                            <OrderModification restaurantId={restaurant.id} />
+                        </TabsContent>
+                    </Tabs>
+                )}
+
+                {/* SETTINGS SECTION */}
+                {activeSection === 'settings' && (
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="settings">Restaurant Settings</TabsTrigger>
+                            <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="settings">
+                            <RestaurantSettings restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="zones">
+                            <DeliveryZoneManagement 
+                                restaurantId={restaurant.id}
+                                restaurantLocation={restaurant.latitude && restaurant.longitude ? {
+                                    lat: restaurant.latitude,
+                                    lng: restaurant.longitude
+                                } : null}
+                            />
+                        </TabsContent>
+                    </Tabs>
+                )}
             </div>
         </div>
     );
