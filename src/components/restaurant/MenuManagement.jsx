@@ -35,6 +35,7 @@ export default function MenuManagement({ restaurantId }) {
         price: '',
         category: '',
         image_url: '',
+        ai_generated_image: false,
         is_popular: false,
         is_vegetarian: false,
         is_spicy: false,
@@ -372,7 +373,7 @@ Requirements:
             const prompt = `Professional, appetizing photograph of ${formData.name}${formData.category ? ` (${formData.category} dish)` : ''}, beautifully plated on a clean white plate, restaurant quality food photography, natural lighting, garnished, high-end presentation, ultra detailed, 8k`;
 
             const result = await base44.integrations.Core.GenerateImage({ prompt });
-            setFormData({ ...formData, image_url: result.url });
+            setFormData({ ...formData, image_url: result.url, ai_generated_image: true });
             toast.success('Image generated!');
         } catch (error) {
             toast.error('Failed to generate image');
