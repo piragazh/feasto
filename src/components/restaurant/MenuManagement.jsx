@@ -27,6 +27,7 @@ export default function MenuManagement({ restaurantId }) {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [generatingDescription, setGeneratingDescription] = useState(false);
     const [generatingImage, setGeneratingImage] = useState(false);
+    const [replacingBackground, setReplacingBackground] = useState(false);
     const [aiIngredients, setAiIngredients] = useState('');
     const [aiTone, setAiTone] = useState('enticing');
     const [formData, setFormData] = useState({
@@ -382,6 +383,35 @@ Requirements:
         }
     };
 
+    const replaceBackground = async () => {
+        if (!formData.image_url) {
+            toast.error('Please add an image first');
+            return;
+        }
+
+        if (!restaurant?.theme_primary_color) {
+            toast.error('Please set restaurant theme color first');
+            return;
+        }
+
+        setReplacingBackground(true);
+        try {
+            const themeColor = restaurant.theme_primary_color;
+            const prompt = `Professional food photography of ${formData.name || 'dish'}, beautifully plated, with a clean, solid ${themeColor} colored background, restaurant quality, high-end presentation, centered composition, soft lighting, ultra detailed, 8k`;
+
+            const result = await base44.integrations.Core.GenerateImage({ 
+                prompt,
+                existing_image_urls: [formData.image_url]
+            });
+            setFormData({ ...formData, image_url: result.url, ai_generated_image: true });
+            toast.success('Background replaced!');
+        } catch (error) {
+            toast.error('Failed to replace background');
+        } finally {
+            setReplacingBackground(false);
+        }
+    };
+
     const handleBulkDelete = () => {
         if (confirm(`Delete ${selectedItems.length} selected items?`)) {
             bulkDeleteMutation.mutate(selectedItems);
@@ -646,17 +676,32 @@ Requirements:
                                 <div className="col-span-2">
                                     <div className="flex items-center justify-between mb-2">
                                         <Label>Image</Label>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={generateImage}
-                                            disabled={generatingImage || !formData.name}
-                                            className="gap-2"
-                                        >
-                                            <Wand2 className="h-4 w-4" />
-                                            {generatingImage ? 'Generating...' : 'AI Generate'}
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={generateImage}
+                                                disabled={generatingImage || replacingBackground || !formData.name}
+                                                className="gap-2"
+                                            >
+                                                <Wand2 className="h-4 w-4" />
+                                                {generatingImage ? 'Generating...' : 'AI Generate'}
+                                            </Button>
+                                            {formData.image_url && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={replaceBackground}
+                                                    disabled={generatingImage || replacingBackground}
+                                                    className="gap-2"
+                                                >
+                                                    <Sparkles className="h-4 w-4" />
+                                                    {replacingBackground ? 'Processing...' : 'Replace BG'}
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Input
@@ -666,18 +711,24 @@ Requirements:
                                                 const file = e.target.files?.[0];
                                                 if (file) handleImageUpload(file);
                                             }}
-                                            disabled={uploadingImage || generatingImage}
+                                            disabled={uploadingImage || generatingImage || replacingBackground}
                                         />
                                         <Input
                                             value={formData.image_url}
                                             onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                                             placeholder="Or paste image URL"
-                                            disabled={generatingImage}
+                                            disabled={generatingImage || replacingBackground}
                                         />
                                         {uploadingImage && <p className="text-xs text-gray-500">Uploading and optimizing image...</p>}
                                         {generatingImage && <p className="text-xs text-gray-500">AI is generating your image...</p>}
+                                        {replacingBackground && <p className="text-xs text-gray-500">AI is replacing background to match theme color...</p>}
                                         {formData.image_url && (
-                                            <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-32 w-32 object-cover rounded" />
+                                            <div className="space-y-1">
+                                                <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-32 w-32 object-cover rounded" />
+                                                {restaurant?.theme_primary_color && (
+                                                    <p className="text-xs text-gray-500">Theme color: <span className="inline-block w-3 h-3 rounded-full" style={{backgroundColor: restaurant.theme_primary_color}}></span> {restaurant.theme_primary_color}</p>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 </div>
