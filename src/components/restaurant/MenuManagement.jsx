@@ -336,7 +336,7 @@ export default function MenuManagement({ restaurantId }) {
                 simple: 'Write a brief, straightforward description in simple language'
             };
 
-            const prompt = `Create a compelling, SEO-friendly menu item description for a restaurant.
+            const prompt = `Create a short, compelling menu item description for a restaurant.
 
 Item Name: ${formData.name}
 Category: ${formData.category || 'Not specified'}
@@ -346,12 +346,12 @@ ${formData.is_spicy ? 'Note: This is a spicy dish' : ''}
 
 Tone: ${toneInstructions[aiTone]}
 
-Requirements:
-- 2-3 sentences maximum
-- Highlight key ingredients and flavors
-- Make it appealing and SEO-friendly
-- Use descriptive, sensory language
-- Don't use markdown or special formatting
+CRITICAL REQUIREMENTS:
+- MAXIMUM 2 SHORT sentences only - keep it brief!
+- About 20-30 words total
+- Highlight only the most important ingredients
+- Make it appetizing but concise
+- No markdown or special formatting
 - Just return the description text, nothing else`;
 
             const result = await base44.integrations.Core.InvokeLLM({ prompt });
