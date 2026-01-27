@@ -615,7 +615,6 @@ export default function VideoEditor({ open, videoUrl, onClose, onSave }) {
                             Cancel
                         </Button>
                     </div>
-                    </div>
                 </div>
             </DialogContent>
         </Dialog>
