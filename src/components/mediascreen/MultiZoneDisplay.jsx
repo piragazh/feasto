@@ -157,7 +157,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                 top: `${zone.position.y}%`,
                 width: `${zone.position.width}%`,
                 height: `${zone.position.height}%`,
-                backgroundColor: zone.type === 'clock' ? 'transparent' : (zone.styling?.backgroundColor || '#000'),
+                backgroundColor: (zone.type === 'clock' || zone.type === 'weather') ? 'transparent' : (zone.styling?.backgroundColor || '#000'),
                 borderRadius: `${zone.styling?.borderRadius || 0}px`
             }}
         >
