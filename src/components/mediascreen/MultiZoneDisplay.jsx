@@ -55,14 +55,24 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
 
             case 'carousel':
                 if (content.length === 0) return null;
-                const carouselItem = content[carouselIndex];
+                const carouselItem = content[carouselIndex % content.length];
                 return (
                     <div className="relative w-full h-full">
-                        <img
-                            src={carouselItem.media_url}
-                            alt={carouselItem.title}
-                            className="w-full h-full object-cover"
-                        />
+                        {carouselItem.media_type === 'video' ? (
+                            <video
+                                src={carouselItem.media_url}
+                                autoPlay
+                                muted
+                                loop
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <img
+                                src={carouselItem.media_url}
+                                alt={carouselItem.title}
+                                className="w-full h-full object-cover"
+                            />
+                        )}
                         {content.length > 1 && (
                             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
                                 {content.map((_, idx) => (
@@ -90,7 +100,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
 
             case 'clock':
                 return (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-white p-4">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-white p-4 bg-black/40 backdrop-blur-sm">
                         <div className="text-4xl font-bold">
                             {currentTime.toLocaleTimeString('en-GB', { 
                                 hour: '2-digit', 
@@ -147,7 +157,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                 top: `${zone.position.y}%`,
                 width: `${zone.position.width}%`,
                 height: `${zone.position.height}%`,
-                backgroundColor: zone.styling?.backgroundColor || '#000',
+                backgroundColor: zone.type === 'clock' ? 'transparent' : (zone.styling?.backgroundColor || '#000'),
                 borderRadius: `${zone.styling?.borderRadius || 0}px`
             }}
         >

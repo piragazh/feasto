@@ -69,7 +69,10 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout })
             type,
             position: { x: 10, y: 10, width: 30, height: 30 },
             content_filter: {},
-            styling: { backgroundColor: '#000000', borderRadius: 8 }
+            styling: { 
+                backgroundColor: type === 'clock' ? 'transparent' : '#000000', 
+                borderRadius: 8 
+            }
         };
         setZones([...zones, newZone]);
         setSelectedZone(newZone.id);
