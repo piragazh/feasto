@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
@@ -1176,7 +1176,7 @@ export default function MenuManagement({ restaurantId }) {
                                 />
                             ) : (
                                 <div className="w-full h-32 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg mb-3 flex items-center justify-center">
-                                    <Image className="h-12 w-12 text-orange-300" />
+                                    <ImageIcon className="h-12 w-12 text-orange-300" />
                                 </div>
                             )}
                             <div className="flex items-start justify-between mb-2">
