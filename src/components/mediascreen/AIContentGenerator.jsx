@@ -11,9 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Loader2, Wand2, Image, Video, Film, Copy, Share2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function AIContentGenerator({ open, onClose, onContentGenerated, restaurantName, existingContent }) {
+export default function AIContentGenerator({ open, onClose, onContentGenerated, restaurantName, existingContent, initialPrompt = '' }) {
     const [contentType, setContentType] = useState('image');
-    const [prompt, setPrompt] = useState('');
+    const [prompt, setPrompt] = useState(initialPrompt);
     const [style, setStyle] = useState('vibrant');
     const [duration, setDuration] = useState(10);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -24,6 +24,12 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
     const [optimizedSuggestions, setOptimizedSuggestions] = useState(null);
     const [socialSnippets, setSocialSnippets] = useState(null);
     const [variations, setVariations] = useState([]);
+
+    React.useEffect(() => {
+        if (initialPrompt) {
+            setPrompt(initialPrompt);
+        }
+    }, [initialPrompt]);
 
     const contentTypes = [
         { value: 'image', label: 'Static Image', icon: Image, description: 'High-quality promotional image' },

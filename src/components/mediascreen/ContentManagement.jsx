@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
+import AIContentAssistant from './AIContentAssistant';
 import FileManager from './FileManager';
 import LayoutDesigner from './LayoutDesigner';
 import { createPageUrl } from '@/utils';
@@ -30,6 +31,7 @@ export default function ContentManagement({ restaurantId }) {
     const [screenAction, setScreenAction] = useState(null);
     const [screenName, setScreenName] = useState('');
     const [editingScreenLayout, setEditingScreenLayout] = useState(null);
+    const [aiPrompt, setAIPrompt] = useState('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -380,8 +382,23 @@ export default function ContentManagement({ restaurantId }) {
         }
     };
 
+    const handleUseIdea = (idea) => {
+        setFormData(prev => ({
+            ...prev,
+            title: idea.title,
+            description: idea.description
+        }));
+        setAIPrompt(idea.visualSuggestions);
+        setShowAIDialog(true);
+    };
+
     return (
         <div className="space-y-6">
+            <AIContentAssistant 
+                restaurant={restaurant}
+                onUseIdea={handleUseIdea}
+            />
+            
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -725,10 +742,14 @@ export default function ContentManagement({ restaurantId }) {
 
             <AIContentGenerator
                 open={showAIDialog}
-                onClose={() => setShowAIDialog(false)}
+                onClose={() => {
+                    setShowAIDialog(false);
+                    setAIPrompt('');
+                }}
                 onContentGenerated={handleAIContentGenerated}
                 restaurantName={restaurant?.name || 'Restaurant'}
                 existingContent={editingContent}
+                initialPrompt={aiPrompt}
             />
 
             <FileManager
