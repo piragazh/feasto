@@ -382,6 +382,13 @@ export default function RestaurantDashboard() {
                                 <MapPin className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 Zones
                             </TabsTrigger>
+                            {restaurant?.media_screen_enabled && (
+                                <TabsTrigger value="media" className="whitespace-nowrap text-xs sm:text-sm">
+                                    <Monitor className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">Media Screens</span>
+                                    <span className="sm:hidden">📺</span>
+                                </TabsTrigger>
+                            )}
                             <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm">
                                 <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Settings</span>
@@ -475,6 +482,33 @@ export default function RestaurantDashboard() {
                             } : null}
                         />
                     </TabsContent>
+
+                    {restaurant?.media_screen_enabled && (
+                        <TabsContent value="media">
+                            <div className="space-y-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Monitor className="h-5 w-5" />
+                                            Media Screen Management
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-gray-600 mb-4">
+                                            Manage promotional content, screens, and layouts for in-store displays.
+                                        </p>
+                                        <Button 
+                                            onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <Monitor className="h-4 w-4 mr-2" />
+                                            Open Media Screen Manager
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </TabsContent>
+                    )}
 
                     <TabsContent value="settings">
                         <RestaurantSettings restaurantId={restaurant.id} />
