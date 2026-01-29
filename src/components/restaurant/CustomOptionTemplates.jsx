@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CustomOptionTemplates({ restaurantId }) {
@@ -28,6 +28,23 @@ export default function CustomOptionTemplates({ restaurantId }) {
     });
 
     const templates = restaurant?.custom_option_templates || [];
+
+    const updateItemsMutation = useMutation({
+        mutationFn: async (template_name) => {
+            const response = await base44.functions.invoke('updateMenuItemsFromTemplate', {
+                restaurant_id: restaurantId,
+                template_name
+            });
+            return response.data;
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries(['menu-items']);
+            toast.success(`Updated ${data.updated_count} menu items`);
+        },
+        onError: () => {
+            toast.error('Failed to update menu items');
+        }
+    });
 
     const saveMutation = useMutation({
         mutationFn: (newTemplates) => {
@@ -245,6 +262,15 @@ export default function CustomOptionTemplates({ restaurantId }) {
                                             <p className="text-sm text-gray-500">{template.options.length} options</p>
                                         </div>
                                         <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => updateItemsMutation.mutate(template.name)}
+                                                disabled={updateItemsMutation.isPending}
+                                                title="Update all menu items using this template"
+                                            >
+                                                <RefreshCw className={`h-4 w-4 ${updateItemsMutation.isPending ? 'animate-spin' : ''}`} />
+                                            </Button>
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
