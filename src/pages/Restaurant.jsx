@@ -809,16 +809,16 @@ export default function Restaurant() {
 
 
             {/* Hero */}
-            <div className="relative h-72 md:h-80">
+            <div className="relative h-72 md:h-80 -mx-4 md:mx-0">
                 <img
                     src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200'}
                     alt={restaurant.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover md:rounded-none"
                     loading="eager"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 
-                <div className="absolute top-4 left-4 flex gap-2 z-10">
+                <div className="absolute top-4 left-4 md:left-8 flex gap-2 z-10">
                     <Link to={createPageUrl('Home')}>
                         <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white shadow-lg">
                             <ArrowLeft className="h-5 w-5" />
@@ -834,7 +834,7 @@ export default function Restaurant() {
                     </Button>
                 </div>
                 
-                <div className="absolute bottom-0 left-0 right-0 p-6">
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
                     <div className="max-w-4xl mx-auto">
                         <div className="flex items-start gap-4 mb-3">
                             <div className="flex-1">
