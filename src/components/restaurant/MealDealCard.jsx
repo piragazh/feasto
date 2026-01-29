@@ -27,9 +27,11 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-bold text-base text-gray-900">{deal.name}</h3>
-                        <Badge className="bg-orange-500 text-white text-xs flex-shrink-0">
-                            {discount}% OFF
-                        </Badge>
+                        {discount > 0 && (
+                            <Badge className="bg-orange-500 text-white text-xs flex-shrink-0">
+                                {discount}% OFF
+                            </Badge>
+                        )}
                     </div>
                     
                     <p className="text-gray-600 text-xs mb-2 line-clamp-2">{deal.description}</p>
@@ -49,9 +51,11 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
 
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-gray-400 line-through text-xs">
-                                £{deal.original_price?.toFixed(2)}
-                            </span>
+                            {deal.original_price > 0 && (
+                                <span className="text-gray-400 line-through text-xs">
+                                    £{deal.original_price?.toFixed(2)}
+                                </span>
+                            )}
                             <span className="font-bold text-lg text-orange-600">
                                 £{deal.deal_price?.toFixed(2)}
                             </span>
