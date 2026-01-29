@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2 } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
@@ -32,6 +32,8 @@ export default function MenuManagement({ restaurantId }) {
     const [enhancingImage, setEnhancingImage] = useState(false);
     const [aiIngredients, setAiIngredients] = useState('');
     const [aiTone, setAiTone] = useState('enticing');
+    const [updateCategoryDialogOpen, setUpdateCategoryDialogOpen] = useState(false);
+    const [selectedUpdateCategory, setSelectedUpdateCategory] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -229,6 +231,25 @@ export default function MenuManagement({ restaurantId }) {
             toast.success(`Deleted ${selectedItems.length} items`);
             setSelectedItems([]);
         },
+    });
+
+    const updateItemsFromCategoryMutation = useMutation({
+        mutationFn: async (category) => {
+            const response = await base44.functions.invoke('updateMenuItemsFromTemplate', {
+                restaurant_id: restaurantId,
+                update_category: category
+            });
+            return response.data;
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries(['menu-items']);
+            toast.success(`Updated ${data.updated_count} menu items from category`);
+            setUpdateCategoryDialogOpen(false);
+            setSelectedUpdateCategory('');
+        },
+        onError: () => {
+            toast.error('Failed to update menu items');
+        }
     });
 
     const toggleAvailability = (item) => {
@@ -542,14 +563,25 @@ CRITICAL REQUIREMENTS:
                             <h3 className="text-lg font-semibold">Menu Categories</h3>
                             <p className="text-sm text-gray-500">Drag to reorder how categories appear on your menu</p>
                         </div>
-                        <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setCategoryDialogOpen(true)}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Category
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setUpdateCategoryDialogOpen(true)}
+                                title="Update items that use category-based options"
+                            >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Update from Category
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setCategoryDialogOpen(true)}
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Category
+                            </Button>
+                        </div>
                     </div>
                     {categories.length === 0 ? (
                         <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
@@ -1514,6 +1546,60 @@ CRITICAL REQUIREMENTS:
                                 className="bg-orange-500 hover:bg-orange-600"
                             >
                                 {editingCategory ? 'Update' : 'Add'} Category
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={updateCategoryDialogOpen} onOpenChange={setUpdateCategoryDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Menu Items from Category</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-600">
+                            This will update all menu items that have customization options based on this category (e.g., "Choose a side", "Pick a drink").
+                        </p>
+                        <div>
+                            <Label>Select Category</Label>
+                            <select
+                                value={selectedUpdateCategory}
+                                onChange={(e) => setSelectedUpdateCategory(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                                <option value="">Choose a category...</option>
+                                {categories.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-2">
+                                All items using "{selectedUpdateCategory || 'this category'}" options will be updated with current items from that category
+                            </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => {
+                                setUpdateCategoryDialogOpen(false);
+                                setSelectedUpdateCategory('');
+                            }}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => updateItemsFromCategoryMutation.mutate(selectedUpdateCategory)}
+                                disabled={!selectedUpdateCategory || updateItemsFromCategoryMutation.isPending}
+                                className="bg-orange-500 hover:bg-orange-600"
+                            >
+                                {updateItemsFromCategoryMutation.isPending ? (
+                                    <>
+                                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                        Update Items
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </div>
