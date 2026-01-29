@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 
@@ -45,7 +45,18 @@ export default function RestaurantSettings({ restaurantId }) {
         theme_primary_color: '#f97316',
         opening_hours: {},
         delivery_hours: {},
-        collection_hours: {}
+        collection_hours: {},
+        printer_config: {
+            printer_width: '80mm',
+            font_size: 'medium',
+            template: 'standard',
+            header_text: '',
+            footer_text: '',
+            show_logo: true,
+            show_order_number: true,
+            show_customer_details: true,
+            auto_print: false
+        }
     });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingCertificate, setUploadingCertificate] = useState(false);
@@ -86,7 +97,18 @@ export default function RestaurantSettings({ restaurantId }) {
                 theme_primary_color: restaurant.theme_primary_color || '#f97316',
                 opening_hours: initializeHours(restaurant.opening_hours || {}),
                 delivery_hours: initializeHours(restaurant.delivery_hours || {}),
-                collection_hours: initializeHours(restaurant.collection_hours || {})
+                collection_hours: initializeHours(restaurant.collection_hours || {}),
+                printer_config: {
+                    printer_width: restaurant.printer_config?.printer_width || '80mm',
+                    font_size: restaurant.printer_config?.font_size || 'medium',
+                    template: restaurant.printer_config?.template || 'standard',
+                    header_text: restaurant.printer_config?.header_text || '',
+                    footer_text: restaurant.printer_config?.footer_text || '',
+                    show_logo: restaurant.printer_config?.show_logo !== false,
+                    show_order_number: restaurant.printer_config?.show_order_number !== false,
+                    show_customer_details: restaurant.printer_config?.show_customer_details !== false,
+                    auto_print: restaurant.printer_config?.auto_print || false
+                }
             });
         }
     }, [restaurant]);
@@ -258,6 +280,13 @@ export default function RestaurantSettings({ restaurantId }) {
                         Collection Hours
                     </Button>
                 )}
+                <Button
+                    variant={activeSection === 'printing' ? 'default' : 'outline'}
+                    onClick={() => setActiveSection('printing')}
+                >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Printing
+                </Button>
             </div>
 
             {activeSection === 'profile' && (
@@ -597,6 +626,166 @@ export default function RestaurantSettings({ restaurantId }) {
                         <Button onClick={handleSaveGeneral} className="w-full" disabled={updateMutation.isPending}>
                             <Save className="h-4 w-4 mr-2" />
                             Save General Settings
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeSection === 'printing' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Printer className="h-5 w-5" />
+                            Receipt Printer Configuration
+                        </CardTitle>
+                        <p className="text-sm text-gray-600">
+                            Configure receipt printing settings for your thermal printer
+                        </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <Label>Printer Width</Label>
+                                <select
+                                    value={formData.printer_config.printer_width}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        printer_config: { ...formData.printer_config, printer_width: e.target.value }
+                                    })}
+                                    className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                >
+                                    <option value="58mm">58mm (Compact)</option>
+                                    <option value="80mm">80mm (Standard)</option>
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">Select your thermal printer paper width</p>
+                            </div>
+                            <div>
+                                <Label>Font Size</Label>
+                                <select
+                                    value={formData.printer_config.font_size}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        printer_config: { ...formData.printer_config, font_size: e.target.value }
+                                    })}
+                                    className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                >
+                                    <option value="small">Small</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="large">Large</option>
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">Choose text size for readability</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Receipt Template</Label>
+                            <select
+                                value={formData.printer_config.template}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    printer_config: { ...formData.printer_config, template: e.target.value }
+                                })}
+                                className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                            >
+                                <option value="standard">Standard - Balanced layout with all details</option>
+                                <option value="detailed">Detailed - Extra information and descriptions</option>
+                                <option value="minimal">Minimal - Clean and simple</option>
+                                <option value="custom">Custom - Use custom header/footer</option>
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">Select the receipt style that suits your needs</p>
+                        </div>
+
+                        <div>
+                            <Label>Custom Header Text</Label>
+                            <Textarea
+                                value={formData.printer_config.header_text}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    printer_config: { ...formData.printer_config, header_text: e.target.value }
+                                })}
+                                placeholder="e.g., Welcome to [Restaurant Name]! Order online at..."
+                                rows={2}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Add custom text at the top of receipts</p>
+                        </div>
+
+                        <div>
+                            <Label>Custom Footer Text</Label>
+                            <Textarea
+                                value={formData.printer_config.footer_text}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    printer_config: { ...formData.printer_config, footer_text: e.target.value }
+                                })}
+                                placeholder="e.g., Thank you for your order! Visit us again soon."
+                                rows={2}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Add custom thank you message or promotional text</p>
+                        </div>
+
+                        <div className="space-y-3 border-t pt-4">
+                            <Label className="text-base font-semibold">Display Options</Label>
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div>
+                                    <p className="font-medium">Show Logo</p>
+                                    <p className="text-sm text-gray-500">Display restaurant logo on receipt</p>
+                                </div>
+                                <Switch
+                                    checked={formData.printer_config.show_logo}
+                                    onCheckedChange={(checked) => setFormData({
+                                        ...formData,
+                                        printer_config: { ...formData.printer_config, show_logo: checked }
+                                    })}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div>
+                                    <p className="font-medium">Show Order Number</p>
+                                    <p className="text-sm text-gray-500">Display order number prominently</p>
+                                </div>
+                                <Switch
+                                    checked={formData.printer_config.show_order_number}
+                                    onCheckedChange={(checked) => setFormData({
+                                        ...formData,
+                                        printer_config: { ...formData.printer_config, show_order_number: checked }
+                                    })}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div>
+                                    <p className="font-medium">Show Customer Details</p>
+                                    <p className="text-sm text-gray-500">Include customer name and address</p>
+                                </div>
+                                <Switch
+                                    checked={formData.printer_config.show_customer_details}
+                                    onCheckedChange={(checked) => setFormData({
+                                        ...formData,
+                                        printer_config: { ...formData.printer_config, show_customer_details: checked }
+                                    })}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50">
+                                <div>
+                                    <p className="font-medium">Auto Print</p>
+                                    <p className="text-sm text-gray-500">Automatically print when new order arrives</p>
+                                </div>
+                                <Switch
+                                    checked={formData.printer_config.auto_print}
+                                    onCheckedChange={(checked) => setFormData({
+                                        ...formData,
+                                        printer_config: { ...formData.printer_config, auto_print: checked }
+                                    })}
+                                />
+                            </div>
+                        </div>
+
+                        <Button 
+                            onClick={() => updateMutation.mutate({ printer_config: formData.printer_config })}
+                            className="w-full"
+                            disabled={updateMutation.isPending}
+                        >
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Printing Settings
                         </Button>
                     </CardContent>
                 </Card>
