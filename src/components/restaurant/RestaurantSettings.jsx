@@ -779,6 +779,109 @@ export default function RestaurantSettings({ restaurantId }) {
                             </div>
                         </div>
 
+                        <div className="border-t pt-6">
+                            <Label className="text-base font-semibold mb-3 block">Receipt Preview</Label>
+                            <div className="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300">
+                                <div 
+                                    className={`bg-white mx-auto shadow-lg ${formData.printer_config.printer_width === '58mm' ? 'max-w-[220px]' : 'max-w-[300px]'}`}
+                                    style={{ fontFamily: 'monospace' }}
+                                >
+                                    <div className={`p-4 ${formData.printer_config.font_size === 'small' ? 'text-xs' : formData.printer_config.font_size === 'large' ? 'text-base' : 'text-sm'}`}>
+                                        {/* Logo */}
+                                        {formData.printer_config.show_logo && formData.logo_url && (
+                                            <div className="text-center mb-3">
+                                                <img src={formData.logo_url} alt="Logo" className="h-12 mx-auto object-contain" />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Restaurant Name */}
+                                        <div className="text-center font-bold mb-1">{restaurant?.name || 'Restaurant Name'}</div>
+                                        <div className="text-center text-xs mb-2">{restaurant?.address || 'Restaurant Address'}</div>
+                                        <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                        
+                                        {/* Custom Header */}
+                                        {formData.printer_config.header_text && (
+                                            <>
+                                                <div className="text-center text-xs mb-2">{formData.printer_config.header_text}</div>
+                                                <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                            </>
+                                        )}
+                                        
+                                        {/* Order Number */}
+                                        {formData.printer_config.show_order_number && (
+                                            <div className="text-center font-bold text-lg mb-2">ORDER #1234</div>
+                                        )}
+                                        
+                                        {/* Date & Time */}
+                                        <div className="text-xs mb-2">{new Date().toLocaleString()}</div>
+                                        <div className="text-xs mb-3">Type: {formData.collection_enabled ? 'Delivery/Collection' : 'Delivery'}</div>
+                                        
+                                        {/* Customer Details */}
+                                        {formData.printer_config.show_customer_details && (
+                                            <>
+                                                <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                                <div className="font-bold text-xs mb-1">Customer:</div>
+                                                <div className="text-xs">John Smith</div>
+                                                <div className="text-xs mb-2">123 Main St, London</div>
+                                            </>
+                                        )}
+                                        
+                                        {/* Items */}
+                                        <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                        <div className="space-y-1 mb-2">
+                                            <div className="flex justify-between">
+                                                <span>1x Margherita Pizza</span>
+                                                <span>£12.99</span>
+                                            </div>
+                                            {formData.printer_config.template === 'detailed' && (
+                                                <div className="text-xs text-gray-600 ml-4">Extra cheese, Mushrooms</div>
+                                            )}
+                                            <div className="flex justify-between">
+                                                <span>2x Coca Cola</span>
+                                                <span>£5.00</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Totals */}
+                                        <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between text-xs">
+                                                <span>Subtotal:</span>
+                                                <span>£17.99</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs">
+                                                <span>Delivery:</span>
+                                                <span>£{formData.delivery_fee || '2.00'}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold">
+                                                <span>TOTAL:</span>
+                                                <span>£{(17.99 + parseFloat(formData.delivery_fee || 2)).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Payment Method */}
+                                        {formData.printer_config.template !== 'minimal' && (
+                                            <div className="text-xs mt-2">Payment: {formData.accepts_cash_on_delivery ? 'Cash on Delivery' : 'Card'}</div>
+                                        )}
+                                        
+                                        {/* Custom Footer */}
+                                        {formData.printer_config.footer_text && (
+                                            <>
+                                                <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                                <div className="text-center text-xs">{formData.printer_config.footer_text}</div>
+                                            </>
+                                        )}
+                                        
+                                        <div className="border-t border-dashed border-gray-400 my-2"></div>
+                                        <div className="text-center text-xs">Thank you!</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 text-center">
+                                Preview shows how your receipt will look with current settings
+                            </p>
+                        </div>
+
                         <Button 
                             onClick={() => updateMutation.mutate({ printer_config: formData.printer_config })}
                             className="w-full"
