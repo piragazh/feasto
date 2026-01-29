@@ -983,14 +983,27 @@ CRITICAL REQUIREMENTS:
                                                         <Input
                                                             type="number"
                                                             min="1"
-                                                            value={custom.max_quantity || 1}
+                                                            value={custom.max_quantity === 0 ? '' : (custom.max_quantity || 1)}
                                                             onChange={(e) => {
                                                                 const newCustoms = [...formData.customization_options];
                                                                 newCustoms[idx].max_quantity = parseInt(e.target.value) || 1;
                                                                 setFormData({ ...formData, customization_options: newCustoms });
                                                             }}
                                                             className="w-20 h-9"
+                                                            disabled={custom.max_quantity === 0}
+                                                            placeholder={custom.max_quantity === 0 ? "No max" : ""}
                                                         />
+                                                        <div className="flex items-center gap-1">
+                                                            <Switch
+                                                                checked={custom.max_quantity === 0}
+                                                                onCheckedChange={(checked) => {
+                                                                    const newCustoms = [...formData.customization_options];
+                                                                    newCustoms[idx].max_quantity = checked ? 0 : 1;
+                                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                                }}
+                                                            />
+                                                            <Label className="text-xs whitespace-nowrap">No max</Label>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -1084,14 +1097,27 @@ CRITICAL REQUIREMENTS:
                                                                                     <Input
                                                                                         type="number"
                                                                                         min="1"
-                                                                                        value={mealCustom.max_quantity || 1}
+                                                                                        value={mealCustom.max_quantity === 0 ? '' : (mealCustom.max_quantity || 1)}
                                                                                         onChange={(e) => {
                                                                                             const newCustoms = [...formData.customization_options];
                                                                                             newCustoms[idx].meal_customizations[mealIdx].max_quantity = parseInt(e.target.value) || 1;
                                                                                             setFormData({ ...formData, customization_options: newCustoms });
                                                                                         }}
                                                                                         className="w-16 h-8 text-xs"
+                                                                                        disabled={mealCustom.max_quantity === 0}
+                                                                                        placeholder={mealCustom.max_quantity === 0 ? "No max" : ""}
                                                                                     />
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <Switch
+                                                                                            checked={mealCustom.max_quantity === 0}
+                                                                                            onCheckedChange={(checked) => {
+                                                                                                const newCustoms = [...formData.customization_options];
+                                                                                                newCustoms[idx].meal_customizations[mealIdx].max_quantity = checked ? 0 : 1;
+                                                                                                setFormData({ ...formData, customization_options: newCustoms });
+                                                                                            }}
+                                                                                        />
+                                                                                        <Label className="text-xs whitespace-nowrap">No max</Label>
+                                                                                    </div>
                                                                                 </div>
                                                                             )}
                                                                         </div>
