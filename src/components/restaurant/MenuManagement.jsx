@@ -373,7 +373,8 @@ CRITICAL REQUIREMENTS:
 
         setGeneratingImage(true);
         try {
-            const prompt = `Professional, appetizing photograph of ${formData.name}${formData.category ? ` (${formData.category} dish)` : ''}, beautifully plated on a clean white plate, restaurant quality food photography, natural lighting, garnished, high-end presentation, ultra detailed, 8k`;
+            const themeColor = restaurant?.theme_primary_color || '#f97316';
+            const prompt = `Professional food photography of ${formData.name}${formData.category ? ` (${formData.category})` : ''}, ISOLATED item only on a clean solid ${themeColor} background, centered composition, beautifully plated, garnished, studio lighting, high-end presentation, remove any other background elements, ultra detailed, 8k. Include small "AI" text watermark in bottom right corner`;
 
             const result = await base44.integrations.Core.GenerateImage({ prompt });
             setFormData({ ...formData, image_url: result.url, ai_generated_image: true });
