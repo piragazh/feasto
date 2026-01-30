@@ -230,6 +230,7 @@ export default function Layout({ children, currentPageName }) {
                 currentDomain.includes('127.0.0.1')
             ) {
                 setCustomDomainChecked(true);
+                sessionStorage.removeItem('customDomainRestaurantId');
                 return;
             }
 
@@ -244,8 +245,16 @@ export default function Layout({ children, currentPageName }) {
 
             if (domainRestaurant) {
                 setCustomDomainRestaurantId(domainRestaurant.id);
-                // Store in sessionStorage for Home page to detect
+                // Store in sessionStorage BEFORE anything renders
                 sessionStorage.setItem('customDomainRestaurantId', domainRestaurant.id);
+                
+                // Force redirect to restaurant page if we're on home page
+                if (window.location.pathname === '/' || window.location.pathname === '/home') {
+                    window.location.href = createPageUrl('Restaurant') + `?id=${domainRestaurant.id}`;
+                    return;
+                }
+            } else {
+                sessionStorage.removeItem('customDomainRestaurantId');
             }
 
             setCustomDomainChecked(true);

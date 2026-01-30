@@ -42,11 +42,16 @@ export default function Home() {
 
     useEffect(() => {
         getUserLocation();
-        // Check if custom domain restaurant
+        // Check if custom domain restaurant (synchronously before render)
         const customDomainId = sessionStorage.getItem('customDomainRestaurantId');
         if (customDomainId) {
             setCustomDomainRestaurantId(customDomainId);
         }
+    }, []);
+
+    // Check sessionStorage immediately on mount (before first render)
+    const initialCustomDomainId = React.useMemo(() => {
+        return sessionStorage.getItem('customDomainRestaurantId');
     }, []);
 
     const getUserLocation = () => {
@@ -143,7 +148,7 @@ export default function Home() {
         });
 
     // If on custom domain, render Restaurant page directly (SEO-friendly)
-    if (customDomainRestaurantId) {
+    if (customDomainRestaurantId || initialCustomDomainId) {
         return <Restaurant />;
     }
 

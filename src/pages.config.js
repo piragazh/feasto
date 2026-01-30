@@ -55,6 +55,7 @@ import CustomerProfile from './pages/CustomerProfile';
 import DriverApp from './pages/DriverApp';
 import DriverDashboard from './pages/DriverDashboard';
 import Favorites from './pages/Favorites';
+import GoogleMenu from './pages/GoogleMenu';
 import GroupOrder from './pages/GroupOrder';
 import Home from './pages/Home';
 import LoyaltyProgram from './pages/LoyaltyProgram';
@@ -74,7 +75,6 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import GoogleMenu from './pages/GoogleMenu';
 import __Layout from './Layout.jsx';
 
 
@@ -87,6 +87,7 @@ export const PAGES = {
     "DriverApp": DriverApp,
     "DriverDashboard": DriverDashboard,
     "Favorites": Favorites,
+    "GoogleMenu": GoogleMenu,
     "GroupOrder": GroupOrder,
     "Home": Home,
     "LoyaltyProgram": LoyaltyProgram,
@@ -106,7 +107,6 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "GoogleMenu": GoogleMenu,
 }
 
 export const pagesConfig = {
