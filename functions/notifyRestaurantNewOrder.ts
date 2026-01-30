@@ -3,19 +3,27 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        
-        // SECURITY: Require authentication (system or authenticated user)
-        let user = null;
-        try {
-            user = await base44.auth.me();
-        } catch (e) {
-            return Response.json({ error: 'Unauthorized - authentication required' }, { status: 401 });
-        }
 
         const { orderId, restaurantId, restaurantName } = await req.json();
 
         if (!orderId || !restaurantName) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // SECURITY: Verify order exists and was created recently (within last 5 minutes)
+        const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+        if (orders.length === 0) {
+            return Response.json({ error: 'Order not found' }, { status: 404 });
+        }
+        
+        const order = orders[0];
+        const orderAge = Date.now() - new Date(order.created_date).getTime();
+        if (orderAge > 5 * 60 * 1000) { // 5 minutes
+            return Response.json({ error: 'Order too old for notification' }, { status: 400 });
+        }
+        
+        if (order.restaurant_id !== restaurantId) {
+            return Response.json({ error: 'Restaurant ID mismatch' }, { status: 400 });
         }
 
         // Get restaurant alert phone from restaurant settings
@@ -40,12 +48,7 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Fetch order details
-        const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
-        if (orders.length === 0) {
-            return Response.json({ error: 'Order not found' }, { status: 404 });
-        }
-        const order = orders[0];
+        // Order already fetched above for validation
 
         // Check if Twilio is configured
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
