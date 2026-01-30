@@ -4,13 +4,39 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         
-        // SECURITY: Require authentication
-        const user = await base44.auth.me();
-        if (!user) {
-            return Response.json({ error: 'Unauthorized - authentication required' }, { status: 401 });
+        const { to, message, orderId } = await req.json();
+        
+        // SECURITY: Either authenticated user OR valid recent order (for guest checkout)
+        let isAuthorized = false;
+        
+        try {
+            const user = await base44.auth.me();
+            if (user) {
+                isAuthorized = true;
+            }
+        } catch (e) {
+            // Not authenticated - check if orderId provided for guest checkout
+            if (orderId) {
+                try {
+                    const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+                    if (orders.length > 0) {
+                        const order = orders[0];
+                        const orderAge = Date.now() - new Date(order.created_date).getTime();
+                        
+                        // Allow SMS for orders created in last 2 minutes
+                        if (orderAge < 2 * 60 * 1000) {
+                            isAuthorized = true;
+                        }
+                    }
+                } catch (orderError) {
+                    console.error('Order validation failed:', orderError);
+                }
+            }
         }
         
-        const { to, message } = await req.json();
+        if (!isAuthorized) {
+            return Response.json({ error: 'Unauthorized - authentication or recent order required' }, { status: 401 });
+        }
 
         if (!to || !message) {
             return Response.json({ error: 'Missing required fields: to, message' }, { status: 400 });

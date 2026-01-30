@@ -834,7 +834,8 @@ export default function Checkout() {
                 console.log('Sending customer SMS to:', formData.phone);
                 const smsResult = await base44.functions.invoke('sendSMS', {
                     to: formData.phone,
-                    message: customerMessage
+                    message: customerMessage,
+                    orderId: newOrder.id // Allow guest checkout SMS
                 });
                 console.log('Customer SMS result:', smsResult);
             } catch (smsError) {
