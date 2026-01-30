@@ -3,6 +3,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+        
+        // SECURITY: Require authentication (system or authenticated user)
+        let user = null;
+        try {
+            user = await base44.auth.me();
+        } catch (e) {
+            return Response.json({ error: 'Unauthorized - authentication required' }, { status: 401 });
+        }
 
         const { orderId, restaurantId, restaurantName } = await req.json();
 
