@@ -42,12 +42,13 @@ export default function Home() {
 
     useEffect(() => {
         getUserLocation();
-        // Check if custom domain restaurant (synchronously before render)
+        // Check if custom domain restaurant - redirect immediately
         const customDomainId = sessionStorage.getItem('customDomainRestaurantId');
         if (customDomainId) {
-            setCustomDomainRestaurantId(customDomainId);
+            // Redirect to restaurant page instead of showing home
+            navigate(createPageUrl('Restaurant') + `?id=${customDomainId}`, { replace: true });
         }
-    }, []);
+    }, [navigate]);
 
     // Check sessionStorage immediately on mount (before first render)
     const initialCustomDomainId = React.useMemo(() => {
