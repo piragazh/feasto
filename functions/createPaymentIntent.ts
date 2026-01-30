@@ -21,7 +21,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid amount' }, { status: 400 });
         }
 
-        // SECURITY: Validate amount against actual order if orderId provided
+        // SECURITY: Enforce maximum payment amount (£500) to prevent abuse
+        if (amount > 500) {
+            return Response.json({ error: 'Amount exceeds maximum allowed (£500)' }, { status: 400 });
+        }
+
+        // OPTIONAL: Validate amount against actual order if orderId provided
+        // (This is for post-order payment verification, but checkout creates payment BEFORE order)
         if (orderId) {
             try {
                 const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
@@ -45,13 +51,9 @@ Deno.serve(async (req) => {
                     return Response.json({ error: 'Unauthorized - order does not belong to you' }, { status: 403 });
                 }
             } catch (error) {
+                console.error('Order validation error:', error);
                 return Response.json({ error: 'Failed to validate order' }, { status: 500 });
             }
-        }
-
-        // SECURITY: Enforce maximum payment amount (£500)
-        if (amount > 500) {
-            return Response.json({ error: 'Amount exceeds maximum allowed (£500)' }, { status: 400 });
         }
 
         // Create a PaymentIntent with the order amount and currency
