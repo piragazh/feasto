@@ -10,23 +10,11 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
     const [connectedDevice, setConnectedDevice] = useState(null);
 
     useEffect(() => {
-        // Try to reconnect to saved printer on mount
+        // Show saved printer info (no need to reconnect Bluetooth)
         if (selectedPrinter?.deviceId) {
-            reconnectPrinter();
+            setConnectedDevice({ name: selectedPrinter.deviceName });
         }
-    }, []);
-
-    const reconnectPrinter = async () => {
-        try {
-            const devices = await navigator.bluetooth.getDevices();
-            const savedDevice = devices.find(d => d.id === selectedPrinter.deviceId);
-            if (savedDevice) {
-                setConnectedDevice(savedDevice);
-            }
-        } catch (error) {
-            console.log('Could not reconnect to saved printer');
-        }
-    };
+    }, [selectedPrinter]);
 
     const scanForPrinters = async () => {
         if (!navigator.bluetooth) {
