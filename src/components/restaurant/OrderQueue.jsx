@@ -111,10 +111,23 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         },
     });
 
-    const handleAccept = (orderId) => {
+    const handleAccept = async (orderId) => {
         updateOrderMutation.mutate({ orderId, status: 'confirmed' });
         toast.success('Order accepted!');
-        printOrderDetails(orderId);
+        
+        // Auto-print to Bluetooth if configured, otherwise browser print
+        const order = orders.find(o => o.id === orderId);
+        if (restaurant?.printer_config?.bluetooth_printer) {
+            try {
+                await printerService.printReceipt(order, restaurant, restaurant.printer_config);
+                toast.success('Receipt printed to Bluetooth printer');
+            } catch (error) {
+                console.error('Bluetooth print failed:', error);
+                printOrderDetails(orderId);
+            }
+        } else {
+            printOrderDetails(orderId);
+        }
     };
 
     const handleReject = (orderId, reason) => {
