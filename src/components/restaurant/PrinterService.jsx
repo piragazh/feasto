@@ -10,6 +10,18 @@ export class PrinterService {
         this.device = null;
         this.characteristic = null;
         this.commandSet = 'esc_pos';
+        // Common Bluetooth printer service UUIDs
+        this.PRINTER_SERVICES = [
+            '000018f0-0000-1000-8000-00805f9b34fb', // Generic printer service
+            'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Common thermal printer
+            '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Microchip data service
+            '0000fff0-0000-1000-8000-00805f9b34fb'  // Another common service
+        ];
+        this.PRINTER_CHARACTERISTICS = [
+            '00002af1-0000-1000-8000-00805f9b34fb',
+            '49535343-8841-43f4-a8d4-ecbe34729bb3',
+            '0000fff1-0000-1000-8000-00805f9b34fb'
+        ];
     }
 
     setCommandSet(commandSet) {
@@ -337,9 +349,24 @@ export class PrinterService {
     }
 
     async sendCommand(command) {
-        const encoder = new TextEncoder();
-        await this.characteristic.writeValue(encoder.encode(command));
-        await new Promise(resolve => setTimeout(resolve, 10));
+        if (!this.characteristic) {
+            throw new Error('Printer not connected');
+        }
+        try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(command);
+            
+            // Send in chunks if data is large (some printers have MTU limits)
+            const chunkSize = 20;
+            for (let i = 0; i < data.length; i += chunkSize) {
+                const chunk = data.slice(i, Math.min(i + chunkSize, data.length));
+                await this.characteristic.writeValue(chunk);
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+        } catch (error) {
+            console.error('❌ Failed to send command:', error);
+            throw error;
+        }
     }
 
     async sendText(text) {
