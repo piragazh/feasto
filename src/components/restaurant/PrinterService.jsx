@@ -36,10 +36,7 @@ export class PrinterService {
 
     async printReceipt(order, restaurant, config) {
         if (!this.characteristic) {
-            const connected = await this.connect(config.bluetooth_printer?.deviceId);
-            if (!connected) {
-                throw new Error('Printer not connected');
-            }
+            await this.connect(config.bluetooth_printer);
         }
 
         try {
