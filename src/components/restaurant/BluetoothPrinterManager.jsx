@@ -11,8 +11,8 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
 
     useEffect(() => {
         // Show saved printer info (no need to reconnect Bluetooth)
-        if (selectedPrinter?.deviceId) {
-            setConnectedDevice({ name: selectedPrinter.deviceName });
+        if (selectedPrinter?.id) {
+            setConnectedDevice({ name: selectedPrinter.name });
         }
     }, [selectedPrinter]);
 
