@@ -231,6 +231,7 @@ export default function Layout({ children, currentPageName }) {
                 currentDomain.includes('127.0.0.1')
             ) {
                 setCustomDomainChecked(true);
+                setIsCheckingDomain(false);
                 sessionStorage.removeItem('customDomainRestaurantId');
                 return;
             }
@@ -253,9 +254,11 @@ export default function Layout({ children, currentPageName }) {
             }
 
             setCustomDomainChecked(true);
+            setIsCheckingDomain(false);
         } catch (error) {
             // Silently fail - don't disrupt user experience
             setCustomDomainChecked(true);
+            setIsCheckingDomain(false);
         }
     };
 
