@@ -30,32 +30,34 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
     });
 
     useEffect(() => {
-        if (restaurant) {
-            setFormData({
-                name: restaurant.name || '',
-                cuisine_type: restaurant.cuisine_type || (cuisineTypes[0]?.name || ''),
-                image_url: restaurant.image_url || '',
-                description: restaurant.description || '',
-                address: restaurant.address || '',
-                delivery_time: restaurant.delivery_time || '25-35 min',
-                delivery_fee: restaurant.delivery_fee?.toString() || '5.00',
-                minimum_order: restaurant.minimum_order?.toString() || '15.00',
-                is_open: restaurant.is_open !== false
-            });
-        } else {
-            setFormData({
-                name: '',
-                cuisine_type: cuisineTypes[0]?.name || '',
-                image_url: '',
-                description: '',
-                address: '',
-                delivery_time: '25-35 min',
-                delivery_fee: '5.00',
-                minimum_order: '15.00',
-                is_open: true
-            });
+        if (open) {
+            if (restaurant) {
+                setFormData({
+                    name: restaurant.name || '',
+                    cuisine_type: restaurant.cuisine_type || (cuisineTypes[0]?.name || ''),
+                    image_url: restaurant.image_url || '',
+                    description: restaurant.description || '',
+                    address: restaurant.address || '',
+                    delivery_time: restaurant.delivery_time || '25-35 min',
+                    delivery_fee: restaurant.delivery_fee?.toString() || '5.00',
+                    minimum_order: restaurant.minimum_order?.toString() || '15.00',
+                    is_open: restaurant.is_open !== false
+                });
+            } else {
+                setFormData({
+                    name: '',
+                    cuisine_type: cuisineTypes[0]?.name || '',
+                    image_url: '',
+                    description: '',
+                    address: '',
+                    delivery_time: '25-35 min',
+                    delivery_fee: '5.00',
+                    minimum_order: '15.00',
+                    is_open: true
+                });
+            }
         }
-    }, [restaurant, open, cuisineTypes]);
+    }, [restaurant, open]);
 
     const saveMutation = useMutation({
         mutationFn: (data) => {
