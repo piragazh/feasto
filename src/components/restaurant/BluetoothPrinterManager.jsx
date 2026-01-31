@@ -35,8 +35,8 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
 
             // Store printer info
             const printerInfo = {
-                deviceId: device.id,
-                deviceName: device.name,
+                id: device.id,
+                name: device.name,
                 connectedAt: new Date().toISOString()
             };
 
