@@ -532,33 +532,27 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                         )}
 
                                         <Button
-                                            onClick={() => printOrderDetails(order.id)}
-                                            variant="outline"
-                                            size="icon"
-                                            title="Print to Browser"
-                                        >
-                                            <Printer className="h-4 w-4" />
-                                        </Button>
-                                        {restaurant?.printer_config?.bluetooth_printer && (
-                                            <Button
-                                                onClick={async () => {
+                                            onClick={async () => {
+                                                if (restaurant?.printer_config?.bluetooth_printer) {
                                                     try {
-                                                        console.log('Printer config:', restaurant.printer_config);
                                                         await printerService.printReceipt(order, restaurant, restaurant.printer_config);
                                                         toast.success('Receipt printed to Bluetooth printer');
                                                     } catch (error) {
-                                                        console.error('Print error:', error);
-                                                        toast.error('Print failed: ' + error.message);
+                                                        console.error('Bluetooth print error:', error);
+                                                        toast.error('Bluetooth print failed, opening browser print...');
+                                                        printOrderDetails(order.id);
                                                     }
-                                                }}
-                                                variant="outline"
-                                                size="icon"
-                                                className="bg-blue-50 border-blue-200 hover:bg-blue-100"
-                                                title="Print to Bluetooth Printer"
-                                            >
-                                                <Printer className="h-4 w-4 text-blue-600" />
-                                            </Button>
-                                        )}
+                                                } else {
+                                                    printOrderDetails(order.id);
+                                                }
+                                            }}
+                                            variant="outline"
+                                            size="icon"
+                                            className={restaurant?.printer_config?.bluetooth_printer ? "bg-blue-50 border-blue-200 hover:bg-blue-100" : ""}
+                                            title={restaurant?.printer_config?.bluetooth_printer ? "Print to Bluetooth Printer" : "Print to Browser"}
+                                        >
+                                            <Printer className={`h-4 w-4 ${restaurant?.printer_config?.bluetooth_printer ? 'text-blue-600' : ''}`} />
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
