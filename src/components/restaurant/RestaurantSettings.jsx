@@ -647,19 +647,11 @@ export default function RestaurantSettings({ restaurantId }) {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <BluetoothPrinterManager
-                            selectedPrinter={formData.printer_config.bluetooth_printer}
+                            selectedPrinter={restaurant?.bluetooth_printer}
                             onPrinterSelect={(printer) => {
-                                const updatedConfig = { 
-                                    ...formData.printer_config, 
-                                    bluetooth_printer: printer 
-                                };
-                                setFormData({
-                                    ...formData,
-                                    printer_config: updatedConfig
-                                });
-                                // Auto-save when printer is selected/disconnected
+                                // Save printer at root level, not inside printer_config
                                 updateMutation.mutate({ 
-                                    printer_config: updatedConfig
+                                    bluetooth_printer: printer
                                 });
                             }}
                         />
