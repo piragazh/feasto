@@ -62,6 +62,7 @@ export default function Layout({ children, currentPageName }) {
     const [customDomainChecked, setCustomDomainChecked] = useState(false);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
+    const [isCheckingDomain, setIsCheckingDomain] = useState(true);
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
