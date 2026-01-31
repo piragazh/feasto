@@ -163,36 +163,74 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
 
-        const printWindow = window.open('', '', 'width=300,height=600');
+        const config = restaurant?.printer_config || {};
+        const width = config.printer_width === '58mm' ? '220px' : '300px';
+        const fontSize = config.font_size === 'small' ? '10px' : config.font_size === 'large' ? '14px' : '12px';
+        const orderNum = order.order_number || `#${order.id.slice(-6)}`;
+
+        const printWindow = window.open('', '', `width=${width},height=600`);
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Order #${order.id.slice(-6)}</title>
+                    <title>Order ${orderNum}</title>
                     <style>
-                        body { font-family: monospace; width: 280px; margin: 10px; }
+                        body { font-family: monospace; width: ${width}; margin: 10px; font-size: ${fontSize}; }
                         h2 { text-align: center; margin: 10px 0; }
                         .separator { border-top: 2px dashed #000; margin: 10px 0; }
                         .item { margin: 5px 0; }
+                        .customization { font-size: 10px; color: #666; margin-left: 20px; }
                         .total { font-weight: bold; font-size: 16px; margin-top: 10px; }
+                        .logo { text-align: center; margin-bottom: 10px; }
+                        .logo img { max-height: 60px; }
                     </style>
                 </head>
                 <body>
-                    <h2>KITCHEN ORDER</h2>
+                    ${config.show_logo && restaurant?.logo_url ? `
+                        <div class="logo">
+                            <img src="${restaurant.logo_url}" alt="Logo" />
+                        </div>
+                    ` : ''}
+                    <h2>${restaurant?.name || 'KITCHEN ORDER'}</h2>
+                    ${restaurant?.address ? `<p style="text-align: center; font-size: 10px;">${restaurant.address}</p>` : ''}
                     <div class="separator"></div>
-                    <p><strong>Order #:</strong> ${order.id.slice(-6)}</p>
+                    ${config.header_text ? `<p style="text-align: center; font-size: 10px;">${config.header_text}</p><div class="separator"></div>` : ''}
+                    ${config.show_order_number ? `<h2 style="text-align: center;">ORDER ${orderNum}</h2>` : `<p><strong>Order:</strong> ${orderNum}</p>`}
                     <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
+                    <p><strong>Type:</strong> ${order.order_type || 'Delivery'}</p>
                     <div class="separator"></div>
+                    ${config.show_customer_details ? `
+                        <p><strong>Customer:</strong> ${order.guest_name || order.created_by || 'Guest'}</p>
+                        ${order.delivery_address ? `<p><strong>Address:</strong> ${order.delivery_address}</p>` : ''}
+                        <p><strong>Phone:</strong> ${order.phone}</p>
+                        <div class="separator"></div>
+                    ` : ''}
                     <h3>ITEMS:</h3>
                     ${order.items.map(item => `
                         <div class="item">
-                            <strong>${item.quantity}x ${item.name}</strong>
+                            <strong>${item.quantity}x ${item.name}</strong> - £${(item.price * item.quantity).toFixed(2)}
+                            ${config.template === 'detailed' && item.customizations ? `
+                                ${Object.entries(item.customizations).map(([key, value]) => `
+                                    <div class="customization">${key}: ${value}</div>
+                                `).join('')}
+                            ` : ''}
                         </div>
                     `).join('')}
                     <div class="separator"></div>
-                    ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
-                    <p><strong>Customer:</strong> ${order.phone}</p>
-                    <div class="separator"></div>
+                    ${config.template !== 'minimal' ? `
+                        <p>Subtotal: £${order.subtotal.toFixed(2)}</p>
+                        ${order.delivery_fee > 0 ? `<p>Delivery: £${order.delivery_fee.toFixed(2)}</p>` : ''}
+                        ${order.discount > 0 ? `<p>Discount: -£${order.discount.toFixed(2)}</p>` : ''}
+                    ` : ''}
                     <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
+                    ${config.template !== 'minimal' ? `<p>Payment: ${order.payment_method}</p>` : ''}
+                    ${order.notes ? `
+                        <div class="separator"></div>
+                        <p><strong>Special Instructions:</strong></p>
+                        <p>${order.notes}</p>
+                    ` : ''}
+                    ${config.footer_text ? `<div class="separator"></div><p style="text-align: center; font-size: 10px;">${config.footer_text}</p>` : ''}
+                    <div class="separator"></div>
+                    <p style="text-align: center;">Thank you!</p>
                 </body>
             </html>
         `);
