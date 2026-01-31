@@ -539,13 +539,18 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                         >
                                             <Printer className="h-4 w-4" />
                                         </Button>
-                                        {restaurant?.printer_config?.bluetooth_printer && (
+                                        {restaurant?.bluetooth_printer && (
                                             <Button
                                                 onClick={async () => {
                                                     try {
-                                                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
+                                                        console.log('Printer config:', restaurant.bluetooth_printer);
+                                                        await printerService.printReceipt(order, restaurant, {
+                                                            ...restaurant.printer_config,
+                                                            bluetooth_printer: restaurant.bluetooth_printer
+                                                        });
                                                         toast.success('Receipt printed to Bluetooth printer');
                                                     } catch (error) {
+                                                        console.error('Print error:', error);
                                                         toast.error('Print failed: ' + error.message);
                                                     }
                                                 }}
