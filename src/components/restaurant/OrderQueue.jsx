@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
+import { printerService } from './PrinterService';
 
 export default function OrderQueue({ restaurantId, onOrderUpdate }) {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
@@ -21,6 +22,14 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
     const [sortBy, setSortBy] = useState('newest');
     const queryClient = useQueryClient();
 
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant-config', restaurantId],
+        queryFn: async () => {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return restaurants[0];
+        },
+    });
+
     const { data: orders = [], isLoading } = useQuery({
         queryKey: ['order-queue', restaurantId],
         queryFn: () => base44.entities.Order.filter({ 
@@ -29,6 +38,32 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         }, '-created_date'),
         refetchInterval: 2000,
     });
+
+    // Auto-print new orders when Bluetooth printer is connected
+    React.useEffect(() => {
+        if (!restaurant?.printer_config?.auto_print) return;
+        if (!restaurant?.printer_config?.bluetooth_printer) return;
+
+        const checkForNewOrders = async () => {
+            const pendingOrders = orders.filter(o => o.status === 'pending');
+            
+            for (const order of pendingOrders) {
+                const printed = localStorage.getItem(`printed_${order.id}`);
+                if (!printed) {
+                    try {
+                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
+                        localStorage.setItem(`printed_${order.id}`, 'true');
+                        toast.success(`Receipt printed for order ${order.order_number || order.id.slice(-6)}`);
+                    } catch (error) {
+                        console.error('Auto-print failed:', error);
+                        toast.error('Failed to print. Check printer connection.');
+                    }
+                }
+            }
+        };
+
+        checkForNewOrders();
+    }, [orders, restaurant]);
 
     const updateOrderMutation = useMutation({
         mutationFn: async ({ orderId, status, rejection_reason }) => {
@@ -462,9 +497,28 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                             onClick={() => printOrderDetails(order.id)}
                                             variant="outline"
                                             size="icon"
+                                            title="Print to Browser"
                                         >
                                             <Printer className="h-4 w-4" />
                                         </Button>
+                                        {restaurant?.printer_config?.bluetooth_printer && (
+                                            <Button
+                                                onClick={async () => {
+                                                    try {
+                                                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
+                                                        toast.success('Receipt printed to Bluetooth printer');
+                                                    } catch (error) {
+                                                        toast.error('Print failed: ' + error.message);
+                                                    }
+                                                }}
+                                                variant="outline"
+                                                size="icon"
+                                                className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+                                                title="Print to Bluetooth Printer"
+                                            >
+                                                <Printer className="h-4 w-4 text-blue-600" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
