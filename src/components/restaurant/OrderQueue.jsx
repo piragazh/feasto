@@ -182,6 +182,12 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         const orderNum = order.order_number || `#${order.id.slice(-6)}`;
 
         const printWindow = window.open('', '', `width=${width},height=600`);
+        
+        if (!printWindow) {
+            toast.error('Popup blocked. Please allow popups for printing.');
+            return;
+        }
+        
         printWindow.document.write(`
             <html>
                 <head>
