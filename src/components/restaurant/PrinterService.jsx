@@ -70,26 +70,36 @@ export class PrinterService {
 
             // Check if Web Bluetooth is supported
             if (!navigator.bluetooth) {
-                throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera on HTTPS.');
+                throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
             }
 
             console.log('Connecting to printer:', printerInfo);
             
-            // Check if getDevices is available (requires HTTPS and user permission)
-            if (!navigator.bluetooth.getDevices) {
-                throw new Error('Bluetooth API not fully available. Please ensure you are using HTTPS and have granted Bluetooth permissions.');
+            let device = null;
+
+            // Try to get previously paired devices first
+            if (navigator.bluetooth.getDevices) {
+                try {
+                    const devices = await navigator.bluetooth.getDevices();
+                    console.log('Available paired devices:', devices);
+                    device = devices.find(d => d.id === printerInfo.id);
+                } catch (e) {
+                    console.log('getDevices failed, will try requestDevice:', e);
+                }
             }
 
-            const devices = await navigator.bluetooth.getDevices();
-            console.log('Available devices:', devices);
-            
-            this.device = devices.find(d => d.id === printerInfo.id);
-            
-            if (!this.device) {
-                throw new Error(`Printer "${printerInfo.name}" not found. Please reconnect in Settings > Printing.`);
+            // If device not found in paired devices, request user to select it
+            if (!device) {
+                console.log('Printer not in paired devices, requesting user selection...');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+                });
+                console.log('User selected device:', device);
             }
 
-            console.log('Found device, connecting GATT...');
+            this.device = device;
+            
+            console.log('Connecting to GATT server...');
             const server = await this.device.gatt.connect();
             const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
             this.characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
