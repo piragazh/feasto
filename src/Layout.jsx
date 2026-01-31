@@ -271,6 +271,18 @@ export default function Layout({ children, currentPageName }) {
         ? createPageUrl('Restaurant') + `?id=${customDomainRestaurantId}`
         : createPageUrl('Home');
 
+    // Show loading while checking custom domain
+    if (isCheckingDomain) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
             {/* Google Tag Manager Noscript */}
