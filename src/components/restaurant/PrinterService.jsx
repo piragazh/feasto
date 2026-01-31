@@ -73,7 +73,7 @@ export class PrinterService {
                 throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
             }
 
-            console.log('Connecting to printer:', printerInfo);
+            console.log('🖨️ Connecting to printer:', printerInfo);
             
             let device = null;
 
@@ -81,33 +81,65 @@ export class PrinterService {
             if (navigator.bluetooth.getDevices) {
                 try {
                     const devices = await navigator.bluetooth.getDevices();
-                    console.log('Available paired devices:', devices);
+                    console.log('📱 Available paired devices:', devices);
                     device = devices.find(d => d.id === printerInfo.id);
                 } catch (e) {
-                    console.log('getDevices failed, will try requestDevice:', e);
+                    console.log('⚠️ getDevices failed, will try requestDevice:', e);
                 }
             }
 
             // If device not found in paired devices, request user to select it
             if (!device) {
-                console.log('Printer not in paired devices, requesting user selection...');
+                console.log('🔍 Printer not in paired devices, requesting user selection...');
                 device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+                    acceptAllDevices: true,
+                    optionalServices: this.PRINTER_SERVICES
                 });
-                console.log('User selected device:', device);
+                console.log('✅ User selected device:', device);
             }
 
             this.device = device;
             
-            console.log('Connecting to GATT server...');
+            console.log('🔌 Connecting to GATT server...');
             const server = await this.device.gatt.connect();
-            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-            this.characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            console.log('✅ GATT connected, discovering services...');
             
-            console.log('Printer connected successfully');
+            // Try to find a working service/characteristic combination
+            let serviceFound = null;
+            let characteristicFound = null;
+
+            for (const serviceUUID of this.PRINTER_SERVICES) {
+                try {
+                    const service = await server.getPrimaryService(serviceUUID);
+                    console.log(`✅ Found service: ${serviceUUID}`);
+                    
+                    for (const charUUID of this.PRINTER_CHARACTERISTICS) {
+                        try {
+                            const char = await service.getCharacteristic(charUUID);
+                            console.log(`✅ Found characteristic: ${charUUID}`);
+                            serviceFound = service;
+                            characteristicFound = char;
+                            break;
+                        } catch (e) {
+                            console.log(`⚠️ Characteristic ${charUUID} not found in this service`);
+                        }
+                    }
+                    
+                    if (characteristicFound) break;
+                } catch (e) {
+                    console.log(`⚠️ Service ${serviceUUID} not available`);
+                }
+            }
+
+            if (!characteristicFound) {
+                throw new Error('Could not find a compatible printer service/characteristic. Your printer may use a different protocol.');
+            }
+
+            this.characteristic = characteristicFound;
+            console.log('🎉 Printer connected successfully!');
             return true;
         } catch (error) {
-            console.error('Printer connection failed:', error);
+            console.error('❌ Printer connection failed:', error);
             throw new Error(`Printer connection failed: ${error.message}`);
         }
     }
