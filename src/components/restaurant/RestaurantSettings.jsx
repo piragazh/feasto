@@ -910,10 +910,7 @@ export default function RestaurantSettings({ restaurantId }) {
                         <Button 
                             onClick={() => {
                                 updateMutation.mutate({ 
-                                    printer_config: {
-                                        ...formData.printer_config,
-                                        bluetooth_printer: formData.printer_config.bluetooth_printer || null
-                                    }
+                                    printer_config: formData.printer_config
                                 });
                             }}
                             className="w-full"
