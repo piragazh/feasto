@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
+import BluetoothPrinterManager from './BluetoothPrinterManager';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -55,7 +56,8 @@ export default function RestaurantSettings({ restaurantId }) {
             show_logo: true,
             show_order_number: true,
             show_customer_details: true,
-            auto_print: false
+            auto_print: false,
+            bluetooth_printer: null
         }
     });
     const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -107,7 +109,8 @@ export default function RestaurantSettings({ restaurantId }) {
                     show_logo: restaurant.printer_config?.show_logo !== false,
                     show_order_number: restaurant.printer_config?.show_order_number !== false,
                     show_customer_details: restaurant.printer_config?.show_customer_details !== false,
-                    auto_print: restaurant.printer_config?.auto_print || false
+                    auto_print: restaurant.printer_config?.auto_print || false,
+                    bluetooth_printer: restaurant.printer_config?.bluetooth_printer || null
                 }
             });
         }
@@ -643,6 +646,18 @@ export default function RestaurantSettings({ restaurantId }) {
                         </p>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                        <BluetoothPrinterManager
+                            selectedPrinter={formData.printer_config.bluetooth_printer}
+                            onPrinterSelect={(printer) => setFormData({
+                                ...formData,
+                                printer_config: { ...formData.printer_config, bluetooth_printer: printer }
+                            })}
+                        />
+
+                        <div className="border-t pt-6">
+                            <Label className="text-base font-semibold mb-4 block">Receipt Settings</Label>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-4">
                             <div>
                                 <Label>Printer Width</Label>
