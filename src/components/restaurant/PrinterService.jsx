@@ -10,13 +10,17 @@ export class PrinterService {
         this.characteristic = null;
     }
 
-    async connect(deviceId) {
+    async connect(printerInfo) {
         try {
+            if (!printerInfo?.id) {
+                throw new Error('No printer configured');
+            }
+
             const devices = await navigator.bluetooth.getDevices();
-            this.device = devices.find(d => d.id === deviceId);
+            this.device = devices.find(d => d.id === printerInfo.id);
             
             if (!this.device) {
-                throw new Error('Printer not found');
+                throw new Error('Printer not found. Please reconnect in settings.');
             }
 
             const server = await this.device.gatt.connect();
@@ -26,7 +30,7 @@ export class PrinterService {
             return true;
         } catch (error) {
             console.error('Printer connection failed:', error);
-            return false;
+            throw new Error(`Printer connection failed: ${error.message}`);
         }
     }
 
