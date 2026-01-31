@@ -78,7 +78,7 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
                             </div>
                             <div>
                                 <p className="font-semibold text-green-900">
-                                    {connectedDevice?.name || selectedPrinter?.deviceName || 'Printer Connected'}
+                                    {connectedDevice?.name || selectedPrinter?.name || 'Printer Connected'}
                                 </p>
                                 <p className="text-sm text-green-700 mt-1">
                                     Ready to print receipts
