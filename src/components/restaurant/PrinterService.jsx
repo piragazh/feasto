@@ -15,12 +15,15 @@ export class PrinterService {
             '000018f0-0000-1000-8000-00805f9b34fb', // Generic printer service
             'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Common thermal printer
             '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Microchip data service
-            '0000fff0-0000-1000-8000-00805f9b34fb'  // Another common service
+            '0000fff0-0000-1000-8000-00805f9b34fb', // Common service
+            '0000ffe0-0000-1000-8000-00805f9b34fb', // Sunmi/Generic BLE printer
+            '00001101-0000-1000-8000-00805f9b34fb'  // SPP Serial Port Profile (Sunmi)
         ];
         this.PRINTER_CHARACTERISTICS = [
             '00002af1-0000-1000-8000-00805f9b34fb',
             '49535343-8841-43f4-a8d4-ecbe34729bb3',
-            '0000fff1-0000-1000-8000-00805f9b34fb'
+            '0000fff1-0000-1000-8000-00805f9b34fb',
+            '0000ffe1-0000-1000-8000-00805f9b34fb'  // Sunmi characteristic
         ];
     }
 
