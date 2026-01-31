@@ -42,7 +42,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
     // Auto-print new orders when Bluetooth printer is connected
     React.useEffect(() => {
         if (!restaurant?.printer_config?.auto_print) return;
-        if (!restaurant?.bluetooth_printer) return;
+        if (!restaurant?.printer_config?.bluetooth_printer) return;
 
         const checkForNewOrders = async () => {
             const pendingOrders = orders.filter(o => o.status === 'pending');
@@ -51,10 +51,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                 const printed = localStorage.getItem(`printed_${order.id}`);
                 if (!printed) {
                     try {
-                        await printerService.printReceipt(order, restaurant, {
-                            ...restaurant.printer_config,
-                            bluetooth_printer: restaurant.bluetooth_printer
-                        });
+                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
                         localStorage.setItem(`printed_${order.id}`, 'true');
                         toast.success(`Receipt printed for order ${order.order_number || order.id.slice(-6)}`);
                     } catch (error) {
@@ -542,15 +539,12 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                         >
                                             <Printer className="h-4 w-4" />
                                         </Button>
-                                        {restaurant?.bluetooth_printer && (
+                                        {restaurant?.printer_config?.bluetooth_printer && (
                                             <Button
                                                 onClick={async () => {
                                                     try {
-                                                        console.log('Printer config:', restaurant.bluetooth_printer);
-                                                        await printerService.printReceipt(order, restaurant, {
-                                                            ...restaurant.printer_config,
-                                                            bluetooth_printer: restaurant.bluetooth_printer
-                                                        });
+                                                        console.log('Printer config:', restaurant.printer_config);
+                                                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
                                                         toast.success('Receipt printed to Bluetooth printer');
                                                     } catch (error) {
                                                         console.error('Print error:', error);

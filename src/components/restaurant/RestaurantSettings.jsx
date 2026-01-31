@@ -665,11 +665,15 @@ export default function RestaurantSettings({ restaurantId }) {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <BluetoothPrinterManager
-                            selectedPrinter={restaurant?.bluetooth_printer}
+                            selectedPrinter={restaurant?.printer_config?.bluetooth_printer}
                             onPrinterSelect={(printer) => {
-                                // Save printer at root level, not inside printer_config
-                                updateMutation.mutate({ 
+                                // Save printer inside printer_config
+                                const updatedConfig = {
+                                    ...restaurant?.printer_config,
                                     bluetooth_printer: printer
+                                };
+                                updateMutation.mutate({ 
+                                    printer_config: updatedConfig
                                 });
                             }}
                         />
@@ -1024,7 +1028,7 @@ export default function RestaurantSettings({ restaurantId }) {
                         <div className="flex gap-3">
                             <Button 
                                 onClick={async () => {
-                                    if (!restaurant?.bluetooth_printer) {
+                                    if (!restaurant?.printer_config?.bluetooth_printer) {
                                         toast.error('Please connect a Bluetooth printer first');
                                         return;
                                     }
@@ -1051,10 +1055,7 @@ export default function RestaurantSettings({ restaurantId }) {
                                             notes: 'Test print - please ignore'
                                         };
 
-                                        await printerService.printReceipt(sampleOrder, restaurant, {
-                                            ...formData.printer_config,
-                                            bluetooth_printer: restaurant.bluetooth_printer
-                                        });
+                                        await printerService.printReceipt(sampleOrder, restaurant, formData.printer_config);
                                         toast.success('Test receipt printed successfully!');
                                     } catch (error) {
                                         console.error('Test print failed:', error);
@@ -1065,7 +1066,7 @@ export default function RestaurantSettings({ restaurantId }) {
                                 }}
                                 variant="outline"
                                 className="flex-1"
-                                disabled={testPrinting || !restaurant?.bluetooth_printer}
+                                disabled={testPrinting || !restaurant?.printer_config?.bluetooth_printer}
                             >
                                 {testPrinting ? (
                                     <>
