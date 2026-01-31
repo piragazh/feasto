@@ -35,7 +35,8 @@ export class PrinterService {
     }
 
     async printReceipt(order, restaurant, config) {
-        if (!this.characteristic) {
+        // Check if we need to reconnect
+        if (!this.device || !this.device.gatt?.connected || !this.characteristic) {
             await this.connect(config.bluetooth_printer);
         }
 
