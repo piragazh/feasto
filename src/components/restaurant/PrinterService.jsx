@@ -40,8 +40,13 @@ export class PrinterService {
     }
 
     async printReceipt(order, restaurant, config) {
+        if (!config.bluetooth_printer) {
+            throw new Error('No printer connected. Please connect a printer in Settings > Printing.');
+        }
+
         // Check if we need to reconnect
         if (!this.device || !this.device.gatt?.connected || !this.characteristic) {
+            console.log('Connecting to printer with config:', config.bluetooth_printer);
             await this.connect(config.bluetooth_printer);
         }
 
