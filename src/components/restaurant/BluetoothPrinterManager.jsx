@@ -37,10 +37,12 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
         setIsConnecting(true);
         try {
             const device = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Thermal printer service
-                ],
-                optionalServices: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2'] // Additional printer services
+                acceptAllDevices: true,
+                optionalServices: [
+                    '000018f0-0000-1000-8000-00805f9b34fb',
+                    'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+                    '00001101-0000-1000-8000-00805f9b34fb' // Serial Port Profile
+                ]
             });
 
             // Store printer info
