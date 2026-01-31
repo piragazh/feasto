@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer, TestTube } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 import BluetoothPrinterManager from './BluetoothPrinterManager';
+import { printerService } from './PrinterService';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -57,12 +58,21 @@ export default function RestaurantSettings({ restaurantId }) {
             show_order_number: true,
             show_customer_details: true,
             auto_print: false,
-            bluetooth_printer: null
+            bluetooth_printer: null,
+            command_set: 'esc_pos',
+            custom_sections: {
+                show_qr_code: false,
+                show_barcode: false,
+                show_social_media: false,
+                show_allergen_info: false,
+                custom_message_position: 'footer'
+            }
         }
     });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingCertificate, setUploadingCertificate] = useState(false);
     const [newKeyword, setNewKeyword] = useState('');
+    const [testPrinting, setTestPrinting] = useState(false);
 
     React.useEffect(() => {
         if (restaurant) {
@@ -110,7 +120,15 @@ export default function RestaurantSettings({ restaurantId }) {
                     show_order_number: restaurant.printer_config?.show_order_number !== false,
                     show_customer_details: restaurant.printer_config?.show_customer_details !== false,
                     auto_print: restaurant.printer_config?.auto_print || false,
-                    bluetooth_printer: restaurant.printer_config?.bluetooth_printer || null
+                    bluetooth_printer: restaurant.printer_config?.bluetooth_printer || null,
+                    command_set: restaurant.printer_config?.command_set || 'esc_pos',
+                    custom_sections: restaurant.printer_config?.custom_sections || {
+                        show_qr_code: false,
+                        show_barcode: false,
+                        show_social_media: false,
+                        show_allergen_info: false,
+                        custom_message_position: 'footer'
+                    }
                 }
             });
         }
@@ -707,9 +725,29 @@ export default function RestaurantSettings({ restaurantId }) {
                                 <option value="standard">Standard - Balanced layout with all details</option>
                                 <option value="detailed">Detailed - Extra information and descriptions</option>
                                 <option value="minimal">Minimal - Clean and simple</option>
-                                <option value="custom">Custom - Use custom header/footer</option>
+                                <option value="itemized">Itemized - Focus on items with large text</option>
+                                <option value="compact">Compact - Minimize paper usage</option>
+                                <option value="custom">Custom - Full customization</option>
                             </select>
                             <p className="text-xs text-gray-500 mt-1">Select the receipt style that suits your needs</p>
+                        </div>
+
+                        <div>
+                            <Label>Printer Command Set</Label>
+                            <select
+                                value={formData.printer_config.command_set}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    printer_config: { ...formData.printer_config, command_set: e.target.value }
+                                })}
+                                className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                            >
+                                <option value="esc_pos">ESC/POS (Standard - Most common)</option>
+                                <option value="esc_pos_star">ESC/POS Star (Star Micronics)</option>
+                                <option value="esc_bixolon">ESC/POS Bixolon</option>
+                                <option value="epson_tm">Epson TM Series</option>
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">Select your printer's command language</p>
                         </div>
 
                         <div>
@@ -739,6 +777,90 @@ export default function RestaurantSettings({ restaurantId }) {
                             />
                             <p className="text-xs text-gray-500 mt-1">Add custom thank you message or promotional text</p>
                         </div>
+
+                        {formData.printer_config.template === 'custom' && (
+                            <div className="border rounded-lg p-4 bg-purple-50">
+                                <Label className="text-base font-semibold mb-3 block">Custom Template Options</Label>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium text-sm">QR Code</p>
+                                            <p className="text-xs text-gray-600">Add QR code for order tracking</p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.printer_config.custom_sections?.show_qr_code}
+                                            onCheckedChange={(checked) => setFormData({
+                                                ...formData,
+                                                printer_config: {
+                                                    ...formData.printer_config,
+                                                    custom_sections: {
+                                                        ...formData.printer_config.custom_sections,
+                                                        show_qr_code: checked
+                                                    }
+                                                }
+                                            })}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium text-sm">Barcode</p>
+                                            <p className="text-xs text-gray-600">Print order number as barcode</p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.printer_config.custom_sections?.show_barcode}
+                                            onCheckedChange={(checked) => setFormData({
+                                                ...formData,
+                                                printer_config: {
+                                                    ...formData.printer_config,
+                                                    custom_sections: {
+                                                        ...formData.printer_config.custom_sections,
+                                                        show_barcode: checked
+                                                    }
+                                                }
+                                            })}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium text-sm">Social Media</p>
+                                            <p className="text-xs text-gray-600">Display social media handles</p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.printer_config.custom_sections?.show_social_media}
+                                            onCheckedChange={(checked) => setFormData({
+                                                ...formData,
+                                                printer_config: {
+                                                    ...formData.printer_config,
+                                                    custom_sections: {
+                                                        ...formData.printer_config.custom_sections,
+                                                        show_social_media: checked
+                                                    }
+                                                }
+                                            })}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium text-sm">Allergen Info</p>
+                                            <p className="text-xs text-gray-600">Show allergen warnings</p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.printer_config.custom_sections?.show_allergen_info}
+                                            onCheckedChange={(checked) => setFormData({
+                                                ...formData,
+                                                printer_config: {
+                                                    ...formData.printer_config,
+                                                    custom_sections: {
+                                                        ...formData.printer_config.custom_sections,
+                                                        show_allergen_info: checked
+                                                    }
+                                                }
+                                            })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-3 border-t pt-4">
                             <Label className="text-base font-semibold">Display Options</Label>
@@ -899,18 +1021,77 @@ export default function RestaurantSettings({ restaurantId }) {
                             </p>
                         </div>
 
-                        <Button 
-                            onClick={() => {
-                                updateMutation.mutate({ 
-                                    printer_config: formData.printer_config
-                                });
-                            }}
-                            className="w-full"
-                            disabled={updateMutation.isPending}
-                        >
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Printing Settings
-                        </Button>
+                        <div className="flex gap-3">
+                            <Button 
+                                onClick={async () => {
+                                    if (!restaurant?.bluetooth_printer) {
+                                        toast.error('Please connect a Bluetooth printer first');
+                                        return;
+                                    }
+
+                                    setTestPrinting(true);
+                                    try {
+                                        const sampleOrder = {
+                                            id: 'TEST123',
+                                            order_number: 'TEST-001',
+                                            created_date: new Date().toISOString(),
+                                            order_type: 'delivery',
+                                            guest_name: 'Test Customer',
+                                            delivery_address: '123 Test Street, London, SW1A 1AA',
+                                            phone: '07700 900000',
+                                            items: [
+                                                { name: 'Margherita Pizza', quantity: 1, price: 12.99, customizations: { Size: 'Large', Extra: 'Cheese' } },
+                                                { name: 'Coca Cola', quantity: 2, price: 2.50 }
+                                            ],
+                                            subtotal: 17.99,
+                                            delivery_fee: 2.50,
+                                            discount: 0,
+                                            total: 20.49,
+                                            payment_method: 'Card',
+                                            notes: 'Test print - please ignore'
+                                        };
+
+                                        await printerService.printReceipt(sampleOrder, restaurant, {
+                                            ...formData.printer_config,
+                                            bluetooth_printer: restaurant.bluetooth_printer
+                                        });
+                                        toast.success('Test receipt printed successfully!');
+                                    } catch (error) {
+                                        console.error('Test print failed:', error);
+                                        toast.error('Test print failed: ' + error.message);
+                                    } finally {
+                                        setTestPrinting(false);
+                                    }
+                                }}
+                                variant="outline"
+                                className="flex-1"
+                                disabled={testPrinting || !restaurant?.bluetooth_printer}
+                            >
+                                {testPrinting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-2" />
+                                        Printing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <TestTube className="h-4 w-4 mr-2" />
+                                        Test Print
+                                    </>
+                                )}
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    updateMutation.mutate({ 
+                                        printer_config: formData.printer_config
+                                    });
+                                }}
+                                className="flex-1"
+                                disabled={updateMutation.isPending}
+                            >
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Settings
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             )}
