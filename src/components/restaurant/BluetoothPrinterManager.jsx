@@ -24,14 +24,20 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
 
         setIsConnecting(true);
         try {
+            console.log('🔍 Scanning for Bluetooth printers...');
             const device = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: [
                     '000018f0-0000-1000-8000-00805f9b34fb',
                     'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-                    '00001101-0000-1000-8000-00805f9b34fb' // Serial Port Profile
+                    '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                    '0000fff0-0000-1000-8000-00805f9b34fb',
+                    '0000ffe0-0000-1000-8000-00805f9b34fb', // Sunmi
+                    '00001101-0000-1000-8000-00805f9b34fb'  // SPP
                 ]
             });
+
+            console.log('✅ Device selected:', device.name, device.id);
 
             // Store printer info
             const printerInfo = {
@@ -44,8 +50,11 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
             onPrinterSelect(printerInfo);
             toast.success(`Printer "${device.name}" connected successfully!`);
         } catch (error) {
+            console.error('❌ Connection error:', error);
             if (error.name === 'NotFoundError') {
                 toast.error('No printer found. Make sure your printer is on and in pairing mode.');
+            } else if (error.name === 'NotSupportedError') {
+                toast.error('This feature requires HTTPS. Make sure you are using a secure connection.');
             } else {
                 toast.error('Failed to connect to printer: ' + error.message);
             }

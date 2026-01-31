@@ -119,39 +119,72 @@ export class PrinterService {
             const server = await this.device.gatt.connect();
             console.log('✅ GATT connected, discovering services...');
             
-            // Try to find a working service/characteristic combination
-            let serviceFound = null;
+            // Try to discover ALL services and find ANY writable characteristic
             let characteristicFound = null;
 
-            for (const serviceUUID of this.PRINTER_SERVICES) {
-                try {
-                    const service = await server.getPrimaryService(serviceUUID);
-                    console.log(`✅ Found service: ${serviceUUID}`);
-                    
-                    for (const charUUID of this.PRINTER_CHARACTERISTICS) {
+            try {
+                // Get all services
+                const services = await server.getPrimaryServices();
+                console.log(`📡 Found ${services.length} services total`);
+
+                // Try known printer services first
+                for (const serviceUUID of this.PRINTER_SERVICES) {
+                    try {
+                        const service = await server.getPrimaryService(serviceUUID);
+                        console.log(`✅ Found known service: ${serviceUUID}`);
+                        
+                        // Try to get all characteristics in this service
+                        const characteristics = await service.getCharacteristics();
+                        console.log(`  Found ${characteristics.length} characteristics`);
+                        
+                        for (const char of characteristics) {
+                            console.log(`  Checking characteristic: ${char.uuid}`);
+                            console.log(`    Properties:`, char.properties);
+                            
+                            // Look for writable characteristic
+                            if (char.properties.write || char.properties.writeWithoutResponse) {
+                                console.log(`  ✅ Found writable characteristic: ${char.uuid}`);
+                                characteristicFound = char;
+                                break;
+                            }
+                        }
+                        
+                        if (characteristicFound) break;
+                    } catch (e) {
+                        console.log(`⚠️ Service ${serviceUUID} not available:`, e.message);
+                    }
+                }
+
+                // If still not found, scan all services for ANY writable characteristic
+                if (!characteristicFound) {
+                    console.log('🔍 Scanning all services for writable characteristics...');
+                    for (const service of services) {
                         try {
-                            const char = await service.getCharacteristic(charUUID);
-                            console.log(`✅ Found characteristic: ${charUUID}`);
-                            serviceFound = service;
-                            characteristicFound = char;
-                            break;
+                            const characteristics = await service.getCharacteristics();
+                            for (const char of characteristics) {
+                                if (char.properties.write || char.properties.writeWithoutResponse) {
+                                    console.log(`✅ Found writable characteristic in service ${service.uuid}: ${char.uuid}`);
+                                    characteristicFound = char;
+                                    break;
+                                }
+                            }
+                            if (characteristicFound) break;
                         } catch (e) {
-                            console.log(`⚠️ Characteristic ${charUUID} not found in this service`);
+                            console.log(`⚠️ Error reading service:`, e.message);
                         }
                     }
-                    
-                    if (characteristicFound) break;
-                } catch (e) {
-                    console.log(`⚠️ Service ${serviceUUID} not available`);
                 }
+            } catch (e) {
+                console.error('❌ Error during service discovery:', e);
             }
 
             if (!characteristicFound) {
-                throw new Error('Could not find a compatible printer service/characteristic. Your printer may use a different protocol.');
+                throw new Error('Could not find any writable characteristic. Make sure your printer is in pairing mode and supports Bluetooth printing.');
             }
 
             this.characteristic = characteristicFound;
             console.log('🎉 Printer connected successfully!');
+            console.log('📝 Using characteristic:', this.characteristic.uuid);
             return true;
         } catch (error) {
             console.error('❌ Printer connection failed:', error);
@@ -359,13 +392,28 @@ export class PrinterService {
             const encoder = new TextEncoder();
             const data = encoder.encode(command);
             
-            // Send in chunks if data is large (some printers have MTU limits)
-            const chunkSize = 20;
+            console.log(`📤 Sending ${data.length} bytes to printer`);
+            
+            // Determine chunk size based on printer (Sunmi typically supports larger chunks)
+            const chunkSize = 512; // Larger chunks for better performance
+            
             for (let i = 0; i < data.length; i += chunkSize) {
                 const chunk = data.slice(i, Math.min(i + chunkSize, data.length));
-                await this.characteristic.writeValue(chunk);
-                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                // Use writeWithoutResponse if available (faster)
+                if (this.characteristic.properties.writeWithoutResponse) {
+                    await this.characteristic.writeValueWithoutResponse(chunk);
+                } else {
+                    await this.characteristic.writeValue(chunk);
+                }
+                
+                // Small delay between chunks
+                if (i + chunkSize < data.length) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
             }
+            
+            console.log('✅ Data sent successfully');
         } catch (error) {
             console.error('❌ Failed to send command:', error);
             throw error;
