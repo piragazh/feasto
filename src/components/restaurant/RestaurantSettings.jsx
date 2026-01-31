@@ -898,7 +898,14 @@ export default function RestaurantSettings({ restaurantId }) {
                         </div>
 
                         <Button 
-                            onClick={() => updateMutation.mutate({ printer_config: formData.printer_config })}
+                            onClick={() => {
+                                updateMutation.mutate({ 
+                                    printer_config: {
+                                        ...formData.printer_config,
+                                        bluetooth_printer: formData.printer_config.bluetooth_printer || null
+                                    }
+                                });
+                            }}
                             className="w-full"
                             disabled={updateMutation.isPending}
                         >
