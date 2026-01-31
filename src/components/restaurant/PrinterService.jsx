@@ -68,7 +68,18 @@ export class PrinterService {
                 throw new Error('No printer configured. Please connect a printer in Settings > Printing.');
             }
 
+            // Check if Web Bluetooth is supported
+            if (!navigator.bluetooth) {
+                throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera on HTTPS.');
+            }
+
             console.log('Connecting to printer:', printerInfo);
+            
+            // Check if getDevices is available (requires HTTPS and user permission)
+            if (!navigator.bluetooth.getDevices) {
+                throw new Error('Bluetooth API not fully available. Please ensure you are using HTTPS and have granted Bluetooth permissions.');
+            }
+
             const devices = await navigator.bluetooth.getDevices();
             console.log('Available devices:', devices);
             
