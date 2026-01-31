@@ -648,10 +648,20 @@ export default function RestaurantSettings({ restaurantId }) {
                     <CardContent className="space-y-6">
                         <BluetoothPrinterManager
                             selectedPrinter={formData.printer_config.bluetooth_printer}
-                            onPrinterSelect={(printer) => setFormData({
-                                ...formData,
-                                printer_config: { ...formData.printer_config, bluetooth_printer: printer }
-                            })}
+                            onPrinterSelect={(printer) => {
+                                const newFormData = {
+                                    ...formData,
+                                    printer_config: { ...formData.printer_config, bluetooth_printer: printer }
+                                };
+                                setFormData(newFormData);
+                                // Auto-save when printer is selected/disconnected
+                                updateMutation.mutate({ 
+                                    printer_config: {
+                                        ...newFormData.printer_config,
+                                        bluetooth_printer: printer
+                                    }
+                                });
+                            }}
                         />
 
                         <div className="border-t pt-6">
