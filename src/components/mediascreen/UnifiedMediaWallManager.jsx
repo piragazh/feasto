@@ -500,67 +500,66 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                             </div>
                                                         </div>
                                                         <div className="flex-1 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-3 transition-all hover:shadow-md">
-                                                                                <div className="flex gap-3 items-center">
-                                                                                    <div className="w-20 h-14 bg-gray-900 rounded overflow-hidden flex-shrink-0">
-                                                                                        {item.media_type === 'video' ? (
-                                                                                            <video src={item.media_url} className="w-full h-full object-cover" />
-                                                                                        ) : (
-                                                                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                                                                                        )}
-                                                                                    </div>
-                                                                                    <div className="flex-1 min-w-0">
-                                                                                        <Badge className="bg-purple-600 text-white mb-1">
-                                                                                            <Maximize2 className="h-3 w-3 mr-1" />
-                                                                                            Full Wall - All Screens
-                                                                                        </Badge>
-                                                                                        <p className="font-semibold text-sm truncate">{item.title}</p>
-                                                                                        <div className="flex gap-1 mt-1">
-                                                                                            <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
-                                                                                            {item.priority > 1 && (
-                                                                                                <Badge variant="outline" className="text-[10px] bg-orange-50">P:{item.priority}</Badge>
-                                                                                            )}
-                                                                                            {item.schedule?.enabled && (
-                                                                                                <Badge variant="outline" className="text-[10px] bg-green-50">
-                                                                                                    <Calendar className="h-2 w-2 mr-1" />Scheduled
-                                                                                                </Badge>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        <Switch
-                                                                                            checked={item.is_active}
-                                                                                            onCheckedChange={(checked) => updateWallMutation.mutate({ id: item.id, data: { is_active: checked } })}
-                                                                                        />
-                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
-                                                                                            <Copy className="h-3 w-3" />
-                                                                                        </Button>
-                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleSchedule(item, 'fullwall')}>
-                                                                                            <Clock className="h-3 w-3" />
-                                                                                        </Button>
-                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
-                                                                                            setEditingContent(item);
-                                                                                            setContentMode('fullwall');
-                                                                                            setFormData({
-                                                                                                title: item.title,
-                                                                                                description: item.description,
-                                                                                                media_url: item.media_url,
-                                                                                                media_type: item.media_type,
-                                                                                                duration: item.duration,
-                                                                                                priority: item.priority,
-                                                                                                is_active: item.is_active
-                                                                                            });
-                                                                                            setShowDialog(true);
-                                                                                        }}>
-                                                                                            <Edit className="h-3 w-3" />
-                                                                                        </Button>
-                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => deleteWallMutation.mutate(item.id)}>
-                                                                                            <Trash2 className="h-3 w-3 text-red-500" />
-                                                                                        </Button>
-                                                                                    </div>
+                                                            <div className="flex gap-3 items-center">
+                                                                <div className="w-20 h-14 bg-gray-900 rounded overflow-hidden flex-shrink-0">
+                                                                    {item.media_type === 'video' ? (
+                                                                        <video src={item.media_url} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <Badge className="bg-purple-600 text-white mb-1">
+                                                                        <Maximize2 className="h-3 w-3 mr-1" />
+                                                                        Full Wall - All Screens
+                                                                    </Badge>
+                                                                    <p className="font-semibold text-sm truncate">{item.title}</p>
+                                                                    <div className="flex gap-1 mt-1">
+                                                                        <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
+                                                                        {item.priority > 1 && (
+                                                                            <Badge variant="outline" className="text-[10px] bg-orange-50">P:{item.priority}</Badge>
+                                                                        )}
+                                                                        {item.schedule?.enabled && (
+                                                                            <Badge variant="outline" className="text-[10px] bg-green-50">
+                                                                                <Calendar className="h-2 w-2 mr-1" />Scheduled
+                                                                            </Badge>
+                                                                        )}
                                                                     </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Switch
+                                                                        checked={item.is_active}
+                                                                        onCheckedChange={(checked) => updateWallMutation.mutate({ id: item.id, data: { is_active: checked } })}
+                                                                    />
+                                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
+                                                                        <Copy className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleSchedule(item, 'fullwall')}>
+                                                                        <Clock className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                                                                        setEditingContent(item);
+                                                                        setContentMode('fullwall');
+                                                                        setFormData({
+                                                                            title: item.title,
+                                                                            description: item.description,
+                                                                            media_url: item.media_url,
+                                                                            media_type: item.media_type,
+                                                                            duration: item.duration,
+                                                                            priority: item.priority,
+                                                                            is_active: item.is_active
+                                                                        });
+                                                                        setShowDialog(true);
+                                                                    }}>
+                                                                        <Edit className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => deleteWallMutation.mutate(item.id)}>
+                                                                        <Trash2 className="h-3 w-3 text-red-500" />
+                                                                    </Button>
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                    </div>
                                                     ) : (
                                                         <div className="flex gap-2">
                                                             <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
@@ -596,79 +595,78 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                     <div key={screen.id} className="flex-1 min-w-[200px] max-w-[280px]">
                                                                         {isCurrentScreen ? (
                                                                             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-2 transition-all hover:shadow-md">
-                                                                                                <div className="flex gap-2 items-center">
-                                                                                                    <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0">
-                                                                                                        {item.media_type === 'video' ? (
-                                                                                                            <video src={item.media_url} className="w-full h-full object-cover" />
-                                                                                                        ) : (
-                                                                                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                                                                                                        )}
-                                                                                                    </div>
-                                                                                                    <div className="flex-1 min-w-0">
-                                                                                                        <p className="text-xs font-semibold truncate">{item.title}</p>
-                                                                                                        <div className="flex gap-1 mt-1">
-                                                                                                            <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
-                                                                                                            {item.schedule?.enabled && (
-                                                                                                                <Badge variant="outline" className="text-[10px] bg-green-50">
-                                                                                                                    <Calendar className="h-2 w-2" />
-                                                                                                                </Badge>
-                                                                                                            )}
-                                                                                                        </div>
-                                                                                                        <div className="flex gap-0.5 mt-1">
-                                                                                                            <Switch
-                                                                                                                checked={item.is_active}
-                                                                                                                onCheckedChange={(checked) => updateIndividualMutation.mutate({ id: item.id, data: { is_active: checked } })}
-                                                                                                                className="scale-75"
-                                                                                                            />
-                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
-                                                                                                                <Copy className="h-2.5 w-2.5" />
-                                                                                                            </Button>
-                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
-                                                                                                                <Clock className="h-2.5 w-2.5" />
-                                                                                                            </Button>
-                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
-                                                                                                                setEditingContent(item);
-                                                                                                                setContentMode('individual');
-                                                                                                                setSelectedPosition(item.position);
-                                                                                                                setFormData({
-                                                                                                                    title: item.title,
-                                                                                                                    description: item.description,
-                                                                                                                    media_url: item.media_url,
-                                                                                                                    media_type: item.media_type,
-                                                                                                                    duration: item.duration,
-                                                                                                                    priority: item.priority || 1,
-                                                                                                                    is_active: item.is_active
-                                                                                                                });
-                                                                                                                setShowDialog(true);
-                                                                                                            }}>
-                                                                                                                <Edit className="h-2.5 w-2.5" />
-                                                                                                            </Button>
-                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
-                                                                                                                <Trash2 className="h-2.5 w-2.5 text-red-500" />
-                                                                                                            </Button>
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </div>
+                                                                                <div className="flex gap-2 items-center">
+                                                                                    <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0">
+                                                                                        {item.media_type === 'video' ? (
+                                                                                            <video src={item.media_url} className="w-full h-full object-cover" />
                                                                                         ) : (
-                                                                                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
-                                                                                                <Button
-                                                                                                    size="sm"
-                                                                                                    variant="ghost"
-                                                                                                    className="text-xs h-7"
-                                                                                                    onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
-                                                                                                >
-                                                                                                    <Plus className="h-3 w-3 mr-1" />
-                                                                                                    Add
-                                                                                                </Button>
-                                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-                                            </motion.div>
+                                                                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <p className="text-xs font-semibold truncate">{item.title}</p>
+                                                                                        <div className="flex gap-1 mt-1">
+                                                                                            <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
+                                                                                            {item.schedule?.enabled && (
+                                                                                                <Badge variant="outline" className="text-[10px] bg-green-50">
+                                                                                                    <Calendar className="h-2 w-2" />
+                                                                                                </Badge>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <div className="flex gap-0.5 mt-1">
+                                                                                            <Switch
+                                                                                                checked={item.is_active}
+                                                                                                onCheckedChange={(checked) => updateIndividualMutation.mutate({ id: item.id, data: { is_active: checked } })}
+                                                                                                className="scale-75"
+                                                                                            />
+                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
+                                                                                                <Copy className="h-2.5 w-2.5" />
+                                                                                            </Button>
+                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
+                                                                                                <Clock className="h-2.5 w-2.5" />
+                                                                                            </Button>
+                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
+                                                                                                setEditingContent(item);
+                                                                                                setContentMode('individual');
+                                                                                                setSelectedPosition(item.position);
+                                                                                                setFormData({
+                                                                                                    title: item.title,
+                                                                                                    description: item.description,
+                                                                                                    media_url: item.media_url,
+                                                                                                    media_type: item.media_type,
+                                                                                                    duration: item.duration,
+                                                                                                    priority: item.priority || 1,
+                                                                                                    is_active: item.is_active
+                                                                                                });
+                                                                                                setShowDialog(true);
+                                                                                            }}>
+                                                                                                <Edit className="h-2.5 w-2.5" />
+                                                                                            </Button>
+                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
+                                                                                                <Trash2 className="h-2.5 w-2.5 text-red-500" />
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        variant="ghost"
+                                                                                        className="text-xs h-7"
+                                                                                        onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
+                                                                                    >
+                                                                                        <Plus className="h-3 w-3 mr-1" />
+                                                                                        Add
+                                                                                    </Button>
+                                                                                </div>
+                                                                            )}
+                                                                            </div>
+                                                                            );
+                                                                            })}
+                                                                            </div>
+                                                                            )}
+                                                                            </motion.div>
                                         ))}
                                     </AnimatePresence>
                                 </div>
