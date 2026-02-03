@@ -281,9 +281,13 @@ export class PrinterService {
             // Set alignment and font
             await this.sendCommand(cmd.alignCenter);
             
-            // Print logo if enabled (simplified)
+            // Print logo if enabled
             if (config.show_logo && restaurant.logo_url) {
-                await this.sendText('[ LOGO ]\n');
+                try {
+                    await this.printImage(restaurant.logo_url);
+                } catch (error) {
+                    console.log('Logo printing failed, skipping:', error);
+                }
             }
 
             // Restaurant name (bold)
@@ -502,6 +506,62 @@ export class PrinterService {
 
     async sendText(text) {
         await this.sendCommand(text);
+    }
+
+    async printImage(imageUrl) {
+        try {
+            // Load image
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = imageUrl;
+            });
+
+            // Create canvas and draw image
+            const canvas = document.createElement('canvas');
+            const maxWidth = 384; // 48mm at 8 dots/mm for 80mm printer
+            const scale = Math.min(1, maxWidth / img.width);
+            canvas.width = Math.floor(img.width * scale);
+            canvas.height = Math.floor(img.height * scale);
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to monochrome bitmap
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const bitmap = [];
+            
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x += 8) {
+                    let byte = 0;
+                    for (let bit = 0; bit < 8; bit++) {
+                        const px = (y * canvas.width + x + bit) * 4;
+                        const brightness = (imageData.data[px] + imageData.data[px + 1] + imageData.data[px + 2]) / 3;
+                        if (brightness < 128) {
+                            byte |= (1 << (7 - bit));
+                        }
+                    }
+                    bitmap.push(byte);
+                }
+            }
+
+            // Send raster image command (ESC * m nL nH d1...dk)
+            const width = canvas.width;
+            const height = canvas.height;
+            const widthBytes = Math.ceil(width / 8);
+            
+            // ESC/POS raster bit image command
+            const cmd = new Uint8Array([0x1D, 0x76, 0x30, 0x00, widthBytes & 0xFF, (widthBytes >> 8) & 0xFF, height & 0xFF, (height >> 8) & 0xFF, ...bitmap]);
+            
+            await this.sendCommand(cmd);
+            await this.sendText('\n');
+            
+        } catch (error) {
+            throw new Error(`Failed to print image: ${error.message}`);
+        }
     }
 
     disconnect() {
