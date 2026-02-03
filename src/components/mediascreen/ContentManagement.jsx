@@ -580,7 +580,33 @@ export default function ContentManagement({ restaurantId }) {
 
     return (
         <div className="space-y-6">
-            <ScreenControl restaurantId={restaurantId} />
+            <Tabs defaultValue="content" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="content">Content Library</TabsTrigger>
+                    <TabsTrigger value="screens">Screen Manager</TabsTrigger>
+                    <TabsTrigger value="walls">Media Walls</TabsTrigger>
+                    <TabsTrigger value="control">Screen Control</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="content" className="mt-6">
+                    <ContentLibraryTab /></TabsContent>
+
+                <TabsContent value="screens" className="mt-6">
+                    <ScreenManagerTab /></TabsContent>
+
+                <TabsContent value="walls" className="mt-6">
+                    <MediaWallManager restaurantId={restaurantId} />
+                </TabsContent>
+
+                <TabsContent value="control" className="mt-6">
+                    <ScreenControl restaurantId={restaurantId} />
+                </TabsContent>
+            </Tabs>
+        </div>
+    );
+
+    function ContentLibraryTab() {
+        return (<div className="space-y-6">
             
             <Card>
                 <CardHeader>
@@ -1181,6 +1207,10 @@ export default function ContentManagement({ restaurantId }) {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
-    );
+        </div>);
+    }
+
+    function ScreenManagerTab() {
+        return null;
+    }
 }
