@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Building, User, Search, LayoutDashboard, UtensilsCrossed } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, User, Search, LayoutDashboard, UtensilsCrossed, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import RestaurantFormDialog from '@/components/admin/RestaurantFormDialog';
 import AssignOwnerDialog from '@/components/admin/AssignOwnerDialog';
@@ -57,6 +57,35 @@ export default function AdminRestaurants() {
             queryClient.invalidateQueries(['admin-restaurants']);
             toast.success('Status updated');
         },
+    });
+
+    const generateDescriptionMutation = useMutation({
+        mutationFn: async (restaurant) => {
+            // Fetch menu items for this restaurant
+            const menuItems = await base44.entities.MenuItem.filter({ restaurant_id: restaurant.id });
+            
+            const menuItemsList = menuItems.slice(0, 10).map(item => item.name).join(', ');
+            
+            const prompt = `Create a compelling 2-3 sentence restaurant description for "${restaurant.name}", a ${restaurant.cuisine_type} restaurant. ${menuItems.length > 0 ? `They serve items like: ${menuItemsList}.` : ''} Make it engaging, highlight what makes them special, and appeal to potential customers. Keep it concise and appetizing.`;
+            
+            const result = await base44.integrations.Core.InvokeLLM({
+                prompt,
+                add_context_from_internet: false
+            });
+            
+            await base44.entities.Restaurant.update(restaurant.id, {
+                description: result
+            });
+            
+            return result;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-restaurants']);
+            toast.success('AI description generated!');
+        },
+        onError: (error) => {
+            toast.error('Failed to generate description: ' + error.message);
+        }
     });
 
     // Check authentication and admin role
@@ -179,6 +208,16 @@ export default function AdminRestaurants() {
                                     </div>
 
                                     <div className="flex flex-col gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => generateDescriptionMutation.mutate(restaurant)}
+                                            disabled={generateDescriptionMutation.isPending}
+                                            className="w-full bg-purple-50 hover:bg-purple-100 border-purple-300"
+                                        >
+                                            <Sparkles className="h-4 w-4 mr-2" />
+                                            {generateDescriptionMutation.isPending ? 'Generating...' : 'AI Description'}
+                                        </Button>
                                         <Button
                                             size="sm"
                                             variant="outline"
