@@ -811,9 +811,13 @@ export default function ContentManagement({ restaurantId }) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => setShowFileManager(true)}
+                                    onClick={() => {
+                                        setShowFileManager(true);
+                                        setShowDialog(false);
+                                    }}
                                 >
-                                    <FolderOpen className="h-4 w-4" />
+                                    <FolderOpen className="h-4 w-4 mr-1" />
+                                    Browse
                                 </Button>
                             </div>
                             {formData.media_url && (
@@ -933,18 +937,54 @@ export default function ContentManagement({ restaurantId }) {
             <FileManager
                 restaurantId={restaurantId}
                 open={showFileManager}
-                onClose={() => setShowFileManager(false)}
-                onSelectFile={(fileUrl, fileType) => {
-                    const mediaType = fileType.startsWith('video/') ? 'video' : 
-                                    fileType === 'image/gif' ? 'gif' : 'image';
-                    setFormData(prev => ({ 
-                        ...prev, 
-                        media_url: fileUrl,
-                        media_type: mediaType 
-                    }));
+                onClose={() => {
                     setShowFileManager(false);
                     setShowDialog(true);
-                    toast.success('File selected');
+                }}
+                allowMultiSelect={true}
+                onSelectFile={(data) => {
+                    // Handle single file selection
+                    if (typeof data === 'string') {
+                        const mediaType = arguments[1].startsWith('video/') ? 'video' : 
+                                        arguments[1] === 'image/gif' ? 'gif' : 'image';
+                        setFormData(prev => ({ 
+                            ...prev, 
+                            media_url: data,
+                            media_type: mediaType 
+                        }));
+                        setShowFileManager(false);
+                        setShowDialog(true);
+                        toast.success('File selected');
+                    } 
+                    // Handle multiple files selection - batch create
+                    else if (Array.isArray(data)) {
+                        setShowFileManager(false);
+                        
+                        // Batch create content for all selected files
+                        const createPromises = data.map(file => {
+                            const mediaType = file.file_type.startsWith('video/') ? 'video' : 
+                                            file.file_type === 'image/gif' ? 'gif' : 'image';
+                            
+                            return base44.entities.PromotionalContent.create({
+                                restaurant_id: restaurantId,
+                                title: file.file_name,
+                                screen_name: formData.screen_name || screenNames[0] || 'Main Screen',
+                                media_url: file.file_url,
+                                media_type: mediaType,
+                                duration: 10,
+                                video_loop_count: mediaType === 'video' ? 1 : undefined,
+                                transition: 'fade',
+                                is_active: true
+                            });
+                        });
+
+                        Promise.all(createPromises).then(() => {
+                            queryClient.invalidateQueries(['promotional-content']);
+                            toast.success(`${data.length} content items created successfully`);
+                        }).catch(() => {
+                            toast.error('Failed to create some content items');
+                        });
+                    }
                 }}
             />
 

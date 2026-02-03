@@ -13,7 +13,7 @@ import { Trash2, Image, Video, File, Search, Folder, FolderPlus, Tag, Edit, Eye,
 import { toast } from 'sonner';
 import moment from 'moment';
 
-export default function FileManager({ restaurantId, open, onClose, onSelectFile }) {
+export default function FileManager({ restaurantId, open, onClose, onSelectFile, allowMultiSelect = false }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentFolder, setCurrentFolder] = useState('All Files');
     const [filterType, setFilterType] = useState('all');
@@ -26,6 +26,8 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
     const [editTags, setEditTags] = useState([]);
     const [newTag, setNewTag] = useState('');
     const [previewFile, setPreviewFile] = useState(null);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
     const queryClient = useQueryClient();
 
     const { data: files = [] } = useQuery({
@@ -144,6 +146,63 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
         });
     };
 
+    const handleMultiUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        setUploading(true);
+        const uploadedFiles = [];
+
+        try {
+            for (const file of files) {
+                const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                
+                const mediaFile = await base44.entities.MediaFile.create({
+                    restaurant_id: restaurantId,
+                    file_url: file_url,
+                    file_name: file.name,
+                    file_type: file.type,
+                    file_size: file.size,
+                    folder: currentFolder === 'All Files' ? null : currentFolder
+                });
+
+                uploadedFiles.push(mediaFile);
+            }
+
+            queryClient.invalidateQueries(['media-files']);
+            toast.success(`${files.length} file(s) uploaded successfully`);
+        } catch (error) {
+            toast.error('Some files failed to upload');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const toggleFileSelection = (file) => {
+        if (!allowMultiSelect) return;
+        
+        setSelectedFiles(prev => {
+            const isSelected = prev.some(f => f.id === file.id);
+            if (isSelected) {
+                return prev.filter(f => f.id !== file.id);
+            } else {
+                return [...prev, file];
+            }
+        });
+    };
+
+    const handleUseSelected = () => {
+        if (selectedFiles.length === 0) return;
+        
+        if (selectedFiles.length === 1) {
+            onSelectFile(selectedFiles[0].file_url, selectedFiles[0].file_type);
+        } else {
+            onSelectFile(selectedFiles);
+        }
+        setSelectedFiles([]);
+        onClose();
+    };
+
     return (
         <>
         <Dialog open={open} onOpenChange={onClose}>
@@ -152,6 +211,19 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                     <CardTitle className="flex items-center justify-between">
                         <span>Media Library</span>
                         <div className="flex gap-2">
+                            <input
+                                type="file"
+                                multiple
+                                accept="image/*,video/*"
+                                onChange={handleMultiUpload}
+                                className="hidden"
+                                id="multi-upload"
+                                disabled={uploading}
+                            />
+                            <Button size="sm" variant="outline" onClick={() => document.getElementById('multi-upload').click()} disabled={uploading}>
+                                <Upload className="h-4 w-4 mr-1" />
+                                {uploading ? 'Uploading...' : 'Upload'}
+                            </Button>
                             <Button size="sm" variant="outline" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
                                 {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3x3 className="h-4 w-4" />}
                             </Button>
@@ -159,6 +231,9 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                     </CardTitle>
                     <p className="text-sm text-gray-500">
                         {filteredFiles.length} of {files.length} files
+                        {allowMultiSelect && selectedFiles.length > 0 && (
+                            <span className="ml-2 text-blue-600 font-medium">• {selectedFiles.length} selected</span>
+                        )}
                     </p>
                 </DialogHeader>
                 
@@ -246,11 +321,18 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                         <div className={`max-h-[55vh] overflow-y-auto ${viewMode === 'grid' ? 'grid grid-cols-3 gap-3' : 'space-y-2'}`}>
                             {filteredFiles.map((file) => {
                                 const used = isFileUsed(file.file_url);
+                                const isSelected = selectedFiles.some(f => f.id === file.id);
                                 
                                 if (viewMode === 'grid') {
                                     return (
-                                        <Card key={file.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                            <div className="aspect-square bg-gray-100 relative group cursor-pointer" onClick={() => setPreviewFile(file)}>
+                                        <Card 
+                                            key={file.id} 
+                                            className={`overflow-hidden hover:shadow-md transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
+                                        >
+                                            <div 
+                                                className="aspect-square bg-gray-100 relative group cursor-pointer" 
+                                                onClick={() => allowMultiSelect ? toggleFileSelection(file) : setPreviewFile(file)}
+                                            >
                                                 {file.file_type?.startsWith('video/') ? (
                                                     <video src={file.file_url} className="w-full h-full object-cover" />
                                                 ) : file.file_type?.startsWith('image/') ? (
@@ -261,7 +343,13 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                                                     </div>
                                                 )}
                                                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
-                                                    <Eye className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    {allowMultiSelect ? (
+                                                        <div className={`h-6 w-6 rounded border-2 ${isSelected ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'} flex items-center justify-center`}>
+                                                            {isSelected && <span className="text-white text-sm">✓</span>}
+                                                        </div>
+                                                    ) : (
+                                                        <Eye className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    )}
                                                 </div>
                                             </div>
                                             <CardContent className="p-2">
@@ -273,6 +361,16 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                                                     ))}
                                                 </div>
                                                 <div className="flex gap-1 mt-2">
+                                                    {allowMultiSelect && (
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant={isSelected ? "default" : "outline"} 
+                                                            className="h-6 flex-1 text-[10px]" 
+                                                            onClick={() => toggleFileSelection(file)}
+                                                        >
+                                                            {isSelected ? '✓ Selected' : 'Select'}
+                                                        </Button>
+                                                    )}
                                                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setPreviewFile(file)}>
                                                         <Eye className="h-3 w-3" />
                                                     </Button>
@@ -311,10 +409,26 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
 
                                 // List view
                                 return (
-                                    <Card key={file.id} className={used ? 'border-green-200 bg-green-50' : ''}>
+                                    <Card 
+                                        key={file.id} 
+                                        className={`${used ? 'border-green-200 bg-green-50' : ''} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+                                    >
                                         <CardContent className="p-3">
                                             <div className="flex gap-3 items-center">
-                                                <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0 cursor-pointer" onClick={() => setPreviewFile(file)}>
+                                                {allowMultiSelect && (
+                                                    <div 
+                                                        className={`h-5 w-5 rounded border-2 cursor-pointer flex items-center justify-center flex-shrink-0 ${
+                                                            isSelected ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
+                                                        }`}
+                                                        onClick={() => toggleFileSelection(file)}
+                                                    >
+                                                        {isSelected && <span className="text-white text-xs">✓</span>}
+                                                    </div>
+                                                )}
+                                                <div 
+                                                    className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0 cursor-pointer" 
+                                                    onClick={() => allowMultiSelect ? toggleFileSelection(file) : setPreviewFile(file)}
+                                                >
                                                     {file.file_type?.startsWith('video/') ? (
                                                         <video src={file.file_url} className="w-full h-full object-cover" />
                                                     ) : file.file_type?.startsWith('image/') ? (
@@ -385,6 +499,17 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                                 </div>
                             )}
                         </div>
+
+                        {allowMultiSelect && selectedFiles.length > 0 && (
+                            <div className="mt-4 flex gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <Button onClick={handleUseSelected} className="flex-1">
+                                    Use {selectedFiles.length} Selected File{selectedFiles.length > 1 ? 's' : ''}
+                                </Button>
+                                <Button variant="outline" onClick={() => setSelectedFiles([])}>
+                                    Clear
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </DialogContent>
