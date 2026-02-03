@@ -12,11 +12,13 @@ import { Switch } from "@/components/ui/switch";
 import { Maximize2, Plus, Edit, Trash2, Clock, ArrowUp, ArrowDown, Calendar, Image as ImageIcon, FolderOpen, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import ContentScheduler from './ContentScheduler';
+import FileManager from './FileManager';
 
 export default function MediaWallContentManager({ restaurantId, wallName }) {
     const queryClient = useQueryClient();
     const [showDialog, setShowDialog] = useState(false);
     const [showScheduler, setShowScheduler] = useState(false);
+    const [showFileManager, setShowFileManager] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
     const [schedulingContent, setSchedulingContent] = useState(null);
     const [formData, setFormData] = useState({
@@ -328,11 +330,14 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => setShowDialog(false)}
+                                    onClick={() => {
+                                        setShowDialog(false);
+                                        setShowFileManager(true);
+                                    }}
                                     className="flex-1"
                                 >
                                     <FolderOpen className="h-4 w-4 mr-2" />
-                                    Browse Files
+                                    Browse Uploaded Files
                                 </Button>
                                 <Button
                                     type="button"
@@ -341,7 +346,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                                     className="flex-1"
                                 >
                                     <Upload className="h-4 w-4 mr-2" />
-                                    Upload New
+                                    Upload New File
                                 </Button>
                             </div>
                             <Input
@@ -401,6 +406,28 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                 }}
                 content={schedulingContent}
                 onSave={handleSaveSchedule}
+            />
+
+            <FileManager
+                restaurantId={restaurantId}
+                open={showFileManager}
+                onClose={() => {
+                    setShowFileManager(false);
+                    if (!formData.media_url) {
+                        setShowDialog(true);
+                    }
+                }}
+                onSelectFile={(fileUrl, fileType) => {
+                    const mediaType = fileType.startsWith('video/') ? 'video' : 'image';
+                    setFormData(prev => ({ 
+                        ...prev, 
+                        media_url: fileUrl,
+                        media_type: mediaType 
+                    }));
+                    setShowFileManager(false);
+                    setShowDialog(true);
+                    toast.success('File selected');
+                }}
             />
         </Card>
     );
