@@ -146,26 +146,103 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogContent className="max-w-6xl max-h-[90vh]">
                 <DialogHeader>
-                    <CardTitle>Media File Manager</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                        <span>Media Library</span>
+                        <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+                                {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3x3 className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    </CardTitle>
                     <p className="text-sm text-gray-500">
-                        Manage your uploaded media files ({files.length} total)
+                        {filteredFiles.length} of {files.length} files
                     </p>
                 </DialogHeader>
                 
-                <div className="space-y-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            placeholder="Search files..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10"
-                        />
+                <div className="flex gap-4">
+                    {/* Sidebar */}
+                    <div className="w-48 flex-shrink-0 space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <Label className="text-xs font-semibold">FOLDERS</Label>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setShowNewFolder(true)}>
+                                    <FolderPlus className="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div className="space-y-1">
+                                {folders.map(folder => (
+                                    <Button
+                                        key={folder}
+                                        variant={currentFolder === folder ? 'secondary' : 'ghost'}
+                                        className="w-full justify-start text-sm h-8"
+                                        onClick={() => setCurrentFolder(folder)}
+                                    >
+                                        <Folder className="h-3 w-3 mr-2" />
+                                        {folder}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {allTags.length > 0 && (
+                            <div>
+                                <Label className="text-xs font-semibold mb-2 block">TAGS</Label>
+                                <div className="flex flex-wrap gap-1">
+                                    {allTags.slice(0, 10).map(tag => (
+                                        <Badge
+                                            key={tag}
+                                            variant={filterTag === tag ? 'default' : 'outline'}
+                                            className="cursor-pointer text-xs"
+                                            onClick={() => setFilterTag(filterTag === tag ? 'all' : tag)}
+                                        >
+                                            {tag}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="max-h-[50vh] overflow-y-auto space-y-2">
+                    {/* Main content */}
+                    <div className="flex-1 space-y-4">
+                        <div className="flex gap-2">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search files and tags..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <Select value={filterType} onValueChange={setFilterType}>
+                                <SelectTrigger className="w-32">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Types</SelectItem>
+                                    <SelectItem value="image">Images</SelectItem>
+                                    <SelectItem value="video">Videos</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={sortBy} onValueChange={setSortBy}>
+                                <SelectTrigger className="w-40">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="date-desc">Newest First</SelectItem>
+                                    <SelectItem value="date-asc">Oldest First</SelectItem>
+                                    <SelectItem value="name-asc">Name A-Z</SelectItem>
+                                    <SelectItem value="name-desc">Name Z-A</SelectItem>
+                                    <SelectItem value="size-asc">Smallest First</SelectItem>
+                                    <SelectItem value="size-desc">Largest First</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className={`max-h-[55vh] overflow-y-auto ${viewMode === 'grid' ? 'grid grid-cols-3 gap-3' : 'space-y-2'}`}>
                             {filteredFiles.map((file) => {
                                 const used = isFileUsed(file.file_url);
                                 
