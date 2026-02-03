@@ -58,7 +58,7 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
             <div className="flex items-center justify-between">
                 <Label htmlFor="wall-enabled">Enable Media Wall Mode</Label>
                 <Switch
