@@ -951,7 +951,10 @@ export default function ContentManagement({ restaurantId }) {
                 open={showFileManager}
                 onClose={() => {
                     setShowFileManager(false);
-                    setShowDialog(true);
+                    // Keep dialog open after selecting file
+                    if (!formData.media_url) {
+                        setShowDialog(true);
+                    }
                 }}
                 allowMultiSelect={true}
                 onSelectFile={(fileUrlOrArray, fileType) => {
