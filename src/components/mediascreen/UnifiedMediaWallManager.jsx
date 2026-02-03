@@ -648,32 +648,30 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
-                                                                                </div>
-                                                                                </div>
-                                                                                </div>
-                                                                                ) : (
-                                                                                <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
                                                                                 <Button
-                                                                                size="sm"
-                                                                                variant="ghost"
-                                                                                className="text-xs h-7"
-                                                                                onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
+                                                                                    size="sm"
+                                                                                    variant="ghost"
+                                                                                    className="text-xs h-7"
+                                                                                    onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
                                                                                 >
-                                                                                <Plus className="h-3 w-3 mr-1" />
-                                                                                Add
+                                                                                    <Plus className="h-3 w-3 mr-1" />
+                                                                                    Add
                                                                                 </Button>
-                                                                                </div>
-                                                                                )}
-                                                                                </div>
-                                                                                );
-                                                                                })}
-                                                                                </div>
-                                                                                )}
-                                                                                </motion.div>
-                                                                                ))}
-                                                                                </AnimatePresence>
-                                                                                </div>
-                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
+                            )}
                             
                             {(wallContent.length > 0 || individualContent.length > 0) && (
                                 <div className="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg">
