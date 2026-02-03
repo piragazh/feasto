@@ -14,82 +14,85 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`group flex gap-4 p-4 rounded-2xl border transition-all duration-300 relative ${
+            whileHover={isAvailable ? { y: -2, scale: 1.01 } : {}}
+            className={`group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative ${
                 isAvailable 
-                    ? 'bg-white border-gray-100 hover:border-orange-200 hover:shadow-lg' 
-                    : 'bg-gray-50 border-gray-200 opacity-70 grayscale'
+                    ? 'bg-white shadow-md hover:shadow-2xl border-0' 
+                    : 'bg-gray-50 border border-gray-200 opacity-70 grayscale'
             }`}
         >
             {!isAvailable && (
-                <div className="absolute top-2 right-2 z-10">
-                    <Badge className="bg-red-500 text-white text-xs font-bold px-3 py-1">
+                <div className="absolute top-3 right-3 z-10">
+                    <Badge className="bg-red-500 text-white text-xs font-bold px-4 py-1.5 shadow-lg">
                         OUT OF STOCK
                     </Badge>
                 </div>
             )}
             
             <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className={`font-semibold ${isAvailable ? 'text-gray-900' : 'text-gray-500'}`}>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <h3 className={`font-bold text-lg ${isAvailable ? 'text-gray-900' : 'text-gray-500'}`}>
                         {item.name}
                     </h3>
                     {promotion && isAvailable && (
-                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs gap-1 animate-pulse">
+                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs gap-1 animate-pulse shadow-lg">
                             <Gift className="h-3 w-3" />
                             {promotion.promotion_type === 'buy_one_get_one' ? 'BOGO' : 'B2G1'}
                         </Badge>
                     )}
                     {item.is_popular && isAvailable && (
-                        <Badge className="bg-orange-100 text-orange-600 text-xs">Popular</Badge>
+                        <Badge className="bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 text-xs font-semibold border-0">⭐ Popular</Badge>
                     )}
                     {hasCustomizations && isAvailable && (
-                        <div className="text-orange-500">
+                        <div className="text-orange-500 bg-orange-50 p-1.5 rounded-lg">
                             <Settings2 className="h-4 w-4" />
                         </div>
                     )}
                 </div>
                 {item.description && (
-                    <div className="mb-3">
-                        <p className={`text-gray-500 text-sm ${!expanded && hasLongDescription ? 'line-clamp-2' : ''}`}>
+                    <div className="mb-4">
+                        <p className={`text-gray-600 text-sm leading-relaxed ${!expanded && hasLongDescription ? 'line-clamp-2' : ''}`}>
                             {item.description}
                         </p>
                         {hasLongDescription && (
                             <button
                                 onClick={() => setExpanded(!expanded)}
-                                className="text-orange-500 hover:text-orange-600 text-xs font-medium mt-1"
+                                className="text-orange-600 hover:text-orange-700 text-xs font-semibold mt-1.5"
                             >
                                 {expanded ? 'Show less' : 'Read more'}
                             </button>
                         )}
                     </div>
                 )}
-                <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg text-gray-900">£{item.price?.toFixed(2)}</span>
-                    {item.is_vegetarian && (
-                        <div className="flex items-center gap-1 text-green-600">
-                            <Leaf className="h-4 w-4" />
-                            <span className="text-xs">Veg</span>
-                        </div>
-                    )}
-                    {item.is_spicy && (
-                        <div className="flex items-center gap-1 text-red-500">
-                            <Flame className="h-4 w-4" />
-                            <span className="text-xs">Spicy</span>
-                        </div>
-                    )}
+                <div className="flex items-center gap-4">
+                    <span className="font-extrabold text-xl text-gray-900">£{item.price?.toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                        {item.is_vegetarian && (
+                            <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg">
+                                <Leaf className="h-3.5 w-3.5 text-green-600" />
+                                <span className="text-xs font-medium text-green-700">Veg</span>
+                            </div>
+                        )}
+                        {item.is_spicy && (
+                            <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg">
+                                <Flame className="h-3.5 w-3.5 text-red-600" />
+                                <span className="text-xs font-medium text-red-700">Spicy</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             
-            <div className="relative">
+            <div className="relative flex-shrink-0">
                 {item.image_url ? (
                     <div className="relative">
                         <img
                             src={item.image_url}
                             alt={item.name}
-                            className="w-28 h-28 rounded-xl object-cover"
+                            className="w-32 h-32 rounded-2xl object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         {!isAvailable && (
-                            <div className="absolute inset-0 bg-gray-900/50 rounded-xl flex items-center justify-center">
+                            <div className="absolute inset-0 bg-gray-900/60 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                                 <span className="text-white text-xs font-bold">UNAVAILABLE</span>
                             </div>
                         )}
@@ -97,7 +100,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                             <Button
                                 onClick={() => onAddToCart(item)}
                                 size="icon"
-                                className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30"
+                                className="absolute -bottom-2 -right-2 h-12 w-12 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-xl shadow-orange-500/40 transition-all hover:scale-110"
                             >
                                 <Plus className="h-5 w-5" />
                             </Button>
@@ -108,7 +111,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                         <Button
                             onClick={() => onAddToCart(item)}
                             size="icon"
-                            className="h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30"
+                            className="h-12 w-12 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-xl shadow-orange-500/40 transition-all hover:scale-110"
                         >
                             <Plus className="h-5 w-5" />
                         </Button>

@@ -94,10 +94,12 @@ export default function PopularItems({ restaurantId, onItemClick }) {
     const displayItems = showCarousel ? popularItems : popularItems.slice(0, 3);
 
     return (
-        <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="h-6 w-6 text-orange-500" />
+        <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                    </div>
                     Popular Items
                 </h2>
                 {showCarousel && (
@@ -107,18 +109,18 @@ export default function PopularItems({ restaurantId, onItemClick }) {
                             size="icon"
                             onClick={scrollPrev}
                             disabled={!canScrollPrev}
-                            className="h-8 w-8 rounded-full"
+                            className="h-10 w-10 rounded-full border-2 hover:bg-orange-50 hover:border-orange-300 disabled:opacity-30"
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            <ChevronLeft className="h-5 w-5" />
                         </Button>
                         <Button
                             variant="outline"
                             size="icon"
                             onClick={scrollNext}
                             disabled={!canScrollNext}
-                            className="h-8 w-8 rounded-full"
+                            className="h-10 w-10 rounded-full border-2 hover:bg-orange-50 hover:border-orange-300 disabled:opacity-30"
                         >
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-5 w-5" />
                         </Button>
                     </div>
                 )}
@@ -129,7 +131,7 @@ export default function PopularItems({ restaurantId, onItemClick }) {
                     <div className="flex gap-4 touch-pan-y">
                         {popularItems.map((item, index) => (
                             <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
-                                <div className="absolute -left-3 top-3 bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10 shadow-lg">
+                                <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
                                     {index + 1}
                                 </div>
                                 <MenuItemCard item={item} onAddToCart={onItemClick} />
@@ -138,10 +140,10 @@ export default function PopularItems({ restaurantId, onItemClick }) {
                     </div>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                     {displayItems.map((item, index) => (
                         <div key={item.id} className="relative">
-                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10 shadow-lg">
+                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
                                 {index + 1}
                             </div>
                             <MenuItemCard item={item} onAddToCart={onItemClick} />
