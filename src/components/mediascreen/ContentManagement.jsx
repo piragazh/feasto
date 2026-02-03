@@ -961,7 +961,7 @@ export default function ContentManagement({ restaurantId }) {
                         setShowFileManager(false);
                         
                         // Batch create content for all selected files
-                        const createPromises = data.map(file => {
+                        const createPromises = fileUrlOrArray.map(file => {
                             const mediaType = file.file_type.startsWith('video/') ? 'video' : 
                                             file.file_type === 'image/gif' ? 'gif' : 'image';
                             
