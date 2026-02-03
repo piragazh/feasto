@@ -942,14 +942,14 @@ export default function ContentManagement({ restaurantId }) {
                     setShowDialog(true);
                 }}
                 allowMultiSelect={true}
-                onSelectFile={(data) => {
+                onSelectFile={(fileUrlOrArray, fileType) => {
                     // Handle single file selection
-                    if (typeof data === 'string') {
-                        const mediaType = arguments[1].startsWith('video/') ? 'video' : 
-                                        arguments[1] === 'image/gif' ? 'gif' : 'image';
+                    if (typeof fileUrlOrArray === 'string' && fileType) {
+                        const mediaType = fileType.startsWith('video/') ? 'video' : 
+                                        fileType === 'image/gif' ? 'gif' : 'image';
                         setFormData(prev => ({ 
                             ...prev, 
-                            media_url: data,
+                            media_url: fileUrlOrArray,
                             media_type: mediaType 
                         }));
                         setShowFileManager(false);
@@ -957,7 +957,7 @@ export default function ContentManagement({ restaurantId }) {
                         toast.success('File selected');
                     } 
                     // Handle multiple files selection - batch create
-                    else if (Array.isArray(data)) {
+                    else if (Array.isArray(fileUrlOrArray)) {
                         setShowFileManager(false);
                         
                         // Batch create content for all selected files
@@ -980,7 +980,7 @@ export default function ContentManagement({ restaurantId }) {
 
                         Promise.all(createPromises).then(() => {
                             queryClient.invalidateQueries(['promotional-content']);
-                            toast.success(`${data.length} content items created successfully`);
+                            toast.success(`${fileUrlOrArray.length} content items created successfully`);
                         }).catch(() => {
                             toast.error('Failed to create some content items');
                         });
