@@ -1054,10 +1054,10 @@ export default function RestaurantSettings({ restaurantId }) {
 
                         <div className="border-t pt-6">
                             <Label className="text-base font-semibold mb-3 block">Receipt Preview</Label>
-                            <div className="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300">
+                            <div className="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300 overflow-x-auto">
                                 <div 
-                                    className={`bg-white mx-auto shadow-lg ${formData.printer_config.printer_width === '58mm' ? 'max-w-[220px]' : 'max-w-[300px]'}`}
-                                    style={{ fontFamily: 'monospace' }}
+                                    className={`bg-white shadow-lg ${formData.printer_config.printer_width === '58mm' ? 'w-[264px]' : 'w-[380px]'}`}
+                                    style={{ fontFamily: 'monospace', margin: '0 auto' }}
                                 >
                                     <div className={`p-4 ${formData.printer_config.font_size === 'small' ? 'text-xs' : formData.printer_config.font_size === 'large' ? 'text-base' : 'text-sm'}`}>
                                         {/* Logo */}
@@ -1102,17 +1102,11 @@ export default function RestaurantSettings({ restaurantId }) {
                                         {/* Items */}
                                         <div className="border-t border-dashed border-gray-400 my-2"></div>
                                         <div className="space-y-1 mb-2">
-                                            <div className="flex justify-between">
-                                                <span>1x Margherita Pizza</span>
-                                                <span>£12.99</span>
-                                            </div>
+                                            <div className="whitespace-pre">{`1x Margherita Pizza${' '.repeat(Math.max(1, (formData.printer_config.printer_width === '80mm' ? 30 : 15) - '1x Margherita Pizza'.length))}£12.99`}</div>
                                             {formData.printer_config.template === 'detailed' && (
                                                 <div className="text-xs text-gray-600 ml-4">Extra cheese, Mushrooms</div>
                                             )}
-                                            <div className="flex justify-between">
-                                                <span>2x Coca Cola</span>
-                                                <span>£5.00</span>
-                                            </div>
+                                            <div className="whitespace-pre">{`2x Coca Cola${' '.repeat(Math.max(1, (formData.printer_config.printer_width === '80mm' ? 37 : 22) - '2x Coca Cola'.length))}£5.00`}</div>
                                         </div>
                                         
                                         {/* Totals */}
@@ -1120,15 +1114,15 @@ export default function RestaurantSettings({ restaurantId }) {
                                         <div className="space-y-1">
                                             <div className="flex justify-between text-xs">
                                                 <span>Subtotal:</span>
-                                                <span>£17.99</span>
+                                                <span className="ml-auto">£17.99</span>
                                             </div>
                                             <div className="flex justify-between text-xs">
                                                 <span>Delivery:</span>
-                                                <span>£{formData.delivery_fee || '2.00'}</span>
+                                                <span className="ml-auto">£{formData.delivery_fee || '2.00'}</span>
                                             </div>
                                             <div className="flex justify-between font-bold">
                                                 <span>TOTAL:</span>
-                                                <span>£{(17.99 + parseFloat(formData.delivery_fee || 2)).toFixed(2)}</span>
+                                                <span className="ml-auto">£{(17.99 + parseFloat(formData.delivery_fee || 2)).toFixed(2)}</span>
                                             </div>
                                         </div>
                                         
