@@ -581,8 +581,9 @@ export default function ContentManagement({ restaurantId }) {
     return (
         <div className="space-y-6">
             <Tabs defaultValue="content" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="content">Content & Screens</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="content">Content Library</TabsTrigger>
+                    <TabsTrigger value="screens">Screen Manager</TabsTrigger>
                     <TabsTrigger value="walls">Media Walls</TabsTrigger>
                     <TabsTrigger value="control">Screen Control</TabsTrigger>
                 </TabsList>
@@ -1190,6 +1191,12 @@ export default function ContentManagement({ restaurantId }) {
                 </DialogContent>
             </Dialog>
         </div>
+                </TabsContent>
+
+                <TabsContent value="screens" className="mt-6">
+                    <div className="text-center py-12 text-gray-500">
+                        Screen management coming soon
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="walls" className="mt-6">
