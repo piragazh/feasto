@@ -22,6 +22,7 @@ import ScreenControl from './ScreenControl';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import MediaWallConfigurator from './MediaWallConfigurator';
 import ContentScheduler from './ContentScheduler';
+import MediaWallManager from './MediaWallManager';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
