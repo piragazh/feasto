@@ -292,7 +292,10 @@ export class PrinterService {
                 } else {
                     const itemName = `${item.quantity}x ${item.name}`;
                     const price = `£${(item.price * item.quantity).toFixed(2)}`;
-                    await this.sendText(`${itemName.padEnd(20)}${price.padStart(12)}\n`);
+                    // Adjust padding based on printer width (80mm = 48 chars, 58mm = 32 chars)
+                    const lineWidth = config.printer_width === '80mm' ? 48 : 32;
+                    const padding = lineWidth - itemName.length - price.length;
+                    await this.sendText(`${itemName}${' '.repeat(Math.max(1, padding))}${price}\n`);
                 }
                 
                 // Customizations
@@ -311,13 +314,21 @@ export class PrinterService {
             await this.sendText('================================\n');
 
             // Totals
+            const lineWidth = config.printer_width === '80mm' ? 48 : 32;
             if (config.template !== 'compact') {
-                await this.sendText(`Subtotal:${`£${order.subtotal.toFixed(2)}`.padStart(24)}\n`);
+                const subtotal = `£${order.subtotal.toFixed(2)}`;
+                const subtotalPad = lineWidth - 9 - subtotal.length;
+                await this.sendText(`Subtotal:${' '.repeat(Math.max(1, subtotalPad))}${subtotal}\n`);
+                
                 if (order.delivery_fee > 0) {
-                    await this.sendText(`Delivery:${`£${order.delivery_fee.toFixed(2)}`.padStart(24)}\n`);
+                    const delivery = `£${order.delivery_fee.toFixed(2)}`;
+                    const deliveryPad = lineWidth - 9 - delivery.length;
+                    await this.sendText(`Delivery:${' '.repeat(Math.max(1, deliveryPad))}${delivery}\n`);
                 }
                 if (order.discount > 0) {
-                    await this.sendText(`Discount:${`-£${order.discount.toFixed(2)}`.padStart(23)}\n`);
+                    const discount = `-£${order.discount.toFixed(2)}`;
+                    const discountPad = lineWidth - 9 - discount.length;
+                    await this.sendText(`Discount:${' '.repeat(Math.max(1, discountPad))}${discount}\n`);
                 }
             }
             
@@ -325,7 +336,9 @@ export class PrinterService {
             if (config.template === 'itemized') {
                 await this.sendCommand(cmd.doubleHeight);
             }
-            await this.sendText(`TOTAL:${`£${order.total.toFixed(2)}`.padStart(26)}\n`);
+            const total = `£${order.total.toFixed(2)}`;
+            const totalPad = lineWidth - 6 - total.length;
+            await this.sendText(`TOTAL:${' '.repeat(Math.max(1, totalPad))}${total}\n`);
             await this.sendCommand(cmd.normal);
             await this.sendCommand(cmd.boldOff);
 
