@@ -589,24 +589,7 @@ export default function ContentManagement({ restaurantId }) {
                 </TabsList>
 
                 <TabsContent value="content" className="mt-6">
-                    <ContentLibraryTab /></TabsContent>
-
-                <TabsContent value="screens" className="mt-6">
-                    <ScreenManagerTab /></TabsContent>
-
-                <TabsContent value="walls" className="mt-6">
-                    <MediaWallManager restaurantId={restaurantId} />
-                </TabsContent>
-
-                <TabsContent value="control" className="mt-6">
-                    <ScreenControl restaurantId={restaurantId} />
-                </TabsContent>
-            </Tabs>
-        </div>
-    );
-
-    function ContentLibraryTab() {
-        return (<div className="space-y-6">
+                    <div className="space-y-6">
             
             <Card>
                 <CardHeader>
@@ -1207,10 +1190,23 @@ export default function ContentManagement({ restaurantId }) {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>);
-    }
+        </div>
+                </TabsContent>
 
-    function ScreenManagerTab() {
-        return null;
-    }
+                <TabsContent value="screens" className="mt-6">
+                    <div className="text-center py-12 text-gray-500">
+                        Screen management coming soon
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="walls" className="mt-6">
+                    <MediaWallManager restaurantId={restaurantId} />
+                </TabsContent>
+
+                <TabsContent value="control" className="mt-6">
+                    <ScreenControl restaurantId={restaurantId} />
+                </TabsContent>
+            </Tabs>
+        </div>
+    );
 }
