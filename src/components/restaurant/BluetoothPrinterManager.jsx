@@ -4,16 +4,41 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Bluetooth, Printer, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { printerService } from './PrinterService';
 
 export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSelect }) {
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectedDevice, setConnectedDevice] = useState(null);
+    const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
     useEffect(() => {
-        // Show saved printer info (no need to reconnect Bluetooth)
+        // Auto-connect on mount if printer is configured
         if (selectedPrinter?.id) {
             setConnectedDevice({ name: selectedPrinter.name });
+            
+            // Try to reconnect silently
+            if (!printerService.isConnected()) {
+                printerService.connect(selectedPrinter, true)
+                    .then(() => {
+                        setConnectionStatus('connected');
+                    })
+                    .catch(() => {
+                        setConnectionStatus('error');
+                    });
+            } else {
+                setConnectionStatus('connected');
+            }
         }
+
+        // Monitor connection status every 10 seconds
+        const interval = setInterval(() => {
+            if (selectedPrinter?.id) {
+                const isConnected = printerService.isConnected();
+                setConnectionStatus(isConnected ? 'connected' : 'disconnected');
+            }
+        }, 10000);
+
+        return () => clearInterval(interval);
     }, [selectedPrinter]);
 
     const scanForPrinters = async () => {
@@ -64,7 +89,9 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
     };
 
     const disconnectPrinter = () => {
+        printerService.disconnect();
         setConnectedDevice(null);
+        setConnectionStatus('disconnected');
         onPrinterSelect(null);
         toast.success('Printer disconnected');
     };
@@ -79,22 +106,49 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
             </div>
 
             {connectedDevice || selectedPrinter ? (
-                <Card className="p-4 bg-green-50 border-green-200">
+                <Card className={`p-4 ${
+                    connectionStatus === 'connected' ? 'bg-green-50 border-green-200' :
+                    connectionStatus === 'error' ? 'bg-red-50 border-red-200' :
+                    'bg-yellow-50 border-yellow-200'
+                }`}>
                     <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                                <CheckCircle className="h-5 w-5 text-white" />
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center relative ${
+                                connectionStatus === 'connected' ? 'bg-green-500' :
+                                connectionStatus === 'error' ? 'bg-red-500' :
+                                'bg-yellow-500'
+                            }`}>
+                                {connectionStatus === 'connected' ? (
+                                    <>
+                                        <CheckCircle className="h-5 w-5 text-white" />
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                                    </>
+                                ) : connectionStatus === 'error' ? (
+                                    <AlertCircle className="h-5 w-5 text-white" />
+                                ) : (
+                                    <Bluetooth className="h-5 w-5 text-white animate-pulse" />
+                                )}
                             </div>
                             <div>
-                                <p className="font-semibold text-green-900">
-                                    {connectedDevice?.name || selectedPrinter?.name || 'Printer Connected'}
+                                <p className={`font-semibold ${
+                                    connectionStatus === 'connected' ? 'text-green-900' :
+                                    connectionStatus === 'error' ? 'text-red-900' :
+                                    'text-yellow-900'
+                                }`}>
+                                    {connectionStatus === 'connected' ? '✓ Connected' :
+                                     connectionStatus === 'error' ? '✗ Connection Error' :
+                                     '↻ Reconnecting...'}
                                 </p>
-                                <p className="text-sm text-green-700 mt-1">
-                                    Ready to print receipts
+                                <p className={`text-sm mt-1 ${
+                                    connectionStatus === 'connected' ? 'text-green-700' :
+                                    connectionStatus === 'error' ? 'text-red-700' :
+                                    'text-yellow-700'
+                                }`}>
+                                    {connectedDevice?.name || selectedPrinter?.name || 'Printer'}
                                 </p>
                                 {selectedPrinter?.connectedAt && (
-                                    <p className="text-xs text-green-600 mt-1">
-                                        Connected: {new Date(selectedPrinter.connectedAt).toLocaleDateString()}
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        First paired: {new Date(selectedPrinter.connectedAt).toLocaleDateString()}
                                     </p>
                                 )}
                             </div>
