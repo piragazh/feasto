@@ -391,13 +391,13 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
                                                         </SelectContent>
                                                     </Select>
                                                     {onSelectFile && (
-                                                        <Button size="sm" variant="outline" className="h-6 flex-1 text-[10px]" onClick={() => {
-                                                            onSelectFile(file.file_url, file.file_type);
-                                                            onClose();
-                                                        }}>
-                                                            Use
-                                                        </Button>
-                                                    )}
+                                                        <Button size="sm" variant="default" className="h-6 flex-1 text-[10px] bg-blue-600 hover:bg-blue-700" onClick={() => {
+                                                             onSelectFile(file.file_url, file.file_type);
+                                                             onClose();
+                                                         }}>
+                                                             Use
+                                                         </Button>
+                                                     )}
                                                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDelete(file)} disabled={used}>
                                                         <Trash2 className={`h-3 w-3 ${used ? 'text-gray-300' : 'text-red-500'}`} />
                                                     </Button>
@@ -476,13 +476,13 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
                                                         </SelectContent>
                                                     </Select>
                                                     {onSelectFile && (
-                                                        <Button size="sm" variant="outline" onClick={() => {
-                                                            onSelectFile(file.file_url, file.file_type);
-                                                            onClose();
-                                                        }}>
-                                                            Use File
-                                                        </Button>
-                                                    )}
+                                                         <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={() => {
+                                                             onSelectFile(file.file_url, file.file_type);
+                                                             onClose();
+                                                         }}>
+                                                             Use File
+                                                         </Button>
+                                                     )}
                                                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDelete(file)} disabled={used}>
                                                         <Trash2 className={`h-3 w-3 ${used ? 'text-gray-300' : 'text-red-500'}`} />
                                                     </Button>
@@ -628,8 +628,9 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
                         {onSelectFile && (
                             <Button onClick={() => {
                                 onSelectFile(previewFile.file_url, previewFile.file_type);
+                                setPreviewFile(null);
                                 onClose();
-                            }} className="flex-1">
+                            }} className="flex-1 bg-blue-600 hover:bg-blue-700">
                                 Use This File
                             </Button>
                         )}
