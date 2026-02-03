@@ -5,14 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Grid3x3, Monitor, Plus, Settings, Eye, Trash2, Maximize2 } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Settings, Eye, Trash2, Maximize2, Film } from 'lucide-react';
 import MediaWallConfigurator from './MediaWallConfigurator';
+import MediaWallContentManager from './MediaWallContentManager';
 import { toast } from 'sonner';
 
 export default function MediaWallManager({ restaurantId }) {
     const [selectedWall, setSelectedWall] = useState(null);
     const [showConfigurator, setShowConfigurator] = useState(false);
     const [configuringScreen, setConfiguringScreen] = useState(null);
+    const [showContentManager, setShowContentManager] = useState(false);
+    const [managingWallName, setManagingWallName] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: screens = [] } = useQuery({
@@ -169,10 +172,23 @@ export default function MediaWallManager({ restaurantId }) {
                                             <Maximize2 className="h-5 w-5" />
                                             {wall.name}
                                         </CardTitle>
-                                        <Badge variant="outline">
-                                            {wall.grid_size.rows}×{wall.grid_size.cols} Grid
-                                            ({wall.grid_size.rows * wall.grid_size.cols} screens)
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline">
+                                                {wall.grid_size.rows}×{wall.grid_size.cols} Grid
+                                                ({wall.grid_size.rows * wall.grid_size.cols} screens)
+                                            </Badge>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setManagingWallName(wall.name);
+                                                    setShowContentManager(true);
+                                                }}
+                                            >
+                                                <Film className="h-3 w-3 mr-1" />
+                                                Manage Content
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
@@ -256,6 +272,21 @@ export default function MediaWallManager({ restaurantId }) {
                             setShowConfigurator(false);
                             setConfiguringScreen(null);
                         }}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showContentManager} onOpenChange={setShowContentManager}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Maximize2 className="h-5 w-5" />
+                            {managingWallName} - Full Screen Content
+                        </DialogTitle>
+                    </DialogHeader>
+                    <MediaWallContentManager 
+                        restaurantId={restaurantId}
+                        wallName={managingWallName}
                     />
                 </DialogContent>
             </Dialog>

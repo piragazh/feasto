@@ -8,6 +8,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [videoLoopCount, setVideoLoopCount] = useState(0);
+    const [wallContentIndex, setWallContentIndex] = useState(0);
     const heartbeatIntervalRef = useRef(null);
     const commandCheckIntervalRef = useRef(null);
 
@@ -29,6 +30,53 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         },
         enabled: !!restaurantId && !!screenName,
         staleTime: 60000,
+    });
+
+    const { data: wallContent = [] } = useQuery({
+        queryKey: ['wall-content', restaurantId, screen?.media_wall_config?.wall_name],
+        queryFn: async () => {
+            if (!screen?.media_wall_config?.enabled || !screen?.media_wall_config?.wall_name) return [];
+            
+            const content = await base44.entities.MediaWallContent.filter({
+                restaurant_id: restaurantId,
+                wall_name: screen.media_wall_config.wall_name,
+                is_active: true
+            });
+            
+            // Apply schedule filtering
+            const now = new Date();
+            const scheduledContent = content.filter(item => {
+                if (!item.schedule?.enabled) return true;
+                
+                const schedule = item.schedule;
+                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
+                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
+                
+                if (schedule.recurring?.enabled) {
+                    const currentDay = now.getDay();
+                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    
+                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
+                    
+                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
+                        return currentTime >= range.start_time && currentTime <= range.end_time;
+                    });
+                    
+                    if (!inTimeRange) return false;
+                }
+                
+                return true;
+            });
+            
+            return scheduledContent.sort((a, b) => {
+                const priorityDiff = (b.priority || 1) - (a.priority || 1);
+                if (priorityDiff !== 0) return priorityDiff;
+                return a.display_order - b.display_order;
+            });
+        },
+        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled,
+        staleTime: 30000,
+        refetchInterval: 30000,
     });
 
     const { data: content = [] } = useQuery({
@@ -228,6 +276,76 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         return (
             <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
                 <p className="text-xl">Missing restaurant ID or screen name</p>
+            </div>
+        );
+    }
+
+    // If screen is part of a media wall and has wall content, render wall content
+    if (screen?.media_wall_config?.enabled && wallContent.length > 0) {
+        const currentWallContent = wallContent[wallContentIndex % wallContent.length];
+        const wallConfig = screen.media_wall_config;
+        
+        // Calculate position offset based on grid position
+        const { row, col } = wallConfig.position;
+        const { rows, cols } = wallConfig.grid_size;
+        const bezel = wallConfig.bezel_compensation || 0;
+        
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        // Calculate the portion of the full image this screen should display
+        const offsetX = -(col * screenWidth) - (col * bezel);
+        const offsetY = -(row * screenHeight) - (row * bezel);
+        const totalWidth = (screenWidth * cols) + (bezel * (cols - 1));
+        const totalHeight = (screenHeight * rows) + (bezel * (rows - 1));
+        
+        useEffect(() => {
+            if (wallContent.length <= 1) return;
+            
+            const duration = (currentWallContent?.duration || 10) * 1000;
+            const timer = setTimeout(() => {
+                setWallContentIndex(prev => (prev + 1) % wallContent.length);
+            }, duration);
+            
+            return () => clearTimeout(timer);
+        }, [wallContentIndex, wallContent.length]);
+        
+        return (
+            <div 
+                className="h-screen w-screen bg-black overflow-hidden relative"
+                style={{ transform: `rotate(${wallConfig.rotation || 0}deg)` }}
+            >
+                {currentWallContent.media_type === 'video' ? (
+                    <video
+                        key={currentWallContent.id}
+                        src={currentWallContent.media_url}
+                        autoPlay
+                        muted
+                        loop
+                        className="absolute"
+                        style={{
+                            left: `${offsetX}px`,
+                            top: `${offsetY}px`,
+                            width: `${totalWidth}px`,
+                            height: `${totalHeight}px`,
+                            objectFit: 'cover'
+                        }}
+                    />
+                ) : (
+                    <img
+                        key={currentWallContent.id}
+                        src={currentWallContent.media_url}
+                        alt={currentWallContent.title}
+                        className="absolute"
+                        style={{
+                            left: `${offsetX}px`,
+                            top: `${offsetY}px`,
+                            width: `${totalWidth}px`,
+                            height: `${totalHeight}px`,
+                            objectFit: 'cover'
+                        }}
+                    />
+                )}
             </div>
         );
     }
