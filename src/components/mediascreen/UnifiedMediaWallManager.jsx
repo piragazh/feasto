@@ -10,15 +10,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight, FolderOpen, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContentScheduler from './ContentScheduler';
+import FileManager from './FileManager';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
     const [showDialog, setShowDialog] = useState(false);
+    const [showFileManager, setShowFileManager] = useState(false);
     const [contentMode, setContentMode] = useState('individual'); // 'individual' or 'fullwall'
     const [selectedPosition, setSelectedPosition] = useState(null);
     const [editingContent, setEditingContent] = useState(null);
@@ -1021,14 +1023,40 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                         </div>
 
                         <div>
-                            <Label>Upload Media {contentMode === 'fullwall' && '(High Resolution)'}</Label>
+                            <Label>Media File {contentMode === 'fullwall' && '(High Resolution)'}</Label>
+                            <p className="text-xs text-gray-500 mb-2">Browse already uploaded files or upload a new file</p>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowDialog(false);
+                                        setShowFileManager(true);
+                                    }}
+                                    className="flex-1"
+                                >
+                                    <FolderOpen className="h-4 w-4 mr-2" />
+                                    Browse Uploaded Files
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => document.getElementById('unified-file-upload-input').click()}
+                                    className="flex-1"
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload New File
+                                </Button>
+                            </div>
                             <Input
+                                id="unified-file-upload-input"
                                 type="file"
                                 accept="image/*,video/*"
                                 onChange={handleFileUpload}
+                                className="hidden"
                             />
                             {formData.media_url && (
-                                <p className="text-sm text-green-600 mt-1">✓ File uploaded</p>
+                                <p className="text-sm text-green-600 mt-2">✓ File selected</p>
                             )}
                         </div>
 
@@ -1116,6 +1144,23 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     )}
                 </DialogContent>
             </Dialog>
+
+            <FileManager
+                restaurantId={restaurantId}
+                open={showFileManager}
+                onClose={() => setShowFileManager(false)}
+                onSelectFile={(fileUrl, fileType) => {
+                    const mediaType = fileType.startsWith('video/') ? 'video' : 'image';
+                    setFormData(prev => ({ 
+                        ...prev, 
+                        media_url: fileUrl,
+                        media_type: mediaType 
+                    }));
+                    setShowFileManager(false);
+                    setShowDialog(true);
+                    toast.success('File selected');
+                }}
+            />
         </div>
     );
 
