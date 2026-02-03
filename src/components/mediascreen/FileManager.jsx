@@ -145,6 +145,7 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-6xl max-h-[90vh]">
                 <DialogHeader>
