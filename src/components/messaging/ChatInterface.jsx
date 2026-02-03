@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Send, Image as ImageIcon, User, Store, Truck } from 'lucide-react';
+import { X, Send, Image as ImageIcon, User, Store, Truck, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
 
