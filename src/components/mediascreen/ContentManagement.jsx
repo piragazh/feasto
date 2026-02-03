@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3 } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
 import AIContentAssistant from './AIContentAssistant';
@@ -19,6 +19,8 @@ import LayoutDesigner from './LayoutDesigner';
 import EnhancedFileUploader from './EnhancedFileUploader';
 import VideoEditor from './VideoEditor';
 import ScreenControl from './ScreenControl';
+import InlinePhotoEditor from './InlinePhotoEditor';
+import MediaWallConfigurator from './MediaWallConfigurator';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
@@ -30,7 +32,11 @@ export default function ContentManagement({ restaurantId }) {
     const [showLayoutDesigner, setShowLayoutDesigner] = useState(false);
     const [showEnhancedUploader, setShowEnhancedUploader] = useState(false);
     const [showVideoEditor, setShowVideoEditor] = useState(false);
+    const [showPhotoEditor, setShowPhotoEditor] = useState(false);
     const [editingContent, setEditingContent] = useState(null);
+    const [photoToEdit, setPhotoToEdit] = useState(null);
+    const [showMediaWallConfig, setShowMediaWallConfig] = useState(false);
+    const [configuringWallScreen, setConfiguringWallScreen] = useState(null);
     const [videoToEdit, setVideoToEdit] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
     const [restaurant, setRestaurant] = useState(null);
@@ -211,6 +217,55 @@ export default function ContentManagement({ restaurantId }) {
             video_trim_start: trimData.startTime,
             video_trim_end: trimData.endTime
         }));
+    };
+
+    const handleEditPhoto = () => {
+        if (formData.media_url && formData.media_type === 'image') {
+            setPhotoToEdit(formData.media_url);
+            setShowPhotoEditor(true);
+        }
+    };
+
+    const handlePhotoEdited = (newUrl) => {
+        setFormData(prev => ({ ...prev, media_url: newUrl }));
+        toast.success('Photo edited successfully');
+    };
+
+    const handleConfigureMediaWall = (screenName) => {
+        const screen = screens.find(s => s.screen_name === screenName);
+        setConfiguringWallScreen(screen);
+        setShowMediaWallConfig(true);
+    };
+
+    const handleSaveMediaWallConfig = async (config) => {
+        if (!configuringWallScreen) return;
+        
+        try {
+            await updateScreenMutation.mutateAsync({
+                id: configuringWallScreen.id,
+                data: { 
+                    media_wall_config: config,
+                    orientation: config.enabled ? 'landscape' : (configuringWallScreen.orientation || 'landscape')
+                }
+            });
+            toast.success('Media wall configured successfully!');
+            setShowMediaWallConfig(false);
+            setConfiguringWallScreen(null);
+        } catch (error) {
+            toast.error('Failed to save media wall configuration');
+        }
+    };
+
+    const handleUpdateOrientation = async (screenId, orientation) => {
+        try {
+            await updateScreenMutation.mutateAsync({
+                id: screenId,
+                data: { orientation }
+            });
+            toast.success('Screen orientation updated');
+        } catch (error) {
+            toast.error('Failed to update orientation');
+        }
     };
 
     const handleSubmit = async () => {
@@ -548,15 +603,24 @@ export default function ContentManagement({ restaurantId }) {
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col gap-1.5">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => handleEditLayout(name)}
-                                                                className="text-xs h-8 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
-                                                            >
-                                                                <Settings className="h-3.5 w-3.5 mr-1" />
-                                                                Layout
-                                                            </Button>
+                                                           <Button
+                                                               size="sm"
+                                                               variant="outline"
+                                                               onClick={() => handleConfigureMediaWall(name)}
+                                                               className="text-xs h-8 bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                                                           >
+                                                               <Grid3x3 className="h-3.5 w-3.5 mr-1" />
+                                                               Media Wall
+                                                           </Button>
+                                                           <Button
+                                                               size="sm"
+                                                               variant="outline"
+                                                               onClick={() => handleEditLayout(name)}
+                                                               className="text-xs h-8 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                                                           >
+                                                               <Settings className="h-3.5 w-3.5 mr-1" />
+                                                               Layout
+                                                           </Button>
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
@@ -774,17 +838,30 @@ export default function ContentManagement({ restaurantId }) {
                             {formData.media_url && (
                                 <div className="mt-2 flex items-center justify-between">
                                     <p className="text-sm text-green-600">File selected</p>
-                                    {formData.media_type === 'video' && (
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={handleEditVideo}
-                                        >
-                                            <Scissors className="h-3 w-3 mr-1" />
-                                            Edit Video
-                                        </Button>
-                                    )}
+                                    <div className="flex gap-2">
+                                        {formData.media_type === 'image' && (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleEditPhoto}
+                                            >
+                                                <ImageIcon className="h-3 w-3 mr-1" />
+                                                Edit Photo
+                                            </Button>
+                                        )}
+                                        {formData.media_type === 'video' && (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleEditVideo}
+                                            >
+                                                <Scissors className="h-3 w-3 mr-1" />
+                                                Edit Video
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -914,6 +991,32 @@ export default function ContentManagement({ restaurantId }) {
                 onClose={() => setShowVideoEditor(false)}
                 onSave={handleVideoEdited}
             />
+
+            <InlinePhotoEditor
+                open={showPhotoEditor}
+                imageUrl={photoToEdit}
+                onClose={() => setShowPhotoEditor(false)}
+                onSave={handlePhotoEdited}
+            />
+
+            <Dialog open={showMediaWallConfig} onOpenChange={setShowMediaWallConfig}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Grid3x3 className="h-5 w-5" />
+                            Media Wall Configuration
+                        </DialogTitle>
+                    </DialogHeader>
+                    <MediaWallConfigurator
+                        screen={configuringWallScreen}
+                        onSave={handleSaveMediaWallConfig}
+                        onCancel={() => {
+                            setShowMediaWallConfig(false);
+                            setConfiguringWallScreen(null);
+                        }}
+                    />
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>
                 <DialogContent>

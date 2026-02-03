@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Monitor, Power, RefreshCw, Wifi, WifiOff, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Monitor, Power, RefreshCw, Wifi, WifiOff, Send, CheckCircle, AlertCircle, RotateCw, Grid3x3 } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
 
@@ -273,6 +273,19 @@ export default function ScreenControl({ restaurantId }) {
                                                                     <span>• {screen.screen_info.resolution}</span>
                                                                 )}
                                                             </>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <Badge variant="outline" className="text-xs">
+                                                            <RotateCw className="h-3 w-3 mr-1" />
+                                                            {screen.orientation || 'landscape'}
+                                                        </Badge>
+                                                        {screen.media_wall_config?.enabled && (
+                                                            <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+                                                                <Grid3x3 className="h-3 w-3 mr-1" />
+                                                                Wall {screen.media_wall_config.position?.row},{screen.media_wall_config.position?.col}
+                                                            </Badge>
                                                         )}
                                                     </div>
 
