@@ -96,7 +96,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                 if (option.type === 'single' && customizations[option.name]) {
                     const selected = option.options.find(o => o.label === customizations[option.name]);
                     if (selected?.price) totalPrice += selected.price;
-                } else if (option.type === 'multiple' && customizations[option.name]) {
+                } else if (option.type === 'multiple' && customizations[option.name] && Array.isArray(customizations[option.name])) {
                     customizations[option.name].forEach(choice => {
                         const quantityKey = `${option.name}_${choice}`;
                         const qty = itemQuantities[quantityKey] || 1;
@@ -113,7 +113,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                             if (mealOpt.type === 'single' && mealCustoms[mealOpt.name]) {
                                 const mealChoice = mealOpt.options?.find(o => o.label === mealCustoms[mealOpt.name]);
                                 if (mealChoice?.price) totalPrice += mealChoice.price;
-                            } else if (mealOpt.type === 'multiple' && mealCustoms[mealOpt.name]) {
+                            } else if (mealOpt.type === 'multiple' && mealCustoms[mealOpt.name] && Array.isArray(mealCustoms[mealOpt.name])) {
                                 mealCustoms[mealOpt.name].forEach(choice => {
                                     const quantityKey = `${option.name}_meal_${mealOpt.name}_${choice}`;
                                     const qty = itemQuantities[quantityKey] || 1;
