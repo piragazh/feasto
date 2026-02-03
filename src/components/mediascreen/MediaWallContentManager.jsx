@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Maximize2, Plus, Edit, Trash2, Clock, ArrowUp, ArrowDown, Calendar, Image as ImageIcon } from 'lucide-react';
+import { Maximize2, Plus, Edit, Trash2, Clock, ArrowUp, ArrowDown, Calendar, Image as ImageIcon, FolderOpen, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import ContentScheduler from './ContentScheduler';
 
@@ -322,16 +322,39 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                         </div>
 
                         <div>
-                            <Label>Upload Media (Full Resolution)</Label>
+                            <Label>Media File (Full Resolution)</Label>
+                            <p className="text-xs text-gray-500 mb-2">Browse already uploaded files or upload a new file</p>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowDialog(false)}
+                                    className="flex-1"
+                                >
+                                    <FolderOpen className="h-4 w-4 mr-2" />
+                                    Browse Files
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => document.getElementById('wall-file-upload-input').click()}
+                                    className="flex-1"
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload New
+                                </Button>
+                            </div>
                             <Input
+                                id="wall-file-upload-input"
                                 type="file"
                                 accept="image/*,video/*"
                                 onChange={handleFileUpload}
+                                className="hidden"
                             />
                             {formData.media_url && (
-                                <p className="text-sm text-green-600 mt-1">
+                                <p className="text-sm text-green-600 mt-2">
                                     <ImageIcon className="h-3 w-3 inline mr-1" />
-                                    File uploaded
+                                    File selected
                                 </p>
                             )}
                         </div>
