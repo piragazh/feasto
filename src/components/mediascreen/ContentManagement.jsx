@@ -942,6 +942,8 @@ export default function ContentManagement({ restaurantId }) {
                         media_url: fileUrl,
                         media_type: mediaType 
                     }));
+                    setShowFileManager(false);
+                    setShowDialog(true);
                     toast.success('File selected');
                 }}
             />
