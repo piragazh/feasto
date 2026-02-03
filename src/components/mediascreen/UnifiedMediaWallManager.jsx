@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContentScheduler from './ContentScheduler';
 import FileManager from './FileManager';
+import ContentPreview from './ContentPreview';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
@@ -27,6 +28,8 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const [showScheduler, setShowScheduler] = useState(false);
     const [schedulingContent, setSchedulingContent] = useState(null);
     const [previewContent, setPreviewContent] = useState(null);
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewIsFullWall, setPreviewIsFullWall] = useState(false);
     
     const [formData, setFormData] = useState({
         title: '',
@@ -600,6 +603,13 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
                                                                         <Copy className="h-3 w-3" />
                                                                     </Button>
+                                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                                                                        setPreviewContent([item]);
+                                                                        setPreviewIsFullWall(true);
+                                                                        setShowPreview(true);
+                                                                    }} title="Preview">
+                                                                        <Eye className="h-3 w-3" />
+                                                                    </Button>
                                                                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleSchedule(item, 'fullwall')}>
                                                                         <Clock className="h-3 w-3" />
                                                                     </Button>
@@ -705,6 +715,13 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                                            </Select>
                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
                                                                                                <Copy className="h-2.5 w-2.5" />
+                                                                                           </Button>
+                                                                                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
+                                                                                               setPreviewContent([item]);
+                                                                                               setPreviewIsFullWall(false);
+                                                                                               setShowPreview(true);
+                                                                                           }} title="Preview">
+                                                                                               <Eye className="h-2.5 w-2.5" />
                                                                                            </Button>
                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
                                                                                                <Clock className="h-2.5 w-2.5" />
@@ -1127,6 +1144,24 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                         </div>
 
                         <div className="flex gap-2 pt-2">
+                            {formData.media_url && (
+                                <Button 
+                                    onClick={() => {
+                                        setPreviewContent([{
+                                            ...formData,
+                                            id: editingContent?.id || 'preview',
+                                            title: formData.title || 'Preview',
+                                        }]);
+                                        setPreviewIsFullWall(contentMode === 'fullwall');
+                                        setShowPreview(true);
+                                    }} 
+                                    variant="outline"
+                                    className="flex-1"
+                                >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Preview
+                                </Button>
+                            )}
                             <Button onClick={handleSubmit} className="flex-1">
                                 {editingContent ? 'Update' : 'Add'} Content
                             </Button>
@@ -1161,33 +1196,15 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 }}
             />
 
-            <Dialog open={!!previewContent} onOpenChange={() => setPreviewContent(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Screen Content Preview</DialogTitle>
-                    </DialogHeader>
-                    {previewContent && (
-                        <div className="space-y-2">
-                            {previewContent.map((item, idx) => (
-                                <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                    <Badge variant="outline" className="text-xs">{idx + 1}</Badge>
-                                    <div className="w-12 h-9 bg-gray-900 rounded overflow-hidden">
-                                        {item.media_type === 'video' ? (
-                                            <video src={item.media_url} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{item.title}</p>
-                                        <p className="text-xs text-gray-500">{item.duration}s</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            <ContentPreview
+                content={previewContent}
+                open={showPreview}
+                onClose={() => {
+                    setShowPreview(false);
+                    setPreviewContent(null);
+                }}
+                isFullWall={previewIsFullWall}
+            />
 
             <FileManager
                 restaurantId={restaurantId}
