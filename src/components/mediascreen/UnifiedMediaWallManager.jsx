@@ -375,9 +375,6 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
             const swapItem = timelineContent[swapIndex];
 
-            console.log('Moving item:', item.id, 'type:', item.type, 'display_order:', item.display_order);
-            console.log('Swapping with:', swapItem.id, 'type:', swapItem.type, 'display_order:', swapItem.display_order);
-
             const newOrder1 = swapItem.display_order;
             const newOrder2 = item.display_order;
 
@@ -414,12 +411,6 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     });
                 }
             }
-
-            // Force refetch
-            await queryClient.invalidateQueries(['wall-content']);
-            await queryClient.invalidateQueries(['promotional-content']);
-            
-            toast.success('Content reordered');
         } catch (error) {
             console.error('Move failed:', error);
             toast.error('Failed to reorder');
