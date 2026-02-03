@@ -1,0 +1,697 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye } from 'lucide-react';
+import { toast } from 'sonner';
+import ContentScheduler from './ContentScheduler';
+
+export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
+    const queryClient = useQueryClient();
+    const [showDialog, setShowDialog] = useState(false);
+    const [contentMode, setContentMode] = useState('individual'); // 'individual' or 'fullwall'
+    const [selectedPosition, setSelectedPosition] = useState(null);
+    const [editingContent, setEditingContent] = useState(null);
+    const [showScheduler, setShowScheduler] = useState(false);
+    const [schedulingContent, setSchedulingContent] = useState(null);
+    const [previewContent, setPreviewContent] = useState(null);
+    
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        media_url: '',
+        media_type: 'image',
+        duration: 10,
+        priority: 1,
+        is_active: true
+    });
+
+    const { data: individualContent = [] } = useQuery({
+        queryKey: ['promotional-content', restaurantId, wallName],
+        queryFn: async () => {
+            const screens = await base44.entities.Screen.filter({ 
+                restaurant_id: restaurantId,
+                'media_wall_config.wall_name': wallName,
+                'media_wall_config.enabled': true
+            });
+            
+            const allContent = [];
+            for (const screen of screens) {
+                const content = await base44.entities.PromotionalContent.filter({
+                    restaurant_id: restaurantId,
+                    screen_name: screen.screen_name,
+                    is_active: true
+                });
+                content.forEach(c => allContent.push({ ...c, position: screen.media_wall_config.position }));
+            }
+            return allContent;
+        },
+        enabled: !!restaurantId && !!wallName
+    });
+
+    const { data: wallContent = [] } = useQuery({
+        queryKey: ['wall-content', restaurantId, wallName],
+        queryFn: () => base44.entities.MediaWallContent.filter({ 
+            restaurant_id: restaurantId,
+            wall_name: wallName 
+        }),
+        enabled: !!restaurantId && !!wallName
+    });
+
+    const { data: screens = [] } = useQuery({
+        queryKey: ['wall-screens', restaurantId, wallName],
+        queryFn: () => base44.entities.Screen.filter({ 
+            restaurant_id: restaurantId,
+            'media_wall_config.wall_name': wallName,
+            'media_wall_config.enabled': true
+        }),
+        enabled: !!restaurantId && !!wallName
+    });
+
+    const createIndividualMutation = useMutation({
+        mutationFn: (data) => base44.entities.PromotionalContent.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['promotional-content']);
+            toast.success('Content added');
+            resetForm();
+        }
+    });
+
+    const createWallMutation = useMutation({
+        mutationFn: (data) => base44.entities.MediaWallContent.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['wall-content']);
+            toast.success('Wall content added');
+            resetForm();
+        }
+    });
+
+    const updateIndividualMutation = useMutation({
+        mutationFn: ({ id, data }) => base44.entities.PromotionalContent.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['promotional-content']);
+            toast.success('Content updated');
+            resetForm();
+        }
+    });
+
+    const updateWallMutation = useMutation({
+        mutationFn: ({ id, data }) => base44.entities.MediaWallContent.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['wall-content']);
+            toast.success('Wall content updated');
+            resetForm();
+        }
+    });
+
+    const deleteIndividualMutation = useMutation({
+        mutationFn: (id) => base44.entities.PromotionalContent.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['promotional-content']);
+            toast.success('Content deleted');
+        }
+    });
+
+    const deleteWallMutation = useMutation({
+        mutationFn: (id) => base44.entities.MediaWallContent.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['wall-content']);
+            toast.success('Wall content deleted');
+        }
+    });
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            toast.loading('Uploading...');
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+            setFormData(prev => ({ ...prev, media_url: file_url, media_type: mediaType }));
+            toast.dismiss();
+            toast.success('File uploaded');
+        } catch (error) {
+            toast.dismiss();
+            toast.error('Upload failed');
+        }
+    };
+
+    const handleAddContent = (mode, position = null) => {
+        setContentMode(mode);
+        setSelectedPosition(position);
+        setEditingContent(null);
+        setShowDialog(true);
+    };
+
+    const handleSubmit = async () => {
+        if (!formData.media_url) {
+            toast.error('Please upload media');
+            return;
+        }
+
+        if (contentMode === 'fullwall') {
+            const data = {
+                restaurant_id: restaurantId,
+                wall_name: wallName,
+                title: formData.title || 'Untitled',
+                description: formData.description,
+                media_url: formData.media_url,
+                media_type: formData.media_type,
+                duration: formData.duration,
+                priority: formData.priority,
+                is_active: formData.is_active,
+                display_order: editingContent?.display_order || wallContent.length
+            };
+
+            if (editingContent) {
+                await updateWallMutation.mutateAsync({ id: editingContent.id, data });
+            } else {
+                await createWallMutation.mutateAsync(data);
+            }
+        } else {
+            // Individual screen content
+            const screen = screens.find(s => 
+                s.media_wall_config.position.row === selectedPosition.row &&
+                s.media_wall_config.position.col === selectedPosition.col
+            );
+
+            if (!screen) {
+                toast.error('Screen not found');
+                return;
+            }
+
+            const data = {
+                restaurant_id: restaurantId,
+                screen_name: screen.screen_name,
+                title: formData.title || 'Untitled',
+                description: formData.description,
+                media_url: formData.media_url,
+                media_type: formData.media_type,
+                duration: formData.duration,
+                priority: formData.priority,
+                is_active: formData.is_active,
+                display_order: editingContent?.display_order || 0
+            };
+
+            if (editingContent) {
+                await updateIndividualMutation.mutateAsync({ id: editingContent.id, data });
+            } else {
+                await createIndividualMutation.mutateAsync(data);
+            }
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({
+            title: '',
+            description: '',
+            media_url: '',
+            media_type: 'image',
+            duration: 10,
+            priority: 1,
+            is_active: true
+        });
+        setEditingContent(null);
+        setShowDialog(false);
+    };
+
+    const getScreenContent = (row, col) => {
+        return individualContent.filter(c => 
+            c.position?.row === row && c.position?.col === col
+        );
+    };
+
+    const renderGridCell = (row, col) => {
+        const screen = screens.find(s => 
+            s.media_wall_config.position.row === row &&
+            s.media_wall_config.position.col === col
+        );
+        const content = getScreenContent(row, col);
+        const hasContent = content.length > 0;
+
+        return (
+            <div
+                key={`${row}-${col}`}
+                className={`border-2 rounded-lg p-3 relative transition-all ${
+                    screen 
+                        ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100' 
+                        : 'border-gray-300 bg-gray-50 border-dashed'
+                }`}
+                style={{ minHeight: '120px' }}
+            >
+                {screen ? (
+                    <>
+                        <div className="text-center mb-2">
+                            <Monitor className="h-6 w-6 mx-auto text-blue-600 mb-1" />
+                            <p className="text-xs font-semibold text-blue-900">{screen.screen_name}</p>
+                            <Badge variant="outline" className="text-[10px] mt-1">
+                                {row},{col}
+                            </Badge>
+                        </div>
+
+                        {hasContent ? (
+                            <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <Badge className="bg-green-100 text-green-700 text-[10px]">
+                                        {content.length} item{content.length > 1 ? 's' : ''}
+                                    </Badge>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-5 w-5 p-0"
+                                        onClick={() => setPreviewContent(content)}
+                                    >
+                                        <Eye className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                                <div className="text-[10px] text-gray-600">
+                                    {content.reduce((sum, c) => sum + (c.duration || 10), 0)}s total
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-[10px] text-gray-500 text-center">No content</p>
+                        )}
+
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full mt-2 h-7 text-[10px]"
+                            onClick={() => handleAddContent('individual', { row, col })}
+                        >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add
+                        </Button>
+                    </>
+                ) : (
+                    <div className="text-center">
+                        <Monitor className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                        <p className="text-xs text-gray-500">Empty</p>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6">
+            <Tabs defaultValue="visual">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="visual">Visual Grid</TabsTrigger>
+                    <TabsTrigger value="individual">Individual Content</TabsTrigger>
+                    <TabsTrigger value="fullwall">Full Wall Content</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="visual" className="space-y-4">
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="font-semibold text-indigo-900 flex items-center gap-2">
+                                    <Grid3x3 className="h-5 w-5" />
+                                    {wallName}
+                                </h3>
+                                <p className="text-sm text-indigo-700 mt-1">
+                                    {wallConfig?.rows}×{wallConfig?.cols} Grid ({screens.length}/{wallConfig?.rows * wallConfig?.cols} configured)
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => handleAddContent('fullwall')}
+                                className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                            >
+                                <Maximize2 className="h-4 w-4 mr-2" />
+                                Add Full-Wall Content
+                            </Button>
+                        </div>
+
+                        <div 
+                            className="grid gap-3 bg-white p-4 rounded-lg"
+                            style={{
+                                gridTemplateColumns: `repeat(${wallConfig?.cols || 2}, 1fr)`
+                            }}
+                        >
+                            {Array.from({ length: wallConfig?.rows || 2 }, (_, row) =>
+                                Array.from({ length: wallConfig?.cols || 2 }, (_, col) =>
+                                    renderGridCell(row, col)
+                                )
+                            )}
+                        </div>
+                    </div>
+
+                    {wallContent.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Maximize2 className="h-4 w-4" />
+                                    Active Full-Wall Content
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    {wallContent.map((item) => (
+                                        <div key={item.id} className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                            <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0">
+                                                {item.media_type === 'video' ? (
+                                                    <video src={item.media_url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-sm truncate">{item.title}</p>
+                                                <div className="flex gap-1 mt-1">
+                                                    <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
+                                                    <Badge variant="outline" className="text-[10px]">Priority: {item.priority}</Badge>
+                                                    {item.schedule?.enabled && (
+                                                        <Badge variant="outline" className="text-[10px] bg-green-50">
+                                                            <Calendar className="h-2 w-2 mr-1" />
+                                                            Scheduled
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Switch
+                                                checked={item.is_active}
+                                                onCheckedChange={(checked) => 
+                                                    updateWallMutation.mutate({ id: item.id, data: { is_active: checked } })
+                                                }
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="individual" className="space-y-4">
+                    {screens.length === 0 ? (
+                        <Card className="border-dashed">
+                            <CardContent className="py-12 text-center">
+                                <Monitor className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                                <p className="text-gray-600">No screens configured in this wall</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        screens.map(screen => {
+                            const content = individualContent.filter(c => 
+                                c.position?.row === screen.media_wall_config.position.row &&
+                                c.position?.col === screen.media_wall_config.position.col
+                            );
+                            
+                            return (
+                                <Card key={screen.id}>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-base flex items-center gap-2">
+                                                    <Monitor className="h-4 w-4" />
+                                                    {screen.screen_name}
+                                                </CardTitle>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Position: Row {screen.media_wall_config.position.row}, Col {screen.media_wall_config.position.col}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
+                                            >
+                                                <Plus className="h-3 w-3 mr-1" />
+                                                Add Content
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {content.length === 0 ? (
+                                            <p className="text-sm text-gray-500 text-center py-4">No content for this screen</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {content.map((item) => (
+                                                    <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                                        <div className="w-12 h-9 bg-gray-900 rounded overflow-hidden">
+                                                            {item.media_type === 'video' ? (
+                                                                <video src={item.media_url} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium truncate">{item.title}</p>
+                                                            <div className="flex gap-1 mt-1">
+                                                                <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
+                                                                {item.schedule?.enabled && (
+                                                                    <Badge variant="outline" className="text-[10px] bg-green-50">Scheduled</Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-1">
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleSchedule(item, 'individual')}>
+                                                                <Clock className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
+                                                                <Trash2 className="h-3 w-3 text-red-500" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })
+                    )}
+                </TabsContent>
+
+                <TabsContent value="fullwall" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base">Full-Wall Content</CardTitle>
+                                <Button size="sm" onClick={() => handleAddContent('fullwall')}>
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add Content
+                                </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Content displayed across all {wallConfig?.rows * wallConfig?.cols} screens
+                            </p>
+                        </CardHeader>
+                        <CardContent>
+                            {wallContent.length === 0 ? (
+                                <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                                    <Maximize2 className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                                    <p className="text-gray-600">No full-wall content</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {wallContent.map((item) => (
+                                        <Card key={item.id}>
+                                            <CardContent className="p-4">
+                                                <div className="flex gap-4">
+                                                    <div className="w-32 h-24 bg-gray-900 rounded-lg overflow-hidden">
+                                                        {item.media_type === 'video' ? (
+                                                            <video src={item.media_url} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="flex-1">
+                                                        <div className="flex items-start justify-between">
+                                                            <div>
+                                                                <h3 className="font-semibold">{item.title}</h3>
+                                                                <p className="text-sm text-gray-500">{item.description}</p>
+                                                            </div>
+                                                            <Switch
+                                                                checked={item.is_active}
+                                                                onCheckedChange={(checked) => 
+                                                                    updateWallMutation.mutate({ id: item.id, data: { is_active: checked } })
+                                                                }
+                                                            />
+                                                        </div>
+                                                        
+                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                            <Badge variant="outline">{item.media_type}</Badge>
+                                                            <Badge variant="outline">{item.duration}s</Badge>
+                                                            {item.priority > 1 && (
+                                                                <Badge className="bg-orange-50 text-orange-700">
+                                                                    Priority: {item.priority}
+                                                                </Badge>
+                                                            )}
+                                                            {item.schedule?.enabled && (
+                                                                <Badge className="bg-green-50 text-green-700">
+                                                                    <Calendar className="h-3 w-3 mr-1" />
+                                                                    Scheduled
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-2">
+                                                        <Button size="sm" variant="ghost" onClick={() => handleSchedule(item, 'fullwall')}>
+                                                            <Clock className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" onClick={() => deleteWallMutation.mutate(item.id)}>
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {contentMode === 'fullwall' ? (
+                                <span className="flex items-center gap-2">
+                                    <Maximize2 className="h-5 w-5" />
+                                    {editingContent ? 'Edit' : 'Add'} Full-Wall Content
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    <Monitor className="h-5 w-5" />
+                                    {editingContent ? 'Edit' : 'Add'} Screen Content
+                                </span>
+                            )}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Title</Label>
+                            <Input
+                                value={formData.title}
+                                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="Content title"
+                            />
+                        </div>
+
+                        <div>
+                            <Label>Description</Label>
+                            <Textarea
+                                value={formData.description}
+                                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Optional description"
+                                rows={2}
+                            />
+                        </div>
+
+                        <div>
+                            <Label>Upload Media {contentMode === 'fullwall' && '(High Resolution)'}</Label>
+                            <Input
+                                type="file"
+                                accept="image/*,video/*"
+                                onChange={handleFileUpload}
+                            />
+                            {formData.media_url && (
+                                <p className="text-sm text-green-600 mt-1">✓ File uploaded</p>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>Duration (seconds)</Label>
+                                <Input
+                                    type="number"
+                                    value={formData.duration}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 10 }))}
+                                    min="1"
+                                />
+                            </div>
+                            <div>
+                                <Label>Priority (1-10)</Label>
+                                <Input
+                                    type="number"
+                                    value={formData.priority}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 1 }))}
+                                    min="1"
+                                    max="10"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <Button onClick={handleSubmit} className="flex-1">
+                                {editingContent ? 'Update' : 'Add'} Content
+                            </Button>
+                            <Button onClick={resetForm} variant="outline">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <ContentScheduler
+                open={showScheduler}
+                onClose={() => {
+                    setShowScheduler(false);
+                    setSchedulingContent(null);
+                }}
+                content={schedulingContent}
+                onSave={async ({ schedule, priority }) => {
+                    if (!schedulingContent) return;
+                    
+                    const isWallContent = schedulingContent.__type === 'fullwall';
+                    const mutation = isWallContent ? updateWallMutation : updateIndividualMutation;
+                    
+                    await mutation.mutateAsync({
+                        id: schedulingContent.id,
+                        data: { schedule, priority }
+                    });
+                    
+                    setShowScheduler(false);
+                    setSchedulingContent(null);
+                }}
+            />
+
+            <Dialog open={!!previewContent} onOpenChange={() => setPreviewContent(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Screen Content Preview</DialogTitle>
+                    </DialogHeader>
+                    {previewContent && (
+                        <div className="space-y-2">
+                            {previewContent.map((item, idx) => (
+                                <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                    <Badge variant="outline" className="text-xs">{idx + 1}</Badge>
+                                    <div className="w-12 h-9 bg-gray-900 rounded overflow-hidden">
+                                        {item.media_type === 'video' ? (
+                                            <video src={item.media_url} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{item.title}</p>
+                                        <p className="text-xs text-gray-500">{item.duration}s</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+
+    function handleSchedule(item, type) {
+        setSchedulingContent({ ...item, __type: type });
+        setShowScheduler(true);
+    }
+}

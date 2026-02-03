@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Grid3x3, Monitor, Plus, Settings, Eye, Trash2, Maximize2, Film } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Settings, Eye, Trash2, Maximize2, Film, LayoutGrid } from 'lucide-react';
 import MediaWallConfigurator from './MediaWallConfigurator';
 import MediaWallContentManager from './MediaWallContentManager';
+import UnifiedMediaWallManager from './UnifiedMediaWallManager';
 import { toast } from 'sonner';
 
 export default function MediaWallManager({ restaurantId }) {
@@ -15,7 +16,9 @@ export default function MediaWallManager({ restaurantId }) {
     const [showConfigurator, setShowConfigurator] = useState(false);
     const [configuringScreen, setConfiguringScreen] = useState(null);
     const [showContentManager, setShowContentManager] = useState(false);
+    const [showUnifiedManager, setShowUnifiedManager] = useState(false);
     const [managingWallName, setManagingWallName] = useState(null);
+    const [managingWallConfig, setManagingWallConfig] = useState(null);
     const queryClient = useQueryClient();
 
     const { data: screens = [] } = useQuery({
@@ -179,13 +182,14 @@ export default function MediaWallManager({ restaurantId }) {
                                             </Badge>
                                             <Button
                                                 size="sm"
-                                                variant="outline"
                                                 onClick={() => {
                                                     setManagingWallName(wall.name);
-                                                    setShowContentManager(true);
+                                                    setManagingWallConfig(wall.grid_size);
+                                                    setShowUnifiedManager(true);
                                                 }}
+                                                className="bg-gradient-to-r from-purple-600 to-indigo-600"
                                             >
-                                                <Film className="h-3 w-3 mr-1" />
+                                                <LayoutGrid className="h-3 w-3 mr-1" />
                                                 Manage Content
                                             </Button>
                                         </div>
@@ -276,17 +280,18 @@ export default function MediaWallManager({ restaurantId }) {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={showContentManager} onOpenChange={setShowContentManager}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <Dialog open={showUnifiedManager} onOpenChange={setShowUnifiedManager}>
+                <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Maximize2 className="h-5 w-5" />
-                            {managingWallName} - Full Screen Content
+                            <LayoutGrid className="h-5 w-5" />
+                            {managingWallName} - Content Management
                         </DialogTitle>
                     </DialogHeader>
-                    <MediaWallContentManager 
+                    <UnifiedMediaWallManager 
                         restaurantId={restaurantId}
                         wallName={managingWallName}
+                        wallConfig={managingWallConfig}
                     />
                 </DialogContent>
             </Dialog>
