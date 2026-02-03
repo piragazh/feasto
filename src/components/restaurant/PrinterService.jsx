@@ -10,6 +10,9 @@ export class PrinterService {
         this.device = null;
         this.characteristic = null;
         this.commandSet = 'esc_pos';
+        this.reconnecting = false;
+        this.connectionCheckInterval = null;
+        this.printerInfo = null;
         // Common Bluetooth printer service UUIDs
         this.PRINTER_SERVICES = [
             '000018f0-0000-1000-8000-00805f9b34fb', // Generic printer service
@@ -77,7 +80,7 @@ export class PrinterService {
         return commands[this.commandSet] || commands.esc_pos;
     }
 
-    async connect(printerInfo) {
+    async connect(printerInfo, silent = false) {
         try {
             if (!printerInfo?.id) {
                 throw new Error('No printer configured. Please connect a printer in Settings > Printing.');
@@ -88,7 +91,10 @@ export class PrinterService {
                 throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
             }
 
-            console.log('🖨️ Connecting to printer:', printerInfo);
+            if (!silent) console.log('🖨️ Connecting to printer:', printerInfo);
+            
+            // Store printer info for reconnection
+            this.printerInfo = printerInfo;
             
             let device = null;
 
@@ -183,13 +189,74 @@ export class PrinterService {
             }
 
             this.characteristic = characteristicFound;
-            console.log('🎉 Printer connected successfully!');
-            console.log('📝 Using characteristic:', this.characteristic.uuid);
+            
+            // Set up disconnect listener for auto-reconnect
+            this.device.addEventListener('gattserverdisconnected', () => {
+                console.log('⚠️ Printer disconnected, will attempt to reconnect...');
+                this.handleDisconnect();
+            });
+            
+            // Start connection monitoring
+            this.startConnectionMonitor();
+            
+            if (!silent) {
+                console.log('🎉 Printer connected successfully!');
+                console.log('📝 Using characteristic:', this.characteristic.uuid);
+            }
             return true;
         } catch (error) {
-            console.error('❌ Printer connection failed:', error);
+            if (!silent) console.error('❌ Printer connection failed:', error);
             throw new Error(`Printer connection failed: ${error.message}`);
         }
+    }
+
+    async handleDisconnect() {
+        if (this.reconnecting) return;
+        
+        this.reconnecting = true;
+        console.log('🔄 Attempting to reconnect...');
+        
+        // Try to reconnect after 2 seconds
+        setTimeout(async () => {
+            try {
+                if (this.printerInfo) {
+                    await this.connect(this.printerInfo, true);
+                    console.log('✅ Reconnected successfully');
+                }
+            } catch (error) {
+                console.error('❌ Reconnection failed:', error);
+                // Try again after 10 seconds
+                setTimeout(() => this.handleDisconnect(), 10000);
+            } finally {
+                this.reconnecting = false;
+            }
+        }, 2000);
+    }
+
+    startConnectionMonitor() {
+        // Clear existing interval
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+        }
+        
+        // Check connection every 30 seconds
+        this.connectionCheckInterval = setInterval(() => {
+            if (!this.device?.gatt?.connected && this.printerInfo) {
+                console.log('🔄 Connection lost, attempting reconnect...');
+                this.handleDisconnect();
+            }
+        }, 30000);
+    }
+
+    stopConnectionMonitor() {
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+            this.connectionCheckInterval = null;
+        }
+    }
+
+    isConnected() {
+        return this.device?.gatt?.connected || false;
     }
 
     async printReceipt(order, restaurant, config) {
@@ -203,8 +270,8 @@ export class PrinterService {
 
         // Check if we need to reconnect
         if (!this.device || !this.device.gatt?.connected || !this.characteristic) {
-            console.log('Connecting to printer with config:', config.bluetooth_printer);
-            await this.connect(config.bluetooth_printer);
+            console.log('Reconnecting to printer...');
+            await this.connect(config.bluetooth_printer, true);
         }
 
         try {
@@ -438,11 +505,13 @@ export class PrinterService {
     }
 
     disconnect() {
+        this.stopConnectionMonitor();
         if (this.device?.gatt?.connected) {
             this.device.gatt.disconnect();
         }
         this.device = null;
         this.characteristic = null;
+        this.printerInfo = null;
     }
 }
 
