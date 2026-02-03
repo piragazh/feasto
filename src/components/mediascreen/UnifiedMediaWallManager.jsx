@@ -10,9 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, GripVertical } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContentScheduler from './ContentScheduler';
 
@@ -130,33 +129,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
         }
     });
 
-    const handleDragEnd = async (result) => {
-        if (!result.destination) return;
 
-        const sourceIndex = result.source.index;
-        const destIndex = result.destination.index;
-
-        if (sourceIndex === destIndex) return;
-
-        const items = [...timelineContent];
-        const [reorderedItem] = items.splice(sourceIndex, 1);
-        items.splice(destIndex, 0, reorderedItem);
-
-        // Update display_order for all affected items
-        try {
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const mutation = item.type === 'fullwall' ? updateWallMutation : updateIndividualMutation;
-                await mutation.mutateAsync({
-                    id: item.id,
-                    data: { display_order: i }
-                });
-            }
-            toast.success('Order updated');
-        } catch (error) {
-            toast.error('Failed to reorder');
-        }
-    };
 
     const handleDuplicate = async (item) => {
         try {
@@ -469,7 +442,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                     </div>
                                 </div>
                             ) : (
-                                <DragDropContext onDragEnd={handleDragEnd}>
+                                <div>
                                     {/* Header Row */}
                                     <div className="flex gap-2 mb-2 pb-2 border-b sticky top-0 bg-white z-10">
                                         <div className="w-32 flex-shrink-0 font-semibold text-sm text-gray-700">
@@ -488,36 +461,45 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                         ))}
                                     </div>
 
-                                    <Droppable droppableId="timeline">
-                                        {(provided) => (
-                                            <div {...provided.droppableProps} ref={provided.innerRef}>
-                                                <AnimatePresence>
-                                                    {timelineContent.map((item, index) => (
-                                                        <Draggable key={`${item.type}-${item.id}`} draggableId={`${item.type}-${item.id}`} index={index}>
-                                                            {(provided, snapshot) => (
-                                                                <motion.div
-                                                                    ref={provided.innerRef}
-                                                                    {...provided.draggableProps}
-                                                                    initial={{ opacity: 0, y: 20 }}
-                                                                    animate={{ opacity: 1, y: 0 }}
-                                                                    exit={{ opacity: 0, x: -100 }}
-                                                                    transition={{ duration: 0.2 }}
-                                                                    className="mb-2"
+                                    <AnimatePresence>
+                                        {timelineContent.map((item, index) => (
+                                            <motion.div
+                                                key={`${item.type}-${item.id}`}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, x: -100 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="mb-2"
+                                            >
+                                                {item.type === 'fullwall' ? (
+                                                    <div className="flex gap-2">
+                                                        <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
+                                                            <div className="flex gap-0.5">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-5 w-5 p-0"
+                                                                    onClick={() => moveInTimeline(item, 'up')}
+                                                                    disabled={index === 0}
                                                                 >
-                                                                    {item.type === 'fullwall' ? (
-                                                                        <div className="flex gap-2">
-                                                                            <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
-                                                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                                                                    <GripVertical className="h-4 w-4 text-gray-400" />
-                                                                                </div>
-                                                                                <div className="flex flex-col items-center flex-1">
-                                                                                    <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
-                                                                                    <div className="text-[10px] text-gray-500 mt-1">{item.duration}s</div>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className={`flex-1 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 rounded-lg p-3 transition-all ${
-                                                                                snapshot.isDragging ? 'border-purple-500 shadow-lg' : 'border-purple-300'
-                                                                            }`}>
+                                                                    <ArrowUp className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-5 w-5 p-0"
+                                                                    onClick={() => moveInTimeline(item, 'down')}
+                                                                    disabled={index === timelineContent.length - 1}
+                                                                >
+                                                                    <ArrowDown className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                            <div className="flex flex-col items-center flex-1">
+                                                                <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
+                                                                <div className="text-[10px] text-gray-500 mt-1">{item.duration}s</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-1 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-3 transition-all hover:shadow-md">
                                                                                 <div className="flex gap-3 items-center">
                                                                                     <div className="w-20 h-14 bg-gray-900 rounded overflow-hidden flex-shrink-0">
                                                                                         {item.media_type === 'video' ? (
@@ -575,29 +557,45 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                                             <Trash2 className="h-3 w-3 text-red-500" />
                                                                                         </Button>
                                                                                     </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="flex gap-2">
-                                                                            <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
-                                                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                                                                    <GripVertical className="h-4 w-4 text-gray-400" />
-                                                                                </div>
-                                                                                <div className="flex flex-col items-center flex-1">
-                                                                                    <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
-                                                                                    <div className="text-[10px] text-gray-500 mt-1">{item.duration}s</div>
-                                                                                </div>
-                                                                            </div>
-                                                                            {screens.map((screen) => {
-                                                                                const isCurrentScreen = screen.media_wall_config.position.row === item.position?.row &&
-                                                                                    screen.media_wall_config.position.col === item.position?.col;
-                                                                                return (
-                                                                                    <div key={screen.id} className="flex-1 min-w-[200px] max-w-[280px]">
-                                                                                        {isCurrentScreen ? (
-                                                                                            <div className={`bg-gradient-to-br from-blue-50 to-indigo-50 border-2 rounded-lg p-2 transition-all ${
-                                                                                                snapshot.isDragging ? 'border-blue-500 shadow-lg' : 'border-blue-300'
-                                                                                            }`}>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
+                                                                <div className="flex gap-0.5">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        className="h-5 w-5 p-0"
+                                                                        onClick={() => moveInTimeline(item, 'up')}
+                                                                        disabled={index === 0}
+                                                                    >
+                                                                        <ArrowUp className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        className="h-5 w-5 p-0"
+                                                                        onClick={() => moveInTimeline(item, 'down')}
+                                                                        disabled={index === timelineContent.length - 1}
+                                                                    >
+                                                                        <ArrowDown className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
+                                                                <div className="flex flex-col items-center flex-1">
+                                                                    <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
+                                                                    <div className="text-[10px] text-gray-500 mt-1">{item.duration}s</div>
+                                                                </div>
+                                                            </div>
+                                                            {screens.map((screen) => {
+                                                                const isCurrentScreen = screen.media_wall_config.position.row === item.position?.row &&
+                                                                    screen.media_wall_config.position.col === item.position?.col;
+                                                                return (
+                                                                    <div key={screen.id} className="flex-1 min-w-[200px] max-w-[280px]">
+                                                                        {isCurrentScreen ? (
+                                                                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-2 transition-all hover:shadow-md">
                                                                                                 <div className="flex gap-2 items-center">
                                                                                                     <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0">
                                                                                                         {item.media_type === 'video' ? (
@@ -664,22 +662,16 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                                                     Add
                                                                                                 </Button>
                                                                                             </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    )}
-                                                                </motion.div>
-                                                            )}
-                                                        </Draggable>
-                                                    ))}
-                                                </AnimatePresence>
-                                                {provided.placeholder}
-                                            </div>
-                                        )}
-                                    </Droppable>
-                                </DragDropContext>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
                             )}
                             
                             {(wallContent.length > 0 || individualContent.length > 0) && (
