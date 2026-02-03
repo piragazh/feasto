@@ -800,14 +800,9 @@ export default function ContentManagement({ restaurantId }) {
                         </div>
 
                         <div>
-                            <Label>Upload Media</Label>
+                            <Label>Media File</Label>
+                            <p className="text-xs text-gray-500 mb-2">Upload a new file or browse already uploaded files</p>
                             <div className="flex gap-2">
-                                <Input
-                                    type="file"
-                                    accept="image/*,video/*"
-                                    onChange={handleFileUpload}
-                                    className="flex-1"
-                                />
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -815,11 +810,28 @@ export default function ContentManagement({ restaurantId }) {
                                         setShowFileManager(true);
                                         setShowDialog(false);
                                     }}
+                                    className="flex-1"
                                 >
-                                    <FolderOpen className="h-4 w-4 mr-1" />
-                                    Browse
+                                    <FolderOpen className="h-4 w-4 mr-2" />
+                                    Browse Uploaded Files
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => document.getElementById('file-upload-input').click()}
+                                    className="flex-1"
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload New File
                                 </Button>
                             </div>
+                            <Input
+                                id="file-upload-input"
+                                type="file"
+                                accept="image/*,video/*"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
                             {formData.media_url && (
                                 <div className="mt-2 flex items-center justify-between">
                                     <p className="text-sm text-green-600">File selected</p>
