@@ -236,11 +236,11 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout })
                             </div>
 
                             {/* Properties Panel */}
-                            <div className="space-y-4">
+                            <div className="space-y-4 overflow-hidden">
                                 <h3 className="font-semibold">Zone Properties</h3>
                                 
                                 {selectedZoneData ? (
-                                    <Card className="p-4 space-y-4">
+                                    <Card className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium">Zone: {selectedZoneData.type}</span>
                                             <Button
