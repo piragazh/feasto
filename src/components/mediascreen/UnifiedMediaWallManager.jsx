@@ -925,34 +925,98 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                             <p className="text-sm text-gray-500 text-center py-4">No content for this screen</p>
                                         ) : (
                                             <div className="space-y-2">
-                                                {content.map((item) => (
+                                                {content.map((item, idx) => (
                                                     <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                                                        <div className="w-12 h-9 bg-gray-900 rounded overflow-hidden">
-                                                            {item.media_type === 'video' ? (
-                                                                <video src={item.media_url} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium truncate">{item.title}</p>
-                                                            <div className="flex gap-1 mt-1">
-                                                                <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
-                                                                {item.schedule?.enabled && (
-                                                                    <Badge variant="outline" className="text-[10px] bg-green-50">Scheduled</Badge>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-1">
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleSchedule(item, 'individual')}>
-                                                                <Clock className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
-                                                                <Trash2 className="h-3 w-3 text-red-500" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                         <div className="flex gap-0.5">
+                                                             <Button
+                                                                 size="sm"
+                                                                 variant="ghost"
+                                                                 className="h-6 w-6 p-0"
+                                                                 onClick={() => {
+                                                                     if (idx > 0) {
+                                                                         const swapItem = content[idx - 1];
+                                                                         const tempOrder = 999999;
+                                                                         updateIndividualMutation.mutate({
+                                                                             id: item.id,
+                                                                             data: { display_order: tempOrder }
+                                                                         });
+                                                                         setTimeout(() => {
+                                                                             updateIndividualMutation.mutate({
+                                                                                 id: swapItem.id,
+                                                                                 data: { display_order: item.display_order }
+                                                                             });
+                                                                             setTimeout(() => {
+                                                                                 updateIndividualMutation.mutate({
+                                                                                     id: item.id,
+                                                                                     data: { display_order: swapItem.display_order }
+                                                                                 });
+                                                                             }, 100);
+                                                                         }, 100);
+                                                                     }
+                                                                 }}
+                                                                 disabled={idx === 0}
+                                                                 title="Move up"
+                                                             >
+                                                                 <ArrowUp className="h-3 w-3" />
+                                                             </Button>
+                                                             <Button
+                                                                 size="sm"
+                                                                 variant="ghost"
+                                                                 className="h-6 w-6 p-0"
+                                                                 onClick={() => {
+                                                                     if (idx < content.length - 1) {
+                                                                         const swapItem = content[idx + 1];
+                                                                         const tempOrder = 999999;
+                                                                         updateIndividualMutation.mutate({
+                                                                             id: item.id,
+                                                                             data: { display_order: tempOrder }
+                                                                         });
+                                                                         setTimeout(() => {
+                                                                             updateIndividualMutation.mutate({
+                                                                                 id: swapItem.id,
+                                                                                 data: { display_order: item.display_order }
+                                                                             });
+                                                                             setTimeout(() => {
+                                                                                 updateIndividualMutation.mutate({
+                                                                                     id: item.id,
+                                                                                     data: { display_order: swapItem.display_order }
+                                                                                 });
+                                                                             }, 100);
+                                                                         }, 100);
+                                                                     }
+                                                                 }}
+                                                                 disabled={idx === content.length - 1}
+                                                                 title="Move down"
+                                                             >
+                                                                 <ArrowDown className="h-3 w-3" />
+                                                             </Button>
+                                                         </div>
+                                                         <div className="w-12 h-9 bg-gray-900 rounded overflow-hidden">
+                                                             {item.media_type === 'video' ? (
+                                                                 <video src={item.media_url} className="w-full h-full object-cover" />
+                                                             ) : (
+                                                                 <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                             )}
+                                                         </div>
+                                                         <div className="flex-1 min-w-0">
+                                                             <p className="text-sm font-medium truncate">{item.title}</p>
+                                                             <div className="flex gap-1 mt-1">
+                                                                 <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
+                                                                 {item.schedule?.enabled && (
+                                                                     <Badge variant="outline" className="text-[10px] bg-green-50">Scheduled</Badge>
+                                                                 )}
+                                                             </div>
+                                                         </div>
+                                                         <div className="flex gap-1">
+                                                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleSchedule(item, 'individual')}>
+                                                                 <Clock className="h-3 w-3" />
+                                                             </Button>
+                                                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
+                                                                 <Trash2 className="h-3 w-3 text-red-500" />
+                                                             </Button>
+                                                         </div>
+                                                     </div>
+                                                 ))}
                                             </div>
                                         )}
                                     </CardContent>
