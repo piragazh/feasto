@@ -363,28 +363,34 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     ].sort((a, b) => a.display_order - b.display_order);
 
     const moveInTimeline = async (item, direction) => {
-        const currentIndex = timelineContent.findIndex(c => c.id === item.id && c.type === item.type);
-        if (
-            (direction === 'up' && currentIndex === 0) || 
-            (direction === 'down' && currentIndex === timelineContent.length - 1)
-        ) {
-            return;
+        try {
+            const currentIndex = timelineContent.findIndex(c => c.id === item.id && c.type === item.type);
+            if (
+                (direction === 'up' && currentIndex === 0) || 
+                (direction === 'down' && currentIndex === timelineContent.length - 1)
+            ) {
+                return;
+            }
+
+            const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+            const swapItem = timelineContent[swapIndex];
+
+            const mutation1 = item.type === 'fullwall' ? updateWallMutation : updateIndividualMutation;
+            const mutation2 = swapItem.type === 'fullwall' ? updateWallMutation : updateIndividualMutation;
+
+            await mutation1.mutateAsync({ 
+                id: item.id, 
+                data: { display_order: swapItem.display_order } 
+            });
+            await mutation2.mutateAsync({ 
+                id: swapItem.id, 
+                data: { display_order: item.display_order } 
+            });
+            toast.success('Order updated');
+        } catch (error) {
+            console.error('Move failed:', error);
+            toast.error('Failed to reorder content');
         }
-
-        const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-        const swapItem = timelineContent[swapIndex];
-
-        const mutation1 = item.type === 'fullwall' ? updateWallMutation : updateIndividualMutation;
-        const mutation2 = swapItem.type === 'fullwall' ? updateWallMutation : updateIndividualMutation;
-
-        await mutation1.mutateAsync({ 
-            id: item.id, 
-            data: { display_order: swapItem.display_order } 
-        });
-        await mutation2.mutateAsync({ 
-            id: swapItem.id, 
-            data: { display_order: item.display_order } 
-        });
     };
 
     const moveToScreen = async (item, newScreenPosition) => {
