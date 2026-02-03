@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContentScheduler from './ContentScheduler';
