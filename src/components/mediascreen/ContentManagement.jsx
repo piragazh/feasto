@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3 } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
 import AIContentAssistant from './AIContentAssistant';
@@ -21,6 +21,7 @@ import VideoEditor from './VideoEditor';
 import ScreenControl from './ScreenControl';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import MediaWallConfigurator from './MediaWallConfigurator';
+import ContentScheduler from './ContentScheduler';
 import { createPageUrl } from '@/utils';
 
 export default function ContentManagement({ restaurantId }) {
@@ -37,6 +38,8 @@ export default function ContentManagement({ restaurantId }) {
     const [photoToEdit, setPhotoToEdit] = useState(null);
     const [showMediaWallConfig, setShowMediaWallConfig] = useState(false);
     const [configuringWallScreen, setConfiguringWallScreen] = useState(null);
+    const [showScheduler, setShowScheduler] = useState(false);
+    const [schedulingContent, setSchedulingContent] = useState(null);
     const [videoToEdit, setVideoToEdit] = useState(null);
     const [selectedScreen, setSelectedScreen] = useState('all');
     const [restaurant, setRestaurant] = useState(null);
@@ -266,6 +269,73 @@ export default function ContentManagement({ restaurantId }) {
         } catch (error) {
             toast.error('Failed to update orientation');
         }
+    };
+
+    const handleSchedule = (content) => {
+        setSchedulingContent(content);
+        setShowScheduler(true);
+    };
+
+    const handleSaveSchedule = async ({ schedule, priority }) => {
+        if (!schedulingContent) return;
+        
+        try {
+            await updateMutation.mutateAsync({
+                id: schedulingContent.id,
+                data: { schedule, priority }
+            });
+            toast.success('Schedule updated successfully');
+            setShowScheduler(false);
+            setSchedulingContent(null);
+        } catch (error) {
+            toast.error('Failed to update schedule');
+        }
+    };
+
+    const getScheduleBadge = (content) => {
+        if (!content.schedule?.enabled) return null;
+        
+        const now = new Date();
+        const isActive = isContentScheduleActive(content, now);
+        
+        return (
+            <Badge 
+                variant="outline" 
+                className={isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600'}
+            >
+                <Calendar className="h-3 w-3 mr-1" />
+                Scheduled
+            </Badge>
+        );
+    };
+
+    const isContentScheduleActive = (content, currentTime) => {
+        if (!content.schedule?.enabled) return true;
+        
+        const schedule = content.schedule;
+        const now = currentTime || new Date();
+        
+        // Check date range
+        if (schedule.start_date && new Date(schedule.start_date) > now) return false;
+        if (schedule.end_date && new Date(schedule.end_date) < now) return false;
+        
+        // Check recurring schedule
+        if (schedule.recurring?.enabled) {
+            const currentDay = now.getDay();
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // Check if current day is selected
+            if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
+            
+            // Check if current time is within any time range
+            const inTimeRange = schedule.recurring.time_ranges?.some(range => {
+                return currentTime >= range.start_time && currentTime <= range.end_time;
+            });
+            
+            if (!inTimeRange) return false;
+        }
+        
+        return true;
     };
 
     const handleSubmit = async () => {
@@ -713,6 +783,12 @@ export default function ContentManagement({ restaurantId }) {
                                                 ) : (
                                                     <Badge variant="outline">{content.duration}s</Badge>
                                                 )}
+                                                {content.priority && content.priority > 1 && (
+                                                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                                        Priority: {content.priority}
+                                                    </Badge>
+                                                )}
+                                                {getScheduleBadge(content)}
                                                 {content.ai_generated && (
                                                     <Badge className="bg-purple-100 text-purple-800">
                                                         <Sparkles className="h-3 w-3 mr-1" />
@@ -723,6 +799,14 @@ export default function ContentManagement({ restaurantId }) {
                                         </div>
 
                                         <div className="flex flex-col gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleSchedule(content)}
+                                                title="Schedule"
+                                            >
+                                                <Clock className="h-4 w-4" />
+                                            </Button>
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
@@ -1017,6 +1101,16 @@ export default function ContentManagement({ restaurantId }) {
                     />
                 </DialogContent>
             </Dialog>
+
+            <ContentScheduler
+                open={showScheduler}
+                onClose={() => {
+                    setShowScheduler(false);
+                    setSchedulingContent(null);
+                }}
+                content={schedulingContent}
+                onSave={handleSaveSchedule}
+            />
 
             <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>
                 <DialogContent>

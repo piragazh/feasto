@@ -39,12 +39,46 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 screen_name: screenName,
                 is_active: true
             });
-            return allContent.sort((a, b) => a.display_order - b.display_order);
+            
+            // Filter by schedule and sort by priority, then display order
+            const now = new Date();
+            const scheduledContent = allContent.filter(item => {
+                if (!item.schedule?.enabled) return true;
+                
+                const schedule = item.schedule;
+                
+                // Check date range
+                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
+                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
+                
+                // Check recurring schedule
+                if (schedule.recurring?.enabled) {
+                    const currentDay = now.getDay();
+                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    
+                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
+                    
+                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
+                        return currentTime >= range.start_time && currentTime <= range.end_time;
+                    });
+                    
+                    if (!inTimeRange) return false;
+                }
+                
+                return true;
+            });
+            
+            // Sort by priority (descending) then display_order (ascending)
+            return scheduledContent.sort((a, b) => {
+                const priorityDiff = (b.priority || 1) - (a.priority || 1);
+                if (priorityDiff !== 0) return priorityDiff;
+                return a.display_order - b.display_order;
+            });
         },
         enabled: !!restaurantId && !!screenName,
-        staleTime: 60000,
+        staleTime: 30000,
         gcTime: 300000,
-        refetchInterval: 60000,
+        refetchInterval: 30000,
     });
 
     const { data: weather } = useQuery({
