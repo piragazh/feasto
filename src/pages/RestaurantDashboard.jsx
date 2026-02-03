@@ -104,6 +104,29 @@ export default function RestaurantDashboard() {
         requestNotificationPermission();
     }, []);
 
+    // Track dashboard activity every 5 minutes
+    useEffect(() => {
+        if (!restaurant?.id) return;
+
+        const trackActivity = async () => {
+            try {
+                await base44.functions.invoke('trackDashboardActivity', {
+                    restaurant_id: restaurant.id
+                });
+            } catch (error) {
+                console.error('Failed to track activity:', error);
+            }
+        };
+
+        // Track immediately on mount
+        trackActivity();
+
+        // Then track every 5 minutes
+        const interval = setInterval(trackActivity, 5 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [restaurant?.id]);
+
     const loadUserAndRestaurant = async () => {
         try {
             const userData = await base44.auth.me();
