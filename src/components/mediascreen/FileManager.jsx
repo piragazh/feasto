@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Image, Video, File, Search, Folder, FolderPlus, Tag, Edit, Eye, X, Grid3x3, List } from 'lucide-react';
+import { Trash2, Image, Video, File, Search, Folder, FolderPlus, Tag, Edit, Eye, X, Grid3x3, List, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
 
