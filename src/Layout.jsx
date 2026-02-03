@@ -262,9 +262,9 @@ export default function Layout({ children, currentPageName }) {
         }
     };
 
-    const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp', 'MediaScreen'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen'].includes(currentPageName);
+    const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap'].includes(currentPageName);
     
     // Custom domain home link
     const homeUrl = customDomainRestaurantId 

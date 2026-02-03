@@ -7,6 +7,7 @@ export default function Sitemap() {
 
     useEffect(() => {
         generateSitemap();
+        document.querySelector('meta[name="robots"]')?.remove();
     }, []);
 
     const generateSitemap = async () => {
@@ -78,20 +79,19 @@ export default function Sitemap() {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <p className="text-gray-600">Generating sitemap...</p>
-            </div>
-        );
+        return <div style={{ fontFamily: 'monospace', padding: '20px' }}>Generating sitemap...</div>;
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4">
-            <div className="max-w-4xl mx-auto">
-                <pre className="bg-white p-4 rounded-lg shadow overflow-x-auto text-xs">
-                    {sitemap}
-                </pre>
-            </div>
-        </div>
+        <pre style={{ 
+            margin: 0, 
+            padding: 0, 
+            fontFamily: 'monospace', 
+            fontSize: '12px',
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word'
+        }}>
+            {sitemap}
+        </pre>
     );
 }
