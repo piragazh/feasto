@@ -386,131 +386,132 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile 
                         </div>
                     </div>
                 </div>
-
-                {/* New Folder Dialog */}
-                <Dialog open={showNewFolder} onOpenChange={setShowNewFolder}>
-                    <DialogContent className="max-w-sm">
-                        <DialogHeader>
-                            <DialogTitle>Create New Folder</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div>
-                                <Label>Folder Name</Label>
-                                <Input
-                                    value={newFolderName}
-                                    onChange={(e) => setNewFolderName(e.target.value)}
-                                    placeholder="e.g., Seasonal Promotions"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button onClick={handleCreateFolder} className="flex-1">Create</Button>
-                                <Button variant="outline" onClick={() => setShowNewFolder(false)}>Cancel</Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Edit Tags Dialog */}
-                <Dialog open={!!editingFile} onOpenChange={() => setEditingFile(null)}>
-                    <DialogContent className="max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Edit Tags</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div>
-                                <Label>File: {editingFile?.file_name}</Label>
-                            </div>
-                            <div>
-                                <Label>Tags</Label>
-                                <div className="flex gap-2 flex-wrap mt-2 mb-2">
-                                    {editTags.map(tag => (
-                                        <Badge key={tag} className="gap-1">
-                                            {tag}
-                                            <X className="h-3 w-3 cursor-pointer" onClick={() => setEditTags(editTags.filter(t => t !== tag))} />
-                                        </Badge>
-                                    ))}
-                                </div>
-                                <div className="flex gap-2">
-                                    <Input
-                                        value={newTag}
-                                        onChange={(e) => setNewTag(e.target.value)}
-                                        placeholder="Add tag..."
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
-                                    />
-                                    <Button onClick={handleAddTag}>Add</Button>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button onClick={handleSaveTags} className="flex-1">Save</Button>
-                                <Button variant="outline" onClick={() => setEditingFile(null)}>Cancel</Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Preview Dialog */}
-                <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-                    <DialogContent className="max-w-4xl">
-                        <DialogHeader>
-                            <DialogTitle>{previewFile?.file_name}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center" style={{ maxHeight: '60vh' }}>
-                                {previewFile?.file_type?.startsWith('video/') ? (
-                                    <video src={previewFile.file_url} controls className="max-w-full max-h-[60vh]" />
-                                ) : previewFile?.file_type?.startsWith('image/') ? (
-                                    <img src={previewFile.file_url} alt={previewFile.file_name} className="max-w-full max-h-[60vh] object-contain" />
-                                ) : (
-                                    <div className="p-8 text-center">
-                                        {getFileIcon(previewFile?.file_type)}
-                                        <p className="mt-2 text-gray-500">Preview not available</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <Label className="text-xs text-gray-500">File Size</Label>
-                                    <p>{formatFileSize(previewFile?.file_size)}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-xs text-gray-500">Upload Date</Label>
-                                    <p>{moment(previewFile?.created_date).format('MMM D, YYYY h:mm A')}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-xs text-gray-500">Type</Label>
-                                    <p>{previewFile?.file_type}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-xs text-gray-500">Folder</Label>
-                                    <p>{previewFile?.folder || 'All Files'}</p>
-                                </div>
-                                {previewFile?.tags && previewFile.tags.length > 0 && (
-                                    <div className="col-span-2">
-                                        <Label className="text-xs text-gray-500 mb-2 block">Tags</Label>
-                                        <div className="flex gap-1 flex-wrap">
-                                            {previewFile.tags.map(tag => (
-                                                <Badge key={tag} variant="outline">{tag}</Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
-                                {onSelectFile && (
-                                    <Button onClick={() => {
-                                        onSelectFile(previewFile.file_url, previewFile.file_type);
-                                        onClose();
-                                    }} className="flex-1">
-                                        Use This File
-                                    </Button>
-                                )}
-                                <Button variant="outline" onClick={() => setPreviewFile(null)}>Close</Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
             </DialogContent>
         </Dialog>
+
+        {/* New Folder Dialog */}
+        <Dialog open={showNewFolder} onOpenChange={setShowNewFolder}>
+            <DialogContent className="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Create New Folder</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <div>
+                        <Label>Folder Name</Label>
+                        <Input
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            placeholder="e.g., Seasonal Promotions"
+                            onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={handleCreateFolder} className="flex-1">Create</Button>
+                        <Button variant="outline" onClick={() => setShowNewFolder(false)}>Cancel</Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        {/* Edit Tags Dialog */}
+        <Dialog open={!!editingFile} onOpenChange={() => setEditingFile(null)}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Edit Tags</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <div>
+                        <Label>File: {editingFile?.file_name}</Label>
+                    </div>
+                    <div>
+                        <Label>Tags</Label>
+                        <div className="flex gap-2 flex-wrap mt-2 mb-2">
+                            {editTags.map(tag => (
+                                <Badge key={tag} className="gap-1">
+                                    {tag}
+                                    <X className="h-3 w-3 cursor-pointer" onClick={() => setEditTags(editTags.filter(t => t !== tag))} />
+                                </Badge>
+                            ))}
+                        </div>
+                        <div className="flex gap-2">
+                            <Input
+                                value={newTag}
+                                onChange={(e) => setNewTag(e.target.value)}
+                                placeholder="Add tag..."
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
+                            />
+                            <Button onClick={handleAddTag}>Add</Button>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={handleSaveTags} className="flex-1">Save</Button>
+                        <Button variant="outline" onClick={() => setEditingFile(null)}>Cancel</Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        {/* Preview Dialog */}
+        <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+            <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>{previewFile?.file_name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <div className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center" style={{ maxHeight: '60vh' }}>
+                        {previewFile?.file_type?.startsWith('video/') ? (
+                            <video src={previewFile.file_url} controls className="max-w-full max-h-[60vh]" />
+                        ) : previewFile?.file_type?.startsWith('image/') ? (
+                            <img src={previewFile.file_url} alt={previewFile.file_name} className="max-w-full max-h-[60vh] object-contain" />
+                        ) : (
+                            <div className="p-8 text-center">
+                                {getFileIcon(previewFile?.file_type)}
+                                <p className="mt-2 text-gray-500">Preview not available</p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <Label className="text-xs text-gray-500">File Size</Label>
+                            <p>{formatFileSize(previewFile?.file_size)}</p>
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Upload Date</Label>
+                            <p>{moment(previewFile?.created_date).format('MMM D, YYYY h:mm A')}</p>
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Type</Label>
+                            <p>{previewFile?.file_type}</p>
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Folder</Label>
+                            <p>{previewFile?.folder || 'All Files'}</p>
+                        </div>
+                        {previewFile?.tags && previewFile.tags.length > 0 && (
+                            <div className="col-span-2">
+                                <Label className="text-xs text-gray-500 mb-2 block">Tags</Label>
+                                <div className="flex gap-1 flex-wrap">
+                                    {previewFile.tags.map(tag => (
+                                        <Badge key={tag} variant="outline">{tag}</Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        {onSelectFile && (
+                            <Button onClick={() => {
+                                onSelectFile(previewFile.file_url, previewFile.file_type);
+                                onClose();
+                            }} className="flex-1">
+                                Use This File
+                            </Button>
+                        )}
+                        <Button variant="outline" onClick={() => setPreviewFile(null)}>Close</Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    </>
     );
 }
