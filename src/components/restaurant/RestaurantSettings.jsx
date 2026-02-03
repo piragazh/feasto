@@ -51,6 +51,13 @@ export default function RestaurantSettings({ restaurantId }) {
         printer_config: {
             printer_width: '80mm',
             font_size: 'medium',
+            font_weight: 'normal',
+            font_style: 'normal',
+            header_font_size: 'large',
+            header_font_weight: 'bold',
+            item_font_size: 'medium',
+            total_font_size: 'large',
+            total_font_weight: 'bold',
             template: 'standard',
             header_text: '',
             footer_text: '',
@@ -113,6 +120,13 @@ export default function RestaurantSettings({ restaurantId }) {
                 printer_config: {
                     printer_width: restaurant.printer_config?.printer_width || '80mm',
                     font_size: restaurant.printer_config?.font_size || 'medium',
+                    font_weight: restaurant.printer_config?.font_weight || 'normal',
+                    font_style: restaurant.printer_config?.font_style || 'normal',
+                    header_font_size: restaurant.printer_config?.header_font_size || 'large',
+                    header_font_weight: restaurant.printer_config?.header_font_weight || 'bold',
+                    item_font_size: restaurant.printer_config?.item_font_size || 'medium',
+                    total_font_size: restaurant.printer_config?.total_font_size || 'large',
+                    total_font_weight: restaurant.printer_config?.total_font_weight || 'bold',
                     template: restaurant.printer_config?.template || 'standard',
                     header_text: restaurant.printer_config?.header_text || '',
                     footer_text: restaurant.printer_config?.footer_text || '',
@@ -698,21 +712,137 @@ export default function RestaurantSettings({ restaurantId }) {
                                 </select>
                                 <p className="text-xs text-gray-500 mt-1">Select your thermal printer paper width</p>
                             </div>
-                            <div>
-                                <Label>Font Size</Label>
-                                <select
-                                    value={formData.printer_config.font_size}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        printer_config: { ...formData.printer_config, font_size: e.target.value }
-                                    })}
-                                    className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
-                                >
-                                    <option value="small">Small</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="large">Large</option>
-                                </select>
-                                <p className="text-xs text-gray-500 mt-1">Choose text size for readability</p>
+                        </div>
+
+                        <div className="border-t pt-6">
+                            <Label className="text-base font-semibold mb-4 block">Font Customization</Label>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Base Font Size</Label>
+                                    <select
+                                        value={formData.printer_config.font_size}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, font_size: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="small">Small</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="large">Large</option>
+                                        <option value="extra-large">Extra Large</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <Label>Base Font Weight</Label>
+                                    <select
+                                        value={formData.printer_config.font_weight}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, font_weight: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="bold">Bold</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <Label>Font Style</Label>
+                                    <select
+                                        value={formData.printer_config.font_style}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, font_style: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="italic">Italic</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="border-t pt-4">
+                            <Label className="text-sm font-medium mb-3 block text-gray-700">Section-Specific Fonts</Label>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Header Font Size</Label>
+                                    <select
+                                        value={formData.printer_config.header_font_size}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, header_font_size: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="small">Small</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="large">Large</option>
+                                        <option value="extra-large">Extra Large</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Header Font Weight</Label>
+                                    <select
+                                        value={formData.printer_config.header_font_weight}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, header_font_weight: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="bold">Bold</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Items Font Size</Label>
+                                    <select
+                                        value={formData.printer_config.item_font_size}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, item_font_size: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="small">Small</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="large">Large</option>
+                                        <option value="extra-large">Extra Large</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Total Font Size</Label>
+                                    <select
+                                        value={formData.printer_config.total_font_size}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, total_font_size: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="small">Small</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="large">Large</option>
+                                        <option value="extra-large">Extra Large</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Total Font Weight</Label>
+                                    <select
+                                        value={formData.printer_config.total_font_weight}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            printer_config: { ...formData.printer_config, total_font_weight: e.target.value }
+                                        })}
+                                        className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
+                                    >
+                                        <option value="normal">Normal</option>
+                                        <option value="bold">Bold</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
