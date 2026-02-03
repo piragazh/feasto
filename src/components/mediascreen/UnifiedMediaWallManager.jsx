@@ -58,6 +58,8 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             }
             return allContent;
         },
+        staleTime: 30000,
+        gcTime: 60000,
         enabled: !!restaurantId && !!wallName
     });
 
@@ -67,6 +69,8 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             restaurant_id: restaurantId,
             wall_name: wallName 
         }),
+        staleTime: 30000,
+        gcTime: 60000,
         enabled: !!restaurantId && !!wallName
     });
 
@@ -77,6 +81,8 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             'media_wall_config.wall_name': wallName,
             'media_wall_config.enabled': true
         }),
+        staleTime: 30000,
+        gcTime: 60000,
         enabled: !!restaurantId && !!wallName
     });
 
