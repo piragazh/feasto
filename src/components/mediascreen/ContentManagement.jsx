@@ -19,6 +19,7 @@ import LayoutDesigner from './LayoutDesigner';
 import EnhancedFileUploader from './EnhancedFileUploader';
 import VideoEditor from './VideoEditor';
 import ScreenControl from './ScreenControl';
+import MediaWallManager from './MediaWallManager';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import MediaWallConfigurator from './MediaWallConfigurator';
 import ContentScheduler from './ContentScheduler';
