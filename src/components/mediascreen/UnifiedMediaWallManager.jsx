@@ -633,38 +633,56 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                                                 </Badge>
                                                                                             )}
                                                                                         </div>
-                                                                                        <div className="flex gap-0.5 mt-1">
-                                                                                            <Switch
-                                                                                                checked={item.is_active}
-                                                                                                onCheckedChange={(checked) => updateIndividualMutation.mutate({ id: item.id, data: { is_active: checked } })}
-                                                                                                className="scale-75"
-                                                                                            />
-                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
-                                                                                                <Copy className="h-2.5 w-2.5" />
-                                                                                            </Button>
-                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
-                                                                                                <Clock className="h-2.5 w-2.5" />
-                                                                                            </Button>
-                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
-                                                                                                setEditingContent(item);
-                                                                                                setContentMode('individual');
-                                                                                                setSelectedPosition(item.position);
-                                                                                                setFormData({
-                                                                                                    title: item.title,
-                                                                                                    description: item.description,
-                                                                                                    media_url: item.media_url,
-                                                                                                    media_type: item.media_type,
-                                                                                                    duration: item.duration,
-                                                                                                    priority: item.priority || 1,
-                                                                                                    is_active: item.is_active
-                                                                                                });
-                                                                                                setShowDialog(true);
-                                                                                            }}>
-                                                                                                <Edit className="h-2.5 w-2.5" />
-                                                                                            </Button>
-                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
-                                                                                                <Trash2 className="h-2.5 w-2.5 text-red-500" />
-                                                                                            </Button>
+                                                                                        <div className="flex gap-0.5 mt-1 flex-wrap">
+                                                                                           <Switch
+                                                                                               checked={item.is_active}
+                                                                                               onCheckedChange={(checked) => updateIndividualMutation.mutate({ id: item.id, data: { is_active: checked } })}
+                                                                                               className="scale-75"
+                                                                                           />
+                                                                                           <Select onValueChange={(value) => {
+                                                                                               const [row, col] = value.split(',').map(Number);
+                                                                                               moveToScreen(item, { row, col });
+                                                                                           }}>
+                                                                                               <SelectTrigger className="h-5 w-5 p-0 border-0">
+                                                                                                   <MoveRight className="h-2.5 w-2.5" />
+                                                                                               </SelectTrigger>
+                                                                                               <SelectContent>
+                                                                                                   {screens.filter(s => 
+                                                                                                       s.media_wall_config.position.row !== item.position?.row ||
+                                                                                                       s.media_wall_config.position.col !== item.position?.col
+                                                                                                   ).map(s => (
+                                                                                                       <SelectItem key={s.id} value={`${s.media_wall_config.position.row},${s.media_wall_config.position.col}`}>
+                                                                                                           {s.screen_name}
+                                                                                                       </SelectItem>
+                                                                                                   ))}
+                                                                                               </SelectContent>
+                                                                                           </Select>
+                                                                                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
+                                                                                               <Copy className="h-2.5 w-2.5" />
+                                                                                           </Button>
+                                                                                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
+                                                                                               <Clock className="h-2.5 w-2.5" />
+                                                                                           </Button>
+                                                                                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
+                                                                                               setEditingContent(item);
+                                                                                               setContentMode('individual');
+                                                                                               setSelectedPosition(item.position);
+                                                                                               setFormData({
+                                                                                                   title: item.title,
+                                                                                                   description: item.description,
+                                                                                                   media_url: item.media_url,
+                                                                                                   media_type: item.media_type,
+                                                                                                   duration: item.duration,
+                                                                                                   priority: item.priority || 1,
+                                                                                                   is_active: item.is_active
+                                                                                               });
+                                                                                               setShowDialog(true);
+                                                                                           }}>
+                                                                                               <Edit className="h-2.5 w-2.5" />
+                                                                                           </Button>
+                                                                                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
+                                                                                               <Trash2 className="h-2.5 w-2.5 text-red-500" />
+                                                                                           </Button>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
