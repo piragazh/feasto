@@ -385,6 +385,25 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
         });
     };
 
+    const moveToScreen = async (item, newScreenPosition) => {
+        const newScreen = screens.find(s => 
+            s.media_wall_config.position.row === newScreenPosition.row &&
+            s.media_wall_config.position.col === newScreenPosition.col
+        );
+        
+        if (!newScreen) {
+            toast.error('Screen not found');
+            return;
+        }
+
+        await updateIndividualMutation.mutateAsync({
+            id: item.id,
+            data: { screen_name: newScreen.screen_name }
+        });
+        
+        toast.success(`Moved to ${newScreen.screen_name}`);
+    };
+
     return (
         <div className="space-y-6">
             <Tabs defaultValue="timeline">
