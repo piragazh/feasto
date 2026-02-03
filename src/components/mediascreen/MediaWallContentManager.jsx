@@ -411,12 +411,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
             <FileManager
                 restaurantId={restaurantId}
                 open={showFileManager}
-                onClose={() => {
-                    setShowFileManager(false);
-                    if (!formData.media_url) {
-                        setShowDialog(true);
-                    }
-                }}
+                onClose={() => setShowFileManager(false)}
                 onSelectFile={(fileUrl, fileType) => {
                     const mediaType = fileType.startsWith('video/') ? 'video' : 'image';
                     setFormData(prev => ({ 
