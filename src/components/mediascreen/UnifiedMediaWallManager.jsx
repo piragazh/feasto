@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { motion, AnimatePresence } from 'framer-motion';
 import ContentScheduler from './ContentScheduler';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
@@ -127,6 +129,77 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             toast.success('Wall content deleted');
         }
     });
+
+    const handleDragEnd = async (result) => {
+        if (!result.destination) return;
+
+        const sourceIndex = result.source.index;
+        const destIndex = result.destination.index;
+
+        if (sourceIndex === destIndex) return;
+
+        const items = [...timelineContent];
+        const [reorderedItem] = items.splice(sourceIndex, 1);
+        items.splice(destIndex, 0, reorderedItem);
+
+        // Update display_order for all affected items
+        try {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const mutation = item.type === 'fullwall' ? updateWallMutation : updateIndividualMutation;
+                await mutation.mutateAsync({
+                    id: item.id,
+                    data: { display_order: i }
+                });
+            }
+            toast.success('Order updated');
+        } catch (error) {
+            toast.error('Failed to reorder');
+        }
+    };
+
+    const handleDuplicate = async (item) => {
+        try {
+            if (item.type === 'fullwall') {
+                await createWallMutation.mutateAsync({
+                    restaurant_id: restaurantId,
+                    wall_name: wallName,
+                    title: `${item.title} (Copy)`,
+                    description: item.description,
+                    media_url: item.media_url,
+                    media_type: item.media_type,
+                    duration: item.duration,
+                    priority: item.priority,
+                    is_active: item.is_active,
+                    display_order: wallContent.length,
+                    schedule: item.schedule
+                });
+            } else {
+                const screen = screens.find(s => 
+                    s.media_wall_config.position.row === item.position?.row &&
+                    s.media_wall_config.position.col === item.position?.col
+                );
+                if (screen) {
+                    await createIndividualMutation.mutateAsync({
+                        restaurant_id: restaurantId,
+                        screen_name: screen.screen_name,
+                        title: `${item.title} (Copy)`,
+                        description: item.description,
+                        media_url: item.media_url,
+                        media_type: item.media_type,
+                        duration: item.duration,
+                        priority: item.priority || 1,
+                        is_active: item.is_active,
+                        display_order: item.display_order + 1,
+                        schedule: item.schedule
+                    });
+                }
+            }
+            toast.success('Content duplicated');
+        } catch (error) {
+            toast.error('Failed to duplicate');
+        }
+    };
 
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
@@ -396,10 +469,10 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                     </div>
                                 </div>
                             ) : (
-                                <div>
+                                <DragDropContext onDragEnd={handleDragEnd}>
                                     {/* Header Row */}
                                     <div className="flex gap-2 mb-2 pb-2 border-b sticky top-0 bg-white z-10">
-                                        <div className="w-24 flex-shrink-0 font-semibold text-sm text-gray-700">
+                                        <div className="w-32 flex-shrink-0 font-semibold text-sm text-gray-700">
                                             Timeline
                                         </div>
                                         {screens.map(screen => (
@@ -415,8 +488,201 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                         ))}
                                     </div>
 
-                                    {/* Content Rows - Full Wall Content */}
-                                    {wallContent.map((item, index) => (
+                                    <Droppable droppableId="timeline">
+                                        {(provided) => (
+                                            <div {...provided.droppableProps} ref={provided.innerRef}>
+                                                <AnimatePresence>
+                                                    {timelineContent.map((item, index) => (
+                                                        <Draggable key={`${item.type}-${item.id}`} draggableId={`${item.type}-${item.id}`} index={index}>
+                                                            {(provided, snapshot) => (
+                                                                <motion.div
+                                                                    ref={provided.innerRef}
+                                                                    {...provided.draggableProps}
+                                                                    initial={{ opacity: 0, y: 20 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    exit={{ opacity: 0, x: -100 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                    className="mb-2"
+                                                                >
+                                                                    {item.type === 'fullwall' ? (
+                                                                        <div className="flex gap-2">
+                                                                            <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
+                                                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                                                                    <GripVertical className="h-4 w-4 text-gray-400" />
+                                                                                </div>
+                                                                                <div className="flex flex-col items-center flex-1">
+                                                                                    <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
+                                                                                    <div className="text-[10px] text-gray-500 mt-1">{item.duration}s</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className={`flex-1 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 rounded-lg p-3 transition-all ${
+                                                                                snapshot.isDragging ? 'border-purple-500 shadow-lg' : 'border-purple-300'
+                                                                            }`}>
+                                                                                <div className="flex gap-3 items-center">
+                                                                                    <div className="w-20 h-14 bg-gray-900 rounded overflow-hidden flex-shrink-0">
+                                                                                        {item.media_type === 'video' ? (
+                                                                                            <video src={item.media_url} className="w-full h-full object-cover" />
+                                                                                        ) : (
+                                                                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <Badge className="bg-purple-600 text-white mb-1">
+                                                                                            <Maximize2 className="h-3 w-3 mr-1" />
+                                                                                            Full Wall - All Screens
+                                                                                        </Badge>
+                                                                                        <p className="font-semibold text-sm truncate">{item.title}</p>
+                                                                                        <div className="flex gap-1 mt-1">
+                                                                                            <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
+                                                                                            {item.priority > 1 && (
+                                                                                                <Badge variant="outline" className="text-[10px] bg-orange-50">P:{item.priority}</Badge>
+                                                                                            )}
+                                                                                            {item.schedule?.enabled && (
+                                                                                                <Badge variant="outline" className="text-[10px] bg-green-50">
+                                                                                                    <Calendar className="h-2 w-2 mr-1" />Scheduled
+                                                                                                </Badge>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <Switch
+                                                                                            checked={item.is_active}
+                                                                                            onCheckedChange={(checked) => updateWallMutation.mutate({ id: item.id, data: { is_active: checked } })}
+                                                                                        />
+                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
+                                                                                            <Copy className="h-3 w-3" />
+                                                                                        </Button>
+                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleSchedule(item, 'fullwall')}>
+                                                                                            <Clock className="h-3 w-3" />
+                                                                                        </Button>
+                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                                                                                            setEditingContent(item);
+                                                                                            setContentMode('fullwall');
+                                                                                            setFormData({
+                                                                                                title: item.title,
+                                                                                                description: item.description,
+                                                                                                media_url: item.media_url,
+                                                                                                media_type: item.media_type,
+                                                                                                duration: item.duration,
+                                                                                                priority: item.priority,
+                                                                                                is_active: item.is_active
+                                                                                            });
+                                                                                            setShowDialog(true);
+                                                                                        }}>
+                                                                                            <Edit className="h-3 w-3" />
+                                                                                        </Button>
+                                                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => deleteWallMutation.mutate(item.id)}>
+                                                                                            <Trash2 className="h-3 w-3 text-red-500" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex gap-2">
+                                                                            <div className="w-32 flex-shrink-0 flex items-center gap-2 border-r pr-2">
+                                                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                                                                    <GripVertical className="h-4 w-4 text-gray-400" />
+                                                                                </div>
+                                                                                <div className="flex flex-col items-center flex-1">
+                                                                                    <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
+                                                                                    <div className="text-[10px] text-gray-500 mt-1">{item.duration}s</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            {screens.map((screen) => {
+                                                                                const isCurrentScreen = screen.media_wall_config.position.row === item.position?.row &&
+                                                                                    screen.media_wall_config.position.col === item.position?.col;
+                                                                                return (
+                                                                                    <div key={screen.id} className="flex-1 min-w-[200px] max-w-[280px]">
+                                                                                        {isCurrentScreen ? (
+                                                                                            <div className={`bg-gradient-to-br from-blue-50 to-indigo-50 border-2 rounded-lg p-2 transition-all ${
+                                                                                                snapshot.isDragging ? 'border-blue-500 shadow-lg' : 'border-blue-300'
+                                                                                            }`}>
+                                                                                                <div className="flex gap-2 items-center">
+                                                                                                    <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0">
+                                                                                                        {item.media_type === 'video' ? (
+                                                                                                            <video src={item.media_url} className="w-full h-full object-cover" />
+                                                                                                        ) : (
+                                                                                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                    <div className="flex-1 min-w-0">
+                                                                                                        <p className="text-xs font-semibold truncate">{item.title}</p>
+                                                                                                        <div className="flex gap-1 mt-1">
+                                                                                                            <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
+                                                                                                            {item.schedule?.enabled && (
+                                                                                                                <Badge variant="outline" className="text-[10px] bg-green-50">
+                                                                                                                    <Calendar className="h-2 w-2" />
+                                                                                                                </Badge>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                        <div className="flex gap-0.5 mt-1">
+                                                                                                            <Switch
+                                                                                                                checked={item.is_active}
+                                                                                                                onCheckedChange={(checked) => updateIndividualMutation.mutate({ id: item.id, data: { is_active: checked } })}
+                                                                                                                className="scale-75"
+                                                                                                            />
+                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleDuplicate(item)} title="Duplicate">
+                                                                                                                <Copy className="h-2.5 w-2.5" />
+                                                                                                            </Button>
+                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
+                                                                                                                <Clock className="h-2.5 w-2.5" />
+                                                                                                            </Button>
+                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
+                                                                                                                setEditingContent(item);
+                                                                                                                setContentMode('individual');
+                                                                                                                setSelectedPosition(item.position);
+                                                                                                                setFormData({
+                                                                                                                    title: item.title,
+                                                                                                                    description: item.description,
+                                                                                                                    media_url: item.media_url,
+                                                                                                                    media_type: item.media_type,
+                                                                                                                    duration: item.duration,
+                                                                                                                    priority: item.priority || 1,
+                                                                                                                    is_active: item.is_active
+                                                                                                                });
+                                                                                                                setShowDialog(true);
+                                                                                                            }}>
+                                                                                                                <Edit className="h-2.5 w-2.5" />
+                                                                                                            </Button>
+                                                                                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
+                                                                                                                <Trash2 className="h-2.5 w-2.5 text-red-500" />
+                                                                                                            </Button>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
+                                                                                                <Button
+                                                                                                    size="sm"
+                                                                                                    variant="ghost"
+                                                                                                    className="text-xs h-7"
+                                                                                                    onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
+                                                                                                >
+                                                                                                    <Plus className="h-3 w-3 mr-1" />
+                                                                                                    Add
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </motion.div>
+                                                            )}
+                                                        </Draggable>
+                                                    ))}
+                                                </AnimatePresence>
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
+                                </DragDropContext>
+                            )}
+                            
+                            {(wallContent.length > 0 || individualContent.length > 0) && (
                                         <div key={`wall-${item.id}`} className="flex gap-2 mb-2">
                                             <div className="w-24 flex-shrink-0 flex flex-col items-center justify-center gap-1 border-r pr-2">
                                                 <Badge variant="outline" className="text-xs font-mono">#{index + 1}</Badge>
@@ -503,101 +769,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                         </div>
                                     ))}
 
-                                    {/* Content Rows - Individual Screen Content */}
-                                    {screens.map((screen, screenIdx) => {
-                                        const screenContent = individualContent.filter(c => 
-                                            c.position?.row === screen.media_wall_config.position.row &&
-                                            c.position?.col === screen.media_wall_config.position.col
-                                        ).sort((a, b) => a.display_order - b.display_order);
 
-                                        if (screenContent.length === 0) return null;
-
-                                        return screenContent.map((item, index) => {
-                                            const timelineIndex = wallContent.length + index;
-                                            return (
-                                                <div key={`ind-${item.id}`} className="flex gap-2 mb-2">
-                                                    <div className="w-24 flex-shrink-0 flex flex-col items-center justify-center gap-1 border-r pr-2">
-                                                        <Badge variant="outline" className="text-xs font-mono">#{timelineIndex + 1}</Badge>
-                                                        <div className="text-[10px] text-gray-500">{item.duration}s</div>
-                                                    </div>
-                                                    {screens.map((s, idx) => {
-                                                        const isCurrentScreen = s.id === screen.id;
-                                                        return (
-                                                            <div key={s.id} className="flex-1 min-w-[200px] max-w-[280px]">
-                                                                {isCurrentScreen ? (
-                                                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-2">
-                                                                        <div className="flex gap-2 items-center">
-                                                                            <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0">
-                                                                                {item.media_type === 'video' ? (
-                                                                                    <video src={item.media_url} className="w-full h-full object-cover" />
-                                                                                ) : (
-                                                                                    <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <p className="text-xs font-semibold truncate">{item.title}</p>
-                                                                                <div className="flex gap-1 mt-1">
-                                                                                    <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
-                                                                                    {item.schedule?.enabled && (
-                                                                                        <Badge variant="outline" className="text-[10px] bg-green-50">
-                                                                                            <Calendar className="h-2 w-2" />
-                                                                                        </Badge>
-                                                                                    )}
-                                                                                </div>
-                                                                                <div className="flex gap-0.5 mt-1">
-                                                                                    <Switch
-                                                                                        checked={item.is_active}
-                                                                                        onCheckedChange={(checked) => updateIndividualMutation.mutate({ id: item.id, data: { is_active: checked } })}
-                                                                                        className="scale-75"
-                                                                                    />
-                                                                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => handleSchedule(item, 'individual')}>
-                                                                                        <Clock className="h-2.5 w-2.5" />
-                                                                                    </Button>
-                                                                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
-                                                                                        setEditingContent(item);
-                                                                                        setContentMode('individual');
-                                                                                        setSelectedPosition(item.position);
-                                                                                        setFormData({
-                                                                                            title: item.title,
-                                                                                            description: item.description,
-                                                                                            media_url: item.media_url,
-                                                                                            media_type: item.media_type,
-                                                                                            duration: item.duration,
-                                                                                            priority: item.priority || 1,
-                                                                                            is_active: item.is_active
-                                                                                        });
-                                                                                        setShowDialog(true);
-                                                                                    }}>
-                                                                                        <Edit className="h-2.5 w-2.5" />
-                                                                                    </Button>
-                                                                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => deleteIndividualMutation.mutate(item.id)}>
-                                                                                        <Trash2 className="h-2.5 w-2.5 text-red-500" />
-                                                                                    </Button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="ghost"
-                                                                            className="text-xs h-7"
-                                                                            onClick={() => handleAddContent('individual', s.media_wall_config.position)}
-                                                                        >
-                                                                            <Plus className="h-3 w-3 mr-1" />
-                                                                            Add
-                                                                        </Button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            );
-                                        });
-                                    })}
-                                </div>
                             )}
                             
                             {(wallContent.length > 0 || individualContent.length > 0) && (
