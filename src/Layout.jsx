@@ -75,7 +75,7 @@ export default function Layout({ children, currentPageName }) {
         enabled: !!customDomainRestaurantId,
     });
 
-    // SEO Meta Tags
+    // SEO Meta Tags & PWA Manifest
     useEffect(() => {
         // Set favicon for custom domain
         if (customDomainRestaurant?.logo_url) {
@@ -86,6 +86,50 @@ export default function Layout({ children, currentPageName }) {
                 document.head.appendChild(favicon);
             }
             favicon.href = customDomainRestaurant.logo_url;
+        }
+
+        // Add PWA manifest link
+        let manifestLink = document.querySelector('link[rel="manifest"]');
+        if (!manifestLink) {
+            manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            document.head.appendChild(manifestLink);
+        }
+        
+        // For restaurant dashboard, use restaurant-specific manifest
+        if (currentPageName === 'RestaurantDashboard' && customDomainRestaurantId) {
+            manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${customDomainRestaurantId}`;
+        } else if (customDomainRestaurantId) {
+            manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${customDomainRestaurantId}`;
+        } else {
+            manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest`;
+        }
+
+        // Add theme-color meta tag
+        let themeColor = document.querySelector('meta[name="theme-color"]');
+        if (!themeColor) {
+            themeColor = document.createElement('meta');
+            themeColor.name = 'theme-color';
+            document.head.appendChild(themeColor);
+        }
+        themeColor.content = customDomainRestaurant?.theme_primary_color || '#f97316';
+
+        // Add apple-mobile-web-app-capable for iOS
+        let appleCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+        if (!appleCapable) {
+            appleCapable = document.createElement('meta');
+            appleCapable.name = 'apple-mobile-web-app-capable';
+            appleCapable.content = 'yes';
+            document.head.appendChild(appleCapable);
+        }
+
+        // Add apple-mobile-web-app-status-bar-style
+        let appleStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+        if (!appleStatusBar) {
+            appleStatusBar = document.createElement('meta');
+            appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
+            appleStatusBar.content = 'default';
+            document.head.appendChild(appleStatusBar);
         }
 
         // Set title and meta tags

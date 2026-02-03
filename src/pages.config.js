@@ -72,10 +72,10 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import PublicFilesManager from './pages/PublicFilesManager';
 import Restaurant from './pages/Restaurant';
 import RestaurantDashboard from './pages/RestaurantDashboard';
+import Sitemap from './pages/Sitemap';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import Sitemap from './pages/Sitemap';
 import __Layout from './Layout.jsx';
 
 
@@ -105,10 +105,10 @@ export const PAGES = {
     "PublicFilesManager": PublicFilesManager,
     "Restaurant": Restaurant,
     "RestaurantDashboard": RestaurantDashboard,
+    "Sitemap": Sitemap,
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "Sitemap": Sitemap,
 }
 
 export const pagesConfig = {
