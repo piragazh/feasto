@@ -108,9 +108,9 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
             )}
             <Link to={restaurantUrl}>
                 <motion.div
-                    whileHover={{ y: -4 }}
+                    whileHover={{ y: -6, scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl active:shadow-md transition-all duration-300 border border-gray-100"
+                    className="group bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl active:shadow-lg transition-all duration-300 border-0"
                 >
                     <div className="relative h-40 md:h-48 overflow-hidden">
                         <img
@@ -123,8 +123,8 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                                 <span className="text-white font-semibold text-sm md:text-lg">Currently Closed</span>
                             </div>
                         )}
-                        <div className="absolute top-2 md:top-3 left-2 md:left-3">
-                            <Badge className="bg-white/95 text-gray-800 hover:bg-white font-medium px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm">
+                        <div className="absolute top-3 left-3">
+                            <Badge className="bg-white/95 backdrop-blur-sm text-gray-900 hover:bg-white font-semibold px-3 py-1.5 text-xs shadow-lg border-0">
                                 {restaurant.cuisine_type}
                             </Badge>
                         </div>
@@ -146,31 +146,35 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                         )}
                     </div>
                     
-                    <div className="p-3 md:p-4">
-                        <div className="flex items-start justify-between mb-2 gap-2">
-                            <h3 className="font-semibold text-base md:text-lg text-gray-900 group-hover:text-orange-500 transition-colors line-clamp-1 flex-1">
+                    <div className="p-4 md:p-5">
+                        <div className="flex items-start justify-between mb-3 gap-2">
+                            <h3 className="font-bold text-lg md:text-xl text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1 flex-1">
                                 {restaurant.name}
                             </h3>
-                            <div className="flex items-center gap-0.5 md:gap-1 bg-orange-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg whitespace-nowrap">
-                                <Star className="h-3 w-3 md:h-4 md:w-4 fill-orange-400 text-orange-400" />
-                                <span className="font-semibold text-xs md:text-sm text-gray-900">{restaurant.rating?.toFixed(1) || '4.5'}</span>
-                                <span className="text-gray-500 text-xs md:text-sm hidden sm:inline">({restaurant.review_count || 0})</span>
+                            <div className="flex items-center gap-1 bg-gradient-to-br from-orange-50 to-orange-100 px-2.5 py-1.5 rounded-xl whitespace-nowrap shadow-sm">
+                                <Star className="h-4 w-4 fill-orange-500 text-orange-500" />
+                                <span className="font-bold text-sm text-gray-900">{restaurant.rating?.toFixed(1) || '4.5'}</span>
+                                <span className="text-gray-600 text-xs hidden sm:inline">({restaurant.review_count || 0})</span>
                             </div>
                         </div>
                         
-                        <p className="text-gray-500 text-xs md:text-sm mb-2 md:mb-3 line-clamp-1">{restaurant.description}</p>
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">{restaurant.description}</p>
                         
-                        <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
-                            <div className="flex items-center gap-1 md:gap-1.5">
-                                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
-                                <span className="truncate">{restaurant.delivery_time || '25-35 min'}</span>
+                        <div className="flex items-center gap-4 text-sm text-gray-600 pt-3 border-t border-gray-100">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                    <Clock className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <span className="font-medium truncate">{restaurant.delivery_time || '25-35 min'}</span>
                             </div>
-                            <div className="flex items-center gap-1 md:gap-1.5">
-                                <Bike className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
-                                <span>{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                                    <Bike className="h-4 w-4 text-green-600" />
+                                </div>
+                                <span className="font-bold">{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
                             </div>
                             {restaurant.minimum_order > 0 && (
-                                <span className="text-gray-400 hidden md:inline">Min £{restaurant.minimum_order}</span>
+                                <span className="text-gray-400 text-xs hidden lg:inline ml-auto">Min £{restaurant.minimum_order}</span>
                             )}
                         </div>
                     </div>
