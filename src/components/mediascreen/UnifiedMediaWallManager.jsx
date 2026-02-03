@@ -381,42 +381,50 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
             const swapItem = timelineContent[swapIndex];
 
+            const tempOrder = 999999;
             const newOrder1 = swapItem.display_order;
             const newOrder2 = item.display_order;
 
+            // Use temp value to avoid conflicts
+            if (item.type === 'fullwall') {
+                await updateWallMutation.mutateAsync({ 
+                    id: item.id, 
+                    data: { display_order: tempOrder } 
+                });
+            } else {
+                await updateIndividualMutation.mutateAsync({ 
+                    id: item.id, 
+                    data: { display_order: tempOrder } 
+                });
+            }
+
+            // Update swapped item
+            if (swapItem.type === 'fullwall') {
+                await updateWallMutation.mutateAsync({ 
+                    id: swapItem.id, 
+                    data: { display_order: newOrder2 } 
+                });
+            } else {
+                await updateIndividualMutation.mutateAsync({ 
+                    id: swapItem.id, 
+                    data: { display_order: newOrder2 } 
+                });
+            }
+
+            // Update original item with correct order
             if (item.type === 'fullwall') {
                 await updateWallMutation.mutateAsync({ 
                     id: item.id, 
                     data: { display_order: newOrder1 } 
                 });
-                if (swapItem.type === 'fullwall') {
-                    await updateWallMutation.mutateAsync({ 
-                        id: swapItem.id, 
-                        data: { display_order: newOrder2 } 
-                    });
-                } else {
-                    await updateIndividualMutation.mutateAsync({ 
-                        id: swapItem.id, 
-                        data: { display_order: newOrder2 } 
-                    });
-                }
             } else {
                 await updateIndividualMutation.mutateAsync({ 
                     id: item.id, 
                     data: { display_order: newOrder1 } 
                 });
-                if (swapItem.type === 'fullwall') {
-                    await updateWallMutation.mutateAsync({ 
-                        id: swapItem.id, 
-                        data: { display_order: newOrder2 } 
-                    });
-                } else {
-                    await updateIndividualMutation.mutateAsync({ 
-                        id: swapItem.id, 
-                        data: { display_order: newOrder2 } 
-                    });
-                }
             }
+            
+            toast.success('Reordered');
         } catch (error) {
             console.error('Move failed:', error);
             toast.error('Failed to reorder');
