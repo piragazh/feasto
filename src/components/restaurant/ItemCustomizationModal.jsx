@@ -203,6 +203,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                         <RadioGroup
                                             value={customizations[option.name]}
                                             onValueChange={(value) => handleSingleChoice(option.name, value)}
+                                            name={`meal-upgrade-${idx}`}
                                         >
                                             {option.options?.map((choice, choiceIdx) => (
                                                 <div 
@@ -250,6 +251,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                                         }
                                                                     }));
                                                                 }}
+                                                                name={`meal-option-${idx}-${mealIdx}`}
                                                             >
                                                                 {mealOpt.options?.map((mealChoice, mealChoiceIdx) => (
                                                                     <div 
@@ -400,6 +402,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                     <RadioGroup
                                         value={customizations[option.name]}
                                         onValueChange={(value) => handleSingleChoice(option.name, value)}
+                                        name={`option-${idx}`}
                                     >
                                         {option.options?.map((choice, choiceIdx) => (
                                             <div 
