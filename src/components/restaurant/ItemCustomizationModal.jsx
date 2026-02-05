@@ -368,12 +368,13 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                                                 </Label>
                                                                             </div>
                                                                             {currentQty > 0 && (
-                                                                                <div className="flex items-center gap-2 ml-2">
+                                                                                <div className="flex items-center gap-2 ml-2" onClick={(e) => e.stopPropagation()}>
                                                                                     <Button
                                                                                         type="button"
                                                                                         size="icon"
                                                                                         variant="outline"
-                                                                                        onClick={() => {
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
                                                                                             const newQuantities = { ...itemQuantities };
                                                                                             const newQty = Math.max(0, currentQty - 1);
                                                                                             newQuantities[quantityKey] = newQty;
