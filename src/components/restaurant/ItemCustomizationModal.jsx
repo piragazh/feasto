@@ -435,11 +435,15 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                             return (
                                                 <div 
                                                     key={choiceIdx} 
-                                                    className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-all min-h-[56px] ${
-                                                        currentQty > 0 ? 'bg-orange-50 border-orange-300' : ''
+                                                    className={`flex items-center justify-between p-4 border rounded-lg transition-all min-h-[56px] cursor-pointer ${
+                                                        currentQty > 0 ? 'bg-orange-50 border-orange-300 shadow-sm' : 'hover:bg-gray-50 hover:border-gray-300'
                                                     }`}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        handleMultipleChoice(option.name, choice.label, currentQty === 0, option);
+                                                    }}
                                                 >
-                                                    <div className="flex items-center space-x-3 flex-1">
+                                                    <div className="flex items-center space-x-3 flex-1" onClick={(e) => e.stopPropagation()}>
                                                         <Checkbox
                                                             id={`${idx}-${choiceIdx}`}
                                                             checked={currentQty > 0}
