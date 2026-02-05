@@ -162,8 +162,9 @@ export default function MealDealsManagement({ restaurantId }) {
                                 />
                             </div>
                             <div>
-                                 <Label>Specific Items in Deal</Label>
-                                    <p className="text-xs text-gray-500 mb-2">Optional: Add fixed items that are always included</p>
+                                <Label>Specific Items in Deal</Label>
+                                   <p className="text-xs text-gray-500 mb-2">Optional: Add fixed items that are always included</p>
+                                   <p className="text-xs text-orange-600 mb-2">⚠️ Items with required customizations cannot be included in fixed meal deals</p>
                                         <div className="space-y-2">
                                             {formData.items.map((item, idx) => (
                                                 <div key={idx} className="flex gap-2">
@@ -228,6 +229,9 @@ export default function MealDealsManagement({ restaurantId }) {
 
                                     <div className="mt-6">
                                     <Label>Category Selection Rules</Label>
+                                    <p className="text-xs text-orange-600 mb-2">
+                                       ⚠️ Note: Items with required customizations cannot be used in meal deals. Only use optional customizations or items without customizations.
+                                    </p>
                                     <div className="space-y-2">
                                         {formData.category_rules.map((rule, idx) => (
                                             <div key={idx} className="flex gap-2 items-start p-3 border rounded-lg">

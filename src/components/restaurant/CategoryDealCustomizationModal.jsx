@@ -27,9 +27,21 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
         );
     };
 
+    const hasRequiredCustomizations = (item) => {
+        if (!item.customization_options || item.customization_options.length === 0) return false;
+        return item.customization_options.some(opt => opt.required === true);
+    };
+
     const handleItemToggle = (ruleIdx, itemId) => {
         const rule = deal.category_rules[ruleIdx];
         const currentSelections = selections[ruleIdx] || [];
+        const item = menuItems.find(m => m.id === itemId);
+        
+        // Check if item has required customizations
+        if (item && hasRequiredCustomizations(item)) {
+            toast.error(`"${item.name}" requires customization and cannot be added to meal deals. Please remove required customizations from this item or exclude it from meal deals.`);
+            return;
+        }
         
         if (currentSelections.includes(itemId)) {
             // Remove item
@@ -144,15 +156,19 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                 <div className="grid gap-2">
                                     {categoryItems.map(item => {
                                         const isSelected = currentSelections.includes(item.id);
+                                        const hasRequired = hasRequiredCustomizations(item);
                                         return (
                                             <button
                                                 key={item.id}
                                                 type="button"
                                                 onClick={() => handleItemToggle(ruleIdx, item.id)}
+                                                disabled={hasRequired}
                                                 className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${
-                                                    isSelected
-                                                        ? 'border-orange-500 bg-orange-50'
-                                                        : 'border-gray-200 hover:border-gray-300'
+                                                    hasRequired 
+                                                        ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                                                        : isSelected
+                                                            ? 'border-orange-500 bg-orange-50'
+                                                            : 'border-gray-200 hover:border-gray-300'
                                                 }`}
                                             >
                                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -172,7 +188,14 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                                     />
                                                 )}
                                                 <div className="flex-1">
-                                                    <div className="font-medium">{item.name}</div>
+                                                    <div className="font-medium flex items-center gap-2">
+                                                        {item.name}
+                                                        {hasRequired && (
+                                                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
+                                                                Requires customization
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                     {item.description && (
                                                         <div className="text-xs text-gray-500 line-clamp-1">
                                                             {item.description}
