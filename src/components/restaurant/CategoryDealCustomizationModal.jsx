@@ -254,32 +254,83 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                                 {isSelected && hasOptionalCustomizations && (
                                                     <div className="ml-9 pl-4 border-l-2 border-orange-300 space-y-3 py-2">
                                                         {item.customization_options
-                                                            .filter(opt => opt.type === 'single' && !opt.required)
+                                                            .filter(opt => !opt.required)
                                                             .map((option, optIdx) => (
                                                                 <div key={optIdx} className="space-y-2">
                                                                     <Label className="text-xs font-semibold text-gray-700">
                                                                         {option.name}
+                                                                        {option.type === 'multiple' && option.max_quantity && (
+                                                                            <span className="ml-2 text-gray-500 font-normal">(max {option.max_quantity})</span>
+                                                                        )}
                                                                     </Label>
-                                                                    <div className="flex flex-wrap gap-2">
-                                                                        {option.options?.map((opt, idx) => {
-                                                                            const isSelectedOption = itemCustomizations[item.id]?.[option.name] === opt.label;
-                                                                            return (
-                                                                                <button
-                                                                                    key={idx}
-                                                                                    type="button"
-                                                                                    onClick={() => handleItemCustomization(item.id, option.name, opt.label)}
-                                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                                                        isSelectedOption
-                                                                                            ? 'bg-orange-500 text-white shadow-sm'
-                                                                                            : 'bg-white border border-gray-300 text-gray-700 hover:border-orange-300'
-                                                                                    }`}
-                                                                                >
-                                                                                    {opt.label}
-                                                                                    {opt.price > 0 && ` (+£${opt.price.toFixed(2)})`}
-                                                                                </button>
-                                                                            );
-                                                                        })}
-                                                                    </div>
+                                                                    {option.type === 'single' ? (
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {option.options?.map((opt, idx) => {
+                                                                                const isSelectedOption = itemCustomizations[item.id]?.[option.name] === opt.label;
+                                                                                return (
+                                                                                    <button
+                                                                                        key={idx}
+                                                                                        type="button"
+                                                                                        onClick={() => handleItemCustomization(item.id, option.name, opt.label)}
+                                                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                                                            isSelectedOption
+                                                                                                ? 'bg-orange-500 text-white shadow-sm'
+                                                                                                : 'bg-white border border-gray-300 text-gray-700 hover:border-orange-300'
+                                                                                        }`}
+                                                                                    >
+                                                                                        {opt.label}
+                                                                                        {opt.price > 0 && ` (+£${opt.price.toFixed(2)})`}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {option.options?.map((opt, idx) => {
+                                                                                const selectedMultiple = itemCustomizations[item.id]?.[option.name] || [];
+                                                                                const isSelectedOption = Array.isArray(selectedMultiple) 
+                                                                                    ? selectedMultiple.includes(opt.label)
+                                                                                    : false;
+                                                                                return (
+                                                                                    <button
+                                                                                        key={idx}
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            const current = Array.isArray(selectedMultiple) ? selectedMultiple : [];
+                                                                                            let updated;
+                                                                                            if (current.includes(opt.label)) {
+                                                                                                updated = current.filter(l => l !== opt.label);
+                                                                                            } else {
+                                                                                                if (option.max_quantity && current.length >= option.max_quantity) {
+                                                                                                    toast.error(`You can only select up to ${option.max_quantity} options`);
+                                                                                                    return;
+                                                                                                }
+                                                                                                updated = [...current, opt.label];
+                                                                                            }
+                                                                                            handleItemCustomization(item.id, option.name, updated);
+                                                                                        }}
+                                                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                                                                                            isSelectedOption
+                                                                                                ? 'bg-orange-500 text-white shadow-sm'
+                                                                                                : 'bg-white border border-gray-300 text-gray-700 hover:border-orange-300'
+                                                                                        }`}
+                                                                                    >
+                                                                                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                                                                                            isSelectedOption ? 'border-white bg-white/20' : 'border-gray-400'
+                                                                                        }`}>
+                                                                                            {isSelectedOption && (
+                                                                                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                                                                                                </svg>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        {opt.label}
+                                                                                        {opt.price > 0 && ` (+£${opt.price.toFixed(2)})`}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             ))}
                                                     </div>
