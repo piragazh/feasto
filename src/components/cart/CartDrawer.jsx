@@ -13,7 +13,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
     const deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 2.99);
     
     // Calculate small order surcharge (only for delivery orders)
-    const minimumOrder = restaurant?.minimum_order || 0;
+    const minimumOrder = orderType === 'delivery' ? (restaurant?.minimum_order || 0) : 0;
     const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
         ? (minimumOrder - subtotal) 
         : 0;
@@ -143,6 +143,18 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                 <p className="text-xs text-gray-500 mt-0.5">
                                                     {item.selected_items.map(si => si.name).join(', ')}
                                                 </p>
+                                            )}
+                                            {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {Object.entries(item.customizations)
+                                                        .filter(([key]) => !key.includes('meal_customizations'))
+                                                        .map(([key, val]) => (
+                                                            <div key={key}>
+                                                                {key}: {Array.isArray(val) ? val.join(', ') : val}
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
                                             )}
                                             <p className="text-orange-500 font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>

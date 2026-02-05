@@ -371,10 +371,14 @@ export default function Restaurant() {
             }
 
             setCart(prev => {
-                const existing = prev.find(i => i.menu_item_id === item.id && !i.customizations);
+                const existing = prev.find(i => 
+                    i.menu_item_id === item.id && 
+                    !i.customizations && 
+                    !i.itemQuantities
+                );
                 if (existing) {
                     return prev.map(i => 
-                        i.menu_item_id === item.id && !i.customizations
+                        i.menu_item_id === item.id && !i.customizations && !i.itemQuantities
                             ? { ...i, quantity: i.quantity + quantityToAdd }
                             : i
                     );

@@ -132,7 +132,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['live-orders']);
-            onOrderUpdate();
+            if (onOrderUpdate) onOrderUpdate();
         },
     });
 

@@ -224,16 +224,34 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                         <div class="separator"></div>
                     ` : ''}
                     <h3>ITEMS:</h3>
-                    ${order.items.map(item => `
-                        <div class="item">
-                            <strong>${item.quantity}x ${item.name}</strong> - £${(item.price * item.quantity).toFixed(2)}
-                            ${config.template === 'detailed' && item.customizations ? `
-                                ${Object.entries(item.customizations).map(([key, value]) => `
-                                    <div class="customization">${key}: ${value}</div>
-                                `).join('')}
-                            ` : ''}
-                        </div>
-                    `).join('')}
+                    ${order.items.map(item => {
+                        let customizationText = '';
+                        if (item.customizations && config.template === 'detailed') {
+                            const lines = Object.entries(item.customizations)
+                                .filter(([key]) => !key.includes('meal_customizations'))
+                                .map(([key, val]) => {
+                                    const value = Array.isArray(val) ? val.join(', ') : String(val);
+                                    return `• ${key}: ${value}`;
+                                });
+                            if (item.itemQuantities) {
+                                Object.entries(item.itemQuantities).forEach(([key, qty]) => {
+                                    if (qty > 1) {
+                                        const label = key.split('_').slice(-1)[0];
+                                        lines.push(`• ${label}: ${qty}x`);
+                                    }
+                                });
+                            }
+                            if (lines.length > 0) {
+                                customizationText = `<div class="customization">${lines.join('<br/>')}</div>`;
+                            }
+                        }
+                        return `
+                            <div class="item">
+                                <strong>${item.quantity}x ${item.name}</strong> - £${(item.price * item.quantity).toFixed(2)}
+                                ${customizationText}
+                            </div>
+                        `;
+                    }).join('')}
                     <div class="separator"></div>
                     ${config.template !== 'minimal' ? `
                         <p>Subtotal: £${order.subtotal.toFixed(2)}</p>
@@ -450,12 +468,63 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                 <CardContent className="space-y-4">
                                     {/* Order Items */}
                                     <div className="space-y-2">
-                                        {order.items.map((item, idx) => (
-                                            <div key={idx} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
-                                                <span className="font-medium">{item.quantity}x {item.name}</span>
-                                                <span>£{(item.price * item.quantity).toFixed(2)}</span>
-                                            </div>
-                                        ))}
+                                        {order.items.map((item, idx) => {
+                                            const formatCustomizations = () => {
+                                                const lines = [];
+                                                
+                                                if (item.customizations && typeof item.customizations === 'object') {
+                                                    Object.entries(item.customizations).forEach(([key, val]) => {
+                                                        if (key.includes('meal_customizations') && typeof val === 'object') return;
+                                                        
+                                                        let displayValue = '';
+                                                        if (Array.isArray(val)) {
+                                                            displayValue = val.join(', ');
+                                                        } else if (typeof val === 'object') {
+                                                            displayValue = JSON.stringify(val);
+                                                        } else {
+                                                            displayValue = String(val);
+                                                        }
+                                                        
+                                                        if (displayValue) {
+                                                            lines.push({ key, value: displayValue });
+                                                        }
+                                                    });
+                                                }
+                                                
+                                                if (item.itemQuantities && typeof item.itemQuantities === 'object') {
+                                                    Object.entries(item.itemQuantities).forEach(([key, qty]) => {
+                                                        if (qty > 0) {
+                                                            const label = key.split('_').slice(-1)[0];
+                                                            if (qty > 1) {
+                                                                lines.push({ key: label, value: `${qty}x` });
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                                
+                                                return lines;
+                                            };
+                                            
+                                            const customizationLines = formatCustomizations();
+                                            
+                                            return (
+                                                <div key={idx} className="bg-gray-50 p-2 rounded">
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="font-medium">{item.quantity}x {item.name}</span>
+                                                        <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                                                    </div>
+                                                    {customizationLines.length > 0 && (
+                                                        <div className="text-xs text-gray-600 ml-4 mt-1 space-y-0.5">
+                                                            {customizationLines.map((line, i) => (
+                                                                <div key={i}>
+                                                                    <span className="font-medium">{line.key}:</span> {line.value}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
 
                                     {/* Customer Info */}
