@@ -420,17 +420,27 @@ export default function Restaurant() {
                 return;
             }
 
-            const customizationKey = JSON.stringify(itemData.customizations || {});
+            const customizationKey = JSON.stringify({
+                customizations: itemData.customizations || {},
+                itemQuantities: itemData.itemQuantities || {}
+            });
+            
             setCart(prev => {
                 const existing = prev.find(i => 
                     i.menu_item_id === itemData.id && 
-                    JSON.stringify(i.customizations || {}) === customizationKey
+                    JSON.stringify({
+                        customizations: i.customizations || {},
+                        itemQuantities: i.itemQuantities || {}
+                    }) === customizationKey
                 );
                 
                 if (existing) {
                     return prev.map(i => 
                         i.menu_item_id === itemData.id && 
-                        JSON.stringify(i.customizations || {}) === customizationKey
+                        JSON.stringify({
+                            customizations: i.customizations || {},
+                            itemQuantities: i.itemQuantities || {}
+                        }) === customizationKey
                             ? { ...i, quantity: i.quantity + itemData.quantity }
                             : i
                     );
@@ -442,7 +452,8 @@ export default function Restaurant() {
                     price: itemData.final_price,
                     quantity: itemData.quantity,
                     image_url: itemData.image_url,
-                    customizations: itemData.customizations
+                    customizations: itemData.customizations,
+                    itemQuantities: itemData.itemQuantities
                 }];
                 });
                 toast.success(`🛒 ${itemData.name} added to cart`, {
