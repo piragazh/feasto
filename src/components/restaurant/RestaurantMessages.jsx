@@ -79,36 +79,40 @@ export default function RestaurantMessages({ restaurantId }) {
         if (selectedOrder && orderMessages.length > 0) {
             const unreadMessages = orderMessages.filter(m => m.sender_type === 'customer' && !m.is_read);
             unreadMessages.forEach(msg => {
-                markOrderMessageAsRead.mutate(msg.id);
+                if (!markOrderMessageAsRead.isPending) {
+                    markOrderMessageAsRead.mutate(msg.id);
+                }
             });
         }
-    }, [selectedOrder, orderMessages.length]);
+    }, [selectedOrder]);
 
     // Play notification sound for new messages
     useEffect(() => {
         const currentAdminCount = adminMessages.filter(m => !m.is_read).length;
         const currentOrderCount = orderMessages.filter(m => m.sender_type === 'customer' && !m.is_read).length;
 
-        // Check if there are new unread messages
-        if ((currentAdminCount > previousMessageCount.admin) || 
-            (currentOrderCount > previousMessageCount.order && selectedOrder)) {
-            // Play notification sound
-            if (audioRef.current) {
-                audioRef.current.play().catch(e => console.log('Audio play failed:', e));
-            }
-            
-            // Show toast notification
-            if (currentAdminCount > previousMessageCount.admin) {
-                toast.info('New platform message received', {
-                    icon: '📬',
-                    duration: 4000
-                });
-            }
-            if (currentOrderCount > previousMessageCount.order && selectedOrder) {
-                toast.info('New customer message received', {
-                    icon: '💬',
-                    duration: 4000
-                });
+        // Only check for increases (new messages), not on initial load
+        if (previousMessageCount.admin > 0 || previousMessageCount.order > 0) {
+            if ((currentAdminCount > previousMessageCount.admin) || 
+                (currentOrderCount > previousMessageCount.order && selectedOrder)) {
+                // Play notification sound
+                if (audioRef.current) {
+                    audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+                }
+                
+                // Show toast notification
+                if (currentAdminCount > previousMessageCount.admin) {
+                    toast.info('New platform message received', {
+                        icon: '📬',
+                        duration: 4000
+                    });
+                }
+                if (currentOrderCount > previousMessageCount.order && selectedOrder) {
+                    toast.info('New customer message received', {
+                        icon: '💬',
+                        duration: 4000
+                    });
+                }
             }
         }
 

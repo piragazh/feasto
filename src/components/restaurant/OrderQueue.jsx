@@ -85,7 +85,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['order-queue']);
-            onOrderUpdate();
+            if (onOrderUpdate) onOrderUpdate();
         },
     });
 
@@ -107,7 +107,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
             queryClient.invalidateQueries(['order-queue']);
             setSelectedOrders(new Set());
             toast.success('Orders updated successfully');
-            onOrderUpdate();
+            if (onOrderUpdate) onOrderUpdate();
         },
     });
 

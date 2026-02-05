@@ -191,7 +191,8 @@ export default function RestaurantDashboard() {
     };
 
     useEffect(() => {
-        if (pendingOrders.length > newOrdersCount && newOrdersCount > 0) {
+        // Only trigger notifications if count increased AND not initial load
+        if (newOrdersCount > 0 && pendingOrders.length > newOrdersCount) {
             playNotificationSound();
             showNotification('New Order!', `You have ${pendingOrders.length} pending orders`);
         }
@@ -387,7 +388,7 @@ export default function RestaurantDashboard() {
                         <Tabs value={activeTab} onValueChange={setActiveTab}>
 
                             <TabsContent value="orders">
-                                <OrderQueue restaurantId={restaurant.id} onOrderUpdate={() => {}} />
+                                <LiveOrders restaurantId={restaurant.id} onOrderUpdate={() => queryClient.invalidateQueries(['pending-orders', restaurant.id])} />
                             </TabsContent>
                             <TabsContent value="messages">
                                 <RestaurantMessages restaurantId={restaurant.id} />
