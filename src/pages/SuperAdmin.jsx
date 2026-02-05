@@ -266,20 +266,6 @@ export default function SuperAdmin() {
                         title="Restaurant Managers"
                     />
                 )}
-                {activeTab === 'drivers' && (
-                    <iframe 
-                        src={createPageUrl('DriverDashboard')} 
-                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
-                        title="Driver Dashboard"
-                    />
-                )}
-                {activeTab === 'admin-dashboard' && (
-                    <iframe 
-                        src={createPageUrl('AdminDashboard')} 
-                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
-                        title="Admin Dashboard"
-                    />
-                )}
                 {activeTab === 'admin-restaurants' && (
                     <iframe 
                         src={createPageUrl('AdminRestaurants')} 
