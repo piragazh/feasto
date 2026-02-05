@@ -98,7 +98,7 @@ export default function Home() {
             setSearchQuery(searchData.value);
             // Check if search matches menu items
             const matchingItems = allMenuItems.filter(item =>
-                item.name.toLowerCase().includes(searchData.value.toLowerCase()) ||
+                item.name?.toLowerCase().includes(searchData.value.toLowerCase()) ||
                 item.description?.toLowerCase().includes(searchData.value.toLowerCase())
             );
             if (matchingItems.length > 0) {
@@ -115,7 +115,7 @@ export default function Home() {
         return [...new Set(
             allMenuItems
                 .filter(item =>
-                    item.name.toLowerCase().includes(menuItemSearch.toLowerCase()) ||
+                    item.name?.toLowerCase().includes(menuItemSearch.toLowerCase()) ||
                     item.description?.toLowerCase().includes(menuItemSearch.toLowerCase())
                 )
                 .map(item => item.restaurant_id)
@@ -125,7 +125,7 @@ export default function Home() {
     const filteredRestaurants = (restaurants || [])
         .filter(r => {
             const matchesSearch = !searchQuery || 
-                r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.cuisine_type?.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCuisine = !selectedCuisine || r.cuisine_type === selectedCuisine;
             const matchesMenuItem = !menuItemSearch || restaurantsWithMatchingItems.includes(r.id);
