@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 export default function CategoryDealCustomizationModal({ deal, menuItems, open, onClose, onAddToCart }) {
     const [selections, setSelections] = useState({});
+    const [itemCustomizations, setItemCustomizations] = useState({});
     const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
@@ -18,6 +19,8 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                 initialSelections[idx] = [];
             });
             setSelections(initialSelections);
+            setItemCustomizations({});
+            setQuantity(1);
         }
     }, [open, deal]);
 
@@ -44,11 +47,15 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
         }
         
         if (currentSelections.includes(itemId)) {
-            // Remove item
+            // Remove item and its customizations
             setSelections({
                 ...selections,
                 [ruleIdx]: currentSelections.filter(id => id !== itemId)
             });
+            // Remove customizations for this item
+            const newCustomizations = { ...itemCustomizations };
+            delete newCustomizations[itemId];
+            setItemCustomizations(newCustomizations);
         } else {
             // Add item (enforce max quantity)
             if (currentSelections.length < rule.quantity) {
@@ -56,10 +63,36 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                     ...selections,
                     [ruleIdx]: [...currentSelections, itemId]
                 });
+                
+                // Initialize default customizations if item has optional customizations
+                if (item?.customization_options?.length > 0) {
+                    const defaultCustomizations = {};
+                    item.customization_options.forEach(option => {
+                        if (option.type === 'single' && option.options?.length > 0) {
+                            defaultCustomizations[option.name] = option.options[0].label;
+                        }
+                    });
+                    if (Object.keys(defaultCustomizations).length > 0) {
+                        setItemCustomizations({
+                            ...itemCustomizations,
+                            [itemId]: defaultCustomizations
+                        });
+                    }
+                }
             } else {
                 toast.error(`You can only select ${rule.quantity} item${rule.quantity > 1 ? 's' : ''} from ${rule.category}`);
             }
         }
+    };
+
+    const handleItemCustomization = (itemId, customizationName, value) => {
+        setItemCustomizations({
+            ...itemCustomizations,
+            [itemId]: {
+                ...(itemCustomizations[itemId] || {}),
+                [customizationName]: value
+            }
+        });
     };
 
     const isValid = () => {
@@ -76,7 +109,7 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
             return;
         }
 
-        // Build selected items list
+        // Build selected items list with customizations
         const selectedItems = [];
         deal.category_rules.forEach((rule, idx) => {
             const selectedIds = selections[idx] || [];
@@ -87,7 +120,8 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                         menu_item_id: item.id,
                         name: item.name,
                         category: item.category,
-                        price: item.price
+                        price: item.price,
+                        customizations: itemCustomizations[itemId] || {}
                     });
                 }
             });
@@ -153,56 +187,104 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                     </Badge>
                                 </div>
 
-                                <div className="grid gap-2">
+                                <div className="grid gap-3">
                                     {categoryItems.map(item => {
                                         const isSelected = currentSelections.includes(item.id);
                                         const hasRequired = hasRequiredCustomizations(item);
+                                        const hasOptionalCustomizations = item.customization_options?.length > 0 && !hasRequired;
+                                        
                                         return (
-                                            <button
-                                                key={item.id}
-                                                type="button"
-                                                onClick={() => handleItemToggle(ruleIdx, item.id)}
-                                                disabled={hasRequired}
-                                                className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${
-                                                    hasRequired 
-                                                        ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
-                                                        : isSelected
-                                                            ? 'border-orange-500 bg-orange-50'
-                                                            : 'border-gray-200 hover:border-gray-300'
-                                                }`}
-                                            >
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                                    isSelected
-                                                        ? 'border-orange-500 bg-orange-500'
-                                                        : 'border-gray-300'
-                                                }`}>
-                                                    {isSelected && (
-                                                        <div className="w-2 h-2 bg-white rounded-full" />
-                                                    )}
-                                                </div>
-                                                {item.image_url && (
-                                                    <img
-                                                        src={item.image_url}
-                                                        alt={item.name}
-                                                        className="w-12 h-12 object-cover rounded-md"
-                                                    />
-                                                )}
-                                                <div className="flex-1">
-                                                    <div className="font-medium flex items-center gap-2">
-                                                        {item.name}
-                                                        {hasRequired && (
-                                                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
-                                                                Requires customization
-                                                            </Badge>
+                                            <div key={item.id} className="space-y-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleItemToggle(ruleIdx, item.id)}
+                                                    disabled={hasRequired}
+                                                    className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                                                        hasRequired 
+                                                            ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                                                            : isSelected
+                                                                ? 'border-orange-500 bg-gradient-to-r from-orange-50 to-amber-50 shadow-md'
+                                                                : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50/30'
+                                                    }`}
+                                                >
+                                                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                                                        isSelected
+                                                            ? 'border-orange-500 bg-orange-500'
+                                                            : 'border-gray-300 bg-white'
+                                                    }`}>
+                                                        {isSelected && (
+                                                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
                                                         )}
                                                     </div>
-                                                    {item.description && (
-                                                        <div className="text-xs text-gray-500 line-clamp-1">
-                                                            {item.description}
-                                                        </div>
+                                                    {item.image_url && (
+                                                        <img
+                                                            src={item.image_url}
+                                                            alt={item.name}
+                                                            className="w-16 h-16 object-cover rounded-lg flex-shrink-0 shadow-sm"
+                                                        />
                                                     )}
-                                                </div>
-                                            </button>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                                                            {item.name}
+                                                            {hasRequired && (
+                                                                <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
+                                                                    Requires customization
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        {item.description && (
+                                                            <div className="text-xs text-gray-500 line-clamp-1 mb-1">
+                                                                {item.description}
+                                                            </div>
+                                                        )}
+                                                        {hasOptionalCustomizations && (
+                                                            <div className="text-xs text-orange-600 font-medium">
+                                                                ✨ Customizable
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm font-semibold text-gray-700 flex-shrink-0">
+                                                        £{item.price?.toFixed(2)}
+                                                    </div>
+                                                </button>
+                                                
+                                                {/* Show customization options for selected items */}
+                                                {isSelected && hasOptionalCustomizations && (
+                                                    <div className="ml-9 pl-4 border-l-2 border-orange-300 space-y-3 py-2">
+                                                        {item.customization_options
+                                                            .filter(opt => opt.type === 'single' && !opt.required)
+                                                            .map((option, optIdx) => (
+                                                                <div key={optIdx} className="space-y-2">
+                                                                    <Label className="text-xs font-semibold text-gray-700">
+                                                                        {option.name}
+                                                                    </Label>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {option.options?.map((opt, idx) => {
+                                                                            const isSelectedOption = itemCustomizations[item.id]?.[option.name] === opt.label;
+                                                                            return (
+                                                                                <button
+                                                                                    key={idx}
+                                                                                    type="button"
+                                                                                    onClick={() => handleItemCustomization(item.id, option.name, opt.label)}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                                                        isSelectedOption
+                                                                                            ? 'bg-orange-500 text-white shadow-sm'
+                                                                                            : 'bg-white border border-gray-300 text-gray-700 hover:border-orange-300'
+                                                                                    }`}
+                                                                                >
+                                                                                    {opt.label}
+                                                                                    {opt.price > 0 && ` (+£${opt.price.toFixed(2)})`}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
                                     })}
                                 </div>
