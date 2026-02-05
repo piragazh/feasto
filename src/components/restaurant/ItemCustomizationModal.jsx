@@ -400,7 +400,8 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                                                         type="button"
                                                                                         size="icon"
                                                                                         variant="outline"
-                                                                                        onClick={() => {
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
                                                                                             if (totalSelected < maxQty) {
                                                                                                 const newQuantities = { ...itemQuantities };
                                                                                                 newQuantities[quantityKey] = currentQty + 1;
