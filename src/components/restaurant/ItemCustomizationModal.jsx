@@ -292,11 +292,43 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                                     return (
                                                                         <div 
                                                                             key={mealChoiceIdx} 
-                                                                            className={`flex items-center justify-between p-4 border rounded hover:bg-white transition-all min-h-[56px] ${
-                                                                                currentQty > 0 ? 'bg-orange-50 border-orange-300' : ''
+                                                                            className={`flex items-center justify-between p-4 border rounded transition-all min-h-[56px] cursor-pointer ${
+                                                                                currentQty > 0 ? 'bg-orange-50 border-orange-300 shadow-sm' : 'hover:bg-white hover:border-gray-300'
                                                                             }`}
+                                                                            onClick={(e) => {
+                                                                                e.preventDefault();
+                                                                                const newQuantities = { ...itemQuantities };
+                                                                                const mealCustoms = customizations[`${option.name}_meal_customizations`] || {};
+                                                                                const currentChoices = mealCustoms[mealOpt.name] || [];
+                                                                                const quantityKey = `${option.name}_meal_${mealOpt.name}_${mealChoice.label}`;
+                                                                                const checked = currentQty === 0;
+
+                                                                                if (checked) {
+                                                                                    newQuantities[quantityKey] = 1;
+                                                                                    if (!currentChoices.includes(mealChoice.label)) {
+                                                                                        setCustomizations(prev => ({
+                                                                                            ...prev,
+                                                                                            [`${option.name}_meal_customizations`]: {
+                                                                                                ...mealCustoms,
+                                                                                                [mealOpt.name]: [...currentChoices, mealChoice.label]
+                                                                                            }
+                                                                                        }));
+                                                                                    }
+                                                                                } else {
+                                                                                    newQuantities[quantityKey] = 0;
+                                                                                    setCustomizations(prev => ({
+                                                                                        ...prev,
+                                                                                        [`${option.name}_meal_customizations`]: {
+                                                                                            ...mealCustoms,
+                                                                                            [mealOpt.name]: currentChoices.filter(c => c !== mealChoice.label)
+                                                                                        }
+                                                                                    }));
+                                                                                }
+
+                                                                                setItemQuantities(newQuantities);
+                                                                            }}
                                                                         >
-                                                                            <div className="flex items-center space-x-3 flex-1">
+                                                                            <div className="flex items-center space-x-3 flex-1" onClick={(e) => e.stopPropagation()}>
                                                                                 <Checkbox
                                                                                     id={`meal-${mealIdx}-${mealChoiceIdx}`}
                                                                                     checked={currentQty > 0}
