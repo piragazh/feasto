@@ -868,7 +868,37 @@ CRITICAL REQUIREMENTS:
                                     </Button>
                                     </div>
                                     {formData.customization_options.map((custom, idx) => (
-                                    <Card key={idx} className="p-3">
+                                    <Card key={idx} className="p-3 relative">
+                                        <div className="absolute top-2 right-2 flex gap-1 bg-white rounded shadow-sm p-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (idx === 0) return;
+                                                    const newCustoms = [...formData.customization_options];
+                                                    [newCustoms[idx], newCustoms[idx - 1]] = [newCustoms[idx - 1], newCustoms[idx]];
+                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                }}
+                                                disabled={idx === 0}
+                                                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title="Move up"
+                                            >
+                                                <ChevronLeft className="h-3 w-3 rotate-90 text-gray-600" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (idx === formData.customization_options.length - 1) return;
+                                                    const newCustoms = [...formData.customization_options];
+                                                    [newCustoms[idx], newCustoms[idx + 1]] = [newCustoms[idx + 1], newCustoms[idx]];
+                                                    setFormData({ ...formData, customization_options: newCustoms });
+                                                }}
+                                                disabled={idx === formData.customization_options.length - 1}
+                                                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title="Move down"
+                                            >
+                                                <ChevronRight className="h-3 w-3 rotate-90 text-gray-600" />
+                                            </button>
+                                        </div>
                                         <div className="space-y-2">
                                             <div className="flex gap-2">
                                                 <Input
