@@ -480,7 +480,18 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                         
                                                         let displayValue = '';
                                                         if (Array.isArray(val)) {
-                                                            displayValue = val.join(', ');
+                                                            // Merge quantities into the array display
+                                                            const itemsWithQty = val.map(optionName => {
+                                                                if (item.itemQuantities) {
+                                                                    const qtyKey = Object.keys(item.itemQuantities).find(k => 
+                                                                        k.toLowerCase().includes(optionName.toLowerCase())
+                                                                    );
+                                                                    const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
+                                                                    return qty > 1 ? `${optionName} (${qty}x)` : optionName;
+                                                                }
+                                                                return optionName;
+                                                            });
+                                                            displayValue = itemsWithQty.join(', ');
                                                         } else if (typeof val === 'object') {
                                                             displayValue = JSON.stringify(val);
                                                         } else {
@@ -496,19 +507,6 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                                 .join(' ');
                                                             
                                                             lines.push({ key: formattedKey, value: displayValue });
-                                                        }
-                                                    });
-                                                }
-                                                
-                                                if (item.itemQuantities && typeof item.itemQuantities === 'object') {
-                                                    Object.entries(item.itemQuantities).forEach(([key, qty]) => {
-                                                        if (qty > 0) {
-                                                            const label = key.split('_').slice(-1)[0];
-                                                            if (qty > 1) {
-                                                                // Capitalize first letter
-                                                                const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-                                                                lines.push({ key: formattedLabel, value: `${qty}x` });
-                                                            }
                                                         }
                                                     });
                                                 }

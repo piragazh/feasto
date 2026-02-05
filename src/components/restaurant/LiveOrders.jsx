@@ -308,29 +308,30 @@ Provide only the time range (e.g., "25-30 min").`;
                             const lines = Object.entries(item.customizations)
                                 .filter(([key]) => !key.includes('meal_customizations'))
                                 .map(([key, val]) => {
-                                    const value = Array.isArray(val) ? val.join(', ') : String(val);
-                                    const formattedKey = key.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                                    return `• ${formattedKey}: ${value}`;
-                                });
-                            if (item.itemQuantities) {
-                                Object.entries(item.itemQuantities).forEach(([key, qty]) => {
-                                    if (qty > 1) {
-                                        const label = key.split('_').slice(-1)[0];
-                                        const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-                                        lines.push(`• ${formattedLabel}: ${qty}x`);
+                                    let value = '';
+                                    if (Array.isArray(val)) {
+                                        const itemsWithQty = val.map(optionName => {
+                                            if (item.itemQuantities) {
+                                                const qtyKey = Object.keys(item.itemQuantities).find(k => 
+                                                    k.toLowerCase().includes(optionName.toLowerCase())
+                                                );
+                                                const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
+                                                return qty > 1 ? optionName + ' (' + qty + 'x)' : optionName;
+                                            }
+                                            return optionName;
+                                        });
+                                        value = itemsWithQty.join(', ');
+                                    } else {
+                                        value = String(val);
                                     }
+                                    const formattedKey = key.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                    return '• ' + formattedKey + ': ' + value;
                                 });
-                            }
                             if (lines.length > 0) {
-                                customizationText = `<br/><small style="margin-left: 10px;">${lines.join('<br/>')}</small>`;
+                                customizationText = '<br/><small style="margin-left: 10px;">' + lines.join('<br/>') + '</small>';
                             }
                         }
-                        return `
-                            <div class="item">
-                                <strong>${item.quantity}x ${item.name}</strong>
-                                ${customizationText}
-                            </div>
-                        `;
+                        return '<div class="item"><strong>' + item.quantity + 'x ' + item.name + '</strong>' + customizationText + '</div>';
                     }).join('')}
                     <div class="separator"></div>
                     ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
@@ -582,7 +583,19 @@ Provide only the time range (e.g., "25-30 min").`;
 
                                                             let displayValue = '';
                                                             if (Array.isArray(val)) {
-                                                                displayValue = val.join(', ');
+                                                                // Merge quantities into the array display
+                                                                const itemsWithQty = val.map(optionName => {
+                                                                    // Check if there's a quantity for this option
+                                                                    if (item.itemQuantities) {
+                                                                        const qtyKey = Object.keys(item.itemQuantities).find(k => 
+                                                                            k.toLowerCase().includes(optionName.toLowerCase())
+                                                                        );
+                                                                        const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
+                                                                        return qty > 1 ? `${optionName} (${qty}x)` : optionName;
+                                                                    }
+                                                                    return optionName;
+                                                                });
+                                                                displayValue = itemsWithQty.join(', ');
                                                             } else if (typeof val === 'object') {
                                                                 displayValue = JSON.stringify(val);
                                                             } else {
@@ -598,20 +611,6 @@ Provide only the time range (e.g., "25-30 min").`;
                                                                     .join(' ');
                                                                 
                                                                 lines.push({ key: formattedKey, value: displayValue });
-                                                            }
-                                                        });
-                                                    }
-
-                                                    // Handle itemQuantities for multiple selections
-                                                    if (item.itemQuantities && typeof item.itemQuantities === 'object') {
-                                                        Object.entries(item.itemQuantities).forEach(([key, qty]) => {
-                                                            if (qty > 0) {
-                                                                const label = key.split('_').slice(-1)[0];
-                                                                if (qty > 1) {
-                                                                    // Capitalize first letter
-                                                                    const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-                                                                    lines.push({ key: formattedLabel, value: `${qty}x` });
-                                                                }
                                                             }
                                                         });
                                                     }
