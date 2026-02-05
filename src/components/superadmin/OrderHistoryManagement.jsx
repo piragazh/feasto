@@ -489,11 +489,26 @@ export default function OrderHistoryManagement() {
 
                             <div>
                                 <p className="text-sm text-gray-600 mb-2">Items</p>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {selectedOrder.items?.map((item, idx) => (
-                                        <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
-                                            <span>{item.quantity}x {item.name}</span>
-                                            <span className="font-medium">£{(item.price * item.quantity).toFixed(2)}</span>
+                                        <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="font-medium">{item.quantity}x {item.name}</span>
+                                                <span className="font-semibold">£{(item.price * item.quantity).toFixed(2)}</span>
+                                            </div>
+                                            {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                                <div className="ml-4 space-y-1">
+                                                    {Object.entries(item.customizations).map(([key, value]) => (
+                                                        <div key={key} className="text-sm text-gray-600 flex items-start gap-2">
+                                                            <span className="text-gray-400">•</span>
+                                                            <span>
+                                                                <strong className="text-gray-700">{key}:</strong> {value}
+                                                                {item.itemQuantities?.[key] && ` (${item.itemQuantities[key]}x)`}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
