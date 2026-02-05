@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -8,24 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
-import MealDealCard from '@/components/restaurant/MealDealCard';
-import CategoryDealCustomizationModal from '@/components/restaurant/CategoryDealCustomizationModal';
 import CartDrawer from '@/components/cart/CartDrawer';
-import ImageGallery from '@/components/restaurant/ImageGallery';
-import OpeningHours from '@/components/restaurant/OpeningHours';
-import SpecialOffers from '@/components/restaurant/SpecialOffers';
-import PopularItems from '@/components/restaurant/PopularItems';
-import ReviewsSection from '@/components/restaurant/ReviewsSection';
-import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
-import ActivePromotionsBanner from '@/components/restaurant/ActivePromotionsBanner';
-import RestaurantProfileSection from '@/components/restaurant/RestaurantProfileSection';
-import MealDealsSection from '@/components/restaurant/MealDealsSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+
+// Lazy load heavy components
+const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
+const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
+const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
+const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
+const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
+const RestaurantInfoDialog = lazy(() => import('@/components/restaurant/RestaurantInfoDialog'));
+const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
+const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
+const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
+const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
 
 export default function Restaurant() {
     const navigate = useNavigate();
@@ -126,7 +126,8 @@ export default function Restaurant() {
         },
         enabled: !!restaurantId,
         retry: 2,
-        staleTime: 5 * 60 * 1000, // Cache restaurant for 5 minutes
+        staleTime: 10 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
     });
 
     const { data: menuItems = [], isLoading: menuLoading } = useQuery({
@@ -136,21 +137,24 @@ export default function Restaurant() {
             return Array.isArray(items) ? items.filter(item => item.is_available !== false) : [];
         },
         enabled: !!restaurantId,
-        staleTime: 5 * 60 * 1000, // Cache menu for 5 minutes
+        staleTime: 10 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
     });
 
     const { data: mealDeals = [], isLoading: dealsLoading } = useQuery({
         queryKey: ['mealDeals', restaurantId],
         queryFn: () => base44.entities.MealDeal.filter({ restaurant_id: restaurantId, is_active: true }),
         enabled: !!restaurantId,
-        staleTime: 5 * 60 * 1000, // Cache deals for 5 minutes
+        staleTime: 10 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
     });
 
     const { data: promotions = [] } = useQuery({
         queryKey: ['promotions', restaurantId],
         queryFn: () => base44.entities.Promotion.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId,
-        staleTime: 3 * 60 * 1000, // Cache promotions for 3 minutes
+        staleTime: 10 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
     });
 
     const categories = React.useMemo(() => {
@@ -187,24 +191,33 @@ export default function Restaurant() {
         return Object.fromEntries(categories.map((cat, idx) => [cat, idx]));
     }, [categories]);
 
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(menuSearchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [menuSearchQuery]);
+
     const searchSuggestions = React.useMemo(() => {
-        if (!menuSearchQuery || menuSearchQuery.length < 2) return [];
+        if (!debouncedSearch || debouncedSearch.length < 2) return [];
         
         return menuItems
             .filter(item => 
-                item.name?.toLowerCase().includes(menuSearchQuery.toLowerCase()) ||
-                item.description?.toLowerCase().includes(menuSearchQuery.toLowerCase())
+                item.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                item.description?.toLowerCase().includes(debouncedSearch.toLowerCase())
             )
             .slice(0, 5);
-    }, [menuItems, menuSearchQuery]);
+    }, [menuItems, debouncedSearch]);
 
     const itemsByCategory = React.useMemo(() => {
         let items = menuItems;
         
-        if (menuSearchQuery) {
+        if (debouncedSearch) {
             items = items.filter(item => 
-                item.name?.toLowerCase().includes(menuSearchQuery.toLowerCase()) ||
-                item.description?.toLowerCase().includes(menuSearchQuery.toLowerCase())
+                item.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                item.description?.toLowerCase().includes(debouncedSearch.toLowerCase())
             );
         }
         
@@ -233,7 +246,7 @@ export default function Restaurant() {
         });
         
         return grouped;
-    }, [menuItems, menuSearchQuery, restaurant?.item_order]);
+    }, [menuItems, debouncedSearch, restaurant?.item_order]);
 
     const categoryNavRef = React.useRef(null);
     const [showLeftArrow, setShowLeftArrow] = React.useState(false);
@@ -319,7 +332,7 @@ export default function Restaurant() {
          return () => window.removeEventListener('scroll', handleScroll);
      }, [categories]);
 
-    const getActivePromotionForItem = (itemId) => {
+    const getActivePromotionForItem = useCallback((itemId) => {
         const now = new Date();
         return promotions.find(promo => {
             if (!promo.is_active) return false;
@@ -334,7 +347,7 @@ export default function Restaurant() {
             
             return true;
         });
-    };
+    }, [promotions]);
 
     const handleItemClick = (item) => {
         // If item has customizations, open modal; otherwise add directly
@@ -879,6 +892,7 @@ export default function Restaurant() {
                     alt={restaurant.name}
                     className="w-full h-full object-cover md:rounded-none"
                     loading="eager"
+                    fetchpriority="high"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 
@@ -1004,38 +1018,40 @@ export default function Restaurant() {
 
             {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
-                {/* Image Gallery */}
-                {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
+                    {/* Image Gallery */}
+                    {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                        <div className="mb-8">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
+                            <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                        </div>
+                    )}
+
+                    {/* Special Offers */}
+                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                        <div className="mb-8">
+                            <SpecialOffers offers={restaurant.special_offers} />
+                        </div>
+                    )}
+
+                    {/* Active Promotions */}
+                    <ActivePromotionsBanner restaurantId={restaurantId} />
+
+                    {/* Opening Hours */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
-                        <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                        <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
                     </div>
-                )}
 
-                {/* Special Offers */}
-                {restaurant.special_offers && restaurant.special_offers.length > 0 && (
-                    <div className="mb-8">
-                        <SpecialOffers offers={restaurant.special_offers} />
-                    </div>
-                )}
+                    {/* Popular Items */}
+                    <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
 
-                {/* Active Promotions */}
-                <ActivePromotionsBanner restaurantId={restaurantId} />
-
-                {/* Opening Hours */}
-                <div className="mb-8">
-                    <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
-                </div>
-
-                {/* Popular Items */}
-                <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
-
-                {/* Meal Deals Section */}
-                <MealDealsSection 
-                    deals={mealDeals}
-                    onAddToCart={addMealDealToCart}
-                    onCustomize={handleCustomizeDeal}
-                />
+                    {/* Meal Deals Section */}
+                    <MealDealsSection 
+                        deals={mealDeals}
+                        onAddToCart={addMealDealToCart}
+                        onCustomize={handleCustomizeDeal}
+                    />
+                </Suspense>
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Full Menu</h2>
 
@@ -1195,26 +1211,30 @@ export default function Restaurant() {
                     onAddToCart={addToCartWithCustomizations}
                 />
 
-                <CategoryDealCustomizationModal
-                    deal={selectedDeal}
-                    menuItems={menuItems}
-                    open={categoryDealModalOpen}
-                    onClose={() => {
-                        setCategoryDealModalOpen(false);
-                        setSelectedDeal(null);
-                    }}
-                    onAddToCart={addCategoryDealToCart}
-                />
+                <Suspense fallback={null}>
+                    <CategoryDealCustomizationModal
+                        deal={selectedDeal}
+                        menuItems={menuItems}
+                        open={categoryDealModalOpen}
+                        onClose={() => {
+                            setCategoryDealModalOpen(false);
+                            setSelectedDeal(null);
+                        }}
+                        onAddToCart={addCategoryDealToCart}
+                    />
+                </Suspense>
 
-                {/* Profile Section (About Us, Story, Awards, Social) */}
-                <div className="mt-12">
-                    <RestaurantProfileSection restaurant={restaurant} />
-                </div>
+                <Suspense fallback={<Skeleton className="h-60 w-full mt-12" />}>
+                    {/* Profile Section (About Us, Story, Awards, Social) */}
+                    <div className="mt-12">
+                        <RestaurantProfileSection restaurant={restaurant} />
+                    </div>
 
-                {/* Reviews Section */}
-                <div className="mt-12">
-                    <ReviewsSection restaurantId={restaurantId} />
-                </div>
+                    {/* Reviews Section */}
+                    <div className="mt-12">
+                        <ReviewsSection restaurantId={restaurantId} />
+                    </div>
+                </Suspense>
                 </div>
 
             {/* Floating Cart Button */}
@@ -1259,11 +1279,13 @@ export default function Restaurant() {
                 onAddItem={addToCartDirect}
                 />
 
-                <RestaurantInfoDialog
-                open={showInfoDialog}
-                onClose={() => setShowInfoDialog(false)}
-                restaurant={restaurant}
-                />
+                <Suspense fallback={null}>
+                    <RestaurantInfoDialog
+                        open={showInfoDialog}
+                        onClose={() => setShowInfoDialog(false)}
+                        restaurant={restaurant}
+                    />
+                </Suspense>
 
                 {/* Time Warning Dialog */}
             {showTimeWarning && (
