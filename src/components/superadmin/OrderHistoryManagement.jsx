@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, Calendar as CalendarIcon, Filter, Eye, FileDown } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Download, Search, Calendar as CalendarIcon, Filter, Eye, FileDown, Trash2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -21,6 +22,11 @@ export default function OrderHistoryManagement() {
     const [dateTo, setDateTo] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
+    const [selectedOrders, setSelectedOrders] = useState([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [orderToDelete, setOrderToDelete] = useState(null);
+    
+    const queryClient = useQueryClient();
 
     const { data: orders = [], isLoading: ordersLoading } = useQuery({
         queryKey: ['allOrders'],
@@ -119,6 +125,58 @@ export default function OrderHistoryManagement() {
     const viewOrderDetails = (order) => {
         setSelectedOrder(order);
         setShowOrderDetails(true);
+    };
+
+    const deleteMutation = useMutation({
+        mutationFn: async (orderIds) => {
+            const deletePromises = orderIds.map(id => base44.entities.Order.delete(id));
+            await Promise.all(deletePromises);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+            setSelectedOrders([]);
+            setShowDeleteConfirm(false);
+            setOrderToDelete(null);
+            toast.success('Order(s) deleted successfully');
+        },
+        onError: (error) => {
+            toast.error('Failed to delete order(s)');
+            console.error(error);
+        }
+    });
+
+    const handleDeleteSingle = (order) => {
+        setOrderToDelete(order);
+        setShowDeleteConfirm(true);
+    };
+
+    const handleDeleteMultiple = () => {
+        if (selectedOrders.length === 0) {
+            toast.error('Please select orders to delete');
+            return;
+        }
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        const idsToDelete = orderToDelete ? [orderToDelete.id] : selectedOrders;
+        deleteMutation.mutate(idsToDelete);
+    };
+
+    const toggleOrderSelection = (orderId) => {
+        setSelectedOrders(prev => 
+            prev.includes(orderId) 
+                ? prev.filter(id => id !== orderId)
+                : [...prev, orderId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedOrders.length === filteredOrders.length) {
+            setSelectedOrders([]);
+        } else {
+            setSelectedOrders(filteredOrders.map(o => o.id));
+        }
     };
 
     return (
@@ -220,7 +278,7 @@ export default function OrderHistoryManagement() {
                         </Popover>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <Button onClick={exportToCSV} variant="outline" className="gap-2">
                             <Download className="h-4 w-4" />
                             Export CSV
@@ -229,6 +287,16 @@ export default function OrderHistoryManagement() {
                             <FileDown className="h-4 w-4" />
                             Backup JSON
                         </Button>
+                        {selectedOrders.length > 0 && (
+                            <Button 
+                                onClick={handleDeleteMultiple} 
+                                variant="destructive" 
+                                className="gap-2"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Selected ({selectedOrders.length})
+                            </Button>
+                        )}
                         <Button 
                             onClick={() => {
                                 setSearchQuery('');
@@ -236,6 +304,7 @@ export default function OrderHistoryManagement() {
                                 setSelectedStatus('all');
                                 setDateFrom(null);
                                 setDateTo(null);
+                                setSelectedOrders([]);
                             }}
                             variant="ghost"
                         >
@@ -260,6 +329,12 @@ export default function OrderHistoryManagement() {
                             <table className="w-full">
                                 <thead className="border-b">
                                     <tr className="text-left text-sm text-gray-600">
+                                        <th className="pb-3 font-medium w-12">
+                                            <Checkbox
+                                                checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
+                                                onCheckedChange={toggleSelectAll}
+                                            />
+                                        </th>
                                         <th className="pb-3 font-medium">Order ID</th>
                                         <th className="pb-3 font-medium">Date</th>
                                         <th className="pb-3 font-medium">Restaurant</th>
@@ -275,6 +350,12 @@ export default function OrderHistoryManagement() {
                                 <tbody>
                                     {filteredOrders.map(order => (
                                         <tr key={order.id} className="border-b hover:bg-gray-50">
+                                            <td className="py-3">
+                                                <Checkbox
+                                                    checked={selectedOrders.includes(order.id)}
+                                                    onCheckedChange={() => toggleOrderSelection(order.id)}
+                                                />
+                                            </td>
                                             <td className="py-3 text-sm font-mono">#{order.id.slice(-8)}</td>
                                             <td className="py-3 text-sm">{format(new Date(order.created_date), 'MMM dd, yyyy HH:mm')}</td>
                                             <td className="py-3 text-sm font-medium">{order.restaurant_name || 'N/A'}</td>
@@ -293,15 +374,25 @@ export default function OrderHistoryManagement() {
                                                 </Badge>
                                             </td>
                                             <td className="py-3">
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="ghost" 
-                                                    onClick={() => viewOrderDetails(order)}
-                                                    className="gap-1"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    View
-                                                </Button>
+                                                <div className="flex gap-1">
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        onClick={() => viewOrderDetails(order)}
+                                                        className="gap-1"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                        View
+                                                    </Button>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        onClick={() => handleDeleteSingle(order)}
+                                                        className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -311,6 +402,49 @@ export default function OrderHistoryManagement() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertTriangle className="h-5 w-5" />
+                            Confirm Delete
+                        </DialogTitle>
+                        <DialogDescription>
+                            {orderToDelete ? (
+                                <>
+                                    Are you sure you want to permanently delete order <strong>#{orderToDelete.id.slice(-8)}</strong>? 
+                                    This action cannot be undone.
+                                </>
+                            ) : (
+                                <>
+                                    Are you sure you want to permanently delete <strong>{selectedOrders.length}</strong> selected order(s)? 
+                                    This action cannot be undone.
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowDeleteConfirm(false);
+                                setOrderToDelete(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                            disabled={deleteMutation.isPending}
+                        >
+                            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Order Details Dialog */}
             <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
