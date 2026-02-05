@@ -132,8 +132,8 @@ export default function Restaurant() {
     const { data: menuItems = [], isLoading: menuLoading } = useQuery({
         queryKey: ['menuItems', restaurantId],
         queryFn: async () => {
-            const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true });
-            return Array.isArray(items) ? items : [];
+            const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
+            return Array.isArray(items) ? items.filter(item => item.is_available !== false) : [];
         },
         enabled: !!restaurantId,
         staleTime: 5 * 60 * 1000, // Cache menu for 5 minutes
