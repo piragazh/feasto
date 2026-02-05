@@ -305,7 +305,13 @@ Provide only the time range (e.g., "25-30 min").`;
                     ${order.items.map(item => `
                         <div class="item">
                             <strong>${item.quantity}x ${item.name}</strong>
-                            ${item.customizations ? `<br/><small>${JSON.stringify(item.customizations)}</small>` : ''}
+                            ${item.customizations ? `
+                                <br/><small style="margin-left: 10px;">
+                                    ${Object.entries(item.customizations).map(([key, val]) => 
+                                        `• ${key}: ${Array.isArray(val) ? val.join(', ') : val}`
+                                    ).join('<br/>')}
+                                </small>
+                            ` : ''}
                         </div>
                     `).join('')}
                     <div class="separator"></div>
