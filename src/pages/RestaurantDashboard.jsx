@@ -70,7 +70,7 @@ export default function RestaurantDashboard() {
             status: 'pending' 
         }),
         enabled: !!restaurant?.id,
-        refetchInterval: 10000,
+        refetchInterval: 30000,
     });
 
     const { data: refundRequests = [] } = useQuery({
@@ -80,21 +80,21 @@ export default function RestaurantDashboard() {
             status: 'refund_requested' 
         }),
         enabled: !!restaurant?.id,
-        refetchInterval: 30000,
+        refetchInterval: 60000,
     });
 
     const { data: orderMessages = [] } = useQuery({
         queryKey: ['order-messages', restaurant?.id],
         queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id }),
         enabled: !!restaurant?.id,
-        refetchInterval: 20000,
+        refetchInterval: 45000,
     });
 
     const { data: restaurantMessages = [] } = useQuery({
         queryKey: ['restaurant-messages', restaurant?.id],
         queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id }),
         enabled: !!restaurant?.id,
-        refetchInterval: 20000,
+        refetchInterval: 45000,
     });
 
     const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(msg => !msg.is_read).length;

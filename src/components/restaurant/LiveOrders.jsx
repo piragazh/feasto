@@ -31,13 +31,13 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             restaurant_id: restaurantId,
             status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] }
         }, '-created_date'),
-        refetchInterval: 3000,
+        refetchInterval: 15000,
     });
 
     const { data: availableDrivers = [] } = useQuery({
         queryKey: ['available-drivers'],
         queryFn: () => base44.entities.Driver.filter({ is_available: true }),
-        refetchInterval: 5000,
+        refetchInterval: 30000,
     });
 
     // Filter orders

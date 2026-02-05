@@ -36,7 +36,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
             restaurant_id: restaurantId,
             status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] }
         }, '-created_date'),
-        refetchInterval: 2000,
+        refetchInterval: 15000,
     });
 
     // Auto-print new orders when Bluetooth printer is connected
