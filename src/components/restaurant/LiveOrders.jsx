@@ -549,21 +549,54 @@ Provide only the time range (e.g., "25-30 min").`;
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="space-y-2">
-                                            {order.items.map((item, idx) => (
-                                                <div key={idx} className="flex justify-between text-sm">
-                                                    <div>
-                                                        <span className="font-medium">{item.quantity}x {item.name}</span>
-                                                        {item.customizations && (
-                                                            <div className="text-xs text-gray-500 ml-4">
-                                                                {Object.entries(item.customizations).map(([key, val]) => (
-                                                                    <div key={key}>{key}: {Array.isArray(val) ? val.join(', ') : val}</div>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                            {order.items.map((item, idx) => {
+                                                // Debug: log the item structure
+                                                if (idx === 0) console.log('Order item structure:', item);
+                                                
+                                                return (
+                                                    <div key={idx} className="flex justify-between text-sm">
+                                                        <div className="flex-1">
+                                                            <span className="font-medium">{item.quantity}x {item.name}</span>
+                                                            
+                                                            {/* Handle customizations object */}
+                                                            {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                                                <div className="text-xs text-gray-600 ml-4 mt-1 space-y-0.5">
+                                                                    {Object.entries(item.customizations).map(([key, val]) => (
+                                                                        <div key={key}>
+                                                                            <span className="font-medium">{key}:</span> {Array.isArray(val) ? val.join(', ') : val}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* Handle selectedOptions array */}
+                                                            {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                                                <div className="text-xs text-gray-600 ml-4 mt-1 space-y-0.5">
+                                                                    {item.selectedOptions.map((opt, i) => (
+                                                                        <div key={i}>
+                                                                            <span className="font-medium">{opt.name}:</span> {
+                                                                                Array.isArray(opt.selected) 
+                                                                                    ? opt.selected.join(', ') 
+                                                                                    : opt.selected
+                                                                            }
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* Handle options array */}
+                                                            {item.options && item.options.length > 0 && (
+                                                                <div className="text-xs text-gray-600 ml-4 mt-1 space-y-0.5">
+                                                                    {item.options.map((opt, i) => (
+                                                                        <div key={i}>• {opt.label || opt}</div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className="ml-2">£{(item.price * item.quantity).toFixed(2)}</span>
                                                     </div>
-                                                    <span>£{(item.price * item.quantity).toFixed(2)}</span>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
 
                                         <Separator />
