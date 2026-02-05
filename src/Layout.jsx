@@ -365,7 +365,7 @@ export default function Layout({ children, currentPageName }) {
                                 {customDomainRestaurant ? (
                                     <>
                                         <img 
-                                            src={customDomainRestaurant.logo_url || customDomainRestaurant.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png?w=100&h=100&fit=crop'} 
+                                            src={customDomainRestaurant.logo_url || customDomainRestaurant.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1770322839/final_logo_icon_only_rgoqoy.png'} 
                                             alt={customDomainRestaurant.name || "Restaurant Logo"} 
                                             className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
                                         />
@@ -374,7 +374,7 @@ export default function Layout({ children, currentPageName }) {
                                 ) : (
                                     <>
                                         <img 
-                                            src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png" 
+                                            src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1770322839/final_logo_icon_only_rgoqoy.png" 
                                             alt="MealDrop Logo" 
                                             className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
                                         />
