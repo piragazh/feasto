@@ -309,13 +309,15 @@ Provide only the time range (e.g., "25-30 min").`;
                                 .filter(([key]) => !key.includes('meal_customizations'))
                                 .map(([key, val]) => {
                                     const value = Array.isArray(val) ? val.join(', ') : String(val);
-                                    return `• ${key}: ${value}`;
+                                    const formattedKey = key.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                    return `• ${formattedKey}: ${value}`;
                                 });
                             if (item.itemQuantities) {
                                 Object.entries(item.itemQuantities).forEach(([key, qty]) => {
                                     if (qty > 1) {
                                         const label = key.split('_').slice(-1)[0];
-                                        lines.push(`• ${label}: ${qty}x`);
+                                        const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+                                        lines.push(`• ${formattedLabel}: ${qty}x`);
                                     }
                                 });
                             }
@@ -588,7 +590,14 @@ Provide only the time range (e.g., "25-30 min").`;
                                                             }
 
                                                             if (displayValue) {
-                                                                lines.push({ key, value: displayValue });
+                                                                // Format key: capitalize first letter, replace underscores with spaces
+                                                                const formattedKey = key
+                                                                    .replace(/_/g, ' ')
+                                                                    .split(' ')
+                                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                                                    .join(' ');
+                                                                
+                                                                lines.push({ key: formattedKey, value: displayValue });
                                                             }
                                                         });
                                                     }
@@ -599,7 +608,9 @@ Provide only the time range (e.g., "25-30 min").`;
                                                             if (qty > 0) {
                                                                 const label = key.split('_').slice(-1)[0];
                                                                 if (qty > 1) {
-                                                                    lines.push({ key: label, value: `${qty}x` });
+                                                                    // Capitalize first letter
+                                                                    const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+                                                                    lines.push({ key: formattedLabel, value: `${qty}x` });
                                                                 }
                                                             }
                                                         });
