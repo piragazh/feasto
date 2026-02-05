@@ -772,6 +772,22 @@ CRITICAL REQUIREMENTS:
                                                         <Sparkles className="h-4 w-4" />
                                                         {replacingBackground ? 'Processing...' : 'Replace BG'}
                                                     </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            if (confirm('Are you sure you want to delete this image?')) {
+                                                                setFormData({ ...formData, image_url: '', ai_generated_image: false });
+                                                                toast.success('Image removed');
+                                                            }
+                                                        }}
+                                                        disabled={generatingImage || replacingBackground || enhancingImage}
+                                                        className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                        Delete
+                                                    </Button>
                                                 </>
                                             )}
                                         </div>
