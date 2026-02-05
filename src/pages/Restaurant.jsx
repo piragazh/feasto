@@ -374,11 +374,12 @@ export default function Restaurant() {
                 const existing = prev.find(i => 
                     i.menu_item_id === item.id && 
                     !i.customizations && 
-                    !i.itemQuantities
+                    !i.itemQuantities &&
+                    !i.is_deal
                 );
                 if (existing) {
                     return prev.map(i => 
-                        i.menu_item_id === item.id && !i.customizations && !i.itemQuantities
+                        i.menu_item_id === item.id && !i.customizations && !i.itemQuantities && !i.is_deal
                             ? { ...i, quantity: i.quantity + quantityToAdd }
                             : i
                     );
@@ -532,20 +533,65 @@ export default function Restaurant() {
             });
     };
 
-    const updateQuantity = (itemId, newQuantity) => {
+    const updateQuantity = (menuItemId, newQuantity, customizationKey) => {
         if (newQuantity < 1) {
-            removeFromCart(itemId);
+            removeFromCart(menuItemId, customizationKey);
             return;
         }
-        setCart(prev => prev.map(item =>
-            item.menu_item_id === itemId
-                ? { ...item, quantity: newQuantity }
-                : item
-        ));
+        
+        if (customizationKey) {
+            // Update specific customized item
+            setCart(prev => prev.map((item, index) => {
+                const itemKey = JSON.stringify({
+                    customizations: item.customizations || {},
+                    itemQuantities: item.itemQuantities || {}
+                });
+                return (item.menu_item_id === menuItemId && itemKey === customizationKey)
+                    ? { ...item, quantity: newQuantity }
+                    : item;
+            }));
+        } else {
+            // Update first matching item without customizations
+            setCart(prev => prev.map(item =>
+                item.menu_item_id === menuItemId && !item.customizations && !item.itemQuantities
+                    ? { ...item, quantity: newQuantity }
+                    : item
+            ));
+        }
     };
 
-    const removeFromCart = (itemId) => {
-        setCart(prev => prev.filter(item => item.menu_item_id !== itemId));
+    const removeFromCart = (menuItemId, customizationKey) => {
+        if (customizationKey) {
+            // Remove specific customized item
+            setCart(prev => {
+                let removed = false;
+                return prev.filter((item) => {
+                    if (removed) return true;
+                    const itemKey = JSON.stringify({
+                        customizations: item.customizations || {},
+                        itemQuantities: item.itemQuantities || {}
+                    });
+                    if (item.menu_item_id === menuItemId && itemKey === customizationKey) {
+                        removed = true;
+                        return false;
+                    }
+                    return true;
+                });
+            });
+        } else {
+            // Remove first matching item without customizations
+            setCart(prev => {
+                let removed = false;
+                return prev.filter((item) => {
+                    if (removed) return true;
+                    if (item.menu_item_id === menuItemId && !item.customizations && !item.itemQuantities) {
+                        removed = true;
+                        return false;
+                    }
+                    return true;
+                });
+            });
+        }
     };
 
     const clearCart = () => {
