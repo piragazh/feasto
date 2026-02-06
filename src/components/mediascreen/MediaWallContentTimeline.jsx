@@ -185,11 +185,24 @@ export default function MediaWallContentTimeline({
                 <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        Timeline Grid
+                        Timeline Grid - Each Column = Screen
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-0 border-t">
+                    <div className="space-y-0 border">
+                        {/* Column Headers */}
+                        <div className="flex border-b bg-gray-100">
+                            <div className="w-24 flex-shrink-0 border-r"></div>
+                            <div className="flex-1 grid grid-cols-3">
+                                {[1, 2, 3].map(screenNum => (
+                                    <div key={screenNum} className="border-r last:border-r-0 p-2 text-center">
+                                        <div className="font-medium text-sm">Screen {screenNum}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Timeline Rows */}
                         {[0, 1, 2, 3, 4, 5, 6, 7].map(rowNum => {
                             const rowItems = timelineItems.filter(item => item.row === rowNum);
                             const sortedItems = rowItems.sort((a, b) => a.startTime - b.startTime);
@@ -222,14 +235,14 @@ export default function MediaWallContentTimeline({
                                         </div>
                                     </div>
 
-                                    {/* Content Columns */}
+                                    {/* Screen Content Columns */}
                                     <div className="flex-1 grid grid-cols-3">
-                                        {[0, 1, 2].map(colNum => {
-                                            const item = sortedItems[colNum];
+                                        {[0, 1, 2].map(screenIndex => {
+                                            const item = sortedItems[screenIndex];
 
                                             if (!item) {
                                                 return (
-                                                    <div key={colNum} className="border-r last:border-r-0 p-3 min-h-[120px]">
+                                                    <div key={screenIndex} className="border-r last:border-r-0 p-3 min-h-[120px]">
                                                         <Button
                                                             variant="outline"
                                                             className="w-full h-full border-dashed border-2 hover:bg-gray-50"
@@ -243,7 +256,7 @@ export default function MediaWallContentTimeline({
                                             }
 
                                             return (
-                                                <div key={colNum} className="border-r last:border-r-0 p-2">
+                                                <div key={screenIndex} className="border-r last:border-r-0 p-2">
                                                     <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 h-full">
                                                         <div className="flex gap-2 mb-2">
                                                             <div className="w-20 h-16 bg-gray-900 rounded overflow-hidden flex-shrink-0">
