@@ -84,7 +84,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
     };
 
     const handleSubmit = async () => {
-        if (!formData.media_url) {
+        if (!formData.media_type.startsWith('widget_') && !formData.media_url) {
             toast.error('Please upload media');
             return;
         }
@@ -94,12 +94,13 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
             wall_name: wallName,
             title: formData.title || 'Untitled',
             description: formData.description,
-            media_url: formData.media_url,
+            media_url: formData.media_type.startsWith('widget_') ? 'widget' : formData.media_url,
             media_type: formData.media_type,
             duration: formData.duration,
             priority: formData.priority,
             is_active: formData.is_active,
-            display_order: editingContent ? editingContent.display_order : content.length
+            display_order: editingContent ? editingContent.display_order : content.length,
+            widget_config: formData.widget_config || {}
         };
 
         if (editingContent) {
@@ -324,8 +325,32 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                         </div>
 
                         <div>
-                            <Label>Media File (Full Resolution)</Label>
-                            <p className="text-xs text-gray-500 mb-2">Browse already uploaded files or upload a new file</p>
+                           <Label>Content Type</Label>
+                           <Select
+                               value={formData.media_type}
+                               onValueChange={(value) => setFormData(prev => ({ 
+                                   ...prev, 
+                                   media_type: value,
+                                   media_url: value.startsWith('widget_') ? 'widget' : prev.media_url
+                               }))}
+                           >
+                               <SelectTrigger>
+                                   <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                   <SelectItem value="image">Image</SelectItem>
+                                   <SelectItem value="video">Video</SelectItem>
+                                   <SelectItem value="widget_time">Widget: Time & Date</SelectItem>
+                                   <SelectItem value="widget_weather">Widget: Weather</SelectItem>
+                                   <SelectItem value="widget_orders">Widget: Collection Orders</SelectItem>
+                               </SelectContent>
+                           </Select>
+                        </div>
+
+                        {!formData.media_type.startsWith('widget_') && (
+                            <div>
+                           <Label>Media File (Full Resolution)</Label>
+                           <p className="text-xs text-gray-500 mb-2">Browse already uploaded files or upload a new file</p>
                             <div className="flex gap-2">
                                 <Button
                                     type="button"
@@ -363,6 +388,19 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                                 </p>
                             )}
                         </div>
+                         )}
+
+                         {formData.media_type.startsWith('widget_') && (
+                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                 <p className="text-sm text-blue-900">
+                                     This widget will display live {
+                                         formData.media_type === 'widget_time' ? 'time and date' :
+                                         formData.media_type === 'widget_weather' ? 'weather conditions' :
+                                         'collection order status'
+                                     } information
+                                 </p>
+                             </div>
+                         )}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>

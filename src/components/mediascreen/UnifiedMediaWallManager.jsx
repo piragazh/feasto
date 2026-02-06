@@ -19,6 +19,7 @@ import FileManager from './FileManager';
 import ContentPreview from './ContentPreview';
 import ScreenHealthMonitor from './ScreenHealthMonitor';
 import MediaWallPlaylistManager from './MediaWallPlaylistManager';
+import MediaWallSettings from './MediaWallSettings';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
@@ -231,12 +232,13 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 wall_name: wallName,
                 title: formData.title || 'Untitled',
                 description: formData.description,
-                media_url: formData.media_url,
+                media_url: formData.media_type.startsWith('widget_') ? 'widget' : formData.media_url,
                 media_type: formData.media_type,
                 duration: formData.duration,
                 priority: formData.priority,
                 is_active: formData.is_active,
-                display_order: editingContent?.display_order || wallContent.length
+                display_order: editingContent?.display_order || wallContent.length,
+                widget_config: formData.widget_config || {}
             };
 
             if (editingContent) {
@@ -336,12 +338,13 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 screen_name: screen.screen_name,
                 title: formData.title || 'Untitled',
                 description: formData.description,
-                media_url: formData.media_url,
+                media_url: formData.media_type.startsWith('widget_') ? 'widget' : formData.media_url,
                 media_type: formData.media_type,
                 duration: formData.duration,
                 priority: formData.priority,
                 is_active: formData.is_active,
-                display_order: editingContent?.display_order || 0
+                display_order: editingContent?.display_order || 0,
+                widget_config: formData.widget_config || {}
             };
 
             if (editingContent) {
@@ -542,7 +545,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     return (
         <div className="space-y-6">
             <Tabs defaultValue="timeline">
-                <TabsList className="grid w-full grid-cols-8">
+                <TabsList className="grid w-full grid-cols-9">
                     <TabsTrigger value="health">Health</TabsTrigger>
                     <TabsTrigger value="playlists">Playlists</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -551,6 +554,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     <TabsTrigger value="rows">Rows</TabsTrigger>
                     <TabsTrigger value="individual">Individual</TabsTrigger>
                     <TabsTrigger value="fullwall">Full Wall</TabsTrigger>
+                    <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="health" className="space-y-4">
@@ -1363,6 +1367,14 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     )}
                 </TabsContent>
 
+                <TabsContent value="settings" className="space-y-4">
+                    <MediaWallSettings restaurantId={restaurantId} />
+                </TabsContent>
+
+                <TabsContent value="settings" className="space-y-4">
+                    <MediaWallSettings restaurantId={restaurantId} />
+                </TabsContent>
+
                 <TabsContent value="fullwall" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -1510,6 +1522,34 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                         </div>
 
                         <div>
+                            <Label>Content Type</Label>
+                            <Select
+                                value={formData.media_type}
+                                onValueChange={(value) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    media_type: value,
+                                    media_url: value.startsWith('widget_') ? 'widget' : prev.media_url
+                                }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="image">Image</SelectItem>
+                                    <SelectItem value="video">Video</SelectItem>
+                                    {contentMode === 'fullwall' && (
+                                        <>
+                                            <SelectItem value="widget_time">Widget: Time & Date</SelectItem>
+                                            <SelectItem value="widget_weather">Widget: Weather</SelectItem>
+                                            <SelectItem value="widget_orders">Widget: Collection Orders</SelectItem>
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {!formData.media_type.startsWith('widget_') && (
+                            <div>
                             <Label>Media File {contentMode === 'fullwall' && '(High Resolution)'}</Label>
                             <p className="text-xs text-gray-500 mb-2">Browse already uploaded files or upload a new file</p>
                             <div className="flex gap-2">
@@ -1542,10 +1582,24 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                 onChange={handleFileUpload}
                                 className="hidden"
                             />
-                            {formData.media_url && (
+                            {formData.media_url && formData.media_url !== 'widget' && (
                                 <p className="text-sm text-green-600 mt-2">✓ File selected</p>
                             )}
                         </div>
+                        )}
+
+                        {formData.media_type.startsWith('widget_') && (
+                            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+                                <p className="text-sm text-indigo-900 font-medium">
+                                    {formData.media_type === 'widget_time' && '🕐 Live Time & Date Display'}
+                                    {formData.media_type === 'widget_weather' && '🌤️ Live Weather Conditions'}
+                                    {formData.media_type === 'widget_orders' && '📦 Real-time Collection Orders'}
+                                </p>
+                                <p className="text-xs text-indigo-700 mt-2">
+                                    This widget will automatically update with live information
+                                </p>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>

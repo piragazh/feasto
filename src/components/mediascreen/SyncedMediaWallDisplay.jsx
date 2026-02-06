@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import CustomContentWidget from './CustomContentWidget';
 
-export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition }) {
+export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition = null }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [syncTimestamp, setSyncTimestamp] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -159,9 +160,19 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
     const currentContent = playlistContent[currentIndex];
     if (!currentContent) return null;
 
+    // Check if current content is a custom widget
+    const isWidget = currentContent.media_type?.startsWith('widget_');
+    const widgetType = isWidget ? currentContent.media_type.replace('widget_', '') : null;
+
     return (
         <div className="h-screen w-screen overflow-hidden bg-gray-900 relative">
-            {currentContent.media_type === 'video' ? (
+            {isWidget ? (
+                <CustomContentWidget
+                    restaurantId={restaurantId}
+                    widgetType={widgetType}
+                    config={currentContent.widget_config || {}}
+                />
+            ) : currentContent.media_type === 'video' ? (
                 <video
                     ref={videoRef}
                     src={currentContent.media_url}
