@@ -865,17 +865,23 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                                 </div>
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center">
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    variant="ghost"
-                                                                                    className="text-xs h-7"
-                                                                                    onClick={() => handleAddContent('individual', screen.media_wall_config.position)}
-                                                                                >
-                                                                                    <Plus className="h-3 w-3 mr-1" />
-                                                                                    Add
-                                                                                </Button>
-                                                                            </div>
+                                                                           <div className="border-2 border-dashed border-gray-200 rounded-lg p-2 h-full bg-gray-50 flex items-center justify-center min-h-[80px]">
+                                                                               <Button
+                                                                                   size="sm"
+                                                                                   variant="outline"
+                                                                                   className="text-xs h-8 w-full"
+                                                                                   onClick={(e) => {
+                                                                                       e.preventDefault();
+                                                                                       e.stopPropagation();
+                                                                                       const position = screen.media_wall_config.position;
+                                                                                       console.log('Adding content to screen:', screen.screen_name, 'at position:', position);
+                                                                                       handleAddContent('individual', position);
+                                                                                   }}
+                                                                               >
+                                                                                   <Plus className="h-3 w-3 mr-1" />
+                                                                                   Add
+                                                                               </Button>
+                                                                           </div>
                                                                         )}
                                                                     </div>
                                                                 );
