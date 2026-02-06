@@ -495,11 +495,12 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     return (
         <div className="space-y-6">
             <Tabs defaultValue="timeline">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="timeline">Timeline View</TabsTrigger>
                     <TabsTrigger value="visual">Visual Grid</TabsTrigger>
-                    <TabsTrigger value="individual">Individual Content</TabsTrigger>
-                    <TabsTrigger value="fullwall">Full Wall Content</TabsTrigger>
+                    <TabsTrigger value="rows">Row Content</TabsTrigger>
+                    <TabsTrigger value="individual">Individual</TabsTrigger>
+                    <TabsTrigger value="fullwall">Full Wall</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="timeline" className="space-y-4">
