@@ -516,18 +516,28 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => handleAddContent('fullwall')}>
-                                        <Maximize2 className="h-4 w-4 mr-1" />
-                                        Full-Wall
-                                    </Button>
-                                    <Button size="sm" onClick={() => {
-                                        if (screens.length > 0) {
-                                            handleAddContent('individual', screens[0].media_wall_config.position);
-                                        }
-                                    }}>
-                                        <Monitor className="h-4 w-4 mr-1" />
-                                        Individual
-                                    </Button>
+                                   <Button size="sm" variant="outline" onClick={() => handleAddContent('fullwall')}>
+                                       <Maximize2 className="h-4 w-4 mr-1" />
+                                       Full-Wall
+                                   </Button>
+                                   <Select onValueChange={(value) => handleAddContent('row', null, parseInt(value))}>
+                                       <SelectTrigger className="w-32 h-9">
+                                           <SelectValue placeholder="Add to Row" />
+                                       </SelectTrigger>
+                                       <SelectContent>
+                                           {Array.from(new Set(screens.map(s => s.media_wall_config.position.row))).sort().map(row => (
+                                               <SelectItem key={row} value={row.toString()}>Row {row}</SelectItem>
+                                           ))}
+                                       </SelectContent>
+                                   </Select>
+                                   <Button size="sm" onClick={() => {
+                                       if (screens.length > 0) {
+                                           handleAddContent('individual', screens[0].media_wall_config.position);
+                                       }
+                                   }}>
+                                       <Monitor className="h-4 w-4 mr-1" />
+                                       Individual
+                                   </Button>
                                 </div>
                             </div>
                         </CardHeader>
