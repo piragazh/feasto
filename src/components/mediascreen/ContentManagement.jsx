@@ -22,6 +22,7 @@ import VideoEditor from './VideoEditor';
 import ScreenControl from './ScreenControl';
 import MediaWallManager from './MediaWallManager';
 import InlinePhotoEditor from './InlinePhotoEditor';
+import LayoutTemplateManager from './LayoutTemplateManager';
 import MediaWallConfigurator from './MediaWallConfigurator';
 import ContentScheduler from './ContentScheduler';
 import { createPageUrl } from '@/utils';
@@ -556,6 +557,33 @@ export default function ContentManagement({ restaurantId }) {
         const screen = screens.find(s => s.screen_name === screenName);
         setEditingScreenLayout(screen);
         setShowLayoutDesigner(true);
+    };
+
+    const handleOpenTemplateLibrary = (screenName) => {
+        const screen = screens.find(s => s.screen_name === screenName);
+        setCurrentScreenForTemplate(screen);
+        setShowTemplateLibrary(true);
+    };
+
+    const handleApplyTemplate = async (template) => {
+        if (!currentScreenForTemplate) return;
+
+        try {
+            await updateScreenMutation.mutateAsync({
+                id: currentScreenForTemplate.id,
+                data: {
+                    layout_template: {
+                        name: template.name,
+                        zones: template.zones
+                    }
+                }
+            });
+            toast.success(`Template "${template.name}" applied to ${currentScreenForTemplate.screen_name}`);
+            setShowTemplateLibrary(false);
+            setCurrentScreenForTemplate(null);
+        } catch (error) {
+            toast.error('Failed to apply template');
+        }
     };
 
     const handleSaveLayout = async (layout) => {
