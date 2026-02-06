@@ -251,21 +251,23 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             toast.loading(`Adding content to ${rowScreens.length} screens...`);
             
             try {
-                for (const screen of rowScreens) {
-                    const data = {
-                        restaurant_id: restaurantId,
-                        screen_name: screen.screen_name,
-                        title: formData.title || 'Untitled',
-                        description: formData.description,
-                        media_url: formData.media_url,
-                        media_type: formData.media_type,
-                        duration: formData.duration,
-                        priority: formData.priority,
-                        is_active: formData.is_active,
-                        display_order: 0
-                    };
-                    await createIndividualMutation.mutateAsync(data);
-                }
+                // Create all content items in parallel using bulkCreate
+                const contentItems = rowScreens.map(screen => ({
+                    restaurant_id: restaurantId,
+                    screen_name: screen.screen_name,
+                    title: formData.title || 'Untitled',
+                    description: formData.description,
+                    media_url: formData.media_url,
+                    media_type: formData.media_type,
+                    duration: formData.duration,
+                    priority: formData.priority,
+                    is_active: formData.is_active,
+                    display_order: 0
+                }));
+                
+                await base44.entities.PromotionalContent.bulkCreate(contentItems);
+                
+                queryClient.invalidateQueries(['promotional-content']);
                 toast.dismiss();
                 toast.success(`Content added to row ${selectedRow}`);
                 resetForm();
