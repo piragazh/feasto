@@ -1066,6 +1066,7 @@ export default function ContentManagement({ restaurantId }) {
                 onSave={handleSaveSchedule}
             />
 
+            {/* Dialogs that need to be outside Tabs context */}
             <Dialog open={showScreenDialog} onOpenChange={setShowScreenDialog}>
                 <DialogContent>
                     <DialogHeader>
