@@ -22,6 +22,7 @@ import MediaWallSettings from './MediaWallSettings';
 import MediaWallContentTimeline from './MediaWallContentTimeline';
 import LayoutTemplateManager from './LayoutTemplateManager';
 import WidgetConfigurationManager from './WidgetConfigurationManager';
+import WidgetLayoutManager from './WidgetLayoutManager';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
@@ -528,6 +529,9 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 {/* Widgets */}
                 <TabsContent value="widgets" className="space-y-4">
                     <WidgetConfigurationManager restaurantId={restaurantId} />
+                    <div className="mt-6">
+                        <WidgetLayoutManager restaurantId={restaurantId} />
+                    </div>
                 </TabsContent>
 
                 {/* Health Monitor */}
