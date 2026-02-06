@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight, FolderOpen, Upload } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight, FolderOpen, Upload, Users, Settings } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,15 +22,19 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const queryClient = useQueryClient();
     const [showDialog, setShowDialog] = useState(false);
     const [showFileManager, setShowFileManager] = useState(false);
-    const [contentMode, setContentMode] = useState('individual'); // 'individual', 'row', or 'fullwall'
+    const [contentMode, setContentMode] = useState('individual'); // 'individual', 'row', 'group', or 'fullwall'
     const [selectedPosition, setSelectedPosition] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
+    const [selectedGroup, setSelectedGroup] = useState(null);
     const [editingContent, setEditingContent] = useState(null);
     const [showScheduler, setShowScheduler] = useState(false);
     const [schedulingContent, setSchedulingContent] = useState(null);
     const [previewContent, setPreviewContent] = useState(null);
     const [showPreview, setShowPreview] = useState(false);
     const [previewIsFullWall, setPreviewIsFullWall] = useState(false);
+    const [showGroupManager, setShowGroupManager] = useState(false);
+    const [groupName, setGroupName] = useState('');
+    const [selectedScreensForGroup, setSelectedScreensForGroup] = useState([]);
     
     const [formData, setFormData] = useState({
         title: '',
@@ -204,10 +208,11 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
         }
     };
 
-    const handleAddContent = (mode, position = null, row = null) => {
+    const handleAddContent = (mode, position = null, row = null, group = null) => {
         setContentMode(mode);
         setSelectedPosition(position);
         setSelectedRow(row);
+        setSelectedGroup(group);
         setEditingContent(null);
         setShowDialog(true);
     };
@@ -217,8 +222,6 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             toast.error('Please upload media');
             return;
         }
-
-        console.log('Submit - contentMode:', contentMode, 'selectedRow:', selectedRow);
 
         if (contentMode === 'fullwall') {
             const data = {
@@ -277,6 +280,43 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 toast.dismiss();
                 toast.error('Failed to add content to row');
             }
+        } else if (contentMode === 'group') {
+            // Group-level content - add to all screens in the selected group
+            const groupScreens = screens.filter(s => 
+                s.groups?.includes(selectedGroup)
+            );
+
+            if (groupScreens.length === 0) {
+                toast.error('No screens found in this group');
+                return;
+            }
+
+            toast.loading(`Adding content to ${groupScreens.length} screens...`);
+            
+            try {
+                const contentItems = groupScreens.map(screen => ({
+                    restaurant_id: restaurantId,
+                    screen_name: screen.screen_name,
+                    title: formData.title || 'Untitled',
+                    description: formData.description,
+                    media_url: formData.media_url,
+                    media_type: formData.media_type,
+                    duration: formData.duration,
+                    priority: formData.priority,
+                    is_active: formData.is_active,
+                    display_order: 0
+                }));
+                
+                await base44.entities.PromotionalContent.bulkCreate(contentItems);
+                
+                queryClient.invalidateQueries(['promotional-content']);
+                toast.dismiss();
+                toast.success(`Content added to group "${selectedGroup}"`);
+                resetForm();
+            } catch (error) {
+                toast.dismiss();
+                toast.error('Failed to add content to group');
+            }
         } else {
             // Individual screen content
             const screen = screens.find(s => 
@@ -322,6 +362,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
         });
         setEditingContent(null);
         setSelectedRow(null);
+        setSelectedGroup(null);
         setShowDialog(false);
     };
 
@@ -499,10 +540,11 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     return (
         <div className="space-y-6">
             <Tabs defaultValue="timeline">
-                <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="timeline">Timeline View</TabsTrigger>
-                    <TabsTrigger value="visual">Visual Grid</TabsTrigger>
-                    <TabsTrigger value="rows">Row Content</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-6">
+                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                    <TabsTrigger value="visual">Visual</TabsTrigger>
+                    <TabsTrigger value="groups">Groups</TabsTrigger>
+                    <TabsTrigger value="rows">Rows</TabsTrigger>
                     <TabsTrigger value="individual">Individual</TabsTrigger>
                     <TabsTrigger value="fullwall">Full Wall</TabsTrigger>
                 </TabsList>
@@ -939,6 +981,141 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     )}
                 </TabsContent>
 
+                <TabsContent value="groups" className="space-y-4">
+                    {(() => {
+                        const allGroups = [...new Set(screens.flatMap(s => s.groups || []))];
+                        
+                        return (
+                            <>
+                                <Card>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-base flex items-center gap-2">
+                                                    <Users className="h-4 w-4" />
+                                                    Screen Groups
+                                                </CardTitle>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {allGroups.length} groups defined
+                                                </p>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => setShowGroupManager(true)}
+                                            >
+                                                <Settings className="h-3 w-3 mr-1" />
+                                                Manage Groups
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                </Card>
+
+                                {allGroups.length === 0 ? (
+                                    <Card className="border-dashed">
+                                        <CardContent className="py-12 text-center">
+                                            <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                                            <p className="text-gray-600 mb-2">No groups created yet</p>
+                                            <p className="text-sm text-gray-500 mb-4">
+                                                Create groups to manage content across multiple screens by location or purpose
+                                            </p>
+                                            <Button onClick={() => setShowGroupManager(true)}>
+                                                Create First Group
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    allGroups.map(group => {
+                                        const groupScreens = screens.filter(s => s.groups?.includes(group));
+                                        const groupContent = individualContent.filter(c => {
+                                            const screen = screens.find(s => 
+                                                s.media_wall_config.position.row === c.position?.row &&
+                                                s.media_wall_config.position.col === c.position?.col
+                                            );
+                                            return screen?.groups?.includes(group);
+                                        });
+                                        
+                                        return (
+                                            <Card key={group}>
+                                                <CardHeader>
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <CardTitle className="text-base flex items-center gap-2">
+                                                                <Users className="h-4 w-4" />
+                                                                {group}
+                                                            </CardTitle>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                {groupScreens.length} screens • {groupContent.length} content items
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleAddContent('group', null, null, group)}
+                                                        >
+                                                            <Plus className="h-3 w-3 mr-1" />
+                                                            Add to Group
+                                                        </Button>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="grid grid-cols-3 gap-3 mb-4">
+                                                        {groupScreens.map(screen => {
+                                                            const screenContent = individualContent.filter(c => 
+                                                                c.position?.row === screen.media_wall_config.position.row &&
+                                                                c.position?.col === screen.media_wall_config.position.col
+                                                            );
+                                                            return (
+                                                                <div key={screen.id} className="border rounded-lg p-2 bg-gradient-to-br from-purple-50 to-pink-50">
+                                                                    <div className="text-center mb-2">
+                                                                        <Monitor className="h-4 w-4 mx-auto text-purple-600 mb-1" />
+                                                                        <p className="text-xs font-semibold text-purple-900 truncate">{screen.screen_name}</p>
+                                                                        <Badge variant="outline" className="text-[10px] mt-1">
+                                                                            {screenContent.length} items
+                                                                        </Badge>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    
+                                                    {groupContent.length === 0 ? (
+                                                        <p className="text-sm text-gray-500 text-center py-4">No content for this group</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs font-semibold text-gray-700 mb-2">Content across this group:</p>
+                                                            {Array.from(new Set(groupContent.map(c => c.media_url))).map((mediaUrl, idx) => {
+                                                                const items = groupContent.filter(c => c.media_url === mediaUrl);
+                                                                const item = items[0];
+                                                                return (
+                                                                    <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                                                        <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden">
+                                                                            {item.media_type === 'video' ? (
+                                                                                <video src={item.media_url} className="w-full h-full object-cover" />
+                                                                            ) : (
+                                                                                <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="text-sm font-medium">{item.title}</p>
+                                                                            <div className="flex gap-1 mt-1">
+                                                                                <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
+                                                                                <Badge variant="outline" className="text-[10px]">On {items.length} screen{items.length > 1 ? 's' : ''}</Badge>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })
+                                )}
+                            </>
+                        );
+                    })()}
+                </TabsContent>
+
                 <TabsContent value="rows" className="space-y-4">
                     {screens.length === 0 ? (
                         <Card className="border-dashed">
@@ -1272,6 +1449,11 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                     <Grid3x3 className="h-5 w-5" />
                                     Add Content to Row {selectedRow}
                                 </span>
+                            ) : contentMode === 'group' ? (
+                                <span className="flex items-center gap-2">
+                                    <Users className="h-5 w-5" />
+                                    Add Content to Group "{selectedGroup}"
+                                </span>
                             ) : (
                                 <span className="flex items-center gap-2">
                                     <Monitor className="h-5 w-5" />
@@ -1285,6 +1467,13 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                 <p className="text-sm text-blue-900">
                                     This content will be added to all {screens.filter(s => s.media_wall_config.position.row === selectedRow).length} screens in Row {selectedRow}
+                                </p>
+                            </div>
+                        )}
+                        {contentMode === 'group' && (
+                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                <p className="text-sm text-purple-900">
+                                    This content will be added to all {screens.filter(s => s.groups?.includes(selectedGroup)).length} screens in group "{selectedGroup}"
                                 </p>
                             </div>
                         )}
@@ -1447,6 +1636,136 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     toast.success('File selected');
                 }}
             />
+
+            <Dialog open={showGroupManager} onOpenChange={setShowGroupManager}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            Manage Screen Groups
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-sm text-blue-900">
+                                Create groups to manage content across multiple screens based on location or purpose (e.g., "Entrance Displays", "Kitchen Screens")
+                            </p>
+                        </div>
+
+                        <div className="border rounded-lg p-4">
+                            <h3 className="font-semibold mb-3">Create New Group</h3>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Group name (e.g., Entrance Screens)"
+                                    value={groupName}
+                                    onChange={(e) => setGroupName(e.target.value)}
+                                />
+                                <Button
+                                    onClick={async () => {
+                                        if (!groupName.trim()) {
+                                            toast.error('Enter a group name');
+                                            return;
+                                        }
+                                        if (selectedScreensForGroup.length === 0) {
+                                            toast.error('Select at least one screen');
+                                            return;
+                                        }
+
+                                        try {
+                                            for (const screenId of selectedScreensForGroup) {
+                                                const screen = screens.find(s => s.id === screenId);
+                                                const currentGroups = screen.groups || [];
+                                                await base44.entities.Screen.update(screenId, {
+                                                    groups: [...currentGroups, groupName]
+                                                });
+                                            }
+                                            queryClient.invalidateQueries(['wall-screens']);
+                                            toast.success(`Group "${groupName}" created`);
+                                            setGroupName('');
+                                            setSelectedScreensForGroup([]);
+                                        } catch (error) {
+                                            toast.error('Failed to create group');
+                                        }
+                                    }}
+                                >
+                                    Create Group
+                                </Button>
+                            </div>
+                            
+                            <div className="mt-4 space-y-2">
+                                <p className="text-sm font-medium">Select screens for this group:</p>
+                                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                                    {screens.map(screen => (
+                                        <label key={screen.id} className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedScreensForGroup.includes(screen.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedScreensForGroup([...selectedScreensForGroup, screen.id]);
+                                                    } else {
+                                                        setSelectedScreensForGroup(selectedScreensForGroup.filter(id => id !== screen.id));
+                                                    }
+                                                }}
+                                                className="rounded"
+                                            />
+                                            <span className="text-sm">{screen.screen_name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="border rounded-lg p-4">
+                            <h3 className="font-semibold mb-3">Existing Groups</h3>
+                            {(() => {
+                                const allGroups = [...new Set(screens.flatMap(s => s.groups || []))];
+                                
+                                if (allGroups.length === 0) {
+                                    return <p className="text-sm text-gray-500">No groups created yet</p>;
+                                }
+
+                                return (
+                                    <div className="space-y-2">
+                                        {allGroups.map(group => {
+                                            const groupScreens = screens.filter(s => s.groups?.includes(group));
+                                            return (
+                                                <div key={group} className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
+                                                    <div>
+                                                        <p className="font-medium text-sm">{group}</p>
+                                                        <p className="text-xs text-gray-600">{groupScreens.length} screens</p>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={async () => {
+                                                            if (!confirm(`Remove group "${group}"?`)) return;
+                                                            
+                                                            try {
+                                                                for (const screen of groupScreens) {
+                                                                    await base44.entities.Screen.update(screen.id, {
+                                                                        groups: (screen.groups || []).filter(g => g !== group)
+                                                                    });
+                                                                }
+                                                                queryClient.invalidateQueries(['wall-screens']);
+                                                                toast.success('Group removed');
+                                                            } catch (error) {
+                                                                toast.error('Failed to remove group');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 
