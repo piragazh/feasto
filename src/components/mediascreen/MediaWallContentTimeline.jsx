@@ -112,84 +112,57 @@ export default function MediaWallContentTimeline({
         return timelineItems.reduce((sum, item) => sum + item.duration, 0);
     };
 
+    const moveItem = (itemId, direction) => {
+        const item = timelineItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        const rowItems = timelineItems.filter(i => i.row === item.row).sort((a, b) => a.startTime - b.startTime);
+        const currentIndex = rowItems.findIndex(i => i.id === itemId);
+        
+        if (direction === 'up' && currentIndex > 0) {
+            const prevItem = rowItems[currentIndex - 1];
+            const newStartTime = prevItem.startTime;
+            const prevNewStartTime = item.startTime;
+            
+            setTimelineItems(timelineItems.map(i => {
+                if (i.id === itemId) return { ...i, startTime: newStartTime };
+                if (i.id === prevItem.id) return { ...i, startTime: prevNewStartTime };
+                return i;
+            }));
+        } else if (direction === 'down' && currentIndex < rowItems.length - 1) {
+            const nextItem = rowItems[currentIndex + 1];
+            const newStartTime = nextItem.startTime;
+            const nextNewStartTime = item.startTime;
+            
+            setTimelineItems(timelineItems.map(i => {
+                if (i.id === itemId) return { ...i, startTime: newStartTime };
+                if (i.id === nextItem.id) return { ...i, startTime: nextNewStartTime };
+                return i;
+            }));
+        }
+    };
+
+    const COLUMNS = 3;
+
     return (
         <div className="space-y-4">
-            {/* Layout Selector */}
+            {/* Content Library */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                        <Layout className="h-4 w-4" />
-                        Apply Layout to Content
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <div>
-                        <Label className="text-xs mb-2">Select Layout</Label>
-                        <Select value={selectedLayout?.id || ''} onValueChange={(id) => {
-                            const layout = layouts.find(l => l.id === id);
-                            setSelectedLayout(layout);
-                        }}>
-                            <SelectTrigger className="text-sm">
-                                <SelectValue placeholder="Choose a layout..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {layouts.map(layout => (
-                                    <SelectItem key={layout.id} value={layout.id}>
-                                        <div className="flex items-center gap-2">
-                                            <span>{layout.name}</span>
-                                            <Badge variant="outline" className="text-xs ml-2">
-                                                {layout.grid.rows}x{layout.grid.cols}
-                                            </Badge>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {selectedLayout && (
-                        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
-                            <div className="font-medium text-blue-900 mb-1">{selectedLayout.name}</div>
-                            <div className="text-xs text-blue-700">
-                                Grid: {selectedLayout.grid.rows}x{selectedLayout.grid.cols} • Zones: {selectedLayout.zones.length}
-                            </div>
-                        </div>
-                    )}
-
-                    <div>
-                        <Label className="text-xs mb-2">Add to Timeline Row</Label>
-                        <Select value={String(selectedRow)} onValueChange={(val) => setSelectedRow(parseInt(val))}>
-                            <SelectTrigger className="text-sm">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[0, 1, 2, 3, 4].map(row => (
-                                    <SelectItem key={row} value={String(row)}>
-                                        Row {row + 1}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Content List */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm">Content to Timeline</CardTitle>
+                    <CardTitle className="text-sm">Available Content</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {content.length === 0 ? (
                         <p className="text-sm text-gray-500 text-center py-6">No content available</p>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                             {content.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
+                                    className="flex flex-col gap-2 p-2 bg-gray-50 rounded-lg border cursor-pointer hover:bg-gray-100"
+                                    onClick={() => handleApplyLayout(item)}
                                 >
-                                    <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                                    <div className="w-full h-20 bg-gray-200 rounded overflow-hidden">
                                         {item.media_type === 'video' ? (
                                             <video src={item.media_url} className="w-full h-full object-cover" />
                                         ) : (
@@ -197,17 +170,9 @@ export default function MediaWallContentTimeline({
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm truncate">{item.title}</p>
-                                        <p className="text-xs text-gray-500">{item.duration}s • {item.media_type}</p>
+                                        <p className="font-medium text-xs truncate">{item.title}</p>
+                                        <p className="text-[10px] text-gray-500">{item.duration}s</p>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => handleApplyLayout(item)}
-                                        disabled={!selectedLayout}
-                                    >
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Add
-                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -215,227 +180,131 @@ export default function MediaWallContentTimeline({
                 </CardContent>
             </Card>
 
-            {/* Timeline Visualization */}
-            {timelineItems.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                Timeline ({getTotalDuration()}s total)
-                            </CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {[0, 1, 2, 3, 4].map(rowNum => {
-                                const rowItems = timelineItems.filter(item => item.row === rowNum);
-                                if (rowItems.length === 0) return null;
+            {/* Grid Timeline */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Timeline Grid
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-0 border-t">
+                        {[0, 1, 2, 3, 4, 5, 6, 7].map(rowNum => {
+                            const rowItems = timelineItems.filter(item => item.row === rowNum);
+                            const sortedItems = rowItems.sort((a, b) => a.startTime - b.startTime);
 
-                                const maxTime = Math.max(...rowItems.map(item => item.startTime + item.duration), 1);
-                                const rowDuration = maxTime;
-
-                                return (
-                                    <div key={rowNum} className="space-y-2">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <GripVertical className="h-4 w-4 text-gray-400" />
-                                                {editingRowLabel === rowNum ? (
-                                                    <Input
-                                                        value={tempRowLabel}
-                                                        onChange={(e) => setTempRowLabel(e.target.value)}
-                                                        onBlur={() => updateRowLabel(rowNum)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') updateRowLabel(rowNum);
-                                                            if (e.key === 'Escape') {
-                                                                setEditingRowLabel(null);
-                                                                setTempRowLabel('');
-                                                            }
-                                                        }}
-                                                        className="h-7 w-32 text-sm"
-                                                        autoFocus
-                                                    />
-                                                ) : (
-                                                    <>
-                                                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                                                            {rowLabels[rowNum]}
-                                                        </Badge>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-6 w-6 p-0"
-                                                            onClick={() => {
-                                                                setEditingRowLabel(rowNum);
-                                                                setTempRowLabel(rowLabels[rowNum]);
-                                                            }}
-                                                        >
-                                                            <Edit2 className="h-3 w-3" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                <div className="text-xs text-gray-500">
-                                                    {rowItems.length} item{rowItems.length > 1 ? 's' : ''} • {rowDuration}s
-                                                </div>
+                            return (
+                                <div key={rowNum} className="flex border-b">
+                                    {/* Timeline Label Column */}
+                                    <div className="w-24 flex-shrink-0 border-r p-3 bg-gray-50">
+                                        <div className="flex flex-col items-center justify-center h-full">
+                                            <div className="flex gap-1 mb-1">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-5 w-5 p-0"
+                                                    disabled={sortedItems.length === 0}
+                                                >
+                                                    ↑
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-5 w-5 p-0"
+                                                    disabled={sortedItems.length === 0}
+                                                >
+                                                    ↓
+                                                </Button>
                                             </div>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => playRow(rowNum)}
-                                                className="h-7"
-                                            >
-                                                {playingRow === rowNum ? (
-                                                    <PauseCircle className="h-4 w-4" />
-                                                ) : (
-                                                    <PlayCircle className="h-4 w-4" />
-                                                )}
-                                            </Button>
-                                        </div>
-                                        <div className="space-y-2 pl-4 border-l-2 border-blue-200">
-                                            {rowItems
-                                                .sort((a, b) => a.startTime - b.startTime)
-                                                .map((item, index) => (
-                                                    <div
-                                                        key={item.id}
-                                                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 relative overflow-hidden"
-                                                        >
-                                                        {/* Playback Progress Indicator */}
-                                                        {playingRow === rowNum && playbackProgress[rowNum] >= item.startTime && playbackProgress[rowNum] <= item.startTime + item.duration && (
-                                                            <div 
-                                                                className="absolute top-0 left-0 h-full bg-blue-300 opacity-30 transition-all duration-100"
-                                                                style={{
-                                                                    width: `${((playbackProgress[rowNum] - item.startTime) / item.duration) * 100}%`
-                                                                }}
-                                                            />
-                                                        )}
-
-                                                        <div className="flex-shrink-0 relative z-10">
-                                                            <Badge variant="outline" className="bg-white">
-                                                                {index + 1}
-                                                            </Badge>
-                                                        </div>
-
-                                                        {/* Content Preview Thumbnail */}
-                                                        <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0 relative z-10">
-                                                            {item.contentMediaType === 'video' ? (
-                                                                <video src={item.contentMediaUrl} className="w-full h-full object-cover" />
-                                                            ) : item.contentMediaType?.startsWith('widget_') ? (
-                                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px]">
-                                                                    {item.contentMediaType === 'widget_time' && '🕐'}
-                                                                    {item.contentMediaType === 'widget_weather' && '🌤️'}
-                                                                    {item.contentMediaType === 'widget_orders' && '📦'}
-                                                                </div>
-                                                            ) : (
-                                                                <img src={item.contentMediaUrl} alt={item.contentTitle} className="w-full h-full object-cover" />
-                                                            )}
-                                                        </div>
-
-                                                        <div className="flex-1 relative z-10">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium text-sm">
-                                                                    {item.contentTitle || content.find(c => c.id === item.contentId)?.title || 'Unknown'}
-                                                                </span>
-                                                                <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                                                    {item.layoutName}
-                                                                </Badge>
-                                                            </div>
-                                                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                                                                <span>Time: {item.startTime}s → {item.startTime + item.duration}s</span>
-                                                                {editingItem === item.id ? (
-                                                                    <div className="flex items-center gap-1">
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={item.duration}
-                                                                            onChange={(e) => updateItemDuration(item.id, parseInt(e.target.value) || 10)}
-                                                                            className="h-5 w-16 text-xs px-1"
-                                                                            min="1"
-                                                                        />
-                                                                        <span>s</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <>
-                                                                        <span>({item.duration}s)</span>
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="ghost"
-                                                                            className="h-4 w-4 p-0"
-                                                                            onClick={() => setEditingItem(item.id)}
-                                                                        >
-                                                                            <Edit2 className="h-2.5 w-2.5" />
-                                                                        </Button>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => removeFromTimeline(item.id)}
-                                                            className="relative z-10"
-                                                        >
-                                                            <Trash2 className="h-3 w-3 text-red-500" />
-                                                        </Button>
-                                                        </div>
-                                                ))}
+                                            <div className="text-sm font-medium">#{rowNum + 1}</div>
+                                            <div className="text-xs text-gray-500">{sortedItems.reduce((sum, i) => sum + i.duration, 0)}s</div>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
 
-                        {/* Timeline Progress Bar by Rows */}
-                        <div className="mt-4 p-3 bg-gray-100 rounded-lg space-y-3">
-                            <div className="text-xs font-medium text-gray-700 mb-2">Playback Timeline</div>
-                            {[0, 1, 2, 3, 4].map(rowNum => {
-                                const rowItems = timelineItems.filter(item => item.row === rowNum);
-                                if (rowItems.length === 0) return null;
-                                
-                                const maxTime = Math.max(...rowItems.map(item => item.startTime + item.duration));
-                                
-                                return (
-                                    <div key={rowNum}>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <div className="text-xs text-gray-600">{rowLabels[rowNum]}</div>
-                                            <div className="text-xs text-gray-500">{maxTime}s</div>
-                                        </div>
-                                        <div className="relative h-8 bg-white border rounded overflow-hidden">
-                                            {rowItems.map((item) => {
-                                                const width = (item.duration / maxTime) * 100;
-                                                const offset = (item.startTime / maxTime) * 100;
+                                    {/* Content Columns */}
+                                    <div className="flex-1 grid grid-cols-3">
+                                        {[0, 1, 2].map(colNum => {
+                                            const item = sortedItems[colNum];
+
+                                            if (!item) {
                                                 return (
-                                                    <div
-                                                        key={item.id}
-                                                        className="absolute h-full bg-gradient-to-r from-blue-400 to-indigo-400 border-r border-blue-600 flex items-center justify-center group hover:from-blue-500 hover:to-indigo-500 cursor-pointer transition-colors"
-                                                        style={{
-                                                            width: `${width}%`,
-                                                            left: `${offset}%`
-                                                        }}
-                                                        title={`${item.contentTitle} - ${item.startTime}s to ${item.startTime + item.duration}s`}
-                                                    >
-                                                        <span className="text-[10px] text-white font-medium truncate px-1 opacity-0 group-hover:opacity-100">
-                                                            {item.contentTitle}
-                                                        </span>
+                                                    <div key={colNum} className="border-r last:border-r-0 p-3 min-h-[120px]">
+                                                        <Button
+                                                            variant="outline"
+                                                            className="w-full h-full border-dashed border-2 hover:bg-gray-50"
+                                                            onClick={() => setSelectedRow(rowNum)}
+                                                        >
+                                                            <Plus className="h-4 w-4 mr-2" />
+                                                            Add
+                                                        </Button>
                                                     </div>
                                                 );
-                                            })}
-                                            {/* Current Playback Position */}
-                                            {playingRow === rowNum && playbackProgress[rowNum] !== undefined && (
-                                                <div
-                                                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
-                                                    style={{
-                                                        left: `${(playbackProgress[rowNum] / maxTime) * 100}%`
-                                                    }}
-                                                >
-                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-red-500" />
+                                            }
+
+                                            return (
+                                                <div key={colNum} className="border-r last:border-r-0 p-2">
+                                                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 h-full">
+                                                        <div className="flex gap-2 mb-2">
+                                                            <div className="w-20 h-16 bg-gray-900 rounded overflow-hidden flex-shrink-0">
+                                                                {item.contentMediaType === 'video' ? (
+                                                                    <video src={item.contentMediaUrl} className="w-full h-full object-cover" />
+                                                                ) : item.contentMediaType?.startsWith('widget_') ? (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-xs">
+                                                                        {item.contentMediaType === 'widget_time' && '🕐'}
+                                                                        {item.contentMediaType === 'widget_weather' && '🌤️'}
+                                                                        {item.contentMediaType === 'widget_orders' && '📦'}
+                                                                    </div>
+                                                                ) : (
+                                                                    <img src={item.contentMediaUrl} alt={item.contentTitle} className="w-full h-full object-cover" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-medium text-sm truncate">{item.contentTitle}</div>
+                                                                <div className="text-xs text-gray-600 mt-1">
+                                                                    {item.contentMediaType}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 mt-1">
+                                                                    <input type="checkbox" defaultChecked className="rounded" />
+                                                                    <span className="text-xs text-gray-500">→</span>
+                                                                    <span className="text-xs font-medium">{item.duration}s</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-gray-600">
+                                                            <div className="flex gap-1">
+                                                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                                                    <Clock className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost" 
+                                                                    className="h-6 w-6 p-0"
+                                                                    onClick={() => setEditingItem(item.id)}
+                                                                >
+                                                                    <Edit2 className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost" 
+                                                                    className="h-6 w-6 p-0"
+                                                                    onClick={() => removeFromTimeline(item.id)}
+                                                                >
+                                                                    <Trash2 className="h-3 w-3 text-red-500" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
+                                            );
+                                        })}
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }
