@@ -16,6 +16,7 @@ export default function MediaWallContentTimeline({
 }) {
     const [selectedLayout, setSelectedLayout] = useState(null);
     const [timelineItems, setTimelineItems] = useState([]);
+    const [selectedRow, setSelectedRow] = useState(0);
 
     const handleApplyLayout = (item) => {
         if (!selectedLayout) {
@@ -23,20 +24,28 @@ export default function MediaWallContentTimeline({
             return;
         }
 
+        // Find items in the selected row to determine start time
+        const rowItems = timelineItems.filter(t => t.row === selectedRow);
+        const lastItemInRow = rowItems.length > 0 
+            ? rowItems.reduce((max, item) => {
+                const endTime = item.startTime + item.duration;
+                return endTime > max ? endTime : max;
+            }, 0)
+            : 0;
+
         const timelineItem = {
             id: `timeline-${Date.now()}`,
             contentId: item.id,
             layoutId: selectedLayout.id,
             layoutName: selectedLayout.name,
             duration: item.duration || 10,
-            startTime: timelineItems.length > 0 
-                ? timelineItems[timelineItems.length - 1].startTime + timelineItems[timelineItems.length - 1].duration
-                : 0
+            row: selectedRow,
+            startTime: lastItemInRow
         };
 
         setTimelineItems([...timelineItems, timelineItem]);
         onApplyLayout(item, selectedLayout);
-        toast.success('Content added to timeline with layout');
+        toast.success(`Content added to timeline row ${selectedRow + 1}`);
     };
 
     const removeFromTimeline = (id) => {
@@ -91,6 +100,22 @@ export default function MediaWallContentTimeline({
                             </div>
                         </div>
                     )}
+
+                    <div>
+                        <Label className="text-xs mb-2">Add to Timeline Row</Label>
+                        <Select value={String(selectedRow)} onValueChange={(val) => setSelectedRow(parseInt(val))}>
+                            <SelectTrigger className="text-sm">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[0, 1, 2, 3, 4].map(row => (
+                                    <SelectItem key={row} value={String(row)}>
+                                        Row {row + 1}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -147,63 +172,94 @@ export default function MediaWallContentTimeline({
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-2">
-                            {timelineItems.map((item, index) => (
-                                <div
-                                    key={item.id}
-                                    className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200"
-                                >
-                                    <div className="flex-shrink-0">
-                                        <Badge variant="outline" className="bg-white">
-                                            {index + 1}
-                                        </Badge>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-sm">
-                                                {content.find(c => c.id === item.contentId)?.title || 'Unknown'}
-                                            </span>
-                                            <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                                {item.layoutName}
+                        <div className="space-y-4">
+                            {[0, 1, 2, 3, 4].map(rowNum => {
+                                const rowItems = timelineItems.filter(item => item.row === rowNum);
+                                if (rowItems.length === 0) return null;
+                                
+                                return (
+                                    <div key={rowNum} className="space-y-2">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                                                Row {rowNum + 1}
                                             </Badge>
+                                            <div className="text-xs text-gray-500">
+                                                {rowItems.length} item{rowItems.length > 1 ? 's' : ''}
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-gray-500 mt-1">
-                                            Time: {item.startTime}s → {item.startTime + item.duration}s ({item.duration}s)
+                                        <div className="space-y-2 pl-4 border-l-2 border-blue-200">
+                                            {rowItems
+                                                .sort((a, b) => a.startTime - b.startTime)
+                                                .map((item, index) => (
+                                                    <div
+                                                        key={item.id}
+                                                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200"
+                                                    >
+                                                        <div className="flex-shrink-0">
+                                                            <Badge variant="outline" className="bg-white">
+                                                                {index + 1}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-sm">
+                                                                    {content.find(c => c.id === item.contentId)?.title || 'Unknown'}
+                                                                </span>
+                                                                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                                                    {item.layoutName}
+                                                                </Badge>
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                Time: {item.startTime}s → {item.startTime + item.duration}s ({item.duration}s)
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => removeFromTimeline(item.id)}
+                                                        >
+                                                            <Trash2 className="h-3 w-3 text-red-500" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
                                         </div>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => removeFromTimeline(item.id)}
-                                    >
-                                        <Trash2 className="h-3 w-3 text-red-500" />
-                                    </Button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
-                        {/* Timeline Progress Bar */}
-                        <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                        {/* Timeline Progress Bar by Rows */}
+                        <div className="mt-4 p-3 bg-gray-100 rounded-lg space-y-3">
                             <div className="text-xs font-medium text-gray-700 mb-2">Playback Timeline</div>
-                            <div className="relative h-8 bg-white border rounded overflow-hidden">
-                                {timelineItems.map((item) => {
-                                    const total = getTotalDuration();
-                                    const width = (item.duration / total) * 100;
-                                    const offset = (item.startTime / total) * 100;
-                                    return (
-                                        <div
-                                            key={item.id}
-                                            className="absolute h-full bg-gradient-to-r from-blue-400 to-indigo-400 border-r border-blue-600"
-                                            style={{
-                                                width: `${width}%`,
-                                                left: `${offset}%`
-                                            }}
-                                            title={`${item.duration}s`}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </div>
+                            {[0, 1, 2, 3, 4].map(rowNum => {
+                                const rowItems = timelineItems.filter(item => item.row === rowNum);
+                                if (rowItems.length === 0) return null;
+                                
+                                const maxTime = Math.max(...rowItems.map(item => item.startTime + item.duration));
+                                
+                                return (
+                                    <div key={rowNum}>
+                                        <div className="text-xs text-gray-600 mb-1">Row {rowNum + 1}</div>
+                                        <div className="relative h-6 bg-white border rounded overflow-hidden">
+                                            {rowItems.map((item) => {
+                                                const width = (item.duration / maxTime) * 100;
+                                                const offset = (item.startTime / maxTime) * 100;
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        className="absolute h-full bg-gradient-to-r from-blue-400 to-indigo-400 border-r border-blue-600"
+                                                        style={{
+                                                            width: `${width}%`,
+                                                            left: `${offset}%`
+                                                        }}
+                                                        title={`${item.startTime}s - ${item.startTime + item.duration}s`}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                     </CardContent>
                 </Card>
             )}
