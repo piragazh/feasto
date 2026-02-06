@@ -278,8 +278,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             media_type: 'image',
             duration: 10,
             priority: 1,
-            is_active: true,
-            start_time: 0
+            is_active: true
         });
         setEditingContent(null);
         setShowDialog(false);
