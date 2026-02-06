@@ -1196,7 +1196,18 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <Label>Start Time (seconds)</Label>
+                                <Input
+                                    type="number"
+                                    value={formData.start_time}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: parseInt(e.target.value) || 0 }))}
+                                    min="0"
+                                    placeholder="0"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">When to show in timeline</p>
+                            </div>
                             <div>
                                 <Label>Duration (seconds)</Label>
                                 <Input
