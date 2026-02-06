@@ -14,6 +14,13 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { 
     Activity, 
     AlertTriangle, 
@@ -30,7 +37,10 @@ import {
     Power,
     Trash2,
     Send,
-    History
+    History,
+    Filter,
+    BarChart3,
+    Timer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
@@ -43,6 +53,13 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
     const [customCommand, setCustomCommand] = useState('');
     const [showCommandLog, setShowCommandLog] = useState(false);
     const [user, setUser] = useState(null);
+    const [logFilters, setLogFilters] = useState({
+        screen: 'all',
+        command: 'all',
+        status: 'all',
+        dateRange: 'all'
+    });
+    const [showAnalysis, setShowAnalysis] = useState(false);
 
     useEffect(() => {
         const loadUser = async () => {
@@ -105,17 +122,31 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
         enabled: !!restaurantId && !!wallName
     });
 
-    const { data: commandLogs = [] } = useQuery({
+    const { data: commandLogs = [], refetch: refetchLogs } = useQuery({
         queryKey: ['screen-command-logs', restaurantId],
         queryFn: async () => {
             const logs = await base44.entities.ScreenCommandLog.filter(
                 { restaurant_id: restaurantId },
                 '-created_date',
-                50
+                100
             );
             return logs;
         },
-        enabled: !!restaurantId
+        enabled: !!restaurantId,
+        refetchInterval: 10000 // Refresh every 10 seconds for real-time updates
+    });
+
+    const { data: failureAnalysis } = useQuery({
+        queryKey: ['command-failure-analysis', restaurantId],
+        queryFn: async () => {
+            const response = await base44.functions.invoke('analyzeCommandFailures', {
+                restaurant_id: restaurantId,
+                days: 7
+            });
+            return response.data;
+        },
+        enabled: !!restaurantId && showAnalysis,
+        staleTime: 60000
     });
 
     const sendCommandMutation = useMutation({
@@ -144,7 +175,7 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries(['screen-health']);
-            queryClient.invalidateQueries(['screen-command-logs']);
+            refetchLogs();
             toast.success(`Command "${data.command}" sent to screen`);
         },
         onError: (error) => {
@@ -222,6 +253,25 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
     const warningCount = screens.filter(s => s.computed_status === 'warning').length;
     const errorCount = screens.filter(s => s.computed_status === 'error').length;
     const offlineCount = screens.filter(s => s.computed_status === 'offline').length;
+
+    // Filter logs based on selected filters
+    const filteredLogs = commandLogs.filter(log => {
+        if (logFilters.screen !== 'all' && log.screen_name !== logFilters.screen) return false;
+        if (logFilters.command !== 'all' && log.command !== logFilters.command) return false;
+        if (logFilters.status !== 'all' && log.status !== logFilters.status) return false;
+        
+        if (logFilters.dateRange !== 'all') {
+            const logDate = new Date(log.created_date);
+            const now = new Date();
+            const daysDiff = (now - logDate) / (1000 * 60 * 60 * 24);
+            
+            if (logFilters.dateRange === 'today' && daysDiff > 1) return false;
+            if (logFilters.dateRange === 'week' && daysDiff > 7) return false;
+            if (logFilters.dateRange === 'month' && daysDiff > 30) return false;
+        }
+        
+        return true;
+    });
 
     return (
         <div className="space-y-4">
@@ -712,55 +762,202 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
 
             {/* Command Log Dialog */}
             <Dialog open={showCommandLog} onOpenChange={setShowCommandLog}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-w-5xl max-h-[90vh]">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <History className="h-5 w-5" />
-                            Command Log
-                        </DialogTitle>
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="flex items-center gap-2">
+                                <History className="h-5 w-5" />
+                                Command Log ({filteredLogs.length})
+                            </DialogTitle>
+                            <div className="flex gap-2">
+                                <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => setShowAnalysis(!showAnalysis)}
+                                >
+                                    <BarChart3 className="h-4 w-4 mr-1" />
+                                    {showAnalysis ? 'Hide' : 'Show'} Analysis
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => refetchLogs()}>
+                                    <RefreshCw className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
                     </DialogHeader>
-                    <ScrollArea className="max-h-96">
-                        <div className="space-y-2">
-                            {commandLogs.length === 0 ? (
-                                <p className="text-center text-gray-500 py-8">No commands logged yet</p>
-                            ) : (
-                                commandLogs.map(log => (
-                                    <div key={log.id} className="border rounded-lg p-3 bg-gray-50">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Badge variant="outline" className="text-xs font-mono">
-                                                        {log.command}
-                                                    </Badge>
-                                                    <Badge 
-                                                        className={
-                                                            log.status === 'executed' ? 'bg-green-100 text-green-800' :
-                                                            log.status === 'failed' ? 'bg-red-100 text-red-800' :
-                                                            log.status === 'timeout' ? 'bg-orange-100 text-orange-800' :
-                                                            'bg-blue-100 text-blue-800'
-                                                        }
-                                                    >
-                                                        {log.status}
-                                                    </Badge>
+
+                    {/* Filters */}
+                    <div className="grid grid-cols-4 gap-2 border rounded-lg p-3 bg-gray-50">
+                        <div>
+                            <Label className="text-xs mb-1">Screen</Label>
+                            <Select value={logFilters.screen} onValueChange={(value) => setLogFilters({...logFilters, screen: value})}>
+                                <SelectTrigger className="h-8">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Screens</SelectItem>
+                                    {[...new Set(commandLogs.map(l => l.screen_name))].map(name => (
+                                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs mb-1">Command</Label>
+                            <Select value={logFilters.command} onValueChange={(value) => setLogFilters({...logFilters, command: value})}>
+                                <SelectTrigger className="h-8">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Commands</SelectItem>
+                                    {[...new Set(commandLogs.map(l => l.command))].map(cmd => (
+                                        <SelectItem key={cmd} value={cmd}>{cmd}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs mb-1">Status</Label>
+                            <Select value={logFilters.status} onValueChange={(value) => setLogFilters({...logFilters, status: value})}>
+                                <SelectTrigger className="h-8">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="executed">Executed</SelectItem>
+                                    <SelectItem value="failed">Failed</SelectItem>
+                                    <SelectItem value="timeout">Timeout</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs mb-1">Date Range</Label>
+                            <Select value={logFilters.dateRange} onValueChange={(value) => setLogFilters({...logFilters, dateRange: value})}>
+                                <SelectTrigger className="h-8">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Time</SelectItem>
+                                    <SelectItem value="today">Today</SelectItem>
+                                    <SelectItem value="week">Last 7 Days</SelectItem>
+                                    <SelectItem value="month">Last 30 Days</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* Failure Analysis */}
+                    {showAnalysis && failureAnalysis && (
+                        <div className="border rounded-lg p-4 bg-red-50 space-y-3">
+                            <h4 className="font-semibold text-red-900 flex items-center gap-2">
+                                <BarChart3 className="h-4 w-4" />
+                                Failure Analysis (Last 7 Days)
+                            </h4>
+                            <div className="grid grid-cols-3 gap-3 text-sm">
+                                <div className="bg-white rounded p-2">
+                                    <p className="text-xs text-gray-600">Total Failures</p>
+                                    <p className="text-xl font-bold text-red-600">{failureAnalysis.analysis?.total_failures || 0}</p>
+                                </div>
+                                <div className="bg-white rounded p-2">
+                                    <p className="text-xs text-gray-600">Unique Screens</p>
+                                    <p className="text-xl font-bold text-orange-600">
+                                        {Object.keys(failureAnalysis.analysis?.by_screen || {}).length}
+                                    </p>
+                                </div>
+                                <div className="bg-white rounded p-2">
+                                    <p className="text-xs text-gray-600">Command Types</p>
+                                    <p className="text-xl font-bold text-yellow-600">
+                                        {Object.keys(failureAnalysis.analysis?.by_command || {}).length}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {failureAnalysis.analysis?.suggestions?.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-semibold text-red-900">Suggestions:</p>
+                                    {failureAnalysis.analysis.suggestions.map((suggestion, idx) => (
+                                        <div key={idx} className={`p-2 rounded text-sm ${
+                                            suggestion.severity === 'high' ? 'bg-red-100 border border-red-200' :
+                                            'bg-yellow-100 border border-yellow-200'
+                                        }`}>
+                                            <div className="flex items-start gap-2">
+                                                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                <div className="flex-1">
+                                                    <p className="font-medium">{suggestion.message}</p>
+                                                    {suggestion.solution && (
+                                                        <p className="text-xs mt-1 text-gray-700">
+                                                            💡 {suggestion.solution}
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <p className="text-sm font-medium">{log.screen_name}</p>
-                                                <p className="text-xs text-gray-600 mt-1">
-                                                    By {log.issued_by} • {moment(log.created_date).format('MMM DD, HH:mm:ss')}
-                                                </p>
-                                                {log.executed_at && (
-                                                    <p className="text-xs text-green-600 mt-1">
-                                                        Executed: {moment(log.executed_at).format('MMM DD, HH:mm:ss')}
-                                                    </p>
-                                                )}
-                                                {log.error_message && (
-                                                    <p className="text-xs text-red-600 mt-1">
-                                                        Error: {log.error_message}
-                                                    </p>
-                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Command Logs */}
+                    <ScrollArea className="max-h-96">
+                        <div className="space-y-2">
+                            {filteredLogs.length === 0 ? (
+                                <p className="text-center text-gray-500 py-8">No commands match the filters</p>
+                            ) : (
+                                filteredLogs.map(log => {
+                                    const executionTime = log.executed_at && log.created_date 
+                                        ? ((new Date(log.executed_at) - new Date(log.created_date)) / 1000).toFixed(1)
+                                        : null;
+                                    
+                                    return (
+                                        <div key={log.id} className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        <Badge variant="outline" className="text-xs font-mono">
+                                                            {log.command}
+                                                        </Badge>
+                                                        <Badge 
+                                                            className={
+                                                                log.status === 'executed' ? 'bg-green-100 text-green-800' :
+                                                                log.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                                                log.status === 'timeout' ? 'bg-orange-100 text-orange-800' :
+                                                                'bg-blue-100 text-blue-800 animate-pulse'
+                                                            }
+                                                        >
+                                                            {log.status === 'executed' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                                            {log.status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
+                                                            {log.status === 'timeout' && <Timer className="h-3 w-3 mr-1" />}
+                                                            {log.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                                                            {log.status}
+                                                        </Badge>
+                                                        {executionTime && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                ⚡ {executionTime}s
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm font-medium">{log.screen_name}</p>
+                                                    <p className="text-xs text-gray-600 mt-1">
+                                                        By {log.issued_by} • {moment(log.created_date).format('MMM DD, HH:mm:ss')}
+                                                    </p>
+                                                    {log.executed_at && (
+                                                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            Executed: {moment(log.executed_at).format('MMM DD, HH:mm:ss')}
+                                                        </p>
+                                                    )}
+                                                    {log.error_message && (
+                                                        <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-900">
+                                                            <p className="font-semibold">Error:</p>
+                                                            <p>{log.error_message}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </ScrollArea>
