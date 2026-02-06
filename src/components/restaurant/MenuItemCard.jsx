@@ -64,9 +64,9 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                         )}
                     </div>
                 )}
-                <div className="flex items-center gap-4">
-                    <span className="font-extrabold text-xl text-gray-900">£{item.price?.toFixed(2)}</span>
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <span className="font-extrabold text-xl text-gray-900 whitespace-nowrap">£{item.price?.toFixed(2)}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
                         {item.is_vegetarian && (
                             <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg">
                                 <Leaf className="h-3.5 w-3.5 text-green-600" />
