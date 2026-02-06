@@ -15,11 +15,45 @@ import { format } from 'date-fns';
 export default function MediaWallSettings({ restaurantId }) {
     const queryClient = useQueryClient();
     const [selectedWall, setSelectedWall] = useState(null);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     const { data: screens = [] } = useQuery({
         queryKey: ['screens', restaurantId],
         queryFn: () => base44.entities.Screen.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId
+    });
+
+    const { data: weather } = useQuery({
+        queryKey: ['widget-weather', restaurantId],
+        queryFn: async () => {
+            const restaurant = await base44.entities.Restaurant.filter({ id: restaurantId });
+            if (restaurant?.[0]?.latitude && restaurant?.[0]?.longitude) {
+                const result = await base44.functions.invoke('getWeather', {
+                    lat: restaurant[0].latitude,
+                    lng: restaurant[0].longitude
+                });
+                return result.data;
+            }
+            return null;
+        },
+        enabled: !!restaurantId,
+        staleTime: 600000
+    });
+
+    const { data: activeOrders = [] } = useQuery({
+        queryKey: ['widget-orders', restaurantId],
+        queryFn: () => base44.entities.Order.filter({
+            restaurant_id: restaurantId,
+            order_type: 'collection',
+            status: { $in: ['preparing', 'ready_for_collection'] }
+        }),
+        enabled: !!restaurantId,
+        refetchInterval: 5000
     });
 
     const updateScreenMutation = useMutation({
