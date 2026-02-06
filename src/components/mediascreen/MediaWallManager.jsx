@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -257,7 +258,7 @@ export default function MediaWallManager({ restaurantId }) {
                                                     const firstScreen = wall.screens[0];
                                                     if (firstScreen) {
                                                         window.open(
-                                                            `/media-screen?restaurantId=${restaurantId}&screenName=${encodeURIComponent(firstScreen.screen_name)}`,
+                                                            createPageUrl('MediaScreen') + `?restaurantId=${restaurantId}&screenName=${encodeURIComponent(firstScreen.screen_name)}`,
                                                             '_blank',
                                                             'width=1920,height=1080,toolbar=no,location=no,status=no,menubar=no'
                                                         );
