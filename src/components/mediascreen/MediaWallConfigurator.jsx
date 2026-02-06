@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Grid3x3, Monitor, Maximize2, Check } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Grid3x3, Monitor, Maximize2, Check, Maximize, Minimize, Move } from 'lucide-react';
 
 export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
     const [config, setConfig] = useState({
@@ -14,7 +15,9 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
         grid_size: screen?.media_wall_config?.grid_size || { rows: 2, cols: 2 },
         bezel_compensation: screen?.media_wall_config?.bezel_compensation || 10,
         wall_name: screen?.media_wall_config?.wall_name || 'Main Wall',
-        rotation: screen?.media_wall_config?.rotation || 0
+        rotation: screen?.media_wall_config?.rotation || 0,
+        layout_mode: screen?.media_wall_config?.layout_mode || 'cover',
+        alignment: screen?.media_wall_config?.alignment || 'center'
     });
 
     const handleSave = () => {
@@ -195,6 +198,105 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
                         <p className="text-xs text-gray-500 mt-1">
                             Adjust to compensate for physical borders between screens
                         </p>
+                    </div>
+
+                    <div className="space-y-4 border-t pt-4">
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Maximize className="h-4 w-4 text-purple-600" />
+                                <span className="text-sm font-semibold text-purple-900">Content Layout Options</span>
+                            </div>
+                            <p className="text-xs text-purple-700">
+                                Configure how content fits across the media wall
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label>Layout Mode</Label>
+                            <Select
+                                value={config.layout_mode}
+                                onValueChange={(value) => setConfig(prev => ({ ...prev, layout_mode: value }))}
+                            >
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cover">
+                                        <div className="flex items-center gap-2">
+                                            <Maximize className="h-4 w-4" />
+                                            <div>
+                                                <p className="font-medium">Cover</p>
+                                                <p className="text-xs text-gray-500">Fill entire wall, may crop content</p>
+                                            </div>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="contain">
+                                        <div className="flex items-center gap-2">
+                                            <Minimize className="h-4 w-4" />
+                                            <div>
+                                                <p className="font-medium">Contain</p>
+                                                <p className="text-xs text-gray-500">Fit content within wall, may show borders</p>
+                                            </div>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="fill">
+                                        <div className="flex items-center gap-2">
+                                            <Grid3x3 className="h-4 w-4" />
+                                            <div>
+                                                <p className="font-medium">Fill</p>
+                                                <p className="text-xs text-gray-500">Stretch to fill wall exactly</p>
+                                            </div>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="auto">
+                                        <div className="flex items-center gap-2">
+                                            <Move className="h-4 w-4" />
+                                            <div>
+                                                <p className="font-medium">Auto</p>
+                                                <p className="text-xs text-gray-500">Automatic based on content</p>
+                                            </div>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700">
+                                {config.layout_mode === 'cover' && '✓ Best for images and videos - fills wall completely'}
+                                {config.layout_mode === 'contain' && '✓ Best for preserving aspect ratio - shows entire content'}
+                                {config.layout_mode === 'fill' && '✓ Stretches content to exact wall dimensions'}
+                                {config.layout_mode === 'auto' && '✓ Automatically selects best mode per content type'}
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Content Alignment</Label>
+                            <div className="grid grid-cols-3 gap-2 mt-1">
+                                {[
+                                    { value: 'top-left', label: 'Top Left' },
+                                    { value: 'top-center', label: 'Top' },
+                                    { value: 'top-right', label: 'Top Right' },
+                                    { value: 'center-left', label: 'Left' },
+                                    { value: 'center', label: 'Center' },
+                                    { value: 'center-right', label: 'Right' },
+                                    { value: 'bottom-left', label: 'Bottom Left' },
+                                    { value: 'bottom-center', label: 'Bottom' },
+                                    { value: 'bottom-right', label: 'Bottom Right' }
+                                ].map(option => (
+                                    <Button
+                                        key={option.value}
+                                        type="button"
+                                        variant={config.alignment === option.value ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setConfig(prev => ({ ...prev, alignment: option.value }))}
+                                        className="text-xs"
+                                    >
+                                        {option.label}
+                                    </Button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                                Position content when using 'contain' mode
+                            </p>
+                        </div>
                     </div>
 
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
