@@ -384,17 +384,30 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
                                             </Badge>
                                         )}
                                         {!template.is_preset && (
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="h-6 w-6 p-0"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteTemplate(template.id);
-                                                }}
-                                            >
-                                                <Trash2 className="h-3 w-3 text-red-500" />
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 w-6 p-0"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditTemplate(template);
+                                                    }}
+                                                >
+                                                    <Edit className="h-3 w-3 text-blue-500" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 w-6 p-0"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteTemplate(template.id);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-3 w-3 text-red-500" />
+                                                </Button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
