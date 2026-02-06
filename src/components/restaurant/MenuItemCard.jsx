@@ -15,7 +15,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={isAvailable ? { y: -2, scale: 1.01 } : {}}
-            className={`group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative h-[180px] ${
+            className={`group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative min-h-[180px] ${
                 isAvailable 
                     ? 'bg-white shadow-md hover:shadow-2xl border-0' 
                     : 'bg-gray-50 border border-gray-200 opacity-70 grayscale'
