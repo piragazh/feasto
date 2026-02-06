@@ -631,8 +631,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                             media_type: item.media_type,
                                                                             duration: item.duration,
                                                                             priority: item.priority,
-                                                                            is_active: item.is_active,
-                                                                            start_time: item.start_time || 0
+                                                                            is_active: item.is_active
                                                                         });
                                                                         setShowDialog(true);
                                                                     }}>
