@@ -22,7 +22,8 @@ import PromotionOversight from '@/components/superadmin/PromotionOversight';
 import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
 import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManagement';
 import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift } from 'lucide-react';
+import GlobalScreenHealthMonitor from '@/components/superadmin/GlobalScreenHealthMonitor';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
@@ -235,6 +236,14 @@ export default function SuperAdmin() {
                             <Upload className="h-4 w-4" />
                             Files
                         </Button>
+                        <Button
+                            variant={activeTab === 'screens' ? 'secondary' : 'ghost'}
+                            onClick={() => setActiveTab('screens')}
+                            className="flex items-center gap-2 text-white hover:bg-white/10"
+                        >
+                            <Monitor className="h-4 w-4" />
+                            Screen Health
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -259,6 +268,7 @@ export default function SuperAdmin() {
                 {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
                 {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
                 {activeTab === 'files' && <PublicFilesManagement />}
+                {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
                 {activeTab === 'managers' && (
                     <iframe 
                         src={createPageUrl('ManageRestaurantManagers')} 
