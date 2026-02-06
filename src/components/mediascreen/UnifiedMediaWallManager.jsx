@@ -1170,6 +1170,11 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                     <Maximize2 className="h-5 w-5" />
                                     {editingContent ? 'Edit' : 'Add'} Full-Wall Content
                                 </span>
+                            ) : contentMode === 'row' ? (
+                                <span className="flex items-center gap-2">
+                                    <Grid3x3 className="h-5 w-5" />
+                                    Add Content to Row {selectedRow}
+                                </span>
                             ) : (
                                 <span className="flex items-center gap-2">
                                     <Monitor className="h-5 w-5" />
