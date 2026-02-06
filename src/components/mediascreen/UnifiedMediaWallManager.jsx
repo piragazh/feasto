@@ -333,6 +333,15 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 return;
             }
 
+            // Calculate next available display_order for this screen
+            const screenContent = individualContent.filter(c => 
+                c.position?.row === selectedPosition.row &&
+                c.position?.col === selectedPosition.col
+            );
+            const nextOrder = screenContent.length > 0 
+                ? Math.max(...screenContent.map(c => c.display_order || 0)) + 1
+                : timelineContent.length;
+
             const data = {
                 restaurant_id: restaurantId,
                 screen_name: screen.screen_name,
@@ -343,7 +352,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 duration: formData.duration,
                 priority: formData.priority,
                 is_active: formData.is_active,
-                display_order: editingContent?.display_order || 0,
+                display_order: editingContent?.display_order || nextOrder,
                 widget_config: formData.widget_config || {}
             };
 
