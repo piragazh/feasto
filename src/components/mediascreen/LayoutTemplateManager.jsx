@@ -199,8 +199,13 @@ const PRESET_TEMPLATES = [
 export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, currentTemplate }) {
     const queryClient = useQueryClient();
     const [showSaveDialog, setShowSaveDialog] = useState(false);
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState(null);
     const [templateName, setTemplateName] = useState('');
     const [templateDescription, setTemplateDescription] = useState('');
+    const [defaultForGroups, setDefaultForGroups] = useState([]);
+    const [defaultForScreenTypes, setDefaultForScreenTypes] = useState([]);
+    const [editingZone, setEditingZone] = useState(null);
 
     const { data: customTemplates = [] } = useQuery({
         queryKey: ['layout-templates', restaurantId],
