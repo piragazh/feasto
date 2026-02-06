@@ -5,7 +5,9 @@ import { base44 } from '@/api/base44Client';
 export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [syncTimestamp, setSyncTimestamp] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const videoRef = useRef(null);
+    const imageRef = useRef(null);
 
     // Fetch active playlist
     const { data: playlists = [] } = useQuery({
@@ -120,10 +122,24 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
         const currentContent = playlistContent[currentIndex];
         if (currentContent.media_type === 'video') return; // Videos auto-advance on end
 
+        // Preload next content
+        const nextIndex = (currentIndex + 1) % playlistContent.length;
+        const nextContent = playlistContent[nextIndex];
+        if (nextContent) {
+            if (nextContent.media_type === 'video') {
+                const preloadVideo = document.createElement('video');
+                preloadVideo.src = nextContent.media_url;
+                preloadVideo.preload = 'auto';
+            } else {
+                const preloadImg = new Image();
+                preloadImg.src = nextContent.media_url;
+            }
+        }
+
         const duration = (currentContent.duration || 10) * 1000;
         const timeout = setTimeout(() => {
-            const nextIndex = (currentIndex + 1) % playlistContent.length;
             setCurrentIndex(nextIndex);
+            setIsLoading(true);
         }, duration);
 
         return () => clearTimeout(timeout);
@@ -131,8 +147,11 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
 
     if (!playlistContent.length) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-black text-white">
-                <p>No synchronized content available</p>
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p>Loading synchronized content...</p>
+                </div>
             </div>
         );
     }
@@ -141,13 +160,18 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
     if (!currentContent) return null;
 
     return (
-        <div className="h-screen w-screen overflow-hidden bg-black">
+        <div className="h-screen w-screen overflow-hidden bg-gray-900 relative">
             {currentContent.media_type === 'video' ? (
                 <video
                     ref={videoRef}
                     src={currentContent.media_url}
                     className="w-full h-full object-cover"
                     muted
+                    autoPlay
+                    playsInline
+                    onLoadedData={() => setIsLoading(false)}
+                    onWaiting={() => setIsLoading(true)}
+                    onPlaying={() => setIsLoading(false)}
                     onEnded={() => {
                         const nextIndex = (currentIndex + 1) % playlistContent.length;
                         setCurrentIndex(nextIndex);
@@ -155,10 +179,21 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
                 />
             ) : (
                 <img
+                    ref={imageRef}
                     src={currentContent.media_url}
                     alt={currentContent.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-opacity duration-300"
+                    style={{ opacity: isLoading ? 0 : 1 }}
+                    onLoad={() => setIsLoading(false)}
+                    onLoadStart={() => setIsLoading(true)}
                 />
+            )}
+            
+            {/* Loading indicator - only show when actually loading */}
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50">
+                    <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
             )}
             
             {/* Sync indicator */}
