@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3, Calendar, Clock } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3, Calendar, Clock, Tag, X } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
 import AIContentAssistant from './AIContentAssistant';
@@ -49,6 +49,10 @@ export default function ContentManagement({ restaurantId }) {
     const [screenName, setScreenName] = useState('');
     const [editingScreenLayout, setEditingScreenLayout] = useState(null);
     const [aiPrompt, setAIPrompt] = useState('');
+    const [showGroupDialog, setShowGroupDialog] = useState(false);
+    const [editingScreenGroups, setEditingScreenGroups] = useState(null);
+    const [selectedGroups, setSelectedGroups] = useState([]);
+    const [newGroupName, setNewGroupName] = useState('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -576,6 +580,47 @@ export default function ContentManagement({ restaurantId }) {
         }));
         setAIPrompt(idea.visualSuggestions);
         setShowAIDialog(true);
+    };
+
+    // Get all unique groups across all screens
+    const allGroupsInUse = [...new Set(screens.flatMap(s => s.groups || []))];
+
+    const handleManageGroups = (screenName) => {
+        const screen = screens.find(s => s.screen_name === screenName);
+        setEditingScreenGroups(screen);
+        setSelectedGroups(screen?.groups || []);
+        setShowGroupDialog(true);
+    };
+
+    const handleAddGroup = () => {
+        if (!newGroupName.trim()) return;
+        if (selectedGroups.includes(newGroupName.trim())) {
+            toast.error('Group already added');
+            return;
+        }
+        setSelectedGroups([...selectedGroups, newGroupName.trim()]);
+        setNewGroupName('');
+    };
+
+    const handleRemoveGroup = (groupName) => {
+        setSelectedGroups(selectedGroups.filter(g => g !== groupName));
+    };
+
+    const handleSaveGroups = async () => {
+        if (!editingScreenGroups) return;
+        
+        try {
+            await updateScreenMutation.mutateAsync({
+                id: editingScreenGroups.id,
+                data: { groups: selectedGroups }
+            });
+            toast.success('Groups updated successfully');
+            setShowGroupDialog(false);
+            setEditingScreenGroups(null);
+            setSelectedGroups([]);
+        } catch (error) {
+            toast.error('Failed to update groups');
+        }
     };
 
     return (
@@ -1134,6 +1179,111 @@ export default function ContentManagement({ restaurantId }) {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Tag className="h-5 w-5 text-emerald-600" />
+                            Manage Screen Groups
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <p className="text-sm text-gray-600 mb-3">
+                                Organize screens into groups for easier management and bulk operations.
+                            </p>
+                            <Label>Screen: {editingScreenGroups?.screen_name}</Label>
+                        </div>
+
+                        <div>
+                            <Label>Current Groups</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {selectedGroups.length === 0 ? (
+                                    <p className="text-sm text-gray-500 italic">No groups assigned</p>
+                                ) : (
+                                    selectedGroups.map(group => (
+                                        <Badge key={group} className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                                            <Tag className="h-3 w-3 mr-1" />
+                                            {group}
+                                            <button
+                                                onClick={() => handleRemoveGroup(group)}
+                                                className="ml-1 hover:bg-emerald-200 rounded-full p-0.5"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Add to Group</Label>
+                            <div className="flex gap-2 mt-1">
+                                <Input
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    placeholder="Enter group name (e.g., Entrance Screens)"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAddGroup();
+                                        }
+                                    }}
+                                />
+                                <Button onClick={handleAddGroup} variant="outline">
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {allGroupsInUse.length > 0 && (
+                            <div>
+                                <Label>Existing Groups (click to add)</Label>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {allGroupsInUse.map(group => (
+                                        <button
+                                            key={group}
+                                            onClick={() => {
+                                                if (!selectedGroups.includes(group)) {
+                                                    setSelectedGroups([...selectedGroups, group]);
+                                                }
+                                            }}
+                                            disabled={selectedGroups.includes(group)}
+                                            className={`px-2 py-1 rounded text-xs border transition-colors ${
+                                                selectedGroups.includes(group)
+                                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                                    : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50 cursor-pointer'
+                                            }`}
+                                        >
+                                            <Tag className="h-3 w-3 inline mr-1" />
+                                            {group}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-2 pt-2">
+                            <Button onClick={handleSaveGroups} className="flex-1">
+                                Save Groups
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    setShowGroupDialog(false);
+                                    setEditingScreenGroups(null);
+                                    setSelectedGroups([]);
+                                    setNewGroupName('');
+                                }} 
+                                variant="outline"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
                 </TabsContent>
 
@@ -1174,18 +1324,24 @@ export default function ContentManagement({ restaurantId }) {
                                                 <div className="p-4">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <h4 className="font-semibold text-gray-900 truncate">{name}</h4>
-                                                                {isEmpty ? (
-                                                                    <Badge variant="outline" className="bg-gray-50 text-gray-500 text-xs">
-                                                                        Empty
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
-                                                                        Active
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
+                                                           <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                               <h4 className="font-semibold text-gray-900 truncate">{name}</h4>
+                                                               {isEmpty ? (
+                                                                   <Badge variant="outline" className="bg-gray-50 text-gray-500 text-xs">
+                                                                       Empty
+                                                                   </Badge>
+                                                               ) : (
+                                                                   <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                                                                       Active
+                                                                   </Badge>
+                                                               )}
+                                                               {screens.find(s => s.screen_name === name)?.groups?.map(group => (
+                                                                   <Badge key={group} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                                                                       <Tag className="h-3 w-3 mr-1" />
+                                                                       {group}
+                                                                   </Badge>
+                                                               ))}
+                                                           </div>
                                                             <div className="grid grid-cols-3 gap-3 text-xs text-gray-600">
                                                                 <div>
                                                                     <span className="text-gray-500">Content:</span>
@@ -1202,6 +1358,15 @@ export default function ContentManagement({ restaurantId }) {
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col gap-1.5">
+                                                           <Button
+                                                               size="sm"
+                                                               variant="outline"
+                                                               onClick={() => handleManageGroups(name)}
+                                                               className="text-xs h-8 bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                                           >
+                                                               <Tag className="h-3.5 w-3.5 mr-1" />
+                                                               Groups
+                                                           </Button>
                                                            <Button
                                                                size="sm"
                                                                variant="outline"
