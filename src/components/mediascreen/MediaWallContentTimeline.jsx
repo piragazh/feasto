@@ -260,6 +260,7 @@ export default function MediaWallContentTimeline({
                                     </div>
                                 );
                             })}
+                        </div>
                     </CardContent>
                 </Card>
             )}
