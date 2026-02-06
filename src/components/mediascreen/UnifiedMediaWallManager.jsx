@@ -204,9 +204,10 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
         }
     };
 
-    const handleAddContent = (mode, position = null) => {
+    const handleAddContent = (mode, position = null, row = null) => {
         setContentMode(mode);
         setSelectedPosition(position);
+        setSelectedRow(row);
         setEditingContent(null);
         setShowDialog(true);
     };
