@@ -363,7 +363,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
         );
     };
 
-    // Combine all content into timeline
+    // Combine all content into timeline, sorted by start_time then display_order
     const timelineContent = [
         ...wallContent.map(c => ({ ...c, type: 'fullwall', screen: 'All Screens' })),
         ...individualContent.map(c => {
@@ -373,7 +373,14 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             );
             return { ...c, type: 'individual', screen: screen?.screen_name || 'Unknown' };
         })
-    ].sort((a, b) => a.display_order - b.display_order);
+    ].sort((a, b) => {
+        // First sort by start_time
+        const timeA = a.start_time || 0;
+        const timeB = b.start_time || 0;
+        if (timeA !== timeB) return timeA - timeB;
+        // Then by display_order as secondary sort
+        return a.display_order - b.display_order;
+    });
 
     const moveInTimeline = async (item, direction) => {
         try {
