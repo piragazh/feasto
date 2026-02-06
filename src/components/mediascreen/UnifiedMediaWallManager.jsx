@@ -22,8 +22,9 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const queryClient = useQueryClient();
     const [showDialog, setShowDialog] = useState(false);
     const [showFileManager, setShowFileManager] = useState(false);
-    const [contentMode, setContentMode] = useState('individual'); // 'individual' or 'fullwall'
+    const [contentMode, setContentMode] = useState('individual'); // 'individual', 'row', or 'fullwall'
     const [selectedPosition, setSelectedPosition] = useState(null);
+    const [selectedRow, setSelectedRow] = useState(null);
     const [editingContent, setEditingContent] = useState(null);
     const [showScheduler, setShowScheduler] = useState(false);
     const [schedulingContent, setSchedulingContent] = useState(null);
