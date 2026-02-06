@@ -252,6 +252,23 @@ export default function MediaWallManager({ restaurantId }) {
                                             </Badge>
                                             <Button
                                                 size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    const firstScreen = wall.screens[0];
+                                                    if (firstScreen) {
+                                                        window.open(
+                                                            `/media-screen?restaurantId=${restaurantId}&screenName=${encodeURIComponent(firstScreen.screen_name)}`,
+                                                            '_blank',
+                                                            'width=1920,height=1080,toolbar=no,location=no,status=no,menubar=no'
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                <Eye className="h-3 w-3 mr-1" />
+                                                Preview
+                                            </Button>
+                                            <Button
+                                                size="sm"
                                                 onClick={() => {
                                                     setManagingWallName(wall.name);
                                                     setManagingWallConfig(wall.grid_size);
