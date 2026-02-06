@@ -591,16 +591,16 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                     </Badge>
                                                                     <p className="font-semibold text-sm truncate">{item.title}</p>
                                                                     <div className="flex gap-1 mt-1">
-                                                                        <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
-                                                                        <Badge variant="outline" className="text-[10px]">{item.start_time || 0}s → {(item.start_time || 0) + item.duration}s</Badge>
-                                                                        {item.priority > 1 && (
-                                                                            <Badge variant="outline" className="text-[10px] bg-orange-50">P:{item.priority}</Badge>
-                                                                        )}
-                                                                        {item.schedule?.enabled && (
-                                                                            <Badge variant="outline" className="text-[10px] bg-green-50">
-                                                                                <Calendar className="h-2 w-2 mr-1" />Scheduled
-                                                                            </Badge>
-                                                                        )}
+                                                                       <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
+                                                                       <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
+                                                                       {item.priority > 1 && (
+                                                                           <Badge variant="outline" className="text-[10px] bg-orange-50">P:{item.priority}</Badge>
+                                                                       )}
+                                                                       {item.schedule?.enabled && (
+                                                                           <Badge variant="outline" className="text-[10px] bg-green-50">
+                                                                               <Calendar className="h-2 w-2 mr-1" />Scheduled
+                                                                           </Badge>
+                                                                       )}
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-1">
