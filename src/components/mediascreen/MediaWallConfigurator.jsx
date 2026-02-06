@@ -21,7 +21,21 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
     });
 
     const handleSave = () => {
-        onSave(config);
+        // Ensure all numeric values are properly typed
+        const sanitizedConfig = {
+            ...config,
+            position: {
+                row: Number(config.position.row),
+                col: Number(config.position.col)
+            },
+            grid_size: {
+                rows: Number(config.grid_size.rows),
+                cols: Number(config.grid_size.cols)
+            },
+            bezel_compensation: Number(config.bezel_compensation),
+            rotation: Number(config.rotation)
+        };
+        onSave(sanitizedConfig);
     };
 
     const renderGridPreview = () => {
@@ -40,7 +54,7 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
                         }`}
                         onClick={() => setConfig(prev => ({
                             ...prev,
-                            position: { row, col }
+                            position: { row: Number(row), col: Number(col) }
                         }))}
                     >
                         {isSelected && (

@@ -309,8 +309,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         const wallConfig = screen.media_wall_config;
         
         // Calculate position offset based on grid position
-        const { row, col } = wallConfig.position;
-        const { rows, cols } = wallConfig.grid_size;
+        const { row, col } = wallConfig.position || { row: 0, col: 0 };
+        const { rows, cols } = wallConfig.grid_size || { rows: 2, cols: 2 };
         const bezel = wallConfig.bezel_compensation || 0;
         
         const screenWidth = window.innerWidth;
