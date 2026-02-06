@@ -18,6 +18,7 @@ import ContentScheduler from './ContentScheduler';
 import FileManager from './FileManager';
 import ContentPreview from './ContentPreview';
 import ScreenHealthMonitor from './ScreenHealthMonitor';
+import MediaWallPlaylistManager from './MediaWallPlaylistManager';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
@@ -541,8 +542,9 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     return (
         <div className="space-y-6">
             <Tabs defaultValue="timeline">
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="grid w-full grid-cols-8">
                     <TabsTrigger value="health">Health</TabsTrigger>
+                    <TabsTrigger value="playlists">Playlists</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
                     <TabsTrigger value="visual">Visual</TabsTrigger>
                     <TabsTrigger value="groups">Groups</TabsTrigger>
@@ -553,6 +555,10 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
 
                 <TabsContent value="health" className="space-y-4">
                     <ScreenHealthMonitor restaurantId={restaurantId} wallName={wallName} />
+                </TabsContent>
+
+                <TabsContent value="playlists" className="space-y-4">
+                    <MediaWallPlaylistManager restaurantId={restaurantId} wallName={wallName} />
                 </TabsContent>
 
                 <TabsContent value="timeline" className="space-y-4">
