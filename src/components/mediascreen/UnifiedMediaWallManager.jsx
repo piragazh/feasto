@@ -1184,6 +1184,14 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
+                        {contentMode === 'row' && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p className="text-sm text-blue-900">
+                                    This content will be added to all {screens.filter(s => s.media_wall_config.position.row === selectedRow).length} screens in Row {selectedRow}
+                                </p>
+                            </div>
+                        )}
+                        
                         <div>
                             <Label>Title</Label>
                             <Input
