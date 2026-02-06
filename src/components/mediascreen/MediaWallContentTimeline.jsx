@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Layout, Plus, Trash2 } from 'lucide-react';
+import { Clock, Layout, Plus, Trash2, Edit2, PlayCircle, PauseCircle, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MediaWallContentTimeline({ 
@@ -17,6 +18,18 @@ export default function MediaWallContentTimeline({
     const [selectedLayout, setSelectedLayout] = useState(null);
     const [timelineItems, setTimelineItems] = useState([]);
     const [selectedRow, setSelectedRow] = useState(0);
+    const [rowLabels, setRowLabels] = useState({
+        0: 'Row 1',
+        1: 'Row 2', 
+        2: 'Row 3',
+        3: 'Row 4',
+        4: 'Row 5'
+    });
+    const [editingRowLabel, setEditingRowLabel] = useState(null);
+    const [tempRowLabel, setTempRowLabel] = useState('');
+    const [playingRow, setPlayingRow] = useState(null);
+    const [playbackProgress, setPlaybackProgress] = useState({});
+    const [editingItem, setEditingItem] = useState(null);
 
     const handleApplyLayout = (item) => {
         if (!selectedLayout) {
@@ -36,6 +49,9 @@ export default function MediaWallContentTimeline({
         const timelineItem = {
             id: `timeline-${Date.now()}`,
             contentId: item.id,
+            contentTitle: item.title,
+            contentMediaUrl: item.media_url,
+            contentMediaType: item.media_type,
             layoutId: selectedLayout.id,
             layoutName: selectedLayout.name,
             duration: item.duration || 10,
@@ -45,7 +61,46 @@ export default function MediaWallContentTimeline({
 
         setTimelineItems([...timelineItems, timelineItem]);
         onApplyLayout(item, selectedLayout);
-        toast.success(`Content added to timeline row ${selectedRow + 1}`);
+        toast.success(`Content added to ${rowLabels[selectedRow]}`);
+    };
+
+    const updateItemDuration = (id, newDuration) => {
+        setTimelineItems(timelineItems.map(item => 
+            item.id === id ? { ...item, duration: newDuration } : item
+        ));
+        toast.success('Duration updated');
+    };
+
+    const updateRowLabel = (rowNum) => {
+        if (tempRowLabel.trim()) {
+            setRowLabels({ ...rowLabels, [rowNum]: tempRowLabel.trim() });
+        }
+        setEditingRowLabel(null);
+        setTempRowLabel('');
+    };
+
+    const playRow = (rowNum) => {
+        if (playingRow === rowNum) {
+            setPlayingRow(null);
+            setPlaybackProgress({});
+            return;
+        }
+
+        setPlayingRow(rowNum);
+        const rowItems = timelineItems.filter(item => item.row === rowNum);
+        const maxTime = Math.max(...rowItems.map(item => item.startTime + item.duration), 1);
+
+        let currentTime = 0;
+        const interval = setInterval(() => {
+            currentTime += 0.1;
+            if (currentTime >= maxTime) {
+                clearInterval(interval);
+                setPlayingRow(null);
+                setPlaybackProgress({});
+            } else {
+                setPlaybackProgress({ [rowNum]: currentTime });
+            }
+        }, 100);
     };
 
     const removeFromTimeline = (id) => {
@@ -176,16 +231,64 @@ export default function MediaWallContentTimeline({
                             {[0, 1, 2, 3, 4].map(rowNum => {
                                 const rowItems = timelineItems.filter(item => item.row === rowNum);
                                 if (rowItems.length === 0) return null;
-                                
+
+                                const maxTime = Math.max(...rowItems.map(item => item.startTime + item.duration), 1);
+                                const rowDuration = maxTime;
+
                                 return (
                                     <div key={rowNum} className="space-y-2">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                                                Row {rowNum + 1}
-                                            </Badge>
-                                            <div className="text-xs text-gray-500">
-                                                {rowItems.length} item{rowItems.length > 1 ? 's' : ''}
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <GripVertical className="h-4 w-4 text-gray-400" />
+                                                {editingRowLabel === rowNum ? (
+                                                    <Input
+                                                        value={tempRowLabel}
+                                                        onChange={(e) => setTempRowLabel(e.target.value)}
+                                                        onBlur={() => updateRowLabel(rowNum)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') updateRowLabel(rowNum);
+                                                            if (e.key === 'Escape') {
+                                                                setEditingRowLabel(null);
+                                                                setTempRowLabel('');
+                                                            }
+                                                        }}
+                                                        className="h-7 w-32 text-sm"
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                                                            {rowLabels[rowNum]}
+                                                        </Badge>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-6 w-6 p-0"
+                                                            onClick={() => {
+                                                                setEditingRowLabel(rowNum);
+                                                                setTempRowLabel(rowLabels[rowNum]);
+                                                            }}
+                                                        >
+                                                            <Edit2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                <div className="text-xs text-gray-500">
+                                                    {rowItems.length} item{rowItems.length > 1 ? 's' : ''} • {rowDuration}s
+                                                </div>
                                             </div>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => playRow(rowNum)}
+                                                className="h-7"
+                                            >
+                                                {playingRow === rowNum ? (
+                                                    <PauseCircle className="h-4 w-4" />
+                                                ) : (
+                                                    <PlayCircle className="h-4 w-4" />
+                                                )}
+                                            </Button>
                                         </div>
                                         <div className="space-y-2 pl-4 border-l-2 border-blue-200">
                                             {rowItems
@@ -193,34 +296,85 @@ export default function MediaWallContentTimeline({
                                                 .map((item, index) => (
                                                     <div
                                                         key={item.id}
-                                                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200"
-                                                    >
-                                                        <div className="flex-shrink-0">
+                                                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 relative overflow-hidden"
+                                                        >
+                                                        {/* Playback Progress Indicator */}
+                                                        {playingRow === rowNum && playbackProgress[rowNum] >= item.startTime && playbackProgress[rowNum] <= item.startTime + item.duration && (
+                                                            <div 
+                                                                className="absolute top-0 left-0 h-full bg-blue-300 opacity-30 transition-all duration-100"
+                                                                style={{
+                                                                    width: `${((playbackProgress[rowNum] - item.startTime) / item.duration) * 100}%`
+                                                                }}
+                                                            />
+                                                        )}
+
+                                                        <div className="flex-shrink-0 relative z-10">
                                                             <Badge variant="outline" className="bg-white">
                                                                 {index + 1}
                                                             </Badge>
                                                         </div>
-                                                        <div className="flex-1">
+
+                                                        {/* Content Preview Thumbnail */}
+                                                        <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden flex-shrink-0 relative z-10">
+                                                            {item.contentMediaType === 'video' ? (
+                                                                <video src={item.contentMediaUrl} className="w-full h-full object-cover" />
+                                                            ) : item.contentMediaType?.startsWith('widget_') ? (
+                                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px]">
+                                                                    {item.contentMediaType === 'widget_time' && '🕐'}
+                                                                    {item.contentMediaType === 'widget_weather' && '🌤️'}
+                                                                    {item.contentMediaType === 'widget_orders' && '📦'}
+                                                                </div>
+                                                            ) : (
+                                                                <img src={item.contentMediaUrl} alt={item.contentTitle} className="w-full h-full object-cover" />
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex-1 relative z-10">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium text-sm">
-                                                                    {content.find(c => c.id === item.contentId)?.title || 'Unknown'}
+                                                                    {item.contentTitle || content.find(c => c.id === item.contentId)?.title || 'Unknown'}
                                                                 </span>
                                                                 <Badge className="bg-blue-100 text-blue-800 text-xs">
                                                                     {item.layoutName}
                                                                 </Badge>
                                                             </div>
-                                                            <div className="text-xs text-gray-500 mt-1">
-                                                                Time: {item.startTime}s → {item.startTime + item.duration}s ({item.duration}s)
+                                                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                                                                <span>Time: {item.startTime}s → {item.startTime + item.duration}s</span>
+                                                                {editingItem === item.id ? (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={item.duration}
+                                                                            onChange={(e) => updateItemDuration(item.id, parseInt(e.target.value) || 10)}
+                                                                            className="h-5 w-16 text-xs px-1"
+                                                                            min="1"
+                                                                        />
+                                                                        <span>s</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <span>({item.duration}s)</span>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            className="h-4 w-4 p-0"
+                                                                            onClick={() => setEditingItem(item.id)}
+                                                                        >
+                                                                            <Edit2 className="h-2.5 w-2.5" />
+                                                                        </Button>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => removeFromTimeline(item.id)}
+                                                            className="relative z-10"
                                                         >
                                                             <Trash2 className="h-3 w-3 text-red-500" />
                                                         </Button>
-                                                    </div>
+                                                        </div>
                                                 ))}
                                         </div>
                                     </div>
@@ -239,23 +393,41 @@ export default function MediaWallContentTimeline({
                                 
                                 return (
                                     <div key={rowNum}>
-                                        <div className="text-xs text-gray-600 mb-1">Row {rowNum + 1}</div>
-                                        <div className="relative h-6 bg-white border rounded overflow-hidden">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <div className="text-xs text-gray-600">{rowLabels[rowNum]}</div>
+                                            <div className="text-xs text-gray-500">{maxTime}s</div>
+                                        </div>
+                                        <div className="relative h-8 bg-white border rounded overflow-hidden">
                                             {rowItems.map((item) => {
                                                 const width = (item.duration / maxTime) * 100;
                                                 const offset = (item.startTime / maxTime) * 100;
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className="absolute h-full bg-gradient-to-r from-blue-400 to-indigo-400 border-r border-blue-600"
+                                                        className="absolute h-full bg-gradient-to-r from-blue-400 to-indigo-400 border-r border-blue-600 flex items-center justify-center group hover:from-blue-500 hover:to-indigo-500 cursor-pointer transition-colors"
                                                         style={{
                                                             width: `${width}%`,
                                                             left: `${offset}%`
                                                         }}
-                                                        title={`${item.startTime}s - ${item.startTime + item.duration}s`}
-                                                    />
+                                                        title={`${item.contentTitle} - ${item.startTime}s to ${item.startTime + item.duration}s`}
+                                                    >
+                                                        <span className="text-[10px] text-white font-medium truncate px-1 opacity-0 group-hover:opacity-100">
+                                                            {item.contentTitle}
+                                                        </span>
+                                                    </div>
                                                 );
                                             })}
+                                            {/* Current Playback Position */}
+                                            {playingRow === rowNum && playbackProgress[rowNum] !== undefined && (
+                                                <div
+                                                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                                                    style={{
+                                                        left: `${(playbackProgress[rowNum] / maxTime) * 100}%`
+                                                    }}
+                                                >
+                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-red-500" />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
