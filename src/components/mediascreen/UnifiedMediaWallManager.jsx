@@ -317,6 +317,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             is_active: true
         });
         setEditingContent(null);
+        setSelectedRow(null);
         setShowDialog(false);
     };
 
