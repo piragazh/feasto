@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
     Activity, 
     AlertTriangle, 
@@ -18,7 +26,11 @@ import {
     Wifi,
     WifiOff,
     RefreshCw,
-    AlertCircle
+    AlertCircle,
+    Power,
+    Trash2,
+    Send,
+    History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
@@ -27,6 +39,22 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
     const queryClient = useQueryClient();
     const [selectedScreen, setSelectedScreen] = useState(null);
     const [showDetails, setShowDetails] = useState(false);
+    const [showCommandDialog, setShowCommandDialog] = useState(false);
+    const [customCommand, setCustomCommand] = useState('');
+    const [showCommandLog, setShowCommandLog] = useState(false);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const loadUser = async () => {
+            try {
+                const userData = await base44.auth.me();
+                setUser(userData);
+            } catch (e) {
+                console.error('Failed to load user:', e);
+            }
+        };
+        loadUser();
+    }, []);
 
     const { data: screens = [], refetch } = useQuery({
         queryKey: ['screen-health', restaurantId, wallName],
@@ -75,6 +103,53 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
         refetchInterval: 10000, // Refresh every 10 seconds
         staleTime: 5000,
         enabled: !!restaurantId && !!wallName
+    });
+
+    const { data: commandLogs = [] } = useQuery({
+        queryKey: ['screen-command-logs', restaurantId],
+        queryFn: async () => {
+            const logs = await base44.entities.ScreenCommandLog.filter(
+                { restaurant_id: restaurantId },
+                '-created_date',
+                50
+            );
+            return logs;
+        },
+        enabled: !!restaurantId
+    });
+
+    const sendCommandMutation = useMutation({
+        mutationFn: async ({ screenId, command, params = {} }) => {
+            const screen = screens.find(s => s.id === screenId);
+            if (!screen) throw new Error('Screen not found');
+
+            // Update screen with pending command
+            await base44.entities.Screen.update(screenId, {
+                pending_command: command,
+                command_timestamp: new Date().toISOString()
+            });
+
+            // Log the command
+            await base44.entities.ScreenCommandLog.create({
+                screen_id: screenId,
+                restaurant_id: screen.restaurant_id,
+                screen_name: screen.screen_name,
+                command,
+                command_params: params,
+                issued_by: user?.email || 'unknown',
+                status: 'pending'
+            });
+
+            return { screenId, command };
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries(['screen-health']);
+            queryClient.invalidateQueries(['screen-command-logs']);
+            toast.success(`Command "${data.command}" sent to screen`);
+        },
+        onError: (error) => {
+            toast.error('Failed to send command: ' + error.message);
+        }
     });
 
     const resolveIssueMutation = useMutation({
@@ -209,10 +284,16 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
                             <Activity className="h-5 w-5" />
                             Screen Status
                         </CardTitle>
-                        <Button size="sm" variant="outline" onClick={() => refetch()}>
-                            <RefreshCw className="h-4 w-4 mr-1" />
-                            Refresh
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setShowCommandLog(true)}>
+                                <History className="h-4 w-4 mr-1" />
+                                Command Log
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => refetch()}>
+                                <RefreshCw className="h-4 w-4 mr-1" />
+                                Refresh
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -261,6 +342,61 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
                                                 {screen.unresolved_warnings} warning{screen.unresolved_warnings > 1 ? 's' : ''}
                                             </Badge>
                                         )}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                <Button size="sm" variant="outline">
+                                                    <Send className="h-3 w-3" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                                <DropdownMenuItem 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        sendCommandMutation.mutate({ 
+                                                            screenId: screen.id, 
+                                                            command: 'refresh_content' 
+                                                        });
+                                                    }}
+                                                >
+                                                    <RefreshCw className="h-3 w-3 mr-2" />
+                                                    Refresh Content
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        sendCommandMutation.mutate({ 
+                                                            screenId: screen.id, 
+                                                            command: 'reboot' 
+                                                        });
+                                                    }}
+                                                >
+                                                    <Power className="h-3 w-3 mr-2" />
+                                                    Reboot Screen
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        sendCommandMutation.mutate({ 
+                                                            screenId: screen.id, 
+                                                            command: 'clear_cache' 
+                                                        });
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-2" />
+                                                    Clear Cache
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedScreen(screen);
+                                                        setShowCommandDialog(true);
+                                                    }}
+                                                >
+                                                    <Send className="h-3 w-3 mr-2" />
+                                                    Custom Command
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
                             </div>
@@ -455,8 +591,179 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Remote Control */}
+                            <div className="border rounded-lg p-3 bg-blue-50">
+                                <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                    <Send className="h-4 w-4" />
+                                    Remote Control
+                                </h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="bg-white"
+                                        onClick={() => sendCommandMutation.mutate({ 
+                                            screenId: selectedScreen.id, 
+                                            command: 'refresh_content' 
+                                        })}
+                                        disabled={sendCommandMutation.isPending}
+                                    >
+                                        <RefreshCw className="h-3 w-3 mr-2" />
+                                        Refresh Content
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="bg-white"
+                                        onClick={() => sendCommandMutation.mutate({ 
+                                            screenId: selectedScreen.id, 
+                                            command: 'reboot' 
+                                        })}
+                                        disabled={sendCommandMutation.isPending}
+                                    >
+                                        <Power className="h-3 w-3 mr-2" />
+                                        Reboot
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="bg-white"
+                                        onClick={() => sendCommandMutation.mutate({ 
+                                            screenId: selectedScreen.id, 
+                                            command: 'clear_cache' 
+                                        })}
+                                        disabled={sendCommandMutation.isPending}
+                                    >
+                                        <Trash2 className="h-3 w-3 mr-2" />
+                                        Clear Cache
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="bg-white"
+                                        onClick={() => setShowCommandDialog(true)}
+                                        disabled={sendCommandMutation.isPending}
+                                    >
+                                        <Send className="h-3 w-3 mr-2" />
+                                        Custom Command
+                                    </Button>
+                                </div>
+                                {selectedScreen.pending_command && (
+                                    <div className="mt-3 p-2 bg-yellow-100 rounded text-sm">
+                                        <p className="font-medium text-yellow-900">
+                                            Pending: {selectedScreen.pending_command}
+                                        </p>
+                                        <p className="text-xs text-yellow-700">
+                                            Sent {moment(selectedScreen.command_timestamp).fromNow()}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Custom Command Dialog */}
+            <Dialog open={showCommandDialog} onOpenChange={setShowCommandDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Send Custom Command</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Command</Label>
+                            <Input
+                                placeholder="e.g., set_volume, enable_debug"
+                                value={customCommand}
+                                onChange={(e) => setCustomCommand(e.target.value)}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Enter a custom command to send to the screen
+                            </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setShowCommandDialog(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    if (!customCommand.trim()) {
+                                        toast.error('Enter a command');
+                                        return;
+                                    }
+                                    sendCommandMutation.mutate({
+                                        screenId: selectedScreen.id,
+                                        command: customCommand
+                                    });
+                                    setCustomCommand('');
+                                    setShowCommandDialog(false);
+                                }}
+                                disabled={sendCommandMutation.isPending}
+                            >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Command
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Command Log Dialog */}
+            <Dialog open={showCommandLog} onOpenChange={setShowCommandLog}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5" />
+                            Command Log
+                        </DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-96">
+                        <div className="space-y-2">
+                            {commandLogs.length === 0 ? (
+                                <p className="text-center text-gray-500 py-8">No commands logged yet</p>
+                            ) : (
+                                commandLogs.map(log => (
+                                    <div key={log.id} className="border rounded-lg p-3 bg-gray-50">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge variant="outline" className="text-xs font-mono">
+                                                        {log.command}
+                                                    </Badge>
+                                                    <Badge 
+                                                        className={
+                                                            log.status === 'executed' ? 'bg-green-100 text-green-800' :
+                                                            log.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                                            log.status === 'timeout' ? 'bg-orange-100 text-orange-800' :
+                                                            'bg-blue-100 text-blue-800'
+                                                        }
+                                                    >
+                                                        {log.status}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-sm font-medium">{log.screen_name}</p>
+                                                <p className="text-xs text-gray-600 mt-1">
+                                                    By {log.issued_by} • {moment(log.created_date).format('MMM DD, HH:mm:ss')}
+                                                </p>
+                                                {log.executed_at && (
+                                                    <p className="text-xs text-green-600 mt-1">
+                                                        Executed: {moment(log.executed_at).format('MMM DD, HH:mm:ss')}
+                                                    </p>
+                                                )}
+                                                {log.error_message && (
+                                                    <p className="text-xs text-red-600 mt-1">
+                                                        Error: {log.error_message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </ScrollArea>
                 </DialogContent>
             </Dialog>
         </div>
