@@ -279,11 +279,12 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     return (
         <div className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
                     <TabsTrigger value="fullwall">Full Wall</TabsTrigger>
                     <TabsTrigger value="screens">Screens</TabsTrigger>
                     <TabsTrigger value="playlists">Playlists</TabsTrigger>
+                    <TabsTrigger value="widgets">Widgets</TabsTrigger>
                     <TabsTrigger value="health">Health</TabsTrigger>
                     <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
@@ -522,6 +523,11 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 {/* Playlists */}
                 <TabsContent value="playlists" className="space-y-4">
                     <MediaWallPlaylistManager restaurantId={restaurantId} wallName={wallName} />
+                </TabsContent>
+
+                {/* Widgets */}
+                <TabsContent value="widgets" className="space-y-4">
+                    <WidgetConfigurationManager restaurantId={restaurantId} />
                 </TabsContent>
 
                 {/* Health Monitor */}
