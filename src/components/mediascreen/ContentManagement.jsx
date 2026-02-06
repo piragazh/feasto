@@ -53,6 +53,8 @@ export default function ContentManagement({ restaurantId }) {
     const [editingScreenGroups, setEditingScreenGroups] = useState(null);
     const [selectedGroups, setSelectedGroups] = useState([]);
     const [newGroupName, setNewGroupName] = useState('');
+    const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+    const [currentScreenForTemplate, setCurrentScreenForTemplate] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -1283,8 +1285,23 @@ export default function ContentManagement({ restaurantId }) {
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
-        </div>
+                </Dialog>
+
+                <Dialog open={showTemplateLibrary} onOpenChange={setShowTemplateLibrary}>
+                <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>
+                        Apply Layout Template to {currentScreenForTemplate?.screen_name}
+                    </DialogTitle>
+                </DialogHeader>
+                <LayoutTemplateManager
+                    restaurantId={restaurantId}
+                    onSelectTemplate={handleApplyTemplate}
+                    currentTemplate={currentScreenForTemplate?.layout_template}
+                />
+                </DialogContent>
+                </Dialog>
+                </div>
                 </TabsContent>
 
                 <TabsContent value="screens" className="mt-6">
@@ -1379,11 +1396,20 @@ export default function ContentManagement({ restaurantId }) {
                                                            <Button
                                                                size="sm"
                                                                variant="outline"
-                                                               onClick={() => handleEditLayout(name)}
+                                                               onClick={() => handleOpenTemplateLibrary(name)}
                                                                className="text-xs h-8 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
                                                            >
                                                                <Settings className="h-3.5 w-3.5 mr-1" />
-                                                               Layout
+                                                               Template
+                                                           </Button>
+                                                           <Button
+                                                               size="sm"
+                                                               variant="outline"
+                                                               onClick={() => handleEditLayout(name)}
+                                                               className="text-xs h-8 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                                                           >
+                                                               <Edit className="h-3.5 w-3.5 mr-1" />
+                                                               Custom
                                                            </Button>
                                                             <Button
                                                                 size="sm"
