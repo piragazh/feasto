@@ -417,8 +417,11 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
                                     {template.description}
                                 </p>
                                 {renderZonePreview(template.zones)}
-                                <div className="mt-2 text-xs text-gray-500">
-                                    {template.zones.length} zone{template.zones.length !== 1 ? 's' : ''}
+                                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                                    <span>{template.zones.length} zone{template.zones.length !== 1 ? 's' : ''}</span>
+                                    {(template.default_for_groups?.length > 0 || template.default_for_screen_types?.length > 0) && (
+                                        <Badge variant="outline" className="text-[10px] px-1">Default</Badge>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
