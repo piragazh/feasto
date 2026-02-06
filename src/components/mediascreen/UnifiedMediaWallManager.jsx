@@ -10,13 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight, FolderOpen, Upload, Users, Settings } from 'lucide-react';
+import { Grid3x3, Monitor, Plus, Maximize2, Film, Image as ImageIcon, Clock, Calendar, Trash2, Edit, Eye, ArrowUp, ArrowDown, PlayCircle, Copy, MoveRight, FolderOpen, Upload, Users, Settings, Activity } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContentScheduler from './ContentScheduler';
 import FileManager from './FileManager';
 import ContentPreview from './ContentPreview';
+import ScreenHealthMonitor from './ScreenHealthMonitor';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
@@ -540,7 +541,8 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     return (
         <div className="space-y-6">
             <Tabs defaultValue="timeline">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
+                    <TabsTrigger value="health">Health</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
                     <TabsTrigger value="visual">Visual</TabsTrigger>
                     <TabsTrigger value="groups">Groups</TabsTrigger>
@@ -548,6 +550,10 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     <TabsTrigger value="individual">Individual</TabsTrigger>
                     <TabsTrigger value="fullwall">Full Wall</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="health" className="space-y-4">
+                    <ScreenHealthMonitor restaurantId={restaurantId} wallName={wallName} />
+                </TabsContent>
 
                 <TabsContent value="timeline" className="space-y-4">
                     <Card>
