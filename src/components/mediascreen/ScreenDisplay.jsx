@@ -200,6 +200,24 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                         command_timestamp: null
                     });
 
+                    // Update command log status
+                    try {
+                        const logs = await base44.entities.ScreenCommandLog.filter({
+                            screen_id: screen.id,
+                            command: command,
+                            status: 'pending'
+                        }, '-created_date', 1);
+                        
+                        if (logs[0]) {
+                            await base44.entities.ScreenCommandLog.update(logs[0].id, {
+                                status: 'executed',
+                                executed_at: new Date().toISOString()
+                            });
+                        }
+                    } catch (logError) {
+                        console.error('Failed to update command log:', logError);
+                    }
+
                     // Execute command
                     switch (command) {
                         case 'refresh_content':
@@ -210,8 +228,13 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                         case 'reload':
                             window.location.reload();
                             break;
+                        case 'clear_cache':
+                            localStorage.clear();
+                            sessionStorage.clear();
+                            window.location.reload();
+                            break;
                         default:
-                            console.warn('Unknown command:', command);
+                            console.log('Custom command executed:', command);
                     }
                 }
             } catch (error) {
