@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Monitor, Power, RefreshCw, Wifi, WifiOff, Send, CheckCircle, AlertCircle, RotateCw, Grid3x3 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Monitor, Power, RefreshCw, Wifi, WifiOff, Send, CheckCircle, AlertCircle, RotateCw, Grid3x3, Tag, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
 
 export default function ScreenControl({ restaurantId }) {
     const queryClient = useQueryClient();
     const [selectedScreens, setSelectedScreens] = useState([]);
+    const [filterGroup, setFilterGroup] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
 
     const { data: screens = [], refetch } = useQuery({
         queryKey: ['screens-control', restaurantId],
@@ -134,6 +137,38 @@ export default function ScreenControl({ restaurantId }) {
         setSelectedScreens([]);
     };
 
+    // Get all unique groups across all screens
+    const allGroups = [...new Set(screens.flatMap(s => s.groups || []))];
+
+    // Apply filters
+    const filteredScreens = screens.filter(screen => {
+        // Group filter
+        if (filterGroup !== 'all') {
+            if (!screen.groups || !screen.groups.includes(filterGroup)) {
+                return false;
+            }
+        }
+
+        // Status filter
+        if (filterStatus !== 'all') {
+            const status = getScreenStatus(screen);
+            if (status !== filterStatus) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    const selectAllFiltered = () => {
+        setSelectedScreens(filteredScreens.map(s => s.id));
+    };
+
+    const selectByGroup = (groupName) => {
+        const groupScreens = screens.filter(s => s.groups && s.groups.includes(groupName));
+        setSelectedScreens(groupScreens.map(s => s.id));
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -154,6 +189,73 @@ export default function ScreenControl({ restaurantId }) {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Filters:</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <Label className="text-xs text-gray-600">Group:</Label>
+                        <Select value={filterGroup} onValueChange={setFilterGroup}>
+                            <SelectTrigger className="h-8 w-40">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Groups</SelectItem>
+                                {allGroups.map(group => (
+                                    <SelectItem key={group} value={group}>
+                                        <div className="flex items-center gap-2">
+                                            <Tag className="h-3 w-3" />
+                                            {group}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Label className="text-xs text-gray-600">Status:</Label>
+                        <Select value={filterStatus} onValueChange={setFilterStatus}>
+                            <SelectTrigger className="h-8 w-32">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="online">Online</SelectItem>
+                                <SelectItem value="idle">Idle</SelectItem>
+                                <SelectItem value="offline">Offline</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="ml-auto text-xs text-gray-500">
+                        Showing {filteredScreens.length} of {screens.length} screens
+                    </div>
+                </div>
+
+                {allGroups.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-gray-600">Quick select:</span>
+                        {allGroups.map(group => {
+                            const groupScreens = screens.filter(s => s.groups && s.groups.includes(group));
+                            return (
+                                <Button
+                                    key={group}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => selectByGroup(group)}
+                                    className="h-7 text-xs"
+                                >
+                                    <Tag className="h-3 w-3 mr-1" />
+                                    {group} ({groupScreens.length})
+                                </Button>
+                            );
+                        })}
+                    </div>
+                )}
+
                 {selectedScreens.length > 0 && (
                     <Card className="bg-blue-50 border-blue-200">
                         <CardContent className="p-4">
@@ -199,16 +301,32 @@ export default function ScreenControl({ restaurantId }) {
                         <Monitor className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p>No screens available</p>
                     </div>
+                ) : filteredScreens.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                        <Filter className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>No screens match the selected filters</p>
+                        <Button 
+                            variant="link" 
+                            size="sm" 
+                            onClick={() => {
+                                setFilterGroup('all');
+                                setFilterStatus('all');
+                            }}
+                            className="mt-2"
+                        >
+                            Clear Filters
+                        </Button>
+                    </div>
                 ) : (
                     <>
                         <div className="flex justify-end gap-2 text-xs">
-                            <Button variant="ghost" size="sm" onClick={selectAll}>
-                                Select All
+                            <Button variant="ghost" size="sm" onClick={selectAllFiltered}>
+                                Select All Filtered ({filteredScreens.length})
                             </Button>
                         </div>
 
                         <div className="space-y-3">
-                            {screens.map(screen => {
+                            {filteredScreens.map(screen => {
                                 const status = getScreenStatus(screen);
                                 const isSelected = selectedScreens.includes(screen.id);
 
@@ -276,7 +394,7 @@ export default function ScreenControl({ restaurantId }) {
                                                         )}
                                                     </div>
 
-                                                    <div className="flex items-center gap-2 mt-2">
+                                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                                                         <Badge variant="outline" className="text-xs">
                                                             <RotateCw className="h-3 w-3 mr-1" />
                                                             {screen.orientation || 'landscape'}
@@ -287,6 +405,12 @@ export default function ScreenControl({ restaurantId }) {
                                                                 Wall {screen.media_wall_config.position?.row},{screen.media_wall_config.position?.col}
                                                             </Badge>
                                                         )}
+                                                        {screen.groups && screen.groups.map(group => (
+                                                            <Badge key={group} variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                <Tag className="h-3 w-3 mr-1" />
+                                                                {group}
+                                                            </Badge>
+                                                        ))}
                                                     </div>
 
                                                     {screen.pending_command && (
