@@ -935,6 +935,98 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                     )}
                 </TabsContent>
 
+                <TabsContent value="rows" className="space-y-4">
+                    {screens.length === 0 ? (
+                        <Card className="border-dashed">
+                            <CardContent className="py-12 text-center">
+                                <Grid3x3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                                <p className="text-gray-600">No screens configured in this wall</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        Array.from(new Set(screens.map(s => s.media_wall_config.position.row))).sort().map(row => {
+                            const rowScreens = screens.filter(s => s.media_wall_config.position.row === row);
+                            const rowContent = individualContent.filter(c => c.position?.row === row);
+                            
+                            return (
+                                <Card key={row}>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-base flex items-center gap-2">
+                                                    <Grid3x3 className="h-4 w-4" />
+                                                    Row {row}
+                                                </CardTitle>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {rowScreens.length} screens • {rowContent.length} content items
+                                                </p>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => handleAddContent('row', null, row)}
+                                            >
+                                                <Plus className="h-3 w-3 mr-1" />
+                                                Add to Row
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-3 gap-3 mb-4">
+                                            {rowScreens.map(screen => {
+                                                const screenContent = individualContent.filter(c => 
+                                                    c.position?.row === screen.media_wall_config.position.row &&
+                                                    c.position?.col === screen.media_wall_config.position.col
+                                                );
+                                                return (
+                                                    <div key={screen.id} className="border rounded-lg p-2 bg-gradient-to-br from-blue-50 to-indigo-50">
+                                                        <div className="text-center mb-2">
+                                                            <Monitor className="h-4 w-4 mx-auto text-blue-600 mb-1" />
+                                                            <p className="text-xs font-semibold text-blue-900 truncate">{screen.screen_name}</p>
+                                                            <Badge variant="outline" className="text-[10px] mt-1">
+                                                                {screenContent.length} items
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        
+                                        {rowContent.length === 0 ? (
+                                            <p className="text-sm text-gray-500 text-center py-4">No content for this row</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <p className="text-xs font-semibold text-gray-700 mb-2">Content across this row:</p>
+                                                {Array.from(new Set(rowContent.map(c => c.media_url))).map((mediaUrl, idx) => {
+                                                    const items = rowContent.filter(c => c.media_url === mediaUrl);
+                                                    const item = items[0];
+                                                    return (
+                                                        <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                                            <div className="w-16 h-12 bg-gray-900 rounded overflow-hidden">
+                                                                {item.media_type === 'video' ? (
+                                                                    <video src={item.media_url} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium">{item.title}</p>
+                                                                <div className="flex gap-1 mt-1">
+                                                                    <Badge variant="outline" className="text-[10px]">{item.duration}s</Badge>
+                                                                    <Badge variant="outline" className="text-[10px]">On {items.length} screen{items.length > 1 ? 's' : ''}</Badge>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })
+                    )}
+                </TabsContent>
+
                 <TabsContent value="individual" className="space-y-4">
                     {screens.length === 0 ? (
                         <Card className="border-dashed">
