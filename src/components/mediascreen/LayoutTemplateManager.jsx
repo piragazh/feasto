@@ -430,7 +430,7 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
             </div>
 
             <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Save Layout as Template</DialogTitle>
                     </DialogHeader>
@@ -453,6 +453,45 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
                                 className="mt-1"
                             />
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-sm mb-2 block">Default for Screen Types</Label>
+                                <div className="space-y-2">
+                                    {['landscape', 'portrait', 'square'].map(type => (
+                                        <label key={type} className="flex items-center gap-2 text-sm">
+                                            <input
+                                                type="checkbox"
+                                                checked={defaultForScreenTypes.includes(type)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setDefaultForScreenTypes([...defaultForScreenTypes, type]);
+                                                    } else {
+                                                        setDefaultForScreenTypes(defaultForScreenTypes.filter(t => t !== type));
+                                                    }
+                                                }}
+                                                className="rounded"
+                                            />
+                                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <Label className="text-sm mb-2 block">Default for Groups (optional)</Label>
+                                <Input
+                                    placeholder="e.g., Entrance, Counter"
+                                    value={defaultForGroups.join(', ')}
+                                    onChange={(e) => {
+                                        const groups = e.target.value.split(',').map(g => g.trim()).filter(g => g);
+                                        setDefaultForGroups(groups);
+                                    }}
+                                    className="text-sm"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Comma-separated list</p>
+                            </div>
+                        </div>
+
                         <div>
                             <Label>Preview</Label>
                             <div className="mt-1">
@@ -464,11 +503,216 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
                                 <Save className="h-4 w-4 mr-2" />
                                 Save Template
                             </Button>
-                            <Button onClick={() => setShowSaveDialog(false)} variant="outline">
+                            <Button onClick={() => {
+                                setShowSaveDialog(false);
+                                setDefaultForGroups([]);
+                                setDefaultForScreenTypes([]);
+                            }} variant="outline">
                                 Cancel
                             </Button>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Settings className="h-5 w-5" />
+                            Edit Template: {editingTemplate?.name}
+                        </DialogTitle>
+                    </DialogHeader>
+                    {editingTemplate && (
+                        <Tabs defaultValue="general">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="general">General Settings</TabsTrigger>
+                                <TabsTrigger value="zones">Zone Configuration</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="general" className="space-y-4 mt-4">
+                                <div>
+                                    <Label>Template Name</Label>
+                                    <Input
+                                        value={templateName}
+                                        onChange={(e) => setTemplateName(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Description</Label>
+                                    <Input
+                                        value={templateDescription}
+                                        onChange={(e) => setTemplateDescription(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm mb-2 block">Default for Screen Types</Label>
+                                        <div className="space-y-2">
+                                            {['landscape', 'portrait', 'square'].map(type => (
+                                                <label key={type} className="flex items-center gap-2 text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={defaultForScreenTypes.includes(type)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setDefaultForScreenTypes([...defaultForScreenTypes, type]);
+                                                            } else {
+                                                                setDefaultForScreenTypes(defaultForScreenTypes.filter(t => t !== type));
+                                                            }
+                                                        }}
+                                                        className="rounded"
+                                                    />
+                                                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm mb-2 block">Default for Groups</Label>
+                                        <Input
+                                            placeholder="e.g., Entrance, Counter"
+                                            value={defaultForGroups.join(', ')}
+                                            onChange={(e) => {
+                                                const groups = e.target.value.split(',').map(g => g.trim()).filter(g => g);
+                                                setDefaultForGroups(groups);
+                                            }}
+                                            className="text-sm"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Comma-separated list</p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex gap-2">
+                                    <Button onClick={handleUpdateTemplate} className="flex-1">
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Update Template
+                                    </Button>
+                                    <Button onClick={() => setShowEditDialog(false)} variant="outline">
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="zones" className="space-y-4 mt-4">
+                                <div className="space-y-4">
+                                    {editingTemplate.zones.map((zone, idx) => (
+                                        <Card key={zone.id || idx}>
+                                            <CardHeader className="pb-3">
+                                                <CardTitle className="text-sm flex items-center justify-between">
+                                                    <span>{zone.name || `Zone ${idx + 1}`}</span>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {zone.width}% × {zone.height}%
+                                                    </Badge>
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-3">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <Label className="text-xs">Zone Name</Label>
+                                                        <Input
+                                                            value={zone.name || ''}
+                                                            onChange={(e) => handleUpdateZone(zone.id, { name: e.target.value })}
+                                                            className="h-8 text-sm mt-1"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs">Aspect Ratio</Label>
+                                                        <Select
+                                                            value={zone.aspect_ratio || 'auto'}
+                                                            onValueChange={(value) => handleUpdateZone(zone.id, { aspect_ratio: value })}
+                                                        >
+                                                            <SelectTrigger className="h-8 text-sm mt-1">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="auto">Auto</SelectItem>
+                                                                <SelectItem value="16:9">16:9 (Widescreen)</SelectItem>
+                                                                <SelectItem value="4:3">4:3 (Standard)</SelectItem>
+                                                                <SelectItem value="1:1">1:1 (Square)</SelectItem>
+                                                                <SelectItem value="9:16">9:16 (Portrait)</SelectItem>
+                                                                <SelectItem value="21:9">21:9 (Ultrawide)</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <Label className="text-xs">Content Fit Mode</Label>
+                                                        <Select
+                                                            value={zone.fit_mode || 'cover'}
+                                                            onValueChange={(value) => handleUpdateZone(zone.id, { fit_mode: value })}
+                                                        >
+                                                            <SelectTrigger className="h-8 text-sm mt-1">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="cover">Cover (fill zone)</SelectItem>
+                                                                <SelectItem value="contain">Contain (fit inside)</SelectItem>
+                                                                <SelectItem value="fill">Fill (stretch)</SelectItem>
+                                                                <SelectItem value="scale-down">Scale Down</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs">Position</Label>
+                                                        <div className="flex gap-1 mt-1">
+                                                            <Input
+                                                                type="number"
+                                                                value={zone.x}
+                                                                onChange={(e) => handleUpdateZone(zone.id, { x: parseFloat(e.target.value) })}
+                                                                placeholder="X"
+                                                                className="h-8 text-xs"
+                                                                disabled
+                                                            />
+                                                            <Input
+                                                                type="number"
+                                                                value={zone.y}
+                                                                onChange={(e) => handleUpdateZone(zone.id, { y: parseFloat(e.target.value) })}
+                                                                placeholder="Y"
+                                                                className="h-8 text-xs"
+                                                                disabled
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800">
+                                                    <strong>Aspect Ratio:</strong> Forces content to maintain this ratio within the zone.
+                                                    <br />
+                                                    <strong>Fit Mode:</strong> Defines how content scales to fit the zone boundaries.
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                <div className="pt-4 flex gap-2">
+                                    <Button 
+                                        onClick={() => {
+                                            updateTemplateMutation.mutate({
+                                                id: editingTemplate.id,
+                                                data: {
+                                                    zones: editingTemplate.zones
+                                                }
+                                            });
+                                        }} 
+                                        className="flex-1"
+                                    >
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Save Zone Changes
+                                    </Button>
+                                    <Button onClick={() => setShowEditDialog(false)} variant="outline">
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
