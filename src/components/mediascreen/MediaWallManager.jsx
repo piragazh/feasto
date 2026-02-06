@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Grid3x3, Monitor, Plus, Settings, Eye, Trash2, Maximize2, Film, LayoutGrid } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Grid3x3, Monitor, Plus, Settings, Eye, Trash2, Maximize2, Film, LayoutGrid, Zap } from 'lucide-react';
 import MediaWallConfigurator from './MediaWallConfigurator';
 import MediaWallContentManager from './MediaWallContentManager';
 import UnifiedMediaWallManager from './UnifiedMediaWallManager';
@@ -19,6 +22,13 @@ export default function MediaWallManager({ restaurantId }) {
     const [showUnifiedManager, setShowUnifiedManager] = useState(false);
     const [managingWallName, setManagingWallName] = useState(null);
     const [managingWallConfig, setManagingWallConfig] = useState(null);
+    const [showProvisionDialog, setShowProvisionDialog] = useState(false);
+    const [provisionData, setProvisionData] = useState({
+        wallName: '',
+        rows: 2,
+        cols: 2,
+        screenPrefix: ''
+    });
     const queryClient = useQueryClient();
 
     const { data: screens = [] } = useQuery({
@@ -76,6 +86,57 @@ export default function MediaWallManager({ restaurantId }) {
                 media_wall_config: { ...screen.media_wall_config, enabled: false }
             }
         });
+    };
+
+    const handleProvisionWall = async () => {
+        if (!provisionData.wallName.trim()) {
+            toast.error('Please enter a wall name');
+            return;
+        }
+
+        const { wallName, rows, cols, screenPrefix } = provisionData;
+        const totalScreens = rows * cols;
+
+        try {
+            toast.loading(`Creating ${totalScreens} screens for ${wallName}...`);
+
+            const screensToCreate = [];
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    screensToCreate.push({
+                        restaurant_id: restaurantId,
+                        screen_name: screenPrefix 
+                            ? `${screenPrefix} ${row}-${col}`
+                            : `${wallName} Screen ${row}-${col}`,
+                        is_active: true,
+                        media_wall_config: {
+                            enabled: true,
+                            wall_name: wallName,
+                            position: { row, col },
+                            grid_size: { rows, cols },
+                            bezel_compensation: 0,
+                            rotation: 0
+                        }
+                    });
+                }
+            }
+
+            await base44.entities.Screen.bulkCreate(screensToCreate);
+            queryClient.invalidateQueries(['screens']);
+
+            toast.dismiss();
+            toast.success(`Media wall "${wallName}" created with ${totalScreens} screens!`);
+            setShowProvisionDialog(false);
+            setProvisionData({
+                wallName: '',
+                rows: 2,
+                cols: 2,
+                screenPrefix: ''
+            });
+        } catch (error) {
+            toast.dismiss();
+            toast.error('Failed to provision media wall');
+        }
     };
 
     const renderWallGrid = (wall) => {
@@ -150,10 +211,19 @@ export default function MediaWallManager({ restaurantId }) {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Grid3x3 className="h-5 w-5" />
-                    Media Walls
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Grid3x3 className="h-5 w-5" />
+                        Media Walls
+                    </h3>
+                    <Button
+                        onClick={() => setShowProvisionDialog(true)}
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Provision New Wall
+                    </Button>
+                </div>
 
                 {Object.keys(mediaWalls).length === 0 ? (
                     <Card className="border-dashed">
@@ -293,6 +363,139 @@ export default function MediaWallManager({ restaurantId }) {
                         wallName={managingWallName}
                         wallConfig={managingWallConfig}
                     />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showProvisionDialog} onOpenChange={setShowProvisionDialog}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Zap className="h-6 w-6 text-indigo-600" />
+                            Provision New Media Wall
+                        </DialogTitle>
+                        <p className="text-sm text-gray-600 mt-2">
+                            Automatically create all screens for a multi-screen display
+                        </p>
+                    </DialogHeader>
+                    <div className="space-y-5 pt-2">
+                        <div className="space-y-2">
+                            <Label className="text-base font-medium">Wall Name *</Label>
+                            <Input
+                                value={provisionData.wallName}
+                                onChange={(e) => setProvisionData(prev => ({ ...prev, wallName: e.target.value }))}
+                                placeholder="e.g., Main Entrance Wall, Drive-Thru Wall"
+                                className="h-11"
+                            />
+                            <p className="text-xs text-gray-500">
+                                Choose a descriptive name for this media wall
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-base font-medium">Rows</Label>
+                                <Select
+                                    value={String(provisionData.rows)}
+                                    onValueChange={(value) => setProvisionData(prev => ({ ...prev, rows: parseInt(value) }))}
+                                >
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[1, 2, 3, 4, 5, 6].map(n => (
+                                            <SelectItem key={n} value={String(n)}>{n} row{n > 1 ? 's' : ''}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-base font-medium">Columns</Label>
+                                <Select
+                                    value={String(provisionData.cols)}
+                                    onValueChange={(value) => setProvisionData(prev => ({ ...prev, cols: parseInt(value) }))}
+                                >
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[1, 2, 3, 4, 5, 6].map(n => (
+                                            <SelectItem key={n} value={String(n)}>{n} column{n > 1 ? 's' : ''}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-base font-medium">Screen Name Prefix (Optional)</Label>
+                            <Input
+                                value={provisionData.screenPrefix}
+                                onChange={(e) => setProvisionData(prev => ({ ...prev, screenPrefix: e.target.value }))}
+                                placeholder="e.g., Entrance, Counter"
+                                className="h-11"
+                            />
+                            <p className="text-xs text-gray-500">
+                                If empty, screens will be named "{provisionData.wallName} Screen 0-0", "...Screen 0-1", etc.
+                            </p>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4">
+                            <div className="flex items-start gap-3">
+                                <Grid3x3 className="h-5 w-5 text-indigo-600 mt-0.5" />
+                                <div>
+                                    <p className="font-semibold text-indigo-900 mb-1">Preview</p>
+                                    <p className="text-sm text-indigo-800">
+                                        This will create a <strong>{provisionData.rows}×{provisionData.cols}</strong> media wall with{' '}
+                                        <strong>{provisionData.rows * provisionData.cols} screens</strong> named:
+                                    </p>
+                                    <div className="mt-2 text-xs text-indigo-700 space-y-0.5">
+                                        {Array.from({ length: Math.min(3, provisionData.rows * provisionData.cols) }, (_, i) => {
+                                            const row = Math.floor(i / provisionData.cols);
+                                            const col = i % provisionData.cols;
+                                            return (
+                                                <div key={i}>
+                                                    • {provisionData.screenPrefix 
+                                                        ? `${provisionData.screenPrefix} ${row}-${col}`
+                                                        : `${provisionData.wallName || 'Wall'} Screen ${row}-${col}`}
+                                                </div>
+                                            );
+                                        })}
+                                        {provisionData.rows * provisionData.cols > 3 && (
+                                            <div className="text-indigo-600">
+                                                ... and {provisionData.rows * provisionData.cols - 3} more
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <Button 
+                                onClick={handleProvisionWall} 
+                                className="flex-1 h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                            >
+                                <Zap className="h-4 w-4 mr-2" />
+                                Provision {provisionData.rows * provisionData.cols} Screens
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    setShowProvisionDialog(false);
+                                    setProvisionData({
+                                        wallName: '',
+                                        rows: 2,
+                                        cols: 2,
+                                        screenPrefix: ''
+                                    });
+                                }}
+                                variant="outline"
+                                className="h-11"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
