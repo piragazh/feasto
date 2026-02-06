@@ -596,6 +596,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                                                                     <p className="font-semibold text-sm truncate">{item.title}</p>
                                                                     <div className="flex gap-1 mt-1">
                                                                         <Badge variant="outline" className="text-[10px]">{item.media_type}</Badge>
+                                                                        <Badge variant="outline" className="text-[10px]">{item.start_time || 0}s → {(item.start_time || 0) + item.duration}s</Badge>
                                                                         {item.priority > 1 && (
                                                                             <Badge variant="outline" className="text-[10px] bg-orange-50">P:{item.priority}</Badge>
                                                                         )}
