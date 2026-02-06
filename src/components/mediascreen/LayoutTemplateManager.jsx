@@ -232,6 +232,16 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
         }
     });
 
+    const updateTemplateMutation = useMutation({
+        mutationFn: ({ id, data }) => base44.entities.LayoutTemplate.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['layout-templates']);
+            toast.success('Template updated');
+            setShowEditDialog(false);
+            setEditingTemplate(null);
+        }
+    });
+
     const handleSaveCurrentAsTemplate = () => {
         if (!currentTemplate?.zones || currentTemplate.zones.length === 0) {
             toast.error('No layout to save');
