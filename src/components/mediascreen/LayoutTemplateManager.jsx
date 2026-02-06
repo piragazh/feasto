@@ -261,7 +261,48 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
             name: templateName,
             description: templateDescription,
             zones: currentTemplate.zones,
-            is_public: false
+            is_public: false,
+            default_for_groups: defaultForGroups,
+            default_for_screen_types: defaultForScreenTypes
+        });
+    };
+
+    const handleEditTemplate = (template) => {
+        setEditingTemplate(template);
+        setTemplateName(template.name);
+        setTemplateDescription(template.description || '');
+        setDefaultForGroups(template.default_for_groups || []);
+        setDefaultForScreenTypes(template.default_for_screen_types || []);
+        setShowEditDialog(true);
+    };
+
+    const handleUpdateTemplate = () => {
+        if (!templateName.trim()) {
+            toast.error('Please enter a template name');
+            return;
+        }
+
+        updateTemplateMutation.mutate({
+            id: editingTemplate.id,
+            data: {
+                name: templateName,
+                description: templateDescription,
+                default_for_groups: defaultForGroups,
+                default_for_screen_types: defaultForScreenTypes
+            }
+        });
+    };
+
+    const handleUpdateZone = (zoneId, updates) => {
+        if (!editingTemplate) return;
+        
+        const updatedZones = editingTemplate.zones.map(z => 
+            z.id === zoneId ? { ...z, ...updates } : z
+        );
+
+        setEditingTemplate({
+            ...editingTemplate,
+            zones: updatedZones
         });
     };
 
