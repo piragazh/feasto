@@ -218,6 +218,8 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
             return;
         }
 
+        console.log('Submit - contentMode:', contentMode, 'selectedRow:', selectedRow);
+
         if (contentMode === 'fullwall') {
             const data = {
                 restaurant_id: restaurantId,
