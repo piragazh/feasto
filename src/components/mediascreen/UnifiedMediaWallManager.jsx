@@ -21,6 +21,7 @@ import MediaWallPlaylistManager from './MediaWallPlaylistManager';
 import MediaWallSettings from './MediaWallSettings';
 import MediaWallContentTimeline from './MediaWallContentTimeline';
 import LayoutTemplateManager from './LayoutTemplateManager';
+import WidgetConfigurationManager from './WidgetConfigurationManager';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();
