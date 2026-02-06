@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
 import MultiZoneDisplay from './MultiZoneDisplay';
+import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,6 +32,48 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         enabled: !!restaurantId && !!screenName,
         staleTime: 60000,
     });
+
+    // Check if there's an active playlist for this media wall
+    const { data: activePlaylists = [] } = useQuery({
+        queryKey: ['active-playlists', restaurantId, screen?.media_wall_config?.wall_name],
+        queryFn: async () => {
+            if (!screen?.media_wall_config?.enabled || !screen?.media_wall_config?.wall_name) return [];
+
+            const playlists = await base44.entities.MediaWallPlaylist.filter({ 
+                restaurant_id: restaurantId,
+                wall_name: screen.media_wall_config.wall_name,
+                is_active: true
+            });
+
+            const now = new Date();
+            return playlists.filter(playlist => {
+                if (!playlist.schedule?.enabled) return true;
+                
+                const schedule = playlist.schedule;
+                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
+                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
+                
+                if (schedule.recurring?.enabled) {
+                    const currentDay = now.getDay();
+                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    
+                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
+                    
+                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
+                        return currentTime >= range.start_time && currentTime <= range.end_time;
+                    });
+                    
+                    if (!inTimeRange) return false;
+                }
+                
+                return true;
+            }).sort((a, b) => (b.priority || 1) - (a.priority || 1));
+        },
+        refetchInterval: 30000,
+        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled
+    });
+
+    const usePlaylistSync = activePlaylists.length > 0;
 
     const { data: wallContent = [] } = useQuery({
         queryKey: ['wall-content', restaurantId, screen?.media_wall_config?.wall_name],
@@ -74,7 +117,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 return a.display_order - b.display_order;
             });
         },
-        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled,
+        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled && !usePlaylistSync,
         staleTime: 30000,
         refetchInterval: 30000,
     });
@@ -300,6 +343,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
                 <p className="text-xl">Missing restaurant ID or screen name</p>
             </div>
+        );
+    }
+
+    // Use synced playlist display if playlist is active
+    if (screen?.media_wall_config?.enabled && usePlaylistSync) {
+        return (
+            <SyncedMediaWallDisplay
+                restaurantId={restaurantId}
+                wallName={screen.media_wall_config.wall_name}
+                screenPosition={screen.media_wall_config.position}
+            />
         );
     }
 
