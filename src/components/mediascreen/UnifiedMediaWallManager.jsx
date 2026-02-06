@@ -227,8 +227,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 duration: formData.duration,
                 priority: formData.priority,
                 is_active: formData.is_active,
-                display_order: editingContent?.display_order || wallContent.length,
-                start_time: formData.start_time || 0
+                display_order: editingContent?.display_order || wallContent.length
             };
 
             if (editingContent) {
@@ -258,8 +257,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                 duration: formData.duration,
                 priority: formData.priority,
                 is_active: formData.is_active,
-                display_order: editingContent?.display_order || 0,
-                start_time: formData.start_time || 0
+                display_order: editingContent?.display_order || 0
             };
 
             if (editingContent) {
