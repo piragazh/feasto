@@ -273,7 +273,7 @@ Provide only the time range (e.g., "25-30 min").`;
         const restaurant = restaurants?.[0];
         const config = restaurant?.printer_config || {};
 
-        const printerWidth = config.printer_width === '58mm' ? '200px' : '280px';
+        const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
         const baseFontSize = config.font_size === 'small' ? '24px' : config.font_size === 'large' ? '32px' : '28px';
         const headerFontSize = config.font_size === 'small' ? '36px' : config.font_size === 'large' ? '48px' : '40px';
         const h3FontSize = config.font_size === 'small' ? '28px' : config.font_size === 'large' ? '36px' : '32px';
