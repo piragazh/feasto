@@ -278,11 +278,14 @@ Provide only the time range (e.g., "25-30 min").`;
                 <head>
                     <title>Order ${orderLabel}</title>
                     <style>
-                        body { font-family: monospace; width: 280px; margin: 10px; }
-                        h2 { text-align: center; margin: 10px 0; }
+                        body { font-family: monospace; width: 280px; margin: 10px; font-size: 14px; }
+                        h2 { text-align: center; margin: 10px 0; font-size: 20px; }
+                        h3 { font-size: 16px; }
                         .separator { border-top: 2px dashed #000; margin: 10px 0; }
-                        .item { margin: 5px 0; }
-                        .total { font-weight: bold; font-size: 16px; margin-top: 10px; }
+                        .item { margin: 5px 0; font-size: 14px; }
+                        .total { font-weight: bold; font-size: 18px; margin-top: 10px; }
+                        p { font-size: 14px; }
+                        small { font-size: 12px; }
                         .collection-badge { 
                             text-align: center; 
                             background: #dbeafe; 
@@ -362,6 +365,7 @@ Provide only the time range (e.g., "25-30 min").`;
                     <div class="separator"></div>
                     ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
                     <p><strong>Customer:</strong> ${order.phone}</p>
+                    ${order.payment_method ? `<p><strong>Payment:</strong> ${order.payment_method.replace(/_/g, ' ').toUpperCase()}</p>` : ''}
                     <div class="separator"></div>
                     <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
                 </body>
