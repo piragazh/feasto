@@ -363,8 +363,11 @@ Provide only the time range (e.g., "25-30 min").`;
                         return '<div class="item"><strong>' + item.quantity + 'x ' + item.name + '</strong>' + customizationText + '</div>';
                     }).join('')}
                     <div class="separator"></div>
+                    <h3>CUSTOMER DETAILS:</h3>
+                    ${order.guest_name || order.created_by ? `<p><strong>Name:</strong> ${order.guest_name || order.created_by}</p>` : ''}
+                    <p><strong>Phone:</strong> ${order.phone}</p>
+                    ${order.order_type === 'delivery' && order.delivery_address ? `<p><strong>Address:</strong> ${order.delivery_address}</p>` : ''}
                     ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
-                    <p><strong>Customer:</strong> ${order.phone}</p>
                     ${order.payment_method ? `<p><strong>Payment:</strong> ${order.payment_method.replace(/_/g, ' ').toUpperCase()}</p>` : ''}
                     <div class="separator"></div>
                     <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
