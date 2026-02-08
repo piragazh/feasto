@@ -305,28 +305,54 @@ Provide only the time range (e.g., "25-30 min").`;
                     ${order.items.map(item => {
                         let customizationText = '';
                         if (item.customizations) {
-                            const lines = Object.entries(item.customizations)
-                                .filter(([key]) => !key.includes('meal_customizations'))
-                                .map(([key, val]) => {
-                                    let value = '';
-                                    if (Array.isArray(val)) {
-                                        const itemsWithQty = val.map(optionName => {
-                                            if (item.itemQuantities) {
-                                                const qtyKey = Object.keys(item.itemQuantities).find(k => 
-                                                    k.toLowerCase().includes(optionName.toLowerCase())
-                                                );
-                                                const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
-                                                return qty > 1 ? optionName + ' (' + qty + 'x)' : optionName;
-                                            }
-                                            return optionName;
-                                        });
-                                        value = itemsWithQty.join(', ');
-                                    } else {
-                                        value = String(val);
-                                    }
-                                    const formattedKey = key.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                                    return '• ' + formattedKey + ': ' + value;
-                                });
+                            const lines = [];
+                            Object.entries(item.customizations).forEach(([key, val]) => {
+                                // Handle meal_customizations separately
+                                if (key.includes('meal_customizations') && typeof val === 'object') {
+                                    Object.entries(val).forEach(([mealKey, mealVal]) => {
+                                        let value = '';
+                                        if (Array.isArray(mealVal)) {
+                                            const itemsWithQty = mealVal.map(optionName => {
+                                                if (item.itemQuantities) {
+                                                    const qtyKey = Object.keys(item.itemQuantities).find(k => 
+                                                        k.toLowerCase().includes('meal') && k.toLowerCase().includes(optionName.toLowerCase())
+                                                    );
+                                                    const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
+                                                    return qty > 1 ? optionName + ' (' + qty + 'x)' : optionName;
+                                                }
+                                                return optionName;
+                                            });
+                                            value = itemsWithQty.join(', ');
+                                        } else {
+                                            value = String(mealVal);
+                                        }
+                                        const formattedKey = mealKey.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                        lines.push('  • ' + formattedKey + ': ' + value);
+                                    });
+                                    return;
+                                }
+                                
+                                let value = '';
+                                if (Array.isArray(val)) {
+                                    const itemsWithQty = val.map(optionName => {
+                                        if (item.itemQuantities) {
+                                            const qtyKey = Object.keys(item.itemQuantities).find(k => 
+                                                k.toLowerCase().includes(optionName.toLowerCase())
+                                            );
+                                            const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
+                                            return qty > 1 ? optionName + ' (' + qty + 'x)' : optionName;
+                                        }
+                                        return optionName;
+                                    });
+                                    value = itemsWithQty.join(', ');
+                                } else if (typeof val === 'object') {
+                                    return; // Skip objects
+                                } else {
+                                    value = String(val);
+                                }
+                                const formattedKey = key.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                lines.push('• ' + formattedKey + ': ' + value);
+                            });
                             if (lines.length > 0) {
                                 customizationText = '<br/><small style="margin-left: 10px;">' + lines.join('<br/>') + '</small>';
                             }
@@ -553,7 +579,11 @@ Provide only the time range (e.g., "25-30 min").`;
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
-                                                <p className="text-xs text-gray-500">{order.payment_method}</p>
+                                                {order.payment_method && (
+                                                    <p className="text-xs text-gray-500 capitalize">
+                                                        {order.payment_method.replace(/_/g, ' ')}
+                                                    </p>
+                                                )}
                                                 {order.order_type === 'collection' && order.order_number && (
                                                     <div className="mt-2">
                                                         <img 
@@ -576,8 +606,35 @@ Provide only the time range (e.g., "25-30 min").`;
                                                     // Handle customizations object
                                                     if (item.customizations && typeof item.customizations === 'object') {
                                                         Object.entries(item.customizations).forEach(([key, val]) => {
-                                                            // Skip meal_customizations objects - they're nested
+                                                            // Handle meal_customizations objects specially
                                                             if (key.includes('meal_customizations') && typeof val === 'object') {
+                                                                Object.entries(val).forEach(([mealKey, mealVal]) => {
+                                                                    let mealDisplayValue = '';
+                                                                    if (Array.isArray(mealVal)) {
+                                                                        const itemsWithQty = mealVal.map(optionName => {
+                                                                            if (item.itemQuantities) {
+                                                                                const qtyKey = Object.keys(item.itemQuantities).find(k => 
+                                                                                    k.toLowerCase().includes('meal') && k.toLowerCase().includes(optionName.toLowerCase())
+                                                                                );
+                                                                                const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
+                                                                                return qty > 1 ? `${optionName} (${qty}x)` : optionName;
+                                                                            }
+                                                                            return optionName;
+                                                                        });
+                                                                        mealDisplayValue = itemsWithQty.join(', ');
+                                                                    } else {
+                                                                        mealDisplayValue = String(mealVal);
+                                                                    }
+                                                                    
+                                                                    if (mealDisplayValue) {
+                                                                        const formattedKey = mealKey
+                                                                            .replace(/_/g, ' ')
+                                                                            .split(' ')
+                                                                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                                                            .join(' ');
+                                                                        lines.push({ key: `   ${formattedKey}`, value: mealDisplayValue });
+                                                                    }
+                                                                });
                                                                 return;
                                                             }
 
