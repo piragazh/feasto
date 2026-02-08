@@ -274,10 +274,10 @@ Provide only the time range (e.g., "25-30 min").`;
         const config = restaurant?.printer_config || {};
 
         const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
-        const baseFontSize = config.font_size === 'small' ? '24px' : config.font_size === 'large' ? '32px' : '28px';
-        const headerFontSize = config.font_size === 'small' ? '36px' : config.font_size === 'large' ? '48px' : '40px';
-        const h3FontSize = config.font_size === 'small' ? '28px' : config.font_size === 'large' ? '36px' : '32px';
-        const totalFontSize = config.font_size === 'small' ? '32px' : config.font_size === 'large' ? '40px' : '36px';
+        const baseFontSize = config.font_size === 'small' ? '28px' : config.font_size === 'large' ? '38px' : '32px';
+        const headerFontSize = config.font_size === 'small' ? '42px' : config.font_size === 'large' ? '56px' : '48px';
+        const h3FontSize = config.font_size === 'small' ? '32px' : config.font_size === 'large' ? '42px' : '36px';
+        const totalFontSize = config.font_size === 'small' ? '38px' : config.font_size === 'large' ? '48px' : '42px';
 
         const printWindow = window.open('', '', 'width=300,height=600');
         const orderLabel = order.order_type === 'collection' && order.order_number 
@@ -296,7 +296,7 @@ Provide only the time range (e.g., "25-30 min").`;
                         .item { margin: 5px 0; font-size: ${baseFontSize}; }
                         .total { font-weight: bold; font-size: ${totalFontSize}; margin-top: 10px; }
                         p { font-size: ${baseFontSize}; }
-                        small { font-size: ${baseFontSize === '24px' ? '20px' : baseFontSize === '32px' ? '28px' : '24px'}; }
+                        small { font-size: ${baseFontSize === '28px' ? '24px' : baseFontSize === '38px' ? '32px' : '28px'}; }
                         .logo { text-align: center; margin: 10px 0; }
                         .logo img { max-width: 80px; height: auto; }
                         .collection-badge { 
