@@ -264,9 +264,20 @@ Provide only the time range (e.g., "25-30 min").`;
         toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
     };
 
-    const printOrderDetails = (orderId) => {
+    const printOrderDetails = async (orderId) => {
         const order = allOrders.find(o => o.id === orderId);
         if (!order) return;
+
+        // Fetch restaurant printer config
+        const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+        const restaurant = restaurants?.[0];
+        const config = restaurant?.printer_config || {};
+
+        const printerWidth = config.printer_width === '58mm' ? '200px' : '280px';
+        const baseFontSize = config.font_size === 'small' ? '12px' : config.font_size === 'large' ? '16px' : '14px';
+        const headerFontSize = config.font_size === 'small' ? '18px' : config.font_size === 'large' ? '24px' : '20px';
+        const h3FontSize = config.font_size === 'small' ? '14px' : config.font_size === 'large' ? '18px' : '16px';
+        const totalFontSize = config.font_size === 'small' ? '16px' : config.font_size === 'large' ? '20px' : '18px';
 
         const printWindow = window.open('', '', 'width=300,height=600');
         const orderLabel = order.order_type === 'collection' && order.order_number 
@@ -278,14 +289,16 @@ Provide only the time range (e.g., "25-30 min").`;
                 <head>
                     <title>Order ${orderLabel}</title>
                     <style>
-                        body { font-family: monospace; width: 280px; margin: 10px; font-size: 14px; }
-                        h2 { text-align: center; margin: 10px 0; font-size: 20px; }
-                        h3 { font-size: 16px; }
+                        body { font-family: monospace; width: ${printerWidth}; margin: 10px; font-size: ${baseFontSize}; }
+                        h2 { text-align: center; margin: 10px 0; font-size: ${headerFontSize}; }
+                        h3 { font-size: ${h3FontSize}; }
                         .separator { border-top: 2px dashed #000; margin: 10px 0; }
-                        .item { margin: 5px 0; font-size: 14px; }
-                        .total { font-weight: bold; font-size: 18px; margin-top: 10px; }
-                        p { font-size: 14px; }
-                        small { font-size: 12px; }
+                        .item { margin: 5px 0; font-size: ${baseFontSize}; }
+                        .total { font-weight: bold; font-size: ${totalFontSize}; margin-top: 10px; }
+                        p { font-size: ${baseFontSize}; }
+                        small { font-size: ${baseFontSize === '12px' ? '10px' : baseFontSize === '16px' ? '14px' : '12px'}; }
+                        .logo { text-align: center; margin: 10px 0; }
+                        .logo img { max-width: 80px; height: auto; }
                         .collection-badge { 
                             text-align: center; 
                             background: #dbeafe; 
@@ -297,10 +310,12 @@ Provide only the time range (e.g., "25-30 min").`;
                     </style>
                 </head>
                 <body>
-                    <h2>KITCHEN ORDER</h2>
+                    ${config.show_logo !== false && restaurant?.logo_url ? `<div class="logo"><img src="${restaurant.logo_url}" alt="Logo" /></div>` : ''}
+                    ${config.header_text ? `<p style="text-align: center; font-weight: bold;">${config.header_text}</p>` : ''}
+                    <h2>${restaurant?.name || 'KITCHEN ORDER'}</h2>
                     ${order.order_type === 'collection' ? '<div class="collection-badge">🏪 COLLECTION ORDER</div>' : ''}
                     <div class="separator"></div>
-                    <p><strong>Order:</strong> ${orderLabel}</p>
+                    ${config.show_order_number !== false ? `<p><strong>Order:</strong> ${orderLabel}</p>` : ''}
                     <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : 'DELIVERY'}</p>
                     <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
                     <div class="separator"></div>
@@ -363,14 +378,17 @@ Provide only the time range (e.g., "25-30 min").`;
                         return '<div class="item"><strong>' + item.quantity + 'x ' + item.name + '</strong>' + customizationText + '</div>';
                     }).join('')}
                     <div class="separator"></div>
-                    <h3>CUSTOMER DETAILS:</h3>
-                    ${order.guest_name || order.created_by ? `<p><strong>Name:</strong> ${order.guest_name || order.created_by}</p>` : ''}
-                    <p><strong>Phone:</strong> ${order.phone}</p>
-                    ${order.order_type === 'delivery' && order.delivery_address ? `<p><strong>Address:</strong> ${order.delivery_address}</p>` : ''}
-                    ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
-                    ${order.payment_method ? `<p><strong>Payment:</strong> ${order.payment_method.replace(/_/g, ' ').toUpperCase()}</p>` : ''}
+                    ${config.show_customer_details !== false ? `
+                        <h3>CUSTOMER DETAILS:</h3>
+                        ${order.guest_name || order.created_by ? `<p><strong>Name:</strong> ${order.guest_name || order.created_by}</p>` : ''}
+                        <p><strong>Phone:</strong> ${order.phone}</p>
+                        ${order.order_type === 'delivery' && order.delivery_address ? `<p><strong>Address:</strong> ${order.delivery_address}</p>` : ''}
+                        ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
+                        ${order.payment_method ? `<p><strong>Payment:</strong> ${order.payment_method.replace(/_/g, ' ').toUpperCase()}</p>` : ''}
+                    ` : ''}
                     <div class="separator"></div>
                     <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
+                    ${config.footer_text ? `<p style="text-align: center; margin-top: 10px;">${config.footer_text}</p>` : ''}
                 </body>
             </html>
         `);
