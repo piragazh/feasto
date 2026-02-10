@@ -359,24 +359,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         };
 
         return (
-            <div className="flex flex-col h-[calc(100vh-200px)]">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white font-bold text-2xl">Tables - Grid View</h2>
-                    <div className="flex gap-2">
-                        <Button 
-                            onClick={() => setViewMode('floor-plan')}
-                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
-                        >
-                            Floor Plan
-                        </Button>
-                        <Button 
-                            onClick={() => setViewMode('entry')}
-                            className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
-                        >
-                            Order Entry
-                        </Button>
-                    </div>
-                </div>
+            <div className="flex flex-col h-full w-full">
+                <h2 className="text-white font-bold text-2xl mb-4">Tables - Grid View</h2>
 
                 <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-6 overflow-y-auto">
                     <div className="grid grid-cols-4 gap-4">
@@ -393,7 +377,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 >
                                     {/* Status Indicator */}
                                     <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${getStatusBadge(table.status)}`} />
-                                    
+
                                     {/* Actions Button */}
                                     <Button
                                         size="sm"
@@ -418,7 +402,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         }}
                                     >
                                         <h3 className="text-white font-bold text-lg mb-1 text-center">{table.table_number}</h3>
-                                        
+
                                         {table.assigned_server && (
                                             <div className="flex items-center gap-1 text-indigo-400 text-xs mb-1">
                                                 <Users className="h-3 w-3" />
