@@ -146,14 +146,78 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
          }
      };
 
-     if (showPayment && cart.length > 0) {
+     if (showPayment && viewingTable) {
+        const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
+        const total = ordersForTable.reduce((sum, order) => sum + order.total, 0);
+        const allItems = ordersForTable.flatMap(order => order.items);
+
         return (
             <POSPayment 
-                cart={cart} 
-                cartTotal={cartTotal} 
+                cart={allItems} 
+                cartTotal={total} 
                 onPaymentComplete={handlePaymentComplete}
-                onBackToCart={() => setShowPayment(false)}
+                onBackToCart={() => {
+                    setShowPayment(false);
+                    setViewMode('tables');
+                }}
             />
+        );
+     }
+
+     // Tables View Mode
+     if (viewMode === 'tables') {
+        const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
+        const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, order) => sum + order.total, 0);
+
+        return (
+            <div className="flex flex-col h-[calc(100vh-200px)]">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-white font-bold text-2xl">Tables</h2>
+                    <Button 
+                        onClick={() => setViewMode('entry')}
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                    >
+                        Back to Order Entry
+                    </Button>
+                </div>
+
+                <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-6 overflow-y-auto">
+                    <div className="grid grid-cols-4 gap-4">
+                        {tables.map(table => {
+                            const orders = getTableOrders(table.id);
+                            const total = getTableTotal(table.id);
+                            const hasOrders = orders.length > 0;
+
+                            return (
+                                <div
+                                    key={table.id}
+                                    onClick={() => {
+                                        if (hasOrders) {
+                                            setViewingTable(table);
+                                            setShowPayment(true);
+                                        }
+                                    }}
+                                    className={`aspect-square rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all border-2 ${
+                                        hasOrders 
+                                            ? 'bg-orange-500/20 border-orange-500 hover:bg-orange-500/30' 
+                                            : 'bg-gray-700 border-gray-600 hover:border-gray-500'
+                                    }`}
+                                >
+                                    <h3 className="text-white font-bold text-xl mb-2">{table.table_number}</h3>
+                                    {hasOrders ? (
+                                        <>
+                                            <p className="text-orange-400 text-sm">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                            <p className="text-white font-bold text-lg mt-2">£{total.toFixed(2)}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-gray-400 text-sm">Available</p>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
         );
      }
 
