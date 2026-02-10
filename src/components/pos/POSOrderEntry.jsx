@@ -564,8 +564,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             {!selectedTable ? (
                                 <div className="space-y-2">
                                     <p className="text-gray-400 text-sm text-center">Select a table: {tables.length} available</p>
+                                    <p className="text-xs text-gray-500 text-center">Restaurant ID: {restaurantId}</p>
                                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                                        {tables.length === 0 && <p className="text-red-400 text-xs col-span-2">No tables found</p>}
+                                        {tables.length === 0 && (
+                                            <div className="text-red-400 text-xs col-span-2">
+                                                <p>No tables found</p>
+                                                <p>RestaurantId: {restaurantId || 'MISSING'}</p>
+                                                <p>Tables: {JSON.stringify(tables)}</p>
+                                            </div>
+                                        )}
                                         {tables.map(table => (
                                             <Button
                                                 key={table.id}
