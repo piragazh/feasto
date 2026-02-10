@@ -196,35 +196,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 {/* Right: Cart */}
                 <div className="col-span-3 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-gray-700">
-                        <h2 className="text-white font-bold text-lg mb-2">Cart</h2>
-                        {orderType === 'dine_in' && (
-                            <div className="space-y-2">
-                                {selectedTable ? (
-                                    <div className="bg-green-600/20 border border-green-500 p-2 rounded">
-                                        <p className="text-green-400 text-xs font-semibold">Table: {selectedTable.table_number}</p>
-                                        <Button
-                                            onClick={() => setSelectedTable(null)}
-                                            className="w-full mt-1 h-7 text-xs bg-gray-700 hover:bg-gray-600"
-                                        >
-                                            Change Table
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="bg-yellow-600/20 border border-yellow-500 p-2 rounded">
-                                        <p className="text-yellow-400 text-xs font-semibold mb-2">Select Table:</p>
-                                        <div className="grid grid-cols-3 gap-1 max-h-32 overflow-y-auto">
-                                            {tables.map(table => (
-                                                <Button
-                                                    key={table.id}
-                                                    onClick={() => setSelectedTable(table)}
-                                                    className="h-9 text-xs bg-gray-700 hover:bg-orange-500 border border-gray-600"
-                                                >
-                                                    {table.table_number}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                        <h2 className="text-white font-bold text-lg">Cart</h2>
+                        {orderType === 'dine_in' && selectedTable && (
+                            <div className="bg-gray-700 p-2 rounded mt-2 text-center">
+                                <p className="text-gray-400 text-xs">Table: <span className="text-white font-bold">{selectedTable.table_number}</span></p>
                             </div>
                         )}
                     </div>
