@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3 } from 'lucide-react';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
-import POSTableManager from '@/components/pos/POSTableManager.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import POSKitchenDisplay from '@/components/pos/POSKitchenDisplay.jsx';
 import POSWaitlist from '@/components/pos/POSWaitlist.jsx';
