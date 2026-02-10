@@ -25,6 +25,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [tableActionsOpen, setTableActionsOpen] = useState(false);
      const [selectedTableForActions, setSelectedTableForActions] = useState(null);
      const [splitBillOpen, setSplitBillOpen] = useState(false);
+     const [isAddingToTable, setIsAddingToTable] = useState(false);
 
      React.useEffect(() => {
          setOptimisticCart(cart);
