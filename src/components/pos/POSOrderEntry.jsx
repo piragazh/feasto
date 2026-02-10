@@ -60,16 +60,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const { data: tableOrders = [], refetch: refetchTableOrders } = useQuery({
         queryKey: ['pos-table-orders', restaurantId],
         queryFn: async () => {
+            console.log('Fetching table orders for restaurant:', restaurantId);
             const orders = await base44.entities.Order.filter({ 
                 restaurant_id: restaurantId, 
                 order_type: 'dine_in',
                 status: { $in: ['preparing', 'confirmed', 'pending'] }
             });
             console.log('Fetched table orders:', orders);
+            console.log('Number of orders:', orders.length);
+            orders.forEach(order => {
+                console.log(`Order ${order.id}: table_id=${order.table_id}, table_number=${order.table_number}, status=${order.status}`);
+            });
             return orders;
         },
         enabled: !!restaurantId,
-        refetchInterval: 5000,
+        refetchInterval: 3000,
         staleTime: 0,
         cacheTime: 0,
     });
@@ -104,7 +109,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         }
 
         if (isAddingToTable) {
-            return; // Prevent duplicate submissions
+            console.log('Already adding to table, preventing duplicate');
+            return;
         }
 
         setIsAddingToTable(true);
@@ -131,28 +137,37 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 table_number: table.table_number
             };
 
+            console.log('Creating order with data:', orderData);
             const createdOrder = await base44.entities.Order.create(orderData);
+            console.log('Order created successfully:', createdOrder);
             
             // Update table status to occupied
             await base44.entities.RestaurantTable.update(table.id, { 
                 status: 'occupied',
                 current_order_id: createdOrder.id 
             });
+            console.log('Table updated successfully');
             
             toast.success(`Order added to ${table.table_number}!`);
             
-            // Clear cart first
+            // Clear cart and selected table first
             onClearCart();
             setSelectedTable(null);
             
-            // Then refetch data
+            // Wait a moment for state to settle
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Then refetch data with forced refresh
+            console.log('Refetching orders and tables...');
             await Promise.all([
                 refetchTableOrders(),
                 refetchTables()
             ]);
+            console.log('Refetch complete');
         } catch (error) {
             console.error('Error adding to table:', error);
-            toast.error('Failed to add items to table');
+            console.error('Error details:', error.message, error.stack);
+            toast.error('Failed to add items to table: ' + (error.message || 'Unknown error'));
         } finally {
             setIsAddingToTable(false);
         }
