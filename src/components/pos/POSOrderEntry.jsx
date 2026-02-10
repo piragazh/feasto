@@ -696,6 +696,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     onConfirm={handleCustomizationConfirm}
                 />
             )}
+
+            <TableSelectionDialog
+                open={tableSelectionOpen}
+                onClose={() => setTableSelectionOpen(false)}
+                tables={tables}
+                selectedTable={selectedTable}
+                onSelectTable={(table) => setSelectedTable(table)}
+            />
         </div>
     );
 }
