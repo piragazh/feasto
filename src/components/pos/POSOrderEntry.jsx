@@ -374,12 +374,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                             <p className="text-white font-bold text-lg">{selectedTable.table_number}</p>
                                         </div>
                                         <Button
-                                            onClick={() => setShowPayment(true)}
+                                            onClick={() => handleAddToTable(selectedTable)}
                                             disabled={optimisticCart.length === 0}
                                             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
                                         >
                                             <ShoppingCart className="h-5 w-5 mr-2" />
-                                            Proceed to Payment
+                                            Add to Table
                                         </Button>
                                         <Button
                                             onClick={() => setSelectedTable(null)}
