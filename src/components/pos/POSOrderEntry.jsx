@@ -202,7 +202,43 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
          }
      };
 
-     if (showPayment && viewingTable) {
+     if (showPayment) {
+        // Takeaway payment
+        if (!viewingTable) {
+            const handleTakeawayPaymentComplete = async () => {
+                try {
+                    toast.success('Payment completed!');
+                    setShowPayment(false);
+                    onClearCart();
+                } catch (error) {
+                    toast.error('Failed to complete payment');
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-[calc(100vh-200px)]">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-white font-bold text-2xl">Takeaway Payment</h2>
+                        <Button 
+                            onClick={() => setShowPayment(false)}
+                            variant="outline"
+                            className="text-white border-gray-600"
+                        >
+                            Back
+                        </Button>
+                    </div>
+
+                    <POSPayment 
+                        cart={optimisticCart} 
+                        cartTotal={cartTotal} 
+                        onPaymentComplete={handleTakeawayPaymentComplete}
+                        onBackToCart={() => setShowPayment(false)}
+                    />
+                </div>
+            );
+        }
+
+        // Dine-in payment
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
         const total = ordersForTable.reduce((sum, order) => sum + order.total, 0);
         const allItems = ordersForTable.flatMap(order => order.items);
@@ -231,7 +267,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </Button>
                     </div>
                 </div>
-                
+
                 <POSPayment 
                     cart={allItems} 
                     cartTotal={total} 
