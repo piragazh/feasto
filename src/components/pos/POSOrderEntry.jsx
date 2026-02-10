@@ -298,6 +298,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
      // Tables View Mode
      if (viewMode === 'tables') {
+        console.log('🏠 Tables View - Total tables:', tables.length);
         const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
         const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, order) => sum + order.total, 0);
 
