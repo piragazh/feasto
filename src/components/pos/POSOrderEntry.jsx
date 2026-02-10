@@ -261,29 +261,30 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             </div>
 
             {/* Bottom: Sticky Function Buttons */}
-            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-700">
-                <Button
-                    onClick={onClearCart}
-                    disabled={optimisticCart.length === 0}
-                    className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg disabled:opacity-50"
-                >
-                    <Trash2 className="h-5 w-5 mr-2" />
-                    Clear Cart
+            <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-700">
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 1
                 </Button>
-                <Button
-                    onClick={() => {/* Add hold functionality */}}
-                    disabled={optimisticCart.length === 0}
-                    className="h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg disabled:opacity-50"
-                >
-                    Hold Order
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 2
                 </Button>
-                <Button
-                    onClick={() => setShowPayment(true)}
-                    disabled={optimisticCart.length === 0}
-                    className="h-16 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xl disabled:opacity-50"
-                >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Payment
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 3
+                </Button>
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 4
+                </Button>
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 5
+                </Button>
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 6
+                </Button>
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 7
+                </Button>
+                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                    Function 8
                 </Button>
             </div>
 
