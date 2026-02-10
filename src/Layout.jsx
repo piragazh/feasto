@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
+import { DarkModeProvider } from '@/components/ui/dark-mode-provider';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
@@ -328,7 +329,8 @@ export default function Layout({ children, currentPageName }) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
+        <DarkModeProvider>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
             {/* Google Tag Manager Noscript */}
             {window.__gtmId && window.__gtmId !== 'undefined' && (
                 <noscript 
@@ -350,15 +352,24 @@ export default function Layout({ children, currentPageName }) {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
                 }
+                body {
+                    overscroll-behavior: none;
+                }
                 @media (max-width: 768px) {
                     body {
                         overscroll-behavior-y: contain;
                     }
                 }
+                nav, button, a {
+                    user-select: none;
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                }
             `}</style>
 
             {!hideHeader && (
-                <header className="bg-white border-b sticky top-0 z-50 safe-area-top">
+                <header className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50 safe-area-top">
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
                             <Link to={homeUrl} className="flex items-center gap-2">
@@ -369,19 +380,19 @@ export default function Layout({ children, currentPageName }) {
                                             alt={customDomainRestaurant.name || "Restaurant Logo"} 
                                             className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
                                         />
-                                        <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">{customDomainRestaurant.name}</span>
-                                    </>
-                                ) : (
-                                    <>
+                                        <span className="font-bold text-lg md:text-xl text-gray-900 dark:text-white hidden sm:block">{customDomainRestaurant.name}</span>
+                                        </>
+                                        ) : (
+                                        <>
                                         <img 
                                             src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1770322839/final_logo_icon_only_rgoqoy.png" 
                                             alt="MealDrop Logo" 
                                             className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
                                         />
-                                        <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">MealDrop</span>
-                                    </>
-                                )}
-                            </Link>
+                                        <span className="font-bold text-lg md:text-xl text-gray-900 dark:text-white hidden sm:block">MealDrop</span>
+                                        </>
+                                        )}
+                                        </Link>
 
 
 
@@ -572,12 +583,12 @@ export default function Layout({ children, currentPageName }) {
 
                 {/* Mobile Bottom Navigation */}
                 {showBottomNav && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 safe-area-bottom">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 z-40 safe-area-bottom">
                     <div className="flex items-center justify-around h-16 px-2">
                         <Link 
                             to={homeUrl} 
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-                                currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant') ? 'text-orange-500' : 'text-gray-600'
+                                currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant') ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <Home className="h-6 w-6" />
@@ -587,7 +598,7 @@ export default function Layout({ children, currentPageName }) {
                         <Link 
                             to={createPageUrl('Orders')} 
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-                                currentPageName === 'Orders' ? 'text-orange-500' : 'text-gray-600'
+                                currentPageName === 'Orders' ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <ShoppingBag className="h-6 w-6" />
@@ -598,7 +609,7 @@ export default function Layout({ children, currentPageName }) {
                             to={createPageUrl('Checkout')} 
                             className="flex flex-col items-center justify-center flex-1 gap-1 py-2 relative"
                         >
-                            <div className={`relative ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600'}`}>
+                            <div className={`relative ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>
                                 <ShoppingBag className="h-6 w-6" />
                                 {cartCount > 0 && (
                                     <span className="absolute -top-1 -right-1 h-4 w-4 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
@@ -606,23 +617,23 @@ export default function Layout({ children, currentPageName }) {
                                     </span>
                                 )}
                             </div>
-                            <span className={`text-xs font-medium ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600'}`}>Cart</span>
+                            <span className={`text-xs font-medium ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>Cart</span>
                         </Link>
 
                         <Link 
                             to={createPageUrl('Messages')} 
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-                                currentPageName === 'Messages' ? 'text-orange-500' : 'text-gray-600'
+                                currentPageName === 'Messages' ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <MessageSquare className="h-6 w-6" />
                             <span className="text-xs font-medium">Messages</span>
                         </Link>
-                        
+
                         <Link 
                             to={createPageUrl('CustomerProfile')} 
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-                                currentPageName === 'CustomerProfile' ? 'text-orange-500' : 'text-gray-600'
+                                currentPageName === 'CustomerProfile' ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <User className="h-6 w-6" />
@@ -631,6 +642,7 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                 </nav>
             )}
-        </div>
-    );
-}
+            </div>
+            </DarkModeProvider>
+            );
+            }

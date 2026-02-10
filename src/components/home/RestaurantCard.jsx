@@ -69,16 +69,19 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
             return;
         }
 
+        // Optimistic update
+        const previousState = isFavorite;
+        setIsFavorite(!isFavorite);
+        toast.success(isFavorite ? 'Removing from favorites...' : 'Adding to favorites...');
+
         try {
-            if (isFavorite) {
+            if (previousState) {
                 const favorites = await base44.entities.Favorite.filter({
                     user_email: userEmail,
                     restaurant_id: restaurant.id
                 });
                 if (favorites[0]) {
                     await base44.entities.Favorite.delete(favorites[0].id);
-                    setIsFavorite(false);
-                    toast.success('Removed from favorites');
                 }
             } else {
                 await base44.entities.Favorite.create({
@@ -86,10 +89,10 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                     restaurant_id: restaurant.id,
                     restaurant_name: restaurant.name
                 });
-                setIsFavorite(true);
-                toast.success('Added to favorites');
             }
         } catch (error) {
+            // Revert on error
+            setIsFavorite(previousState);
             toast.error('Failed to update favorites');
         }
     };

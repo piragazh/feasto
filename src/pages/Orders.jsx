@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -196,9 +197,10 @@ export default function Orders() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <PullToRefresh onRefresh={() => refetch()}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Header */}
-            <div className="bg-white border-b sticky top-0 z-10">
+            <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-4">
@@ -565,5 +567,6 @@ export default function Orders() {
                 </DialogContent>
             </Dialog>
             </div>
+        </PullToRefresh>
             );
             }
