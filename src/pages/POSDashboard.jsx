@@ -11,6 +11,7 @@ import POSPayment from '@/components/pos/POSPayment.jsx';
 import POSKitchenDisplay from '@/components/pos/POSKitchenDisplay.jsx';
 import POSWaitlist from '@/components/pos/POSWaitlist.jsx';
 import POSReports from '@/components/pos/POSReports.jsx';
+import POSTablesView from '@/components/pos/POSTablesView.jsx';
 import { toast } from 'sonner';
 
 export default function POSDashboard() {
