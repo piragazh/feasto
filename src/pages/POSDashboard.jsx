@@ -74,7 +74,6 @@ export default function POSDashboard() {
                 const restaurantData = await base44.entities.Restaurant.filter({ id: restaurantId });
                 if (restaurantData && restaurantData.length > 0) {
                     setRestaurant(restaurantData[0]);
-                    initializeTables(restaurantData[0]);
                 } else {
                     toast.error('Restaurant not found');
                 }
@@ -85,31 +84,6 @@ export default function POSDashboard() {
             console.error('POS loading error:', e);
             toast.error('Error loading POS system');
             setTimeout(() => base44.auth.redirectToLogin(), 1500);
-        }
-    };
-
-    const initializeTables = async (rest) => {
-        // Fetch actual tables from database
-        try {
-            const dbTables = await base44.entities.RestaurantTable.filter({ 
-                restaurant_id: rest.id, 
-                is_active: true 
-            });
-            
-            const newTables = {};
-            dbTables.forEach(table => {
-                newTables[`table_${table.id}`] = {
-                    number: table.table_number,
-                    status: 'empty',
-                    items: [],
-                    total: 0,
-                    id: table.id
-                };
-            });
-            setTables(newTables);
-        } catch (error) {
-            console.error('Error loading tables:', error);
-            toast.error('Failed to load tables');
         }
     };
 
