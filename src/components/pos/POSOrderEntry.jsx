@@ -12,6 +12,7 @@ import POSPayment from './POSPayment';
 import TableActionsDialog from './TableActionsDialog';
 import SplitBillDialog from './SplitBillDialog';
 import FloorPlanView from './FloorPlanView';
+import POSTableManager from './POSTableManager';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
