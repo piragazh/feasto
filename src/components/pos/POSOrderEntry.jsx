@@ -90,7 +90,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      };
 
     const handleAddToTable = async (table) => {
-        if (cart.length === 0) {
+        if (optimisticCart.length === 0) {
             toast.error('Cart is empty');
             return;
         }
@@ -98,8 +98,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         try {
             const orderData = {
                 restaurant_id: restaurantId,
-                items: cart.map(item => ({
-                    menu_item_id: item.id,
+                items: optimisticCart.map(item => ({
+                    menu_item_id: item.menu_item_id || item.id,
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
@@ -117,12 +117,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             };
 
             await base44.entities.Order.create(orderData);
+            
+            // Update table status to occupied
+            await base44.entities.RestaurantTable.update(table.id, { 
+                status: 'occupied',
+                current_order_id: table.id 
+            });
+            
             toast.success(`Items added to ${table.table_number}!`);
             onClearCart();
             setSelectedTable(null);
             refetchTableOrders();
+            refetchTables();
         } catch (error) {
-            toast.error('Failed to add items to table');
+            console.error('Error adding to table:', error);
+            toast.error('Failed to add items to table: ' + (error.message || 'Unknown error'));
         }
     };
 
