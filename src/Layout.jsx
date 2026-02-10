@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DarkModeProvider } from '@/components/ui/dark-mode-provider';
 import { ArrowLeft } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { PageTransition } from '@/components/ui/page-transition';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
@@ -335,8 +336,32 @@ export default function Layout({ children, currentPageName }) {
             navigate(targetUrl, { replace: true });
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            // Navigate to new tab
-            navigate(targetUrl);
+            // Save current location for the outgoing tab
+            const currentTabKey = `tab_location_${currentPageName}`;
+            sessionStorage.setItem(currentTabKey, JSON.stringify({
+                pathname: location.pathname,
+                search: location.search,
+                scrollY: window.scrollY
+            }));
+            
+            // Check if incoming tab has saved location
+            const incomingTabKey = `tab_location_${targetPage}`;
+            const savedLocation = sessionStorage.getItem(incomingTabKey);
+            
+            if (savedLocation) {
+                try {
+                    const { pathname, search, scrollY } = JSON.parse(savedLocation);
+                    navigate(pathname + search);
+                    // Restore scroll after navigation
+                    setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 0);
+                } catch (e) {
+                    // If parsing fails, just navigate normally
+                    navigate(targetUrl);
+                }
+            } else {
+                // No saved location, navigate to tab root
+                navigate(targetUrl);
+            }
         }
     };
 
@@ -571,7 +596,9 @@ export default function Layout({ children, currentPageName }) {
 
             <main className="min-h-screen">
                 <PullToRefresh onRefresh={() => window.location.reload()}>
-                    {children}
+                    <PageTransition>
+                        {children}
+                    </PageTransition>
                 </PullToRefresh>
             </main>
 
