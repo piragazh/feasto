@@ -535,6 +535,7 @@ export default function RestaurantDashboard() {
                             <TabsTrigger value="settings">Restaurant Settings</TabsTrigger>
                             <TabsTrigger value="branding">Branding</TabsTrigger>
                             <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
+                            <TabsTrigger value="integrations">Third-Party Orders</TabsTrigger>
                         </TabsList>
                         <TabsContent value="settings">
                             <RestaurantSettings restaurantId={restaurant.id} />
