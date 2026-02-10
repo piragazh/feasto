@@ -514,11 +514,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     </div>
                                     <Button
                                         onClick={() => handleAddToTable(selectedTable)}
-                                        disabled={optimisticCart.length === 0}
+                                        disabled={optimisticCart.length === 0 || isAddingToTable}
                                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
                                     >
                                         <ShoppingCart className="h-5 w-5 mr-2" />
-                                        Add to Table
+                                        {isAddingToTable ? 'Adding...' : 'Add to Table'}
                                     </Button>
                                     <Button
                                         onClick={() => setSelectedTable(null)}
