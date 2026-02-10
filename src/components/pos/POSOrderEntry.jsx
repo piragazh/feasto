@@ -560,8 +560,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             <p className="text-gray-400 text-xs">Total</p>
                             <p className="text-white text-2xl font-bold">£{cartTotal.toFixed(2)}</p>
                         </div>
-                        
-                        <>
+
+                        {orderType === 'dine_in' ? (
+                            <>
                             {!selectedTable ? (
                                 <div className="space-y-2">
                                     <p className="text-gray-400 text-sm text-center">Select a table: {tables.length} available</p>
