@@ -129,149 +129,162 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      }
 
      return (
-        <div className="grid grid-cols-3 gap-4 h-[calc(100vh-200px)]">
-             {/* Menu Section */}
-             <div className="col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-gray-700">
-                    <Input
-                        type="text"
-                        placeholder="Search items..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 mb-3 text-lg h-14 px-4"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                        <Button
-                            variant={!selectedCategory ? "default" : "outline"}
-                            onClick={() => setSelectedCategory('')}
-                            className="text-lg h-14 px-6 bg-orange-500 hover:bg-orange-600 font-bold"
-                        >
-                            All
-                        </Button>
-                        {categories.map(cat => (
+        <div className="flex flex-col h-[calc(100vh-200px)]">
+            {/* Main 3-Column Layout */}
+            <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden pb-4">
+                {/* Left: Categories/Menu */}
+                <div className="col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-gray-700">
+                        <h2 className="text-white font-bold text-lg mb-3">Categories</h2>
+                        <div className="flex flex-col gap-2">
                             <Button
-                                key={cat}
-                                variant={selectedCategory === cat ? "default" : "outline"}
-                                onClick={() => setSelectedCategory(cat)}
-                                className={`text-lg h-14 px-6 font-bold ${selectedCategory === cat ? 'bg-orange-500' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                variant={!selectedCategory ? "default" : "outline"}
+                                onClick={() => setSelectedCategory('')}
+                                className={`w-full justify-start text-base h-12 px-4 font-bold ${!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                             >
-                                {cat}
+                                All Items
                             </Button>
+                            {categories.map(cat => (
+                                <Button
+                                    key={cat}
+                                    variant={selectedCategory === cat ? "default" : "outline"}
+                                    onClick={() => setSelectedCategory(cat)}
+                                    className={`w-full justify-start text-base h-12 px-4 font-bold ${selectedCategory === cat ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                >
+                                    {cat}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Middle: Items Grid */}
+                <div className="col-span-7 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-gray-700">
+                        <Input
+                            type="text"
+                            placeholder="Search items..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 text-lg h-12 px-4"
+                        />
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {filteredItems.map(item => (
+                            <div
+                                key={item.id}
+                                onClick={() => handleItemClick(item)}
+                                className="bg-gray-700 border border-gray-600 rounded-lg p-3 hover:border-orange-500 hover:shadow-lg transition-all cursor-pointer group flex flex-col"
+                            >
+                                <div className="w-full aspect-square bg-gray-600 rounded-lg overflow-hidden mb-2">
+                                    {item.image_url ? (
+                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-500 flex items-center justify-center">
+                                            <ShoppingCart className="h-8 w-8 text-gray-400" />
+                                        </div>
+                                    )}
+                                </div>
+                                <h3 className="font-bold text-white text-sm line-clamp-2 group-hover:text-orange-400 transition-colors mb-1">{item.name}</h3>
+                                <p className="text-orange-400 font-bold text-lg mt-auto">£{item.price.toFixed(2)}</p>
+                            </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {filteredItems.map(item => (
-                        <div
-                            key={item.id}
-                            onClick={() => handleItemClick(item)}
-                            className="flex items-center gap-2 p-2 bg-gray-700 border border-gray-600 rounded hover:border-orange-500 hover:shadow-md transition-all cursor-pointer group"
-                        >
-                            <div className="w-12 h-12 flex-shrink-0 bg-gray-600 rounded overflow-hidden">
-                                {item.image_url ? (
-                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-gray-500 flex items-center justify-center">
-                                        <ShoppingCart className="h-5 w-5 text-gray-400" />
+                {/* Right: Cart */}
+                <div className="col-span-3 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-gray-700">
+                        <h2 className="text-white font-bold text-lg">Cart</h2>
+                        {orderType === 'dine_in' && selectedTable && (
+                            <div className="bg-gray-700 p-2 rounded mt-2 text-center">
+                                <p className="text-gray-400 text-xs">Table: <span className="text-white font-bold">{selectedTable.table_number}</span></p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                        {optimisticCart.length === 0 ? (
+                            <p className="text-gray-400 text-center py-8 text-sm">No items in cart</p>
+                        ) : (
+                            optimisticCart.map(item => (
+                                <div key={item.id} className="bg-gray-700 p-2 rounded border border-gray-600">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex-1 pr-2">
+                                            <p className="text-white font-semibold text-xs leading-tight">{item.name}</p>
+                                            {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                                <div className="text-gray-300 text-[9px] mt-0.5 space-y-0.5 max-h-10 overflow-hidden">
+                                                    {Object.entries(item.customizations).map(([key, value]) => (
+                                                        <p key={key} className="line-clamp-1 truncate">
+                                                            {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <p className="text-orange-400 text-sm mt-1 font-bold">£{item.price.toFixed(2)}</p>
+                                        </div>
+                                        <Button
+                                            onClick={() => onRemoveItem(item.id)}
+                                            className="text-red-400 hover:text-red-500 bg-red-500/10 hover:bg-red-500/20 h-8 w-8 rounded-full transition-all p-0 flex items-center justify-center"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
                                     </div>
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-white text-sm line-clamp-1 group-hover:text-orange-400 transition-colors">{item.name}</h3>
-                                <p className="text-orange-400 font-bold text-base">£{item.price.toFixed(2)}</p>
-                            </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                            className="h-9 w-9 p-0 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded flex items-center justify-center"
+                                        >
+                                            <Minus className="h-4 w-4" />
+                                        </Button>
+                                        <span className="text-white font-bold text-base flex-1 text-center">{item.quantity}</span>
+                                        <Button
+                                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                            className="h-9 w-9 p-0 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded flex items-center justify-center"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="border-t border-gray-700 p-3">
+                        <div className="bg-gray-700 p-2 rounded mb-2">
+                            <p className="text-gray-400 text-xs">Total</p>
+                            <p className="text-white text-2xl font-bold">£{cartTotal.toFixed(2)}</p>
                         </div>
-                    ))}
+                    </div>
                 </div>
             </div>
 
-            {/* Cart Section */}
-             <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                 <div className="p-4 border-b border-gray-700">
-                     <h2 className="text-white font-bold text-lg">Cart</h2>
-                     {orderType === 'dine_in' && selectedTable && (
-                         <div className="bg-gray-700 p-2 rounded mt-2 text-center">
-                             <p className="text-gray-400 text-xs">Table: <span className="text-white font-bold">{selectedTable.table_number}</span></p>
-                         </div>
-                     )}
-                 </div>
-
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {optimisticCart.length === 0 ? (
-                        <p className="text-gray-400 text-center py-8">No items in cart</p>
-                    ) : (
-                        optimisticCart.map(item => (
-                            <div key={item.id} className="bg-gray-700 p-3 rounded border border-gray-600">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex-1">
-                                        <p className="text-white font-semibold text-sm">{item.name}</p>
-                                        {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                            <div className="text-gray-300 text-[10px] mt-1 space-y-0.5 max-h-12 overflow-hidden">
-                                                {Object.entries(item.customizations).map(([key, value]) => (
-                                                    <p key={key} className="line-clamp-1 truncate">
-                                                        {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                                    </p>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {item.removedIngredients?.length > 0 && (
-                                            <p className="text-red-400 text-[10px] mt-0.5 line-clamp-1 truncate">
-                                                No: {item.removedIngredients.join(', ')}
-                                            </p>
-                                        )}
-                                        {item.specialInstructions && (
-                                            <p className="text-blue-300 text-[10px] mt-0.5 italic line-clamp-1 truncate">
-                                                Note: {item.specialInstructions}
-                                            </p>
-                                        )}
-                                        <p className="text-orange-400 text-sm mt-1">£{item.price.toFixed(2)}</p>
-                                    </div>
-                                    <Button
-                                        onClick={() => onRemoveItem(item.id)}
-                                        className="text-red-400 hover:text-red-500 bg-red-500/10 hover:bg-red-500/20 h-12 w-12 rounded-full transition-all font-bold"
-                                    >
-                                        <X className="h-6 w-6" />
-                                    </Button>
-                                </div>
-                                <div className="flex items-center justify-between gap-2">
-                                    <Button
-                                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded active:scale-95 transition-transform"
-                                    >
-                                        <Minus className="h-5 w-5" />
-                                    </Button>
-                                    <span className="text-white font-bold text-lg flex-1 text-center min-w-12">{item.quantity}</span>
-                                    <Button
-                                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded active:scale-95 transition-transform"
-                                    >
-                                        <Plus className="h-5 w-5" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                <div className="border-t border-gray-700 p-4 space-y-3">
-                    <div className="bg-gray-700 p-3 rounded">
-                        <p className="text-gray-400 text-sm mb-1">Total</p>
-                        <p className="text-white text-3xl font-bold">£{cartTotal.toFixed(2)}</p>
-                    </div>
-                    <Button
-                        onClick={() => setShowPayment(true)}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-16 text-xl"
-                    >
-                        Proceed to Payment
-                    </Button>
-                    <Button
-                        onClick={onClearCart}
-                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-14 text-lg"
-                    >
-                        Clear Cart
-                    </Button>
-                </div>
+            {/* Bottom: Sticky Function Buttons */}
+            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-700">
+                <Button
+                    onClick={onClearCart}
+                    disabled={optimisticCart.length === 0}
+                    className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg disabled:opacity-50"
+                >
+                    <Trash2 className="h-5 w-5 mr-2" />
+                    Clear Cart
+                </Button>
+                <Button
+                    onClick={() => {/* Add hold functionality */}}
+                    disabled={optimisticCart.length === 0}
+                    className="h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg disabled:opacity-50"
+                >
+                    Hold Order
+                </Button>
+                <Button
+                    onClick={() => setShowPayment(true)}
+                    disabled={optimisticCart.length === 0}
+                    className="h-16 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xl disabled:opacity-50"
+                >
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    Payment
+                </Button>
             </div>
 
             {selectedItem && (
