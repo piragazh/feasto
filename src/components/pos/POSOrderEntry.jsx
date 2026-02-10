@@ -109,7 +109,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
-                    customizations: item.customizations
+                    customizations: item.customizations || {}
                 })),
                 subtotal: cartTotal,
                 delivery_fee: 0,
@@ -122,19 +122,26 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 table_number: table.table_number
             };
 
-            await base44.entities.Order.create(orderData);
+            console.log('Creating order with data:', orderData);
+            const createdOrder = await base44.entities.Order.create(orderData);
+            console.log('Order created:', createdOrder);
             
             // Update table status to occupied
             await base44.entities.RestaurantTable.update(table.id, { 
                 status: 'occupied',
-                current_order_id: table.id 
+                current_order_id: createdOrder.id 
             });
             
             toast.success(`Items added to ${table.table_number}!`);
+            
+            // Force refetch with a slight delay
+            setTimeout(() => {
+                refetchTableOrders();
+                refetchTables();
+            }, 100);
+            
             onClearCart();
             setSelectedTable(null);
-            refetchTableOrders();
-            refetchTables();
         } catch (error) {
             console.error('Error adding to table:', error);
             toast.error('Failed to add items to table: ' + (error.message || 'Unknown error'));
