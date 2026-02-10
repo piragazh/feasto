@@ -660,14 +660,24 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 </Button>
                             </>
                         ) : (
-                            <Button
-                                onClick={onClearCart}
-                                disabled={optimisticCart.length === 0}
-                                className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-12 text-base disabled:opacity-50"
-                            >
-                                <Trash2 className="h-5 w-5 mr-2" />
-                                Clear Cart
-                            </Button>
+                            <>
+                                <Button
+                                    onClick={() => setShowPayment(true)}
+                                    disabled={optimisticCart.length === 0}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
+                                >
+                                    <ShoppingCart className="h-5 w-5 mr-2" />
+                                    Checkout
+                                </Button>
+                                <Button
+                                    onClick={onClearCart}
+                                    disabled={optimisticCart.length === 0}
+                                    className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-12 text-base disabled:opacity-50"
+                                >
+                                    <Trash2 className="h-5 w-5 mr-2" />
+                                    Clear Cart
+                                </Button>
+                            </>
                         )}
                         </div>
                 </div>
