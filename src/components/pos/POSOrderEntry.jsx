@@ -102,9 +102,16 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             return;
         }
 
+        if (isAddingToTable) {
+            return; // Prevent duplicate submissions
+        }
+
+        setIsAddingToTable(true);
+
         try {
             const orderData = {
                 restaurant_id: restaurantId,
+                restaurant_name: 'POS Order',
                 items: optimisticCart.map(item => ({
                     menu_item_id: item.menu_item_id || item.id,
                     name: item.name,
@@ -123,9 +130,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 table_number: table.table_number
             };
 
-            console.log('Creating order with data:', orderData);
             const createdOrder = await base44.entities.Order.create(orderData);
-            console.log('Order created:', createdOrder);
             
             // Update table status to occupied
             await base44.entities.RestaurantTable.update(table.id, { 
@@ -133,19 +138,22 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 current_order_id: createdOrder.id 
             });
             
-            toast.success(`Items added to ${table.table_number}!`);
+            toast.success(`Order added to ${table.table_number}!`);
             
-            // Force refetch with a slight delay
-            setTimeout(() => {
-                refetchTableOrders();
-                refetchTables();
-            }, 100);
-            
+            // Clear cart first
             onClearCart();
             setSelectedTable(null);
+            
+            // Then refetch data
+            await Promise.all([
+                refetchTableOrders(),
+                refetchTables()
+            ]);
         } catch (error) {
             console.error('Error adding to table:', error);
-            toast.error('Failed to add items to table: ' + (error.message || 'Unknown error'));
+            toast.error('Failed to add items to table');
+        } finally {
+            setIsAddingToTable(false);
         }
     };
 
