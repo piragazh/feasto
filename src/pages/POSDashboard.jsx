@@ -90,18 +90,29 @@ export default function POSDashboard() {
         }
     };
 
-    const initializeTables = (rest) => {
-        // Initialize tables (1-20 by default)
-        const newTables = {};
-        for (let i = 1; i <= 20; i++) {
-            newTables[`table_${i}`] = {
-                number: i,
-                status: 'empty',
-                items: [],
-                total: 0
-            };
+    const initializeTables = async (rest) => {
+        // Fetch actual tables from database
+        try {
+            const dbTables = await base44.entities.RestaurantTable.filter({ 
+                restaurant_id: rest.id, 
+                is_active: true 
+            });
+            
+            const newTables = {};
+            dbTables.forEach(table => {
+                newTables[`table_${table.id}`] = {
+                    number: table.table_number,
+                    status: 'empty',
+                    items: [],
+                    total: 0,
+                    id: table.id
+                };
+            });
+            setTables(newTables);
+        } catch (error) {
+            console.error('Error loading tables:', error);
+            toast.error('Failed to load tables');
         }
-        setTables(newTables);
     };
 
     const addToCart = (item) => {
