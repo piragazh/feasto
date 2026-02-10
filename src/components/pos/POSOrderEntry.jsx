@@ -582,7 +582,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         <p className="text-white font-bold text-lg">{selectedTable.table_number}</p>
                                     </div>
                                     <Button
-                                        onClick={() => handleAddToTable(selectedTable)}
+                                        onClick={() => {
+                                            console.log('🔴 BUTTON CLICKED!');
+                                            handleAddToTable(selectedTable);
+                                        }}
                                         disabled={optimisticCart.length === 0 || isAddingToTable}
                                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
                                     >
