@@ -569,7 +569,11 @@ export default function Layout({ children, currentPageName }) {
                 </header>
             )}
 
-            <main className="min-h-screen">{children}</main>
+            <main className="min-h-screen">
+                <PullToRefresh onRefresh={() => window.location.reload()}>
+                    {children}
+                </PullToRefresh>
+            </main>
 
                 {/* AI Chatbot Widget */}
                 <ChatbotWidget />
