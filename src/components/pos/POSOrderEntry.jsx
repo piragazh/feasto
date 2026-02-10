@@ -251,11 +251,27 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         )}
                     </div>
 
-                    <div className="border-t border-gray-700 p-3">
-                        <div className="bg-gray-700 p-2 rounded mb-2">
+                    <div className="border-t border-gray-700 p-3 space-y-2">
+                        <div className="bg-gray-700 p-2 rounded">
                             <p className="text-gray-400 text-xs">Total</p>
                             <p className="text-white text-2xl font-bold">£{cartTotal.toFixed(2)}</p>
                         </div>
+                        <Button
+                            onClick={() => setShowPayment(true)}
+                            disabled={optimisticCart.length === 0}
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
+                        >
+                            <ShoppingCart className="h-5 w-5 mr-2" />
+                            Proceed to Payment
+                        </Button>
+                        <Button
+                            onClick={onClearCart}
+                            disabled={optimisticCart.length === 0}
+                            className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-12 text-base disabled:opacity-50"
+                        >
+                            <Trash2 className="h-5 w-5 mr-2" />
+                            Clear Cart
+                        </Button>
                     </div>
                 </div>
             </div>
