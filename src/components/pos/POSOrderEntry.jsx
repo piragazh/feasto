@@ -49,7 +49,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         enabled: !!restaurantId,
     });
 
-    const { data: tables = [] } = useQuery({
+    const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['pos-tables', restaurantId],
         queryFn: () => base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true }),
         enabled: !!restaurantId,
