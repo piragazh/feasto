@@ -65,6 +65,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             // First get ALL orders to debug
             const allOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId });
             console.log('ALL orders for restaurant:', allOrders);
+            console.log('Order types in ALL orders:');
+            allOrders.forEach(order => {
+                console.log(`  Order ${order.id}: order_type="${order.order_type}", status="${order.status}", table_id="${order.table_id}", table_number="${order.table_number}"`);
+            });
             
             const orders = await base44.entities.Order.filter({ 
                 restaurant_id: restaurantId, 
@@ -73,12 +77,6 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             });
             console.log('Filtered dine-in orders:', orders);
             console.log('Number of dine-in orders:', orders.length);
-            
-            if (orders.length > 0) {
-                orders.forEach(order => {
-                    console.log(`Order ${order.id}: table_id=${order.table_id}, table_number=${order.table_number}, status=${order.status}, order_type=${order.order_type}`);
-                });
-            }
             
             return orders;
         },
