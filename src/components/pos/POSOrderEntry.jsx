@@ -53,7 +53,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['pos-tables', restaurantId],
-        queryFn: () => base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true }),
+        queryFn: async () => {
+            const result = await base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true });
+            console.log('📊 Tables fetched:', result.length, result);
+            return result;
+        },
         enabled: !!restaurantId,
     });
 
@@ -559,8 +563,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <>
                             {!selectedTable ? (
                                 <div className="space-y-2">
-                                    <p className="text-gray-400 text-sm text-center">Select a table:</p>
+                                    <p className="text-gray-400 text-sm text-center">Select a table: {tables.length} available</p>
                                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                                        {tables.length === 0 && <p className="text-red-400 text-xs col-span-2">No tables found</p>}
                                         {tables.map(table => (
                                             <Button
                                                 key={table.id}
