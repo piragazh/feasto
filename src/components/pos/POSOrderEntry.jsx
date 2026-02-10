@@ -157,15 +157,53 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         const allItems = ordersForTable.flatMap(order => order.items);
 
         return (
-            <POSPayment 
-                cart={allItems} 
-                cartTotal={total} 
-                onPaymentComplete={handlePaymentComplete}
-                onBackToCart={() => {
-                    setShowPayment(false);
-                    setViewMode('tables');
-                }}
-            />
+            <div className="flex flex-col h-[calc(100vh-200px)]">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-white font-bold text-2xl">{viewingTable.table_number} - Payment</h2>
+                    <div className="flex gap-2">
+                        <Button 
+                            onClick={() => setSplitBillOpen(true)}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                        >
+                            <Scissors className="h-4 w-4 mr-2" />
+                            Split Bill
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setShowPayment(false);
+                                setViewMode('tables');
+                            }}
+                            variant="outline"
+                            className="text-white border-gray-600"
+                        >
+                            Back
+                        </Button>
+                    </div>
+                </div>
+                
+                <POSPayment 
+                    cart={allItems} 
+                    cartTotal={total} 
+                    onPaymentComplete={handlePaymentComplete}
+                    onBackToCart={() => {
+                        setShowPayment(false);
+                        setViewMode('tables');
+                    }}
+                />
+
+                {splitBillOpen && (
+                    <SplitBillDialog
+                        open={splitBillOpen}
+                        onClose={() => setSplitBillOpen(false)}
+                        orders={ordersForTable}
+                        table={viewingTable}
+                        onPaymentComplete={() => {
+                            setSplitBillOpen(false);
+                            handlePaymentComplete();
+                        }}
+                    />
+                )}
+            </div>
         );
      }
 
