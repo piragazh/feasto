@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Minus, ShoppingCart, X, Settings, Scissors } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, X, Settings, Scissors, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import POSItemCustomization from './POSItemCustomization';
 import POSPayment from './POSPayment';
 import TableActionsDialog from './TableActionsDialog';
 import SplitBillDialog from './SplitBillDialog';
+import FloorPlanView from './FloorPlanView';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
@@ -20,7 +21,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [selectedTable, setSelectedTable] = useState(null);
      const [showPayment, setShowPayment] = useState(false);
      const [optimisticCart, setOptimisticCart] = useState(cart);
-     const [viewMode, setViewMode] = useState('entry'); // 'entry' or 'tables'
+     const [viewMode, setViewMode] = useState('entry'); // 'entry', 'tables', or 'floor-plan'
      const [viewingTable, setViewingTable] = useState(null);
      const [tableActionsOpen, setTableActionsOpen] = useState(false);
      const [selectedTableForActions, setSelectedTableForActions] = useState(null);
@@ -238,6 +239,44 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         );
      }
 
+     // Floor Plan View Mode
+     if (viewMode === 'floor-plan') {
+        return (
+            <div className="flex flex-col h-[calc(100vh-200px)]">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-white font-bold text-2xl">Floor Plan</h2>
+                    <div className="flex gap-2">
+                        <Button 
+                            onClick={() => setViewMode('tables')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                        >
+                            Grid View
+                        </Button>
+                        <Button 
+                            onClick={() => setViewMode('entry')}
+                            className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                        >
+                            Back to Order Entry
+                        </Button>
+                    </div>
+                </div>
+
+                <FloorPlanView
+                    tables={tables}
+                    tableOrders={tableOrders}
+                    onRefresh={() => {
+                        refetchTables();
+                        refetchTableOrders();
+                    }}
+                    onTableClick={(table) => {
+                        setViewingTable(table);
+                        setShowPayment(true);
+                    }}
+                />
+            </div>
+        );
+     }
+
      // Tables View Mode
      if (viewMode === 'tables') {
         const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
@@ -266,13 +305,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         return (
             <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white font-bold text-2xl">Tables</h2>
-                    <Button 
-                        onClick={() => setViewMode('entry')}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
-                    >
-                        Back to Order Entry
-                    </Button>
+                    <h2 className="text-white font-bold text-2xl">Tables - Grid View</h2>
+                    <div className="flex gap-2">
+                        <Button 
+                            onClick={() => setViewMode('floor-plan')}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                        >
+                            Floor Plan
+                        </Button>
+                        <Button 
+                            onClick={() => setViewMode('entry')}
+                            className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                        >
+                            Order Entry
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-6 overflow-y-auto">
@@ -316,6 +363,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     >
                                         <h3 className="text-white font-bold text-lg mb-1 text-center">{table.table_number}</h3>
                                         
+                                        {table.assigned_server && (
+                                            <div className="flex items-center gap-1 text-indigo-400 text-xs mb-1">
+                                                <Users className="h-3 w-3" />
+                                                <span>{table.assigned_server}</span>
+                                            </div>
+                                        )}
+
                                         {isMerged && (
                                             <p className="text-purple-400 text-xs mb-1">Merged</p>
                                         )}

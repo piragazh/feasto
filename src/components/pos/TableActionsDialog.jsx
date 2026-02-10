@@ -3,14 +3,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { Combine, StickyNote, Sparkles, X } from 'lucide-react';
+import { Combine, StickyNote, Sparkles, X, UserPlus, Split } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function TableActionsDialog({ open, onClose, table, tables, onRefresh }) {
     const [notes, setNotes] = useState(table?.notes || '');
     const [selectedTableToMerge, setSelectedTableToMerge] = useState('');
+    const [assignedServer, setAssignedServer] = useState(table?.assigned_server || '');
     const [loading, setLoading] = useState(false);
 
     const handleSaveNotes = async () => {
@@ -102,13 +104,58 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
         }
     };
 
+    const handleAssignServer = async () => {
+        setLoading(true);
+        try {
+            await base44.entities.RestaurantTable.update(table.id, { assigned_server: assignedServer });
+            toast.success('Server assigned!');
+            onRefresh();
+            onClose();
+        } catch (error) {
+            toast.error('Failed to assign server');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSplitTable = async () => {
+        setLoading(true);
+        try {
+            // If table is merged, unmerge first
+            const mergedWith = table.merged_with || [];
+            await base44.entities.RestaurantTable.update(table.id, {
+                merged_with: []
+            });
+
+            // Clear references in other tables
+            for (const mergedTableId of mergedWith) {
+                const mergedTable = tables.find(t => t.id === mergedTableId);
+                if (mergedTable) {
+                    const updatedMerged = (mergedTable.merged_with || []).filter(id => id !== table.id);
+                    await base44.entities.RestaurantTable.update(mergedTableId, {
+                        merged_with: updatedMerged
+                    });
+                }
+            }
+
+            toast.success('Table split successfully!');
+            onRefresh();
+            onClose();
+        } catch (error) {
+            toast.error('Failed to split table');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleCleanTable = async () => {
         setLoading(true);
         try {
             await base44.entities.RestaurantTable.update(table.id, {
                 status: 'available',
                 notes: '',
-                merged_with: []
+                merged_with: [],
+                assigned_server: ''
             });
             toast.success('Table cleaned and reset!');
             onRefresh();
@@ -192,11 +239,32 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
                         </Button>
                     </div>
 
-                    {/* Merge Tables */}
+                    {/* Assign Server */}
+                    <div>
+                        <Label className="text-sm font-semibold mb-2 flex items-center gap-2">
+                            <UserPlus className="h-4 w-4" />
+                            Assign Server
+                        </Label>
+                        <Input
+                            value={assignedServer}
+                            onChange={(e) => setAssignedServer(e.target.value)}
+                            placeholder="Enter server name..."
+                            className="mb-2"
+                        />
+                        <Button
+                            onClick={handleAssignServer}
+                            disabled={loading}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700"
+                        >
+                            Assign Server
+                        </Button>
+                    </div>
+
+                    {/* Merge/Split Tables */}
                     <div>
                         <Label className="text-sm font-semibold mb-2 flex items-center gap-2">
                             <Combine className="h-4 w-4" />
-                            Merge Tables
+                            Merge / Split Tables
                         </Label>
                         {(table?.merged_with || []).length > 0 ? (
                             <div className="space-y-2">
@@ -206,14 +274,24 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
                                         return t?.table_number;
                                     }).filter(Boolean).join(', ')}
                                 </p>
-                                <Button
-                                    onClick={handleUnmergeTables}
-                                    disabled={loading}
-                                    className="w-full bg-red-600 hover:bg-red-700"
-                                >
-                                    <X className="h-4 w-4 mr-2" />
-                                    Unmerge Tables
-                                </Button>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                        onClick={handleUnmergeTables}
+                                        disabled={loading}
+                                        className="bg-red-600 hover:bg-red-700"
+                                    >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Unmerge
+                                    </Button>
+                                    <Button
+                                        onClick={handleSplitTable}
+                                        disabled={loading}
+                                        className="bg-orange-600 hover:bg-orange-700"
+                                    >
+                                        <Split className="h-4 w-4 mr-2" />
+                                        Split
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-2">
