@@ -14,6 +14,7 @@ import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
 import RestaurantCard from '@/components/home/RestaurantCard';
 import EnhancedSearchBar from '@/components/home/EnhancedSearchBar';
 import Restaurant from './Restaurant';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function Home() {
     });
 
     // Fetch restaurants with optimized caching
-    const { data: restaurants = [], isLoading } = useQuery({
+    const { data: restaurants = [], isLoading, refetch } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
         staleTime: 10 * 60 * 1000, // Cache for 10 minutes
@@ -153,7 +154,8 @@ export default function Home() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <PullToRefresh onRefresh={() => refetch()}>
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-gray-50 dark:from-gray-900 dark:to-gray-800">
             <div className="md:block hidden">
                 <HeroSection />
             </div>
