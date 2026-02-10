@@ -624,7 +624,18 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             <Trash2 className="h-5 w-5 mr-2" />
                             Clear Cart
                         </Button>
-                    </div>
+                        </>
+                        ) : (
+                            <Button
+                                onClick={onClearCart}
+                                disabled={optimisticCart.length === 0}
+                                className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-12 text-base disabled:opacity-50"
+                            >
+                                <Trash2 className="h-5 w-5 mr-2" />
+                                Clear Cart
+                            </Button>
+                        )}
+                        </div>
                 </div>
             </div>
 
