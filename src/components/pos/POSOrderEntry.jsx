@@ -212,6 +212,26 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
         const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, order) => sum + order.total, 0);
 
+        const getStatusColor = (status) => {
+            switch (status) {
+                case 'available': return 'bg-gray-700 border-gray-600';
+                case 'occupied': return 'bg-orange-500/20 border-orange-500';
+                case 'reserved': return 'bg-blue-500/20 border-blue-500';
+                case 'needs_cleaning': return 'bg-yellow-500/20 border-yellow-500';
+                default: return 'bg-gray-700 border-gray-600';
+            }
+        };
+
+        const getStatusBadge = (status) => {
+            const colors = {
+                available: 'bg-green-500',
+                occupied: 'bg-orange-500',
+                reserved: 'bg-blue-500',
+                needs_cleaning: 'bg-yellow-500'
+            };
+            return colors[status] || 'bg-gray-500';
+        };
+
         return (
             <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="flex items-center justify-between mb-4">
@@ -230,36 +250,79 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             const orders = getTableOrders(table.id);
                             const total = getTableTotal(table.id);
                             const hasOrders = orders.length > 0;
+                            const isMerged = (table.merged_with || []).length > 0;
 
                             return (
                                 <div
                                     key={table.id}
-                                    onClick={() => {
-                                        if (hasOrders) {
-                                            setViewingTable(table);
-                                            setShowPayment(true);
-                                        }
-                                    }}
-                                    className={`aspect-square rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all border-2 ${
-                                        hasOrders 
-                                            ? 'bg-orange-500/20 border-orange-500 hover:bg-orange-500/30' 
-                                            : 'bg-gray-700 border-gray-600 hover:border-gray-500'
-                                    }`}
+                                    className={`aspect-square rounded-xl p-3 flex flex-col relative cursor-pointer transition-all border-2 ${getStatusColor(table.status)} hover:opacity-90`}
                                 >
-                                    <h3 className="text-white font-bold text-xl mb-2">{table.table_number}</h3>
-                                    {hasOrders ? (
-                                        <>
-                                            <p className="text-orange-400 text-sm">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                            <p className="text-white font-bold text-lg mt-2">£{total.toFixed(2)}</p>
-                                        </>
-                                    ) : (
-                                        <p className="text-gray-400 text-sm">Available</p>
-                                    )}
+                                    {/* Status Indicator */}
+                                    <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${getStatusBadge(table.status)}`} />
+                                    
+                                    {/* Actions Button */}
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedTableForActions(table);
+                                            setTableActionsOpen(true);
+                                        }}
+                                        className="absolute top-2 left-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
+                                    >
+                                        <Settings className="h-4 w-4" />
+                                    </Button>
+
+                                    <div 
+                                        className="flex-1 flex flex-col items-center justify-center"
+                                        onClick={() => {
+                                            if (hasOrders) {
+                                                setViewingTable(table);
+                                                setShowPayment(true);
+                                            }
+                                        }}
+                                    >
+                                        <h3 className="text-white font-bold text-lg mb-1 text-center">{table.table_number}</h3>
+                                        
+                                        {isMerged && (
+                                            <p className="text-purple-400 text-xs mb-1">Merged</p>
+                                        )}
+
+                                        {table.notes && (
+                                            <p className="text-gray-400 text-xs italic text-center line-clamp-2 mb-1">"{table.notes}"</p>
+                                        )}
+
+                                        {hasOrders ? (
+                                            <>
+                                                <p className="text-orange-400 text-xs">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                                <p className="text-white font-bold text-base mt-1">£{total.toFixed(2)}</p>
+                                            </>
+                                        ) : (
+                                            <p className="text-gray-400 text-xs capitalize">{table.status.replace('_', ' ')}</p>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
                 </div>
+
+                {tableActionsOpen && selectedTableForActions && (
+                    <TableActionsDialog
+                        open={tableActionsOpen}
+                        onClose={() => {
+                            setTableActionsOpen(false);
+                            setSelectedTableForActions(null);
+                        }}
+                        table={selectedTableForActions}
+                        tables={tables}
+                        onRefresh={() => {
+                            refetchTables();
+                            refetchTableOrders();
+                        }}
+                    />
+                )}
             </div>
         );
      }
