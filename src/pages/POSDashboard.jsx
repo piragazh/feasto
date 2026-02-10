@@ -18,7 +18,6 @@ export default function POSDashboard() {
     const [restaurant, setRestaurant] = useState(null);
     const [activeTab, setActiveTab] = useState('order-entry');
     const [cart, setCart] = useState([]);
-    const [tables, setTables] = useState({});
     const [orderType, setOrderType] = useState('takeaway');
 
     useEffect(() => {
