@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { DarkModeProvider } from '@/components/ui/dark-mode-provider';
 import { ArrowLeft } from 'lucide-react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
@@ -367,6 +368,13 @@ export default function Layout({ children, currentPageName }) {
                 :root {
                     --primary: 24 100% 50%;
                     --primary-foreground: 0 0% 100%;
+                }
+                html, body {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+                html::-webkit-scrollbar, body::-webkit-scrollbar {
+                    display: none;
                 }
                 .scrollbar-hide::-webkit-scrollbar {
                     display: none;
