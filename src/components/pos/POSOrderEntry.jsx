@@ -57,13 +57,19 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     const { data: tableOrders = [], refetch: refetchTableOrders } = useQuery({
         queryKey: ['pos-table-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ 
-            restaurant_id: restaurantId, 
-            order_type: 'dine_in',
-            status: { $in: ['preparing', 'confirmed', 'pending'] }
-        }),
+        queryFn: async () => {
+            const orders = await base44.entities.Order.filter({ 
+                restaurant_id: restaurantId, 
+                order_type: 'dine_in',
+                status: { $in: ['preparing', 'confirmed', 'pending'] }
+            });
+            console.log('Fetched table orders:', orders);
+            return orders;
+        },
         enabled: !!restaurantId,
         refetchInterval: 5000,
+        staleTime: 0,
+        cacheTime: 0,
     });
 
     const categories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
