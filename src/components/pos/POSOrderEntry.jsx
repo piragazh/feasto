@@ -415,8 +415,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             {/* Bottom: Sticky Function Buttons */}
             <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-700">
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
-                    Function 1
+                <Button 
+                    onClick={() => setViewMode('tables')}
+                    className="h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border border-blue-500"
+                >
+                    View Tables
                 </Button>
                 <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
                     Function 2
