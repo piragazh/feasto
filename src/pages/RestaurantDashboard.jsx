@@ -552,6 +552,9 @@ export default function RestaurantDashboard() {
                                 } : null}
                             />
                         </TabsContent>
+                        <TabsContent value="integrations">
+                            <ThirdPartyIntegrations restaurantId={restaurant.id} />
+                        </TabsContent>
                     </Tabs>
                 )}
             </div>
