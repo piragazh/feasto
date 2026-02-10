@@ -69,16 +69,16 @@ export default function CustomerProfile() {
                             </div>
                             <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center w-full sm:w-auto">
                                 <div>
-                                    <p className="text-xl sm:text-2xl font-bold text-orange-600">{user.total_orders || 0}</p>
-                                    <p className="text-xs text-gray-500">Orders</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">{user.total_orders || 0}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Orders</p>
                                 </div>
                                 <div>
-                                    <p className="text-xl sm:text-2xl font-bold text-green-600">£{(user.total_spent || 0).toFixed(2)}</p>
-                                    <p className="text-xs text-gray-500">Spent</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">£{(user.total_spent || 0).toFixed(2)}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Spent</p>
                                 </div>
                                 <div>
-                                    <p className="text-xl sm:text-2xl font-bold text-purple-600">{user.loyalty_points || 0}</p>
-                                    <p className="text-xs text-gray-500">Points</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">{user.loyalty_points || 0}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Points</p>
                                 </div>
                             </div>
                         </div>
