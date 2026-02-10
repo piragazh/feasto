@@ -584,58 +584,41 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </div>
 
                         {orderType === 'dine_in' ? (
-                            <>
-                                {!selectedTable ? (
-                                    <div className="space-y-2">
-                                        <p className="text-gray-400 text-sm text-center">Select a table: {tables.length} available</p>
-                                        <p className="text-xs text-gray-500 text-center">Restaurant ID: {restaurantId}</p>
-                                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                                            {tables.length === 0 && (
-                                                <div className="text-red-400 text-xs col-span-2">
-                                                    <p>No tables found</p>
-                                                    <p>RestaurantId: {restaurantId || 'MISSING'}</p>
-                                                    <p>Tables: {JSON.stringify(tables)}</p>
-                                                </div>
-                                            )}
-                                            {tables.map(table => (
-                                                <Button
-                                                    key={table.id}
-                                                    onClick={() => {
-                                                        setSelectedTable(table);
-                                                        setOrderType('dine_in');
-                                                    }}
-                                                    className="h-14 bg-gray-700 hover:bg-orange-500 text-white font-bold text-base border border-gray-600"
-                                                >
-                                                    {table.table_number}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="bg-orange-500/20 border border-orange-500 rounded p-2 text-center">
-                                            <p className="text-orange-400 text-xs">Table Selected</p>
-                                            <p className="text-white font-bold text-lg">{selectedTable.table_number}</p>
-                                        </div>
-                                        <Button
-                                            onClick={() => {
-                                                console.log('🔴 BUTTON CLICKED!');
-                                                handleAddToTable(selectedTable);
-                                            }}
-                                            disabled={optimisticCart.length === 0 || isAddingToTable}
-                                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
-                                        >
-                                            <ShoppingCart className="h-5 w-5 mr-2" />
-                                            {isAddingToTable ? 'Adding...' : 'Add to Table'}
-                                        </Button>
-                                        <Button
-                                            onClick={() => setSelectedTable(null)}
-                                            className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-10 text-sm"
-                                        >
-                                            Change Table
-                                        </Button>
-                                    </>
-                                )}
+                             <>
+                                 {!selectedTable ? (
+                                     <Button
+                                         onClick={() => setTableSelectionOpen(true)}
+                                         disabled={tables.length === 0}
+                                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
+                                     >
+                                         <ShoppingCart className="h-5 w-5 mr-2" />
+                                         Select Table ({tables.length} available)
+                                     </Button>
+                                 ) : (
+                                     <>
+                                         <div className="bg-orange-500/20 border border-orange-500 rounded p-2 text-center">
+                                             <p className="text-orange-400 text-xs">Table Selected</p>
+                                             <p className="text-white font-bold text-lg">{selectedTable.table_number}</p>
+                                         </div>
+                                         <Button
+                                             onClick={() => {
+                                                 console.log('🔴 BUTTON CLICKED!');
+                                                 handleAddToTable(selectedTable);
+                                             }}
+                                             disabled={optimisticCart.length === 0 || isAddingToTable}
+                                             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
+                                         >
+                                             <ShoppingCart className="h-5 w-5 mr-2" />
+                                             {isAddingToTable ? 'Adding...' : 'Add to Table'}
+                                         </Button>
+                                         <Button
+                                             onClick={() => setSelectedTable(null)}
+                                             className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-10 text-sm"
+                                         >
+                                             Change Table
+                                         </Button>
+                                     </>
+                                 )}
                                 <Button
                                     onClick={onClearCart}
                                     disabled={optimisticCart.length === 0}
