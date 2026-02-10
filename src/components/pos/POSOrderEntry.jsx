@@ -61,16 +61,25 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         queryKey: ['pos-table-orders', restaurantId],
         queryFn: async () => {
             console.log('Fetching table orders for restaurant:', restaurantId);
+            
+            // First get ALL orders to debug
+            const allOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId });
+            console.log('ALL orders for restaurant:', allOrders);
+            
             const orders = await base44.entities.Order.filter({ 
                 restaurant_id: restaurantId, 
                 order_type: 'dine_in',
                 status: { $in: ['preparing', 'confirmed', 'pending'] }
             });
-            console.log('Fetched table orders:', orders);
-            console.log('Number of orders:', orders.length);
-            orders.forEach(order => {
-                console.log(`Order ${order.id}: table_id=${order.table_id}, table_number=${order.table_number}, status=${order.status}`);
-            });
+            console.log('Filtered dine-in orders:', orders);
+            console.log('Number of dine-in orders:', orders.length);
+            
+            if (orders.length > 0) {
+                orders.forEach(order => {
+                    console.log(`Order ${order.id}: table_id=${order.table_id}, table_number=${order.table_number}, status=${order.status}, order_type=${order.order_type}`);
+                });
+            }
+            
             return orders;
         },
         enabled: !!restaurantId,
@@ -103,6 +112,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      };
 
     const handleAddToTable = async (table) => {
+        console.log('=== handleAddToTable CALLED ===');
+        console.log('Table:', table);
+        console.log('Cart:', optimisticCart);
+        console.log('Cart length:', optimisticCart.length);
+        console.log('Restaurant ID:', restaurantId);
+        
         if (optimisticCart.length === 0) {
             toast.error('Cart is empty');
             return;
