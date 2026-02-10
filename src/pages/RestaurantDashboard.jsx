@@ -51,6 +51,7 @@ import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
 import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
 import BrandingManager from '@/components/restaurant/BrandingManager';
+import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
