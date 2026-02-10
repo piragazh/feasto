@@ -268,13 +268,17 @@ export default function POSDashboard() {
                     </TabsContent>
 
                     <TabsContent value="tables">
-                        <POSTableManager 
-                            tables={tables}
+                        <POSOrderEntry 
+                            restaurantId={restaurant.id}
                             cart={cart}
-                            cartTotal={cartTotal}
                             onAddItem={addToCart}
                             onRemoveItem={removeFromCart}
                             onUpdateQuantity={updateQuantity}
+                            onClearCart={clearCart}
+                            cartTotal={cartTotal}
+                            orderType="dine_in"
+                            setOrderType={() => {}}
+                            viewModeDefault="tables"
                         />
                     </TabsContent>
 
