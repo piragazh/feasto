@@ -84,49 +84,65 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
          setSelectedItem(null);
      };
 
+    const handleAddToTable = async (table) => {
+        if (cart.length === 0) {
+            toast.error('Cart is empty');
+            return;
+        }
+
+        try {
+            const orderData = {
+                restaurant_id: restaurantId,
+                items: cart.map(item => ({
+                    menu_item_id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    customizations: item.customizations
+                })),
+                subtotal: cartTotal,
+                delivery_fee: 0,
+                discount: 0,
+                total: cartTotal,
+                status: 'preparing',
+                order_type: 'dine_in',
+                payment_method: 'cash',
+                table_id: table.id,
+                table_number: table.table_number
+            };
+
+            await base44.entities.Order.create(orderData);
+            toast.success(`Items added to ${table.table_number}!`);
+            onClearCart();
+            setSelectedTable(null);
+            refetchTableOrders();
+        } catch (error) {
+            toast.error('Failed to add items to table');
+        }
+    };
+
      const handlePaymentComplete = async () => {
-         if (cart.length === 0) {
-             toast.error('Cart is empty');
+         if (!viewingTable) {
+             toast.error('No table selected');
              return;
          }
 
-         if (orderType === 'dine_in' && !selectedTable) {
-             toast.error('Please select a table for dine-in order');
-             return;
-         }
+         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
+         const total = ordersForTable.reduce((sum, order) => sum + order.total, 0);
 
          try {
-             const orderData = {
-                 restaurant_id: restaurantId,
-                 items: cart.map(item => ({
-                     menu_item_id: item.id,
-                     name: item.name,
-                     price: item.price,
-                     quantity: item.quantity
-                 })),
-                 subtotal: cartTotal,
-                 delivery_fee: 0,
-                 discount: 0,
-                 total: cartTotal,
-                 status: orderType === 'takeaway' ? 'confirmed' : 'pending',
-                 order_type: orderType,
-                 payment_method: 'cash'
-             };
-
-             if (orderType === 'dine_in') {
-                 orderData.table_id = selectedTable.id;
-                 orderData.table_number = selectedTable.table_number;
+             // Update all orders for this table to 'delivered' status
+             for (const order of ordersForTable) {
+                 await base44.entities.Order.update(order.id, { status: 'delivered' });
              }
 
-             await base44.entities.Order.create(orderData);
-
-             toast.success('Order created successfully!');
-             onClearCart();
+             toast.success('Payment completed!');
              setShowPayment(false);
-             setSelectedTable(null);
-             setOrderType('collection');
+             setViewingTable(null);
+             setViewMode('tables');
+             refetchTableOrders();
          } catch (error) {
-             toast.error('Failed to create order');
+             toast.error('Failed to complete payment');
          }
      };
 
