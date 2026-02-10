@@ -60,24 +60,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const { data: tableOrders = [], refetch: refetchTableOrders } = useQuery({
         queryKey: ['pos-table-orders', restaurantId],
         queryFn: async () => {
-            console.log('Fetching table orders for restaurant:', restaurantId);
-            
-            // First get ALL orders to debug
-            const allOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId });
-            console.log('ALL orders for restaurant:', allOrders);
-            console.log('Order types in ALL orders:');
-            allOrders.forEach(order => {
-                console.log(`  Order ${order.id}: order_type="${order.order_type}", status="${order.status}", table_id="${order.table_id}", table_number="${order.table_number}"`);
-            });
-            
             const orders = await base44.entities.Order.filter({ 
                 restaurant_id: restaurantId, 
                 order_type: 'dine_in',
                 status: { $in: ['preparing', 'confirmed', 'pending'] }
             });
-            console.log('Filtered dine-in orders:', orders);
-            console.log('Number of dine-in orders:', orders.length);
-            
             return orders;
         },
         enabled: !!restaurantId,
