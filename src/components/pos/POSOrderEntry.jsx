@@ -17,6 +17,24 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [selectedItem, setSelectedItem] = useState(null);
      const [selectedTable, setSelectedTable] = useState(null);
      const [showPayment, setShowPayment] = useState(false);
+     const [optimisticCart, setOptimisticCart] = useState(cart);
+
+     React.useEffect(() => {
+         setOptimisticCart(cart);
+     }, [cart]);
+
+     const handleQuantityChange = (itemId, newQuantity) => {
+         // Optimistic update
+         setOptimisticCart(prev => 
+             prev.map(item => 
+                 item.id === itemId 
+                     ? { ...item, quantity: newQuantity }
+                     : item
+             )
+         );
+         // Actual update
+         onUpdateQuantity(itemId, newQuantity);
+     };
 
     const { data: menuItems = [] } = useQuery({
         queryKey: ['pos-menu-items', restaurantId],
@@ -180,10 +198,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                  </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {cart.length === 0 ? (
+                    {optimisticCart.length === 0 ? (
                         <p className="text-gray-400 text-center py-8">No items in cart</p>
                     ) : (
-                        cart.map(item => (
+                        optimisticCart.map(item => (
                             <div key={item.id} className="bg-gray-700 p-3 rounded border border-gray-600">
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex-1">
@@ -218,15 +236,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
                                     <Button
-                                        onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded"
+                                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded active:scale-95 transition-transform"
                                     >
                                         <Minus className="h-5 w-5" />
                                     </Button>
                                     <span className="text-white font-bold text-lg flex-1 text-center min-w-12">{item.quantity}</span>
                                     <Button
-                                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded"
+                                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                        className="h-12 px-3 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg rounded active:scale-95 transition-transform"
                                     >
                                         <Plus className="h-5 w-5" />
                                     </Button>

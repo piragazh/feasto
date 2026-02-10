@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { DarkModeProvider } from '@/components/ui/dark-mode-provider';
+import { ArrowLeft } from 'lucide-react';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
@@ -58,6 +59,7 @@ import { Toaster } from 'sonner';
 
 export default function Layout({ children, currentPageName }) {
     const location = useLocation();
+    const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
     const [customDomainChecked, setCustomDomainChecked] = useState(false);
@@ -316,6 +318,27 @@ export default function Layout({ children, currentPageName }) {
         ? createPageUrl('Restaurant') + `?id=${customDomainRestaurantId}`
         : createPageUrl('Home');
 
+    // Determine if we should show back button (not on Home or custom domain restaurant page)
+    const isHomePage = currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant');
+    const showBackButton = !hideHeader && !isHomePage;
+
+    // Bottom nav tabs for stack preservation
+    const bottomNavTabs = ['Home', 'Orders', 'Checkout', 'Messages', 'CustomerProfile'];
+    
+    // Handle bottom nav tab click with stack preservation
+    const handleTabClick = (e, targetPage, targetUrl) => {
+        e.preventDefault();
+        
+        // If already on this tab's page, go to its root
+        if (currentPageName === targetPage) {
+            navigate(targetUrl, { replace: true });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            // Navigate to new tab
+            navigate(targetUrl);
+        }
+    };
+
     // Show loading while checking custom domain
     if (isCheckingDomain) {
         return (
@@ -372,7 +395,17 @@ export default function Layout({ children, currentPageName }) {
                 <header className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50 safe-area-top">
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
-                            <Link to={homeUrl} className="flex items-center gap-2">
+                            {showBackButton ? (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => navigate(-1)}
+                                    className="rounded-full mr-2"
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </Button>
+                            ) : (
+                                <Link to={homeUrl} className="flex items-center gap-2">
                                 {customDomainRestaurant ? (
                                     <>
                                         <img 
@@ -393,6 +426,7 @@ export default function Layout({ children, currentPageName }) {
                                         </>
                                         )}
                                         </Link>
+                                        )}
 
 
 
@@ -585,28 +619,31 @@ export default function Layout({ children, currentPageName }) {
                 {showBottomNav && (
                 <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 z-40 safe-area-bottom">
                     <div className="flex items-center justify-around h-16 px-2">
-                        <Link 
-                            to={homeUrl} 
+                        <a 
+                            href={homeUrl}
+                            onClick={(e) => handleTabClick(e, customDomainRestaurantId ? 'Restaurant' : 'Home', homeUrl)}
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
                                 currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant') ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <Home className="h-6 w-6" />
                             <span className="text-xs font-medium">Home</span>
-                        </Link>
-                        
-                        <Link 
-                            to={createPageUrl('Orders')} 
+                        </a>
+
+                        <a 
+                            href={createPageUrl('Orders')}
+                            onClick={(e) => handleTabClick(e, 'Orders', createPageUrl('Orders'))}
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
                                 currentPageName === 'Orders' ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <ShoppingBag className="h-6 w-6" />
                             <span className="text-xs font-medium">Orders</span>
-                        </Link>
+                        </a>
 
-                        <Link 
-                            to={createPageUrl('Checkout')} 
+                        <a 
+                            href={createPageUrl('Checkout')}
+                            onClick={(e) => handleTabClick(e, 'Checkout', createPageUrl('Checkout'))}
                             className="flex flex-col items-center justify-center flex-1 gap-1 py-2 relative"
                         >
                             <div className={`relative ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>
@@ -618,30 +655,32 @@ export default function Layout({ children, currentPageName }) {
                                 )}
                             </div>
                             <span className={`text-xs font-medium ${cartCount > 0 ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'}`}>Cart</span>
-                        </Link>
+                        </a>
 
-                        <Link 
-                            to={createPageUrl('Messages')} 
+                        <a 
+                            href={createPageUrl('Messages')}
+                            onClick={(e) => handleTabClick(e, 'Messages', createPageUrl('Messages'))}
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
                                 currentPageName === 'Messages' ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <MessageSquare className="h-6 w-6" />
                             <span className="text-xs font-medium">Messages</span>
-                        </Link>
+                        </a>
 
-                        <Link 
-                            to={createPageUrl('CustomerProfile')} 
+                        <a 
+                            href={createPageUrl('CustomerProfile')}
+                            onClick={(e) => handleTabClick(e, 'CustomerProfile', createPageUrl('CustomerProfile'))}
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
                                 currentPageName === 'CustomerProfile' ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <User className="h-6 w-6" />
                             <span className="text-xs font-medium">Profile</span>
-                        </Link>
+                        </a>
                     </div>
                 </nav>
-            )}
+                )}
             </div>
             </DarkModeProvider>
             );

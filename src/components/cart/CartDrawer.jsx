@@ -9,7 +9,26 @@ import CartPromotions from './CartPromotions';
 import CartQuickAddContainer from './CartQuickAddContainer';
 
 export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null, onAddItem = null }) {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const [optimisticCart, setOptimisticCart] = React.useState(cart);
+
+    React.useEffect(() => {
+        setOptimisticCart(cart);
+    }, [cart]);
+
+    const handleQuantityChange = (itemId, newQuantity) => {
+        // Optimistic update
+        setOptimisticCart(prev => 
+            prev.map(item => 
+                item.menu_item_id === itemId 
+                    ? { ...item, quantity: newQuantity }
+                    : item
+            )
+        );
+        // Actual update
+        updateQuantity(itemId, newQuantity);
+    };
+
+    const subtotal = optimisticCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 2.99);
     
     // Calculate small order surcharge (only for delivery orders)
@@ -120,7 +139,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                     ) : (
                         <AnimatePresence>
                             <div className="space-y-4">
-                                {cart.map((item) => (
+                                {optimisticCart.map((item) => (
                                     <motion.div
                                         key={item.menu_item_id}
                                         layout
@@ -167,15 +186,15 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                             </button>
                                             <div className="flex items-center gap-2 bg-white rounded-full border px-1">
                                                 <button
-                                                    onClick={() => updateQuantity(item.menu_item_id, item.quantity - 1)}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                                                    onClick={() => handleQuantityChange(item.menu_item_id, item.quantity - 1)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
                                                 >
                                                     <Minus className="h-3 w-3" />
                                                 </button>
                                                 <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
                                                 <button
-                                                    onClick={() => updateQuantity(item.menu_item_id, item.quantity + 1)}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                                                    onClick={() => handleQuantityChange(item.menu_item_id, item.quantity + 1)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
                                                 >
                                                     <Plus className="h-3 w-3" />
                                                 </button>
