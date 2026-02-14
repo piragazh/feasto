@@ -427,10 +427,22 @@ export default function Orders() {
                                                </div>
 
                                                 <div className="border-t pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                <div className="flex items-start gap-2 text-sm text-gray-500">
-                                                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                                                    <span className="line-clamp-1">{order.delivery_address || 'N/A'}</span>
-                                                </div>
+                                                {order?.order_type !== 'dine_in' && (
+                                                    <div className="flex items-start gap-2 text-sm text-gray-500">
+                                                        <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                                                        <span className="line-clamp-1">
+                                                            {order?.order_type === 'collection' 
+                                                                ? 'Collect from restaurant' 
+                                                                : (order?.delivery_address || 'Address not provided')}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {order?.order_type === 'dine_in' && order?.table_number && (
+                                                    <div className="flex items-start gap-2 text-sm text-gray-500">
+                                                        <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                                                        <span>{order.table_number}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex items-center gap-4">
                                                     {order?.estimated_delivery && order?.status !== 'delivered' && order?.status !== 'cancelled' && (
                                                        <span className="text-sm text-gray-500">
