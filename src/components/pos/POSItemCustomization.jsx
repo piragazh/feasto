@@ -11,20 +11,26 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
      const [customizations, setCustomizations] = useState({});
      const [specialInstructions, setSpecialInstructions] = useState('');
      const [removedIngredients, setRemovedIngredients] = useState([]);
+     const [isMeal, setIsMeal] = useState(false);
+     const [mealCustomizations, setMealCustomizations] = useState({});
 
      const optionCount = item?.customization_options?.length || 0;
      const columns = Math.min(Math.max(optionCount, 1), 4);
 
     const handleConfirm = () => {
+        const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
         onConfirm({ 
             ...item, 
-            customizations,
+            customizations: allCustomizations,
             specialInstructions: specialInstructions.trim(),
-            removedIngredients
+            removedIngredients,
+            isMeal
         });
         setCustomizations({});
+        setMealCustomizations({});
         setSpecialInstructions('');
         setRemovedIngredients([]);
+        setIsMeal(false);
     };
 
     const handleSingleSelect = (optionName, selectedValue) => {
@@ -78,17 +84,59 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                     }}
                 >
                     {item.customization_options?.map(option => (
-                         <div key={option.name} className="space-y-2">
-                            <div className="flex items-baseline gap-1">
-                                <Label className={`font-bold text-white ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
-                                    {option.name}
-                                </Label>
-                                {option.required && (
-                                    <span className="text-red-500 font-bold">*</span>
-                                )}
-                            </div>
+                        <div key={option.name} className="space-y-2">
+                           <div className="flex items-baseline gap-1">
+                               <Label className={`font-bold text-white ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
+                                   {option.name}
+                               </Label>
+                               {option.required && (
+                                   <span className="text-red-500 font-bold">*</span>
+                               )}
+                           </div>
 
-                            {option.type === 'single' ? (
+                           {option.type === 'meal_upgrade' ? (
+                               <RadioGroup 
+                                   value={isMeal ? 'meal' : 'single'}
+                                   onValueChange={(value) => {
+                                       setIsMeal(value === 'meal');
+                                       if (value !== 'meal') {
+                                           setMealCustomizations({});
+                                       }
+                                   }}
+                                   className="space-y-2"
+                               >
+                                   {option.options?.map(opt => (
+                                       <div 
+                                           key={opt.label} 
+                                           className="flex items-center space-x-2 p-2 md:p-3 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                           onClick={() => {
+                                               const newIsMeal = opt.label.toLowerCase().includes('meal');
+                                               setIsMeal(newIsMeal);
+                                               if (!newIsMeal) {
+                                                   setMealCustomizations({});
+                                               }
+                                           }}
+                                       >
+                                           <RadioGroupItem 
+                                               value={opt.label.toLowerCase().includes('meal') ? 'meal' : 'single'}
+                                               id={opt.label}
+                                               className="w-4 h-4"
+                                           />
+                                           <Label 
+                                               htmlFor={opt.label} 
+                                               className="text-white cursor-pointer flex-1 font-medium text-sm"
+                                           >
+                                               {opt.label}
+                                           </Label>
+                                           {opt.price > 0 && (
+                                               <span className="font-bold text-orange-400 text-sm">
+                                                   +£{opt.price.toFixed(2)}
+                                               </span>
+                                           )}
+                                       </div>
+                                   ))}
+                               </RadioGroup>
+                           ) : option.type === 'single' ? (
                                 <RadioGroup 
                                     value={customizations[option.name] || ''}
                                     onValueChange={(value) => handleSingleSelect(option.name, value)}
@@ -141,6 +189,93 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                                             </Label>
                                             {opt.price > 0 && (
                                                 <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}>
+                                                    +£{opt.price.toFixed(2)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    
+                    {/* Meal Customizations - Show when meal is selected */}
+                    {isMeal && item.customization_options?.find(opt => opt.type === 'meal_upgrade')?.meal_customizations?.map(mealOpt => (
+                        <div key={mealOpt.name} className="space-y-2 col-span-full border-t border-orange-500/30 pt-3">
+                            <div className="flex items-baseline gap-1">
+                                <Label className="font-bold text-orange-400 text-base">
+                                    {mealOpt.name}
+                                </Label>
+                                {mealOpt.required && (
+                                    <span className="text-red-500 font-bold">*</span>
+                                )}
+                            </div>
+
+                            {mealOpt.type === 'single' ? (
+                                <RadioGroup 
+                                    value={mealCustomizations[mealOpt.name] || ''}
+                                    onValueChange={(value) => setMealCustomizations(prev => ({
+                                        ...prev,
+                                        [mealOpt.name]: value
+                                    }))}
+                                    className="grid grid-cols-2 gap-2"
+                                >
+                                    {mealOpt.options?.map(opt => (
+                                        <div 
+                                            key={opt.label} 
+                                            className="flex items-center space-x-2 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                            onClick={() => setMealCustomizations(prev => ({
+                                                ...prev,
+                                                [mealOpt.name]: opt.label
+                                            }))}
+                                        >
+                                            <RadioGroupItem 
+                                                value={opt.label} 
+                                                id={`meal-${opt.label}`}
+                                                className="w-4 h-4"
+                                            />
+                                            <Label 
+                                                htmlFor={`meal-${opt.label}`}
+                                                className="text-white cursor-pointer flex-1 font-medium text-xs"
+                                            >
+                                                {opt.label}
+                                            </Label>
+                                            {opt.price > 0 && (
+                                                <span className="font-bold text-orange-400 text-xs">
+                                                    +£{opt.price.toFixed(2)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </RadioGroup>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {mealOpt.options?.map(opt => (
+                                        <div 
+                                            key={opt.label}
+                                            className="flex items-center space-x-2 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                            onClick={() => {
+                                                setMealCustomizations(prev => ({
+                                                    ...prev,
+                                                    [mealOpt.name]: prev[mealOpt.name]?.includes(opt.label)
+                                                        ? prev[mealOpt.name].filter(v => v !== opt.label)
+                                                        : [...(prev[mealOpt.name] || []), opt.label]
+                                                }));
+                                            }}
+                                        >
+                                            <Checkbox
+                                                id={`meal-${opt.label}`}
+                                                checked={mealCustomizations[mealOpt.name]?.includes(opt.label) || false}
+                                                className="w-4 h-4"
+                                            />
+                                            <Label 
+                                                htmlFor={`meal-${opt.label}`}
+                                                className="text-white cursor-pointer flex-1 font-medium text-xs"
+                                            >
+                                                {opt.label}
+                                            </Label>
+                                            {opt.price > 0 && (
+                                                <span className="font-bold text-orange-400 text-xs">
                                                     +£{opt.price.toFixed(2)}
                                                 </span>
                                             )}
