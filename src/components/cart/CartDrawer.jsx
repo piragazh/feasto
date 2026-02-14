@@ -167,11 +167,20 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                 <div className="text-xs text-gray-500 mt-1">
                                                     {Object.entries(item.customizations)
                                                         .filter(([key]) => !key.includes('meal_customizations'))
-                                                        .map(([key, val]) => (
-                                                            <div key={key}>
-                                                                {key}: {Array.isArray(val) ? val.join(', ') : val}
-                                                            </div>
-                                                        ))
+                                                        .map(([key, val]) => {
+                                                            // Skip empty values
+                                                            if (!val || (Array.isArray(val) && val.length === 0)) return null;
+                                                            // Skip complex objects - only handle simple types and arrays
+                                                            if (typeof val === 'object' && !Array.isArray(val)) return null;
+                                                            
+                                                            const displayValue = Array.isArray(val) ? val.join(', ') : String(val);
+                                                            return (
+                                                                <div key={key}>
+                                                                    {key}: {displayValue}
+                                                                </div>
+                                                            );
+                                                        })
+                                                        .filter(Boolean)
                                                     }
                                                 </div>
                                             )}
