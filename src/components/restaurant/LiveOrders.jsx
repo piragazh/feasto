@@ -353,8 +353,12 @@ Provide only the time range (e.g., "25-30 min").`;
                                         const qty = item.itemQuantities && item.itemQuantities[optionName] || 1;
                                         lines.push('<div>' + qty + 'x ' + optionName + '</div>');
                                     });
-                                } else if (typeof val === 'object') {
-                                    // Skip complex objects
+                                } else if (typeof val === 'object' && val !== null) {
+                                    // Handle nested objects with 'selection' property
+                                    if ('selection' in val) {
+                                        lines.push('<div>1x ' + String(val.selection || '') + '</div>');
+                                    }
+                                    // Skip other complex objects
                                 } else {
                                     lines.push('<div>1x ' + String(val) + '</div>');
                                 }
@@ -669,8 +673,13 @@ Provide only the time range (e.g., "25-30 min").`;
                                                                     return optionName;
                                                                 });
                                                                 displayValue = itemsWithQty.join(', ');
-                                                            } else if (typeof val === 'object') {
-                                                                displayValue = JSON.stringify(val);
+                                                            } else if (typeof val === 'object' && val !== null) {
+                                                                // Handle nested objects with 'selection' property
+                                                                if ('selection' in val) {
+                                                                    displayValue = String(val.selection || '');
+                                                                } else {
+                                                                    displayValue = JSON.stringify(val);
+                                                                }
                                                             } else {
                                                                 displayValue = String(val);
                                                             }
