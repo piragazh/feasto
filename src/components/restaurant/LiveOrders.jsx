@@ -729,7 +729,13 @@ Provide only the time range (e.g., "25-30 min").`;
                                             {order.order_type === 'delivery' && order.delivery_address && (
                                                 <div className="flex items-start gap-2">
                                                     <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                                                    <span className="text-gray-700">{order.delivery_address}</span>
+                                                    <span className="text-gray-700">
+                                                        {typeof order.delivery_address === 'string' && !order.delivery_address.includes('lat')
+                                                            ? order.delivery_address
+                                                            : order.delivery_coordinates
+                                                                ? `${order.delivery_coordinates.lat}, ${order.delivery_coordinates.lng}`
+                                                                : 'Address not provided'}
+                                                    </span>
                                                 </div>
                                             )}
                                             {order.order_type === 'collection' && (
