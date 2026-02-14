@@ -10,7 +10,6 @@ import { X } from 'lucide-react';
 export default function POSItemCustomization({ item, open, onClose, onConfirm }) {
      const [customizations, setCustomizations] = useState({});
      const [specialInstructions, setSpecialInstructions] = useState('');
-     const [removedIngredients, setRemovedIngredients] = useState([]);
      const [isMeal, setIsMeal] = useState(false);
      const [mealCustomizations, setMealCustomizations] = useState({});
 
@@ -65,13 +64,11 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
             price: currentPrice,
             customizations: allCustomizations,
             specialInstructions: specialInstructions.trim(),
-            removedIngredients,
             isMeal
         });
         setCustomizations({});
         setMealCustomizations({});
         setSpecialInstructions('');
-        setRemovedIngredients([]);
         setIsMeal(false);
     };
 
@@ -333,37 +330,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                         </div>
                     ))}
                     
-                    {/* Remove Ingredients Section */}
-                    {item.description && (
-                        <div className="space-y-2 col-span-full">
-                            <Label className="font-bold text-white text-base">Remove Ingredients</Label>
-                            <div className="space-y-2">
-                                {item.description.split(',').map((ingredient, idx) => (
-                                    <div 
-                                        key={idx}
-                                        className="flex items-center space-x-2 p-2 md:p-3 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
-                                        onClick={() => {
-                                            const ingredientName = ingredient.trim();
-                                            setRemovedIngredients(prev =>
-                                                prev.includes(ingredientName)
-                                                    ? prev.filter(i => i !== ingredientName)
-                                                    : [...prev, ingredientName]
-                                            );
-                                        }}
-                                    >
-                                        <Checkbox
-                                            checked={removedIngredients.includes(ingredient.trim())}
-                                            className="w-4 h-4"
-                                        />
-                                        <Label className="text-white cursor-pointer flex-1 font-medium text-sm">
-                                            Remove {ingredient.trim()}
-                                        </Label>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    
+
                     {/* Special Instructions Section */}
                     <div className="space-y-2 col-span-full">
                         <Label className="font-bold text-white text-base">Special Instructions</Label>
