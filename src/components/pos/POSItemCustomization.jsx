@@ -17,10 +17,52 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
      const optionCount = item?.customization_options?.length || 0;
      const columns = Math.min(Math.max(optionCount, 1), 4);
 
+     // Calculate total price including customizations
+     const calculatePrice = () => {
+         let total = item?.price || 0;
+         
+         // Add customization prices
+         item?.customization_options?.forEach(option => {
+             if (option.type === 'single' && customizations[option.name]) {
+                 const selected = option.options?.find(opt => opt.label === customizations[option.name]);
+                 if (selected?.price) total += selected.price;
+             } else if (option.type === 'multiple' && customizations[option.name]) {
+                 customizations[option.name].forEach(label => {
+                     const selected = option.options?.find(opt => opt.label === label);
+                     if (selected?.price) total += selected.price;
+                 });
+             } else if (option.type === 'meal_upgrade' && isMeal) {
+                 const mealOption = option.options?.find(opt => opt.label.toLowerCase().includes('meal'));
+                 if (mealOption?.price) total += mealOption.price;
+             }
+         });
+
+         // Add meal customization prices
+         if (isMeal) {
+             const mealUpgrade = item?.customization_options?.find(opt => opt.type === 'meal_upgrade');
+             mealUpgrade?.meal_customizations?.forEach(mealOpt => {
+                 if (mealOpt.type === 'single' && mealCustomizations[mealOpt.name]) {
+                     const selected = mealOpt.options?.find(opt => opt.label === mealCustomizations[mealOpt.name]);
+                     if (selected?.price) total += selected.price;
+                 } else if (mealOpt.type === 'multiple' && mealCustomizations[mealOpt.name]) {
+                     mealCustomizations[mealOpt.name].forEach(label => {
+                         const selected = mealOpt.options?.find(opt => opt.label === label);
+                         if (selected?.price) total += selected.price;
+                     });
+                 }
+             });
+         }
+
+         return total;
+     };
+
+     const currentPrice = calculatePrice();
+
     const handleConfirm = () => {
         const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
         onConfirm({ 
             ...item, 
+            price: currentPrice,
             customizations: allCustomizations,
             specialInstructions: specialInstructions.trim(),
             removedIngredients,
@@ -62,9 +104,14 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                 }}
             >
                 <div className="flex items-center justify-between p-3 md:p-4 border-b border-gray-700 flex-shrink-0">
-                    <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-lg' : 'text-base'}`}>
-                        {item.name}
-                    </DialogTitle>
+                    <div className="flex-1">
+                        <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-lg' : 'text-base'}`}>
+                            {item.name}
+                        </DialogTitle>
+                        <p className="text-orange-400 font-bold text-lg mt-1">
+                            £{currentPrice.toFixed(2)}
+                        </p>
+                    </div>
                     <Button
                         variant="ghost"
                         size="icon"
