@@ -145,12 +145,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     })();
 
     const handleItemClick = (item) => {
-         if (item.customization_options?.length) {
-             setSelectedItem(item);
-             setCustomizationOpen(true);
-         } else {
-             onAddItem(item);
-         }
+         // Always show customization dialog for all items
+         setSelectedItem(item);
+         setCustomizationOpen(true);
      };
 
      const handleCustomizationConfirm = (itemWithCustomizations) => {
