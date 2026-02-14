@@ -34,6 +34,10 @@ export default function MenuManagement({ restaurantId }) {
     const [aiTone, setAiTone] = useState('enticing');
     const [updateCategoryDialogOpen, setUpdateCategoryDialogOpen] = useState(false);
     const [selectedUpdateCategory, setSelectedUpdateCategory] = useState('');
+    const [bgOptionsDialogOpen, setBgOptionsDialogOpen] = useState(false);
+    const [bgThemeColor, setBgThemeColor] = useState('');
+    const [bgStyle, setBgStyle] = useState('solid');
+    const [bgCustomInput, setBgCustomInput] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -407,21 +411,37 @@ CRITICAL REQUIREMENTS:
         }
     };
 
-    const replaceBackground = async () => {
+    const openBackgroundOptions = () => {
         if (!formData.image_url) {
             toast.error('Please add an image first');
             return;
         }
+        setBgThemeColor(restaurant?.theme_primary_color || '#f97316');
+        setBgStyle('solid');
+        setBgCustomInput('');
+        setBgOptionsDialogOpen(true);
+    };
 
-        if (!restaurant?.theme_primary_color) {
-            toast.error('Please set restaurant theme color first');
-            return;
-        }
-
+    const replaceBackground = async () => {
         setReplacingBackground(true);
+        setBgOptionsDialogOpen(false);
+        
         try {
-            const themeColor = restaurant.theme_primary_color;
-            const prompt = `Keep the exact same food item from the reference image - preserve its appearance, colors, garnishes, and plating exactly as shown. Only replace the background with a clean, solid ${themeColor} color. Optionally enhance the composition by centering or repositioning the food item for better visual appeal. Professional restaurant photography, studio lighting, high quality, 8k`;
+            let backgroundDescription = '';
+            
+            if (bgStyle === 'solid') {
+                backgroundDescription = `clean, solid ${bgThemeColor} color background`;
+            } else if (bgStyle === 'wooden') {
+                backgroundDescription = `elegant wooden table surface background, natural wood grain texture, ${bgThemeColor} tones`;
+            } else if (bgStyle === 'marble') {
+                backgroundDescription = `luxurious marble countertop background, ${bgThemeColor} marble with subtle veining`;
+            } else if (bgStyle === 'gradient') {
+                backgroundDescription = `smooth gradient background transitioning from ${bgThemeColor} to lighter shades`;
+            } else if (bgStyle === 'custom' && bgCustomInput) {
+                backgroundDescription = bgCustomInput;
+            }
+
+            const prompt = `Keep the exact same food item from the reference image - preserve its appearance, colors, garnishes, and plating exactly as shown. Only replace the background with: ${backgroundDescription}. Enhance the composition by centering or repositioning the food item for better visual appeal. Professional restaurant photography, studio lighting, high quality, 8k`;
 
             const result = await base44.integrations.Core.GenerateImage({ 
                 prompt,
@@ -765,7 +785,7 @@ CRITICAL REQUIREMENTS:
                                                         type="button"
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={replaceBackground}
+                                                        onClick={openBackgroundOptions}
                                                         disabled={generatingImage || replacingBackground || enhancingImage}
                                                         className="gap-2"
                                                     >
@@ -1672,6 +1692,92 @@ CRITICAL REQUIREMENTS:
                                         Update Items
                                     </>
                                 )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={bgOptionsDialogOpen} onOpenChange={setBgOptionsDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Customize Background</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Background Style</Label>
+                            <select
+                                value={bgStyle}
+                                onChange={(e) => setBgStyle(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                                <option value="solid">Solid Color</option>
+                                <option value="wooden">Wooden Table</option>
+                                <option value="marble">Marble Surface</option>
+                                <option value="gradient">Gradient</option>
+                                <option value="custom">Custom Description</option>
+                            </select>
+                        </div>
+
+                        {bgStyle !== 'custom' && (
+                            <div>
+                                <Label>Theme Color</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="color"
+                                        value={bgThemeColor}
+                                        onChange={(e) => setBgThemeColor(e.target.value)}
+                                        className="w-20 h-10"
+                                    />
+                                    <Input
+                                        type="text"
+                                        value={bgThemeColor}
+                                        onChange={(e) => setBgThemeColor(e.target.value)}
+                                        placeholder="#f97316"
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {bgStyle === 'custom' && (
+                            <div>
+                                <Label>Custom Background Description</Label>
+                                <Textarea
+                                    value={bgCustomInput}
+                                    onChange={(e) => setBgCustomInput(e.target.value)}
+                                    placeholder="e.g., rustic wooden table with scattered herbs, soft natural lighting..."
+                                    rows={3}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Describe the background you want. Be specific about textures, colors, and ambiance.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-xs text-blue-900">
+                                <strong>Preview:</strong> {
+                                    bgStyle === 'solid' ? `Clean solid ${bgThemeColor} background` :
+                                    bgStyle === 'wooden' ? `Wooden table surface with ${bgThemeColor} tones` :
+                                    bgStyle === 'marble' ? `${bgThemeColor} marble countertop` :
+                                    bgStyle === 'gradient' ? `Gradient from ${bgThemeColor} to lighter shades` :
+                                    bgCustomInput || 'Enter custom description'
+                                }
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setBgOptionsDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={replaceBackground}
+                                disabled={bgStyle === 'custom' && !bgCustomInput.trim()}
+                                className="bg-orange-500 hover:bg-orange-600"
+                            >
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Generate Background
                             </Button>
                         </div>
                     </div>
