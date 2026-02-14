@@ -517,27 +517,28 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 overflow-hidden pb-4">
                 {/* Left: Categories/Menu */}
                 <div className="col-span-1 md:col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-gray-700">
-                        <h2 className="text-white font-bold text-lg mb-3">Categories</h2>
-                        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+                    <div className="p-3 border-b border-gray-700 flex-shrink-0">
+                        <h2 className="text-white font-bold text-lg">Categories</h2>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
+                        <Button
+                            variant={!selectedCategory ? "default" : "outline"}
+                            onClick={() => setSelectedCategory('')}
+                            className={`w-full justify-start text-sm h-10 px-3 font-bold ${!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                        >
+                            <span className="truncate">All Items</span>
+                        </Button>
+                        {categories.map(cat => (
                             <Button
-                                variant={!selectedCategory ? "default" : "outline"}
-                                onClick={() => setSelectedCategory('')}
-                                className={`flex-shrink-0 text-sm h-10 px-3 font-bold whitespace-nowrap ${!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                key={cat}
+                                variant={selectedCategory === cat ? "default" : "outline"}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`w-full justify-start text-sm h-10 px-3 font-bold ${selectedCategory === cat ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                title={cat}
                             >
-                                All Items
+                                <span className="truncate">{cat}</span>
                             </Button>
-                            {categories.map(cat => (
-                                <Button
-                                    key={cat}
-                                    variant={selectedCategory === cat ? "default" : "outline"}
-                                    onClick={() => setSelectedCategory(cat)}
-                                    className={`flex-shrink-0 text-sm h-10 px-3 font-bold whitespace-nowrap ${selectedCategory === cat ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                                >
-                                    {cat}
-                                </Button>
-                            ))}
-                        </div>
+                        ))}
                     </div>
                 </div>
 
