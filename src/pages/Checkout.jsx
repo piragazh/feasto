@@ -675,9 +675,16 @@ export default function Checkout() {
                 return;
             }
 
-            const fullAddress = orderType === 'delivery' 
-                ? `${formData.door_number}, ${formData.delivery_address}`
+            // Ensure we save the proper address string, not coordinates
+            const deliveryAddressString = orderType === 'delivery'
+                ? (typeof formData.delivery_address === 'string' && formData.delivery_address.trim() 
+                    ? formData.delivery_address.trim() 
+                    : 'Address not provided')
                 : restaurant?.address || 'Collection';
+            
+            const fullAddress = orderType === 'delivery' 
+                ? `${formData.door_number}, ${deliveryAddressString}`
+                : deliveryAddressString;
             
             // Generate order number for collection orders
             const orderNumber = orderType === 'collection' 
