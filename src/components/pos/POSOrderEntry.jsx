@@ -714,41 +714,26 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
             </div>
 
-            {/* Bottom: Sticky Function Buttons */}
-            <div className="grid grid-cols-8 gap-2 pt-3 border-t border-gray-700">
-                {orderType === 'dine_in' && (
-                <Button 
-                    onClick={() => setViewMode('tables')}
-                    className="aspect-square bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs border border-blue-500 p-2 flex items-center justify-center"
-                >
-                    View Tables
-                </Button>
-                )}
-                <Button 
-                    onClick={() => setCustomItemOpen(true)}
-                    className="aspect-square bg-green-600 hover:bg-green-700 text-white font-bold text-xs border border-green-500 p-2 flex flex-col items-center justify-center gap-1"
-                >
-                    <PlusCircle className="h-4 w-4" />
-                    <span className="text-[10px]">Custom</span>
-                </Button>
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 3
-                </Button>
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 4
-                </Button>
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 5
-                </Button>
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 6
-                </Button>
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 7
-                </Button>
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 8
-                </Button>
+            {/* Bottom: Quick Access Function Buttons */}
+            <div className="bg-gray-900 rounded-lg border border-gray-700 p-3">
+                <div className="grid grid-cols-8 gap-2">
+                    {orderType === 'dine_in' && (
+                        <Button 
+                            onClick={() => setViewMode('tables')}
+                            className="aspect-square bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] border border-blue-500 rounded-lg p-2 flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105"
+                        >
+                            <Users className="h-5 w-5" />
+                            <span>Tables</span>
+                        </Button>
+                    )}
+                    <Button 
+                        onClick={() => setCustomItemOpen(true)}
+                        className="aspect-square bg-green-600 hover:bg-green-700 text-white font-semibold text-[11px] border border-green-500 rounded-lg p-2 flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105"
+                    >
+                        <PlusCircle className="h-5 w-5" />
+                        <span>Custom</span>
+                    </Button>
+                </div>
             </div>
 
             {selectedItem && (
