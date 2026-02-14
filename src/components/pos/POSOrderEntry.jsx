@@ -519,11 +519,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 <div className="col-span-1 md:col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-gray-700">
                         <h2 className="text-white font-bold text-lg mb-3">Categories</h2>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
                             <Button
                                 variant={!selectedCategory ? "default" : "outline"}
                                 onClick={() => setSelectedCategory('')}
-                                className={`w-full justify-start text-base h-12 px-4 font-bold ${!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                className={`flex-shrink-0 text-sm h-10 px-3 font-bold whitespace-nowrap ${!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                             >
                                 All Items
                             </Button>
@@ -532,7 +532,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     key={cat}
                                     variant={selectedCategory === cat ? "default" : "outline"}
                                     onClick={() => setSelectedCategory(cat)}
-                                    className={`w-full justify-start text-base h-12 px-4 font-bold ${selectedCategory === cat ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                                    className={`flex-shrink-0 text-sm h-10 px-3 font-bold whitespace-nowrap ${selectedCategory === cat ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                                 >
                                     {cat}
                                 </Button>
