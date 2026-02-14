@@ -1520,16 +1520,18 @@ export default function Checkout() {
                                                         <div className="text-xs text-gray-500 mt-1">
                                                             {Object.entries(item.customizations).map(([key, value]) => {
                                                                 // Skip empty values
-                                                                if (!value || (Array.isArray(value) && value.length === 0) || 
-                                                                    (typeof value === 'object' && Object.keys(value).length === 0)) {
+                                                                if (!value || (Array.isArray(value) && value.length === 0)) {
+                                                                    return null;
+                                                                }
+
+                                                                // Skip complex objects - only handle simple types and arrays
+                                                                if (typeof value === 'object' && !Array.isArray(value)) {
                                                                     return null;
                                                                 }
 
                                                                 let displayValue = '';
                                                                 if (Array.isArray(value)) {
                                                                     displayValue = value.join(', ');
-                                                                } else if (typeof value === 'object' && value !== null) {
-                                                                    displayValue = JSON.stringify(value);
                                                                 } else {
                                                                     displayValue = String(value);
                                                                 }
