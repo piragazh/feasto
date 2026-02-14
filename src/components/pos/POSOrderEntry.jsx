@@ -47,6 +47,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
          onUpdateQuantity(itemId, newQuantity);
      };
 
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return restaurants[0];
+        },
+        enabled: !!restaurantId,
+    });
+
     const { data: menuItems = [] } = useQuery({
         queryKey: ['pos-menu-items', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true }),
@@ -79,13 +88,61 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         cacheTime: 0,
     });
 
-    const categories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
+    // Get ordered categories based on restaurant settings
+    const getOrderedCategories = () => {
+        const currentOrder = restaurant?.category_order || [];
+        const allCategories = restaurant?.menu_categories || [];
+        
+        // Start with ordered categories
+        const ordered = currentOrder.filter(cat => allCategories.includes(cat));
+        
+        // Add any new categories not in the order yet
+        const unordered = allCategories.filter(cat => !currentOrder.includes(cat));
+        
+        return [...ordered, ...unordered];
+    };
+
+    // Get ordered items for a specific category
+    const getOrderedItems = (category) => {
+        const itemOrder = restaurant?.item_order || {};
+        const categoryOrder = itemOrder[category] || [];
+        const categoryItems = menuItems.filter(item => item.category === category && item.is_available !== false);
+        
+        // Start with ordered items
+        const ordered = categoryOrder
+            .map(id => categoryItems.find(item => item.id === id))
+            .filter(Boolean);
+        
+        // Add any new items not in the order yet
+        const orderedIds = new Set(ordered.map(item => item.id));
+        const unordered = categoryItems.filter(item => !orderedIds.has(item.id));
+        
+        return [...ordered, ...unordered];
+    };
+
+    const categories = getOrderedCategories();
     
-    const filteredItems = menuItems.filter(item => {
-        const matchesCategory = !selectedCategory || item.category === selectedCategory;
-        const matchesSearch = !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
+    const filteredItems = (() => {
+        if (!selectedCategory) {
+            // Show all items when no category selected, but still filter by search
+            return menuItems.filter(item => {
+                const matchesSearch = !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesSearch && item.is_available !== false;
+            });
+        }
+        
+        // Get ordered items for the selected category
+        const orderedItems = getOrderedItems(selectedCategory);
+        
+        // Apply search filter if present
+        if (searchQuery) {
+            return orderedItems.filter(item => 
+                item.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        
+        return orderedItems;
+    })();
 
     const handleItemClick = (item) => {
          if (item.customization_options?.length) {
