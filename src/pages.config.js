@@ -61,6 +61,7 @@ import Home from './pages/Home';
 import LoyaltyProgram from './pages/LoyaltyProgram';
 import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
+import MediaLibrary from './pages/MediaLibrary';
 import MediaScreen from './pages/MediaScreen';
 import MediaScreenManagement from './pages/MediaScreenManagement';
 import Messages from './pages/Messages';
@@ -76,7 +77,6 @@ import Sitemap from './pages/Sitemap';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import MediaLibrary from './pages/MediaLibrary';
 import __Layout from './Layout.jsx';
 
 
@@ -95,6 +95,7 @@ export const PAGES = {
     "LoyaltyProgram": LoyaltyProgram,
     "ManageCoupons": ManageCoupons,
     "ManageRestaurantManagers": ManageRestaurantManagers,
+    "MediaLibrary": MediaLibrary,
     "MediaScreen": MediaScreen,
     "MediaScreenManagement": MediaScreenManagement,
     "Messages": Messages,
@@ -110,7 +111,6 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "MediaLibrary": MediaLibrary,
 }
 
 export const pagesConfig = {

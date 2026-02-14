@@ -52,6 +52,7 @@ import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
 import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
 import BrandingManager from '@/components/restaurant/BrandingManager';
 import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
+import POSConfigurations from '@/components/restaurant/POSConfigurations';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -536,6 +537,7 @@ export default function RestaurantDashboard() {
                             <TabsTrigger value="branding">Branding</TabsTrigger>
                             <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
                             <TabsTrigger value="integrations">Third-Party Orders</TabsTrigger>
+                            <TabsTrigger value="pos">POS Configurations</TabsTrigger>
                         </TabsList>
                         <TabsContent value="settings">
                             <RestaurantSettings restaurantId={restaurant.id} />
@@ -554,6 +556,9 @@ export default function RestaurantDashboard() {
                         </TabsContent>
                         <TabsContent value="integrations">
                             <ThirdPartyIntegrations restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="pos">
+                            <POSConfigurations restaurantId={restaurant.id} />
                         </TabsContent>
                     </Tabs>
                 )}
