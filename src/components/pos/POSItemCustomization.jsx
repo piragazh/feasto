@@ -13,6 +13,8 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
      const [removedIngredients, setRemovedIngredients] = useState([]);
      const [isMeal, setIsMeal] = useState(false);
      const [mealCustomizations, setMealCustomizations] = useState({});
+     const [priceOverride, setPriceOverride] = useState(null);
+     const [isEditingPrice, setIsEditingPrice] = useState(false);
 
      const optionCount = item?.customization_options?.length || 0;
      const columns = Math.min(Math.max(optionCount, 1), 4);
@@ -56,7 +58,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
          return total;
      };
 
-     const currentPrice = calculatePrice();
+     const currentPrice = priceOverride !== null ? priceOverride : calculatePrice();
 
     const handleConfirm = () => {
         const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
@@ -73,6 +75,8 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
         setSpecialInstructions('');
         setRemovedIngredients([]);
         setIsMeal(false);
+        setPriceOverride(null);
+        setIsEditingPrice(false);
     };
 
     const handleSingleSelect = (optionName, selectedValue) => {
@@ -108,9 +112,38 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                         <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-lg' : 'text-base'}`}>
                             {item.name}
                         </DialogTitle>
-                        <p className="text-orange-400 font-bold text-lg mt-1">
-                            £{currentPrice.toFixed(2)}
-                        </p>
+                        {isEditingPrice ? (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-white">£</span>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={priceOverride !== null ? priceOverride : calculatePrice()}
+                                    onChange={(e) => setPriceOverride(parseFloat(e.target.value) || 0)}
+                                    className="w-24 h-8 bg-gray-700 border-orange-500 text-white"
+                                    autoFocus
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setIsEditingPrice(false);
+                                        setPriceOverride(null);
+                                    }}
+                                    className="h-8 text-white hover:bg-gray-700"
+                                >
+                                    Reset
+                                </Button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditingPrice(true)}
+                                className="text-orange-400 font-bold text-lg mt-1 hover:text-orange-300 transition-colors"
+                            >
+                                £{currentPrice.toFixed(2)}
+                            </button>
+                        )}
                     </div>
                     <Button
                         variant="ghost"
