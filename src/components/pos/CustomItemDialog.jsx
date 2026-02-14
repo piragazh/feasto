@@ -59,6 +59,29 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
 
                 <div className="space-y-4 py-4">
                     <div>
+                        <Label className="text-white mb-2">Quick Add</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {quickItems.map((item, idx) => (
+                                <Button
+                                    key={idx}
+                                    onClick={() => {
+                                        setItemName(item.name);
+                                        setItemPrice(typeof item.price === 'number' ? item.price.toFixed(2) : item.price);
+                                    }}
+                                    className="bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 h-auto py-3"
+                                >
+                                    <div className="text-left w-full">
+                                        <div className="text-sm font-medium">{item.name}</div>
+                                        <div className="text-xs text-orange-400">
+                                            £{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
+                                        </div>
+                                    </div>
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
                         <Label className="text-white mb-2">Item Name</Label>
                         <Input
                             value={itemName}
@@ -87,29 +110,6 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                             placeholder="0.00"
                             className="bg-gray-700 border-gray-600 text-white text-lg h-12"
                         />
-                    </div>
-
-                    <div>
-                        <Label className="text-white mb-2">Quick Add</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {quickItems.map((item, idx) => (
-                                <Button
-                                    key={idx}
-                                    onClick={() => {
-                                        setItemName(item.name);
-                                        setItemPrice(typeof item.price === 'number' ? item.price.toFixed(2) : item.price);
-                                    }}
-                                    className="bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 h-auto py-3"
-                                >
-                                    <div className="text-left w-full">
-                                        <div className="text-sm font-medium">{item.name}</div>
-                                        <div className="text-xs text-orange-400">
-                                            £{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
-                                        </div>
-                                    </div>
-                                </Button>
-                            ))}
-                        </div>
                     </div>
                 </div>
 
