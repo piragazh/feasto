@@ -63,6 +63,10 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                         <Input
                             value={itemName}
                             onChange={(e) => setItemName(e.target.value)}
+                            onFocus={() => {
+                                setShowKeyboard(true);
+                                setActiveInput('name');
+                            }}
                             placeholder="e.g., Delivery Charge"
                             className="bg-gray-700 border-gray-600 text-white text-lg h-12"
                         />
@@ -76,6 +80,10 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                             min="0"
                             value={itemPrice}
                             onChange={(e) => setItemPrice(e.target.value)}
+                            onFocus={() => {
+                                setShowKeyboard(true);
+                                setActiveInput('price');
+                            }}
                             placeholder="0.00"
                             className="bg-gray-700 border-gray-600 text-white text-lg h-12"
                         />
@@ -121,6 +129,33 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                         Add to Cart
                     </Button>
                 </div>
+
+                {showKeyboard && (
+                    <OnScreenKeyboard
+                        onKeyPress={(key) => {
+                            if (activeInput === 'name') {
+                                setItemName(prev => prev + key);
+                            } else if (activeInput === 'price') {
+                                if (/[0-9.]/.test(key)) {
+                                    setItemPrice(prev => prev + key);
+                                }
+                            }
+                        }}
+                        onBackspace={() => {
+                            if (activeInput === 'name') {
+                                setItemName(prev => prev.slice(0, -1));
+                            } else if (activeInput === 'price') {
+                                setItemPrice(prev => prev.slice(0, -1));
+                            }
+                        }}
+                        onSpace={() => {
+                            if (activeInput === 'name') {
+                                setItemName(prev => prev + ' ');
+                            }
+                        }}
+                        onClose={() => setShowKeyboard(false)}
+                    />
+                )}
             </DialogContent>
         </Dialog>
     );
