@@ -647,6 +647,11 @@ Provide only the time range (e.g., "25-30 min").`;
                                                                     }
                                                                     
                                                                     if (mealDisplayValue) {
+                                                                        // Final safety check: ensure mealDisplayValue is not an object
+                                                                        if (typeof mealDisplayValue === 'object') {
+                                                                            return; // Skip this customization
+                                                                        }
+                                                                        
                                                                         const formattedKey = mealKey
                                                                             .replace(/_/g, ' ')
                                                                             .split(' ')
@@ -685,6 +690,11 @@ Provide only the time range (e.g., "25-30 min").`;
                                                             }
 
                                                             if (displayValue) {
+                                                                // Final safety check: ensure displayValue is not an object
+                                                                if (typeof displayValue === 'object') {
+                                                                    return; // Skip this customization
+                                                                }
+                                                                
                                                                 // Format key: capitalize first letter, replace underscores with spaces
                                                                 const formattedKey = key
                                                                     .replace(/_/g, ' ')
