@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Minus, ShoppingCart, X, Settings, Scissors, Users } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, X, Settings, Scissors, Users, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import POSItemCustomization from './POSItemCustomization';
 import POSPayment from './POSPayment';
@@ -13,6 +13,7 @@ import TableActionsDialog from './TableActionsDialog';
 import SplitBillDialog from './SplitBillDialog';
 import FloorPlanView from './FloorPlanView';
 import TableSelectionDialog from './TableSelectionDialog';
+import CustomItemDialog from './CustomItemDialog';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +30,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [splitBillOpen, setSplitBillOpen] = useState(false);
      const [isAddingToTable, setIsAddingToTable] = useState(false);
      const [tableSelectionOpen, setTableSelectionOpen] = useState(false);
+     const [customItemOpen, setCustomItemOpen] = useState(false);
 
      React.useEffect(() => {
          setOptimisticCart(cart);
@@ -722,8 +724,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     View Tables
                 </Button>
                 )}
-                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
-                    Function 2
+                <Button 
+                    onClick={() => setCustomItemOpen(true)}
+                    className="aspect-square bg-green-600 hover:bg-green-700 text-white font-bold text-xs border border-green-500 p-2 flex flex-col items-center justify-center gap-1"
+                >
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="text-[10px]">Custom</span>
                 </Button>
                 <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 3
@@ -763,6 +769,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 tables={tables}
                 selectedTable={selectedTable}
                 onSelectTable={(table) => setSelectedTable(table)}
+            />
+
+            <CustomItemDialog
+                open={customItemOpen}
+                onClose={() => setCustomItemOpen(false)}
+                onAdd={(customItem) => onAddItem(customItem)}
             />
         </div>
     );
