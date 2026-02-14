@@ -293,7 +293,7 @@ Provide only the time range (e.g., "25-30 min").`;
                         h2 { text-align: center; margin: 10px 0; font-size: ${headerFontSize}; }
                         h3 { font-size: ${h3FontSize}; }
                         .separator { border-top: 2px dashed #000; margin: 10px 0; }
-                        .item { margin: 5px 0; font-size: ${baseFontSize}; }
+                        .item { margin: 15px 0; padding: 8px 0; font-size: ${baseFontSize}; border-bottom: 1px solid #e5e5e5; }
                         .total { font-weight: bold; font-size: ${totalFontSize}; margin-top: 10px; }
                         p { font-size: ${baseFontSize}; }
                         small { font-size: ${baseFontSize === '28px' ? '24px' : baseFontSize === '38px' ? '32px' : '28px'}; }
