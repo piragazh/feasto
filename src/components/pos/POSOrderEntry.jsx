@@ -775,6 +775,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 open={customItemOpen}
                 onClose={() => setCustomItemOpen(false)}
                 onAdd={(customItem) => onAddItem(customItem)}
+                restaurantId={restaurantId}
             />
         </div>
     );

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Monitor, Printer } from 'lucide-react';
+import { Monitor, Printer, PlusCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from '@/utils';
 import BluetoothPrinterManager from './BluetoothPrinterManager';
+import CustomItemsManager from './CustomItemsManager';
 
 export default function POSConfigurations({ restaurantId }) {
     return (
@@ -41,6 +42,21 @@ export default function POSConfigurations({ restaurantId }) {
                 </CardHeader>
                 <CardContent>
                     <BluetoothPrinterManager restaurantId={restaurantId} />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <PlusCircle className="h-5 w-5" />
+                        Custom Items
+                    </CardTitle>
+                    <CardDescription>
+                        Create quick-add items like delivery charge, bag fee, etc.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <CustomItemsManager restaurantId={restaurantId} />
                 </CardContent>
             </Card>
         </div>

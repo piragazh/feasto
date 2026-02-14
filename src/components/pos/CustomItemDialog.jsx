@@ -4,10 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
-export default function CustomItemDialog({ open, onClose, onAdd }) {
+export default function CustomItemDialog({ open, onClose, onAdd, restaurantId }) {
     const [itemName, setItemName] = useState('');
     const [itemPrice, setItemPrice] = useState('');
+
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return restaurants[0];
+        },
+        enabled: !!restaurantId,
+    });
+
+    const quickItems = restaurant?.custom_pos_items || [
+        { name: 'Delivery Charge', price: '2.50' },
+        { name: 'Bag Fee', price: '0.50' },
+        { name: 'Service Charge', price: '1.00' },
+        { name: 'Extra Sauce', price: '0.75' },
+    ];
 
     const handleAdd = () => {
         if (!itemName.trim() || !itemPrice || parseFloat(itemPrice) <= 0) {
@@ -29,13 +47,6 @@ export default function CustomItemDialog({ open, onClose, onAdd }) {
         setItemPrice('');
         onClose();
     };
-
-    const quickItems = [
-        { name: 'Delivery Charge', price: '2.50' },
-        { name: 'Bag Fee', price: '0.50' },
-        { name: 'Service Charge', price: '1.00' },
-        { name: 'Extra Sauce', price: '0.75' },
-    ];
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -81,18 +92,20 @@ export default function CustomItemDialog({ open, onClose, onAdd }) {
                     <div>
                         <Label className="text-white mb-2">Quick Add</Label>
                         <div className="grid grid-cols-2 gap-2">
-                            {quickItems.map((item) => (
+                            {quickItems.map((item, idx) => (
                                 <Button
-                                    key={item.name}
+                                    key={idx}
                                     onClick={() => {
                                         setItemName(item.name);
-                                        setItemPrice(item.price);
+                                        setItemPrice(typeof item.price === 'number' ? item.price.toFixed(2) : item.price);
                                     }}
                                     className="bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 h-auto py-3"
                                 >
                                     <div className="text-left w-full">
                                         <div className="text-sm font-medium">{item.name}</div>
-                                        <div className="text-xs text-orange-400">£{item.price}</div>
+                                        <div className="text-xs text-orange-400">
+                                            £{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
+                                        </div>
                                     </div>
                                 </Button>
                             ))}
