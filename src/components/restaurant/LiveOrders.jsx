@@ -726,10 +726,22 @@ Provide only the time range (e.g., "25-30 min").`;
                                         <Separator />
 
                                         <div className="space-y-2 text-sm">
-                                            {order.order_type === 'delivery' && (
+                                            {order.order_type === 'delivery' && order.delivery_address && (
                                                 <div className="flex items-start gap-2">
                                                     <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
                                                     <span className="text-gray-700">{order.delivery_address}</span>
+                                                </div>
+                                            )}
+                                            {order.order_type === 'collection' && (
+                                                <div className="flex items-start gap-2">
+                                                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                                                    <span className="text-gray-700">Customer will collect from restaurant</span>
+                                                </div>
+                                            )}
+                                            {order.order_type === 'dine_in' && order.table_number && (
+                                                <div className="flex items-start gap-2">
+                                                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                                                    <span className="text-gray-700">{order.table_number}</span>
                                                 </div>
                                             )}
                                             <div className="flex items-center gap-2">
