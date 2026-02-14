@@ -86,9 +86,10 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                         <Input
                             value={itemName}
                             onChange={(e) => setItemName(e.target.value)}
-                            onFocus={() => {
+                            onFocus={(e) => {
                                 setShowKeyboard(true);
                                 setActiveInput('name');
+                                setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
                             }}
                             placeholder="e.g., Delivery Charge"
                             className="bg-gray-700 border-gray-600 text-white text-lg h-12"
@@ -103,9 +104,10 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                             min="0"
                             value={itemPrice}
                             onChange={(e) => setItemPrice(e.target.value)}
-                            onFocus={() => {
+                            onFocus={(e) => {
                                 setShowKeyboard(true);
                                 setActiveInput('price');
+                                setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
                             }}
                             placeholder="0.00"
                             className="bg-gray-700 border-gray-600 text-white text-lg h-12"

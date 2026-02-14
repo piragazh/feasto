@@ -122,7 +122,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                 </div>
 
                 <div 
-                    className="flex-1 overflow-y-auto p-2 md:p-4 min-h-0"
+                    className={`flex-1 overflow-y-auto p-2 md:p-4 min-h-0 ${showKeyboard ? 'pb-80' : ''}`}
                     style={{
                         display: 'grid',
                         gridTemplateColumns: `repeat(${columns}, 1fr)`,
@@ -340,7 +340,10 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                             placeholder="Add any special requests (e.g., extra spicy, no onions, etc.)"
                             value={specialInstructions}
                             onChange={(e) => setSpecialInstructions(e.target.value)}
-                            onFocus={() => setShowKeyboard(true)}
+                            onFocus={(e) => {
+                                setShowKeyboard(true);
+                                setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                            }}
                             className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 resize-none h-24"
                         />
                     </div>
