@@ -426,20 +426,33 @@ export default function Orders() {
                                                        </div>
                                                        {item?.customizations && typeof item.customizations === 'object' && (
                                                            <div className="text-xs text-gray-500 mt-1 ml-4">
-                                                               {Object.entries(item.customizations).map(([key, value]) => {
-                                                                   if (!value || (Array.isArray(value) && value.length === 0)) {
-                                                                       return null;
-                                                                   }
-                                                                   if (typeof value === 'object' && !Array.isArray(value)) {
-                                                                       return null;
-                                                                   }
-                                                                   const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
-                                                                   return (
-                                                                       <div key={key}>
-                                                                           {key}: {displayValue}
-                                                                       </div>
-                                                                   );
-                                                               }).filter(Boolean)}
+                                                               {Object.entries(item.customizations)
+                                                                   .map(([key, value]) => {
+                                                                       // Skip empty values
+                                                                       if (!value || (Array.isArray(value) && value.length === 0)) {
+                                                                           return null;
+                                                                       }
+                                                                       // Skip complex nested objects
+                                                                       if (typeof value === 'object' && !Array.isArray(value)) {
+                                                                           // Try to extract meaningful value from nested objects
+                                                                           if (value && typeof value === 'object' && 'selection' in value) {
+                                                                               return (
+                                                                                   <div key={key}>
+                                                                                       {key}: {String(value.selection || '')}
+                                                                                   </div>
+                                                                               );
+                                                                           }
+                                                                           return null;
+                                                                       }
+                                                                       const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+                                                                       return (
+                                                                           <div key={key}>
+                                                                               {key}: {displayValue}
+                                                                           </div>
+                                                                       );
+                                                                   })
+                                                                   .filter(Boolean)
+                                                               }
                                                            </div>
                                                        )}
                                                    </div>

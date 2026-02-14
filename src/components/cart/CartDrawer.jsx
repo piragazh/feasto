@@ -170,8 +170,18 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                         .map(([key, val]) => {
                                                             // Skip empty values
                                                             if (!val || (Array.isArray(val) && val.length === 0)) return null;
-                                                            // Skip complex objects - only handle simple types and arrays
-                                                            if (typeof val === 'object' && !Array.isArray(val)) return null;
+                                                            
+                                                            // Handle nested objects with 'selection' property
+                                                            if (typeof val === 'object' && !Array.isArray(val)) {
+                                                                if (val && 'selection' in val) {
+                                                                    return (
+                                                                        <div key={key}>
+                                                                            {key}: {String(val.selection || '')}
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            }
                                                             
                                                             const displayValue = Array.isArray(val) ? val.join(', ') : String(val);
                                                             return (
