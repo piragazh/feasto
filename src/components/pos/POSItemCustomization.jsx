@@ -6,12 +6,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from 'lucide-react';
+import OnScreenKeyboard from './OnScreenKeyboard';
 
 export default function POSItemCustomization({ item, open, onClose, onConfirm }) {
      const [customizations, setCustomizations] = useState({});
      const [specialInstructions, setSpecialInstructions] = useState('');
      const [isMeal, setIsMeal] = useState(false);
      const [mealCustomizations, setMealCustomizations] = useState({});
+     const [showKeyboard, setShowKeyboard] = useState(false);
 
      const optionCount = item?.customization_options?.length || 0;
      const columns = Math.min(Math.max(optionCount, 1), 4);
@@ -338,6 +340,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                             placeholder="Add any special requests (e.g., extra spicy, no onions, etc.)"
                             value={specialInstructions}
                             onChange={(e) => setSpecialInstructions(e.target.value)}
+                            onFocus={() => setShowKeyboard(true)}
                             className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 resize-none h-24"
                         />
                     </div>
@@ -358,6 +361,15 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                         Add to Cart
                     </Button>
                 </div>
+
+                {showKeyboard && (
+                    <OnScreenKeyboard
+                        onKeyPress={(key) => setSpecialInstructions(prev => prev + key)}
+                        onBackspace={() => setSpecialInstructions(prev => prev.slice(0, -1))}
+                        onSpace={() => setSpecialInstructions(prev => prev + ' ')}
+                        onClose={() => setShowKeyboard(false)}
+                    />
+                )}
             </DialogContent>
         </Dialog>
     );

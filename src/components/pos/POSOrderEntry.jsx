@@ -14,6 +14,7 @@ import SplitBillDialog from './SplitBillDialog';
 import FloorPlanView from './FloorPlanView';
 import TableSelectionDialog from './TableSelectionDialog';
 import CustomItemDialog from './CustomItemDialog';
+import OnScreenKeyboard from './OnScreenKeyboard';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +32,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [isAddingToTable, setIsAddingToTable] = useState(false);
      const [tableSelectionOpen, setTableSelectionOpen] = useState(false);
      const [customItemOpen, setCustomItemOpen] = useState(false);
+     const [showKeyboard, setShowKeyboard] = useState(false);
 
      React.useEffect(() => {
          setOptimisticCart(cart);
@@ -554,6 +556,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             placeholder="Search items..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setShowKeyboard(true)}
                             className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 text-lg h-12 px-4"
                         />
                     </div>
@@ -762,6 +765,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 onAdd={(customItem) => onAddItem(customItem)}
                 restaurantId={restaurantId}
             />
+
+            {showKeyboard && (
+                <OnScreenKeyboard
+                    onKeyPress={(key) => setSearchQuery(prev => prev + key)}
+                    onBackspace={() => setSearchQuery(prev => prev.slice(0, -1))}
+                    onSpace={() => setSearchQuery(prev => prev + ' ')}
+                    onClose={() => setShowKeyboard(false)}
+                />
+            )}
         </div>
     );
 }

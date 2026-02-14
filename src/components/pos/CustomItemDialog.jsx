@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import OnScreenKeyboard from './OnScreenKeyboard';
 
 export default function CustomItemDialog({ open, onClose, onAdd, restaurantId }) {
     const [itemName, setItemName] = useState('');
     const [itemPrice, setItemPrice] = useState('');
+    const [showKeyboard, setShowKeyboard] = useState(false);
+    const [activeInput, setActiveInput] = useState(null);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
