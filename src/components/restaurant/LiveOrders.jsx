@@ -321,61 +321,52 @@ Provide only the time range (e.g., "25-30 min").`;
                     <div class="separator"></div>
                     <h3>ITEMS:</h3>
                     ${order.items.map(item => {
-                        let customizationText = '';
+                        let itemHtml = '<div class="item"><strong>' + item.quantity + 'x ' + item.name + '</strong>';
+                        
                         if (item.customizations) {
                             const lines = [];
                             Object.entries(item.customizations).forEach(([key, val]) => {
                                 // Handle meal_customizations separately
                                 if (key.includes('meal_customizations') && typeof val === 'object') {
                                     Object.entries(val).forEach(([mealKey, mealVal]) => {
-                                        let value = '';
+                                        const formattedKey = mealKey.replace(/_/g, ' ').toUpperCase();
+                                        lines.push('<div style="font-style: italic; margin-top: 4px;">' + formattedKey + '</div>');
+                                        
                                         if (Array.isArray(mealVal)) {
-                                            const itemsWithQty = mealVal.map(optionName => {
-                                                if (item.itemQuantities) {
-                                                    const qtyKey = Object.keys(item.itemQuantities).find(k => 
-                                                        k.toLowerCase().includes('meal') && k.toLowerCase().includes(optionName.toLowerCase())
-                                                    );
-                                                    const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
-                                                    return qty > 1 ? optionName + ' (' + qty + 'x)' : optionName;
-                                                }
-                                                return optionName;
+                                            mealVal.forEach(optionName => {
+                                                const qty = item.itemQuantities && item.itemQuantities[optionName] || 1;
+                                                lines.push('<div>' + qty + 'x ' + optionName + '</div>');
                                             });
-                                            value = itemsWithQty.join(', ');
                                         } else {
-                                            value = String(mealVal);
+                                            lines.push('<div>1x ' + String(mealVal) + '</div>');
                                         }
-                                        const formattedKey = mealKey.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                                        lines.push('  • ' + formattedKey + ': ' + value);
                                     });
                                     return;
                                 }
                                 
-                                let value = '';
+                                // Regular customizations
+                                const formattedKey = key.replace(/_/g, ' ').toUpperCase();
+                                lines.push('<div style="font-style: italic; margin-top: 4px;">' + formattedKey + '</div>');
+                                
                                 if (Array.isArray(val)) {
-                                    const itemsWithQty = val.map(optionName => {
-                                        if (item.itemQuantities) {
-                                            const qtyKey = Object.keys(item.itemQuantities).find(k => 
-                                                k.toLowerCase().includes(optionName.toLowerCase())
-                                            );
-                                            const qty = qtyKey ? item.itemQuantities[qtyKey] : 1;
-                                            return qty > 1 ? optionName + ' (' + qty + 'x)' : optionName;
-                                        }
-                                        return optionName;
+                                    val.forEach(optionName => {
+                                        const qty = item.itemQuantities && item.itemQuantities[optionName] || 1;
+                                        lines.push('<div>' + qty + 'x ' + optionName + '</div>');
                                     });
-                                    value = itemsWithQty.join(', ');
                                 } else if (typeof val === 'object') {
-                                    return; // Skip objects
+                                    // Skip complex objects
                                 } else {
-                                    value = String(val);
+                                    lines.push('<div>1x ' + String(val) + '</div>');
                                 }
-                                const formattedKey = key.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                                lines.push('• ' + formattedKey + ': ' + value);
                             });
+                            
                             if (lines.length > 0) {
-                                customizationText = '<br/><small style="margin-left: 10px;">' + lines.join('<br/>') + '</small>';
+                                itemHtml += '<br/><small style="margin-left: 15px; display: block;">' + lines.join('') + '</small>';
                             }
                         }
-                        return '<div class="item"><strong>' + item.quantity + 'x ' + item.name + '</strong>' + customizationText + '</div>';
+                        
+                        itemHtml += '</div>';
+                        return itemHtml;
                     }).join('')}
                     <div class="separator"></div>
                     ${config.show_customer_details !== false ? `
