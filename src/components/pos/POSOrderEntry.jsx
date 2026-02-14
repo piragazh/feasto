@@ -711,34 +711,34 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             </div>
 
             {/* Bottom: Sticky Function Buttons */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-gray-700">
+            <div className="grid grid-cols-8 gap-2 pt-3 border-t border-gray-700">
                 {orderType === 'dine_in' && (
                 <Button 
                     onClick={() => setViewMode('tables')}
-                    className="h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border border-blue-500"
+                    className="aspect-square bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs border border-blue-500 p-2 flex items-center justify-center"
                 >
                     View Tables
                 </Button>
                 )}
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 2
                 </Button>
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 3
                 </Button>
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 4
                 </Button>
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 5
                 </Button>
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 6
                 </Button>
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 7
                 </Button>
-                <Button className="h-16 bg-gray-700 hover:bg-gray-600 text-white font-bold text-base border border-gray-600">
+                <Button className="aspect-square bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs border border-gray-600 p-2 flex items-center justify-center">
                     Function 8
                 </Button>
             </div>
