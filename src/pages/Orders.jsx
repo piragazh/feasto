@@ -415,13 +415,33 @@ export default function Orders() {
 
                                             <div className="space-y-2 mb-4">
                                                {(order.items || []).map((item, i) => (
-                                                   <div key={i} className="flex justify-between text-sm">
-                                                       <span className="text-gray-600">
-                                                           {item?.quantity || 0}x {item?.name || 'Item'}
-                                                       </span>
-                                                       <span className="text-gray-900">
-                                                           £{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}
-                                                       </span>
+                                                   <div key={i} className="text-sm">
+                                                       <div className="flex justify-between">
+                                                           <span className="text-gray-600">
+                                                               {item?.quantity || 0}x {item?.name || 'Item'}
+                                                           </span>
+                                                           <span className="text-gray-900">
+                                                               £{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}
+                                                           </span>
+                                                       </div>
+                                                       {item?.customizations && typeof item.customizations === 'object' && (
+                                                           <div className="text-xs text-gray-500 mt-1 ml-4">
+                                                               {Object.entries(item.customizations).map(([key, value]) => {
+                                                                   if (!value || (Array.isArray(value) && value.length === 0)) {
+                                                                       return null;
+                                                                   }
+                                                                   if (typeof value === 'object' && !Array.isArray(value)) {
+                                                                       return null;
+                                                                   }
+                                                                   const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+                                                                   return (
+                                                                       <div key={key}>
+                                                                           {key}: {displayValue}
+                                                                       </div>
+                                                                   );
+                                                               }).filter(Boolean)}
+                                                           </div>
+                                                       )}
                                                    </div>
                                                ))}
                                                </div>
