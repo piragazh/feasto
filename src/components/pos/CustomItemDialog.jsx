@@ -52,7 +52,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+            <DialogContent className={`bg-gray-800 border-gray-700 text-white max-w-md max-h-[85vh] overflow-y-auto ${showKeyboard ? 'pb-80' : ''}`}>
                 <DialogHeader>
                     <DialogTitle className="text-white text-xl">Add Custom Item</DialogTitle>
                 </DialogHeader>
