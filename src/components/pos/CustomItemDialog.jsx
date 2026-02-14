@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -52,17 +52,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
                 <DialogHeader>
-                    <div className="flex items-center justify-between">
-                        <DialogTitle className="text-white text-xl">Add Custom Item</DialogTitle>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onClose}
-                            className="text-white hover:bg-gray-700"
-                        >
-                            <X className="h-5 w-5" />
-                        </Button>
-                    </div>
+                    <DialogTitle className="text-white text-xl">Add Custom Item</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
