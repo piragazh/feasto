@@ -50,31 +50,31 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent 
-                className="bg-gray-800 border-gray-700 h-screen md:h-auto p-0 flex flex-col"
+                className="bg-gray-800 border-gray-700 p-0 flex flex-col max-h-[85vh]"
                 style={{
                     maxWidth: columns === 1 ? '90vw' : columns === 2 ? '95vw' : '98vw'
                 }}
             >
-                <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-700 flex-shrink-0">
-                    <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-xl' : 'text-lg'}`}>
+                <div className="flex items-center justify-between p-3 md:p-4 border-b border-gray-700 flex-shrink-0">
+                    <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-lg' : 'text-base'}`}>
                         {item.name}
                     </DialogTitle>
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="h-12 w-12 text-white hover:bg-gray-700"
+                        className="h-8 w-8 text-white hover:bg-gray-700"
                     >
-                        <X className="h-8 w-8" />
+                        <X className="h-5 w-5" />
                     </Button>
                 </div>
 
                 <div 
-                    className="flex-1 overflow-y-auto p-3 md:p-6"
+                    className="flex-1 overflow-y-auto p-2 md:p-4 min-h-0"
                     style={{
                         display: 'grid',
                         gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                        gap: columns > 2 ? '1rem' : '1.5rem'
+                        gap: columns > 2 ? '0.75rem' : '1rem'
                     }}
                 >
                     {item.customization_options?.map(option => (
@@ -194,17 +194,17 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm })
                     </div>
                 </div>
 
-                <div className={`flex gap-2 md:gap-3 p-3 md:p-6 border-t border-gray-700 flex-shrink-0 bg-gray-800`}>
+                <div className="flex gap-2 p-3 md:p-4 border-t border-gray-700 flex-shrink-0 bg-gray-800">
                     <Button 
                         variant="outline" 
                         onClick={onClose}
-                        className={`flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600 font-bold rounded-lg ${columns === 1 ? 'h-16 text-lg' : 'h-12 text-sm md:text-base'}`}
+                        className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600 font-bold rounded-lg h-12 text-sm"
                     >
                         Cancel
                     </Button>
                     <Button 
                         onClick={handleConfirm}
-                        className={`flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg ${columns === 1 ? 'h-16 text-lg' : 'h-12 text-sm md:text-base'}`}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg h-12 text-sm"
                     >
                         Add to Cart
                     </Button>
