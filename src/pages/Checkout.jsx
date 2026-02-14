@@ -712,7 +712,7 @@ export default function Checkout() {
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
                 status: 'pending',
-                delivery_address: orderType === 'delivery' ? fullAddress : restaurant?.address || 'Collection',
+                delivery_address: fullAddress,
                 delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
                 phone: formData.phone,
                 notes: formData.notes,
