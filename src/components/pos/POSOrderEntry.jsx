@@ -457,9 +457,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      return (
         <div className="flex flex-col h-[calc(100vh-200px)]">
             {/* Main 3-Column Layout */}
-            <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden pb-4">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 overflow-hidden pb-4">
                 {/* Left: Categories/Menu */}
-                <div className="col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
+                <div className="col-span-1 md:col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-gray-700">
                         <h2 className="text-white font-bold text-lg mb-3">Categories</h2>
                         <div className="flex flex-col gap-2">
@@ -485,7 +485,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
 
                 {/* Middle: Items Grid */}
-                <div className="col-span-7 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
+                <div className="col-span-1 md:col-span-7 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-gray-700">
                         <Input
                             type="text"
@@ -520,7 +520,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
 
                 {/* Right: Cart */}
-                <div className="col-span-3 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
+                <div className="col-span-1 md:col-span-3 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-gray-700">
                         <h2 className="text-white font-bold text-lg">Cart</h2>
                         {orderType === 'dine_in' && selectedTable && (
@@ -653,7 +653,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             </div>
 
             {/* Bottom: Sticky Function Buttons */}
-            <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-700">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-gray-700">
                 {orderType === 'dine_in' && (
                 <Button 
                     onClick={() => setViewMode('tables')}

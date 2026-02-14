@@ -56,12 +56,32 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
                 });
             }
         },
+        onMutate: async ({ userId, restaurantId }) => {
+            // Optimistic update: update UI immediately
+            const userToAssign = users.find(u => u.id === userId);
+            if (userToAssign) {
+                setCurrentManager({
+                    user_email: userToAssign.email,
+                    full_name: userToAssign.full_name || userToAssign.email,
+                    restaurant_ids: [restaurantId]
+                });
+            }
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant-managers']);
             queryClient.invalidateQueries(['all-users']);
             toast.success('Manager assigned successfully');
             onClose();
         },
+        onError: () => {
+            // Revert optimistic update on error
+            const loadCurrentManager = async () => {
+                const managers = await base44.entities.RestaurantManager.filter({});
+                const manager = managers.find(m => m.restaurant_ids?.includes(restaurant.id));
+                setCurrentManager(manager);
+            };
+            loadCurrentManager();
+        }
     });
 
     const inviteAndAssignMutation = useMutation({

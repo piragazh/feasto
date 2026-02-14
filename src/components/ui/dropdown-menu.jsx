@@ -1,6 +1,7 @@
 import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 
 import { cn } from "@/lib/utils"
 
@@ -49,15 +50,33 @@ const DropdownMenuSubContent = React.forwardRef(({ className, ...props }, ref) =
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName
 
-const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, ...props }, ref) => {
+const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, children, ...props }, ref) => {
   const [mounted, setMounted] = React.useState(false);
+  const [isOpen, setIsOpen] = React.useState(false);
   
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Always use popover style for dropdown menus (even on mobile)
-  // This maintains the existing header menu behavior
+  const mobile = mounted && isMobile();
+
+  // On mobile, render as Drawer instead of popover
+  if (mobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+        <DrawerContent className="max-h-[80vh]">
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>Menu</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6 overflow-y-auto">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Desktop: use standard popover
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -68,7 +87,9 @@ const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, ...pr
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           className
         )}
-        {...props} />
+        {...props}>
+        {children}
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   );
 })

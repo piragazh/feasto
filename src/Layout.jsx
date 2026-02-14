@@ -425,7 +425,7 @@ export default function Layout({ children, currentPageName }) {
             `}</style>
 
             {!hideHeader && (
-                <header className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50 safe-area-top">
+                <header className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}>
                     <div className="max-w-6xl mx-auto px-4">
                         <div className="flex items-center justify-between h-14 md:h-16">
                             {showBackButton ? (
