@@ -479,14 +479,18 @@ export default function Layout({ children, currentPageName }) {
                                     )}
                                 </div>
 
-                                <DropdownMenu>
+                                <DropdownMenu modal={false}>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="rounded-full h-11 w-11 md:h-9 md:w-9">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="rounded-full h-11 w-11 md:h-9 md:w-9 touch-manipulation active:scale-95 transition-transform"
+                                        >
                                             <Menu className="h-6 w-6 md:hidden" />
                                             <User className="h-5 w-5 hidden md:block" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-56">
+                                    <DropdownMenuContent align="end" className="w-56 z-[100]">
                                        <DropdownMenuItem asChild className="md:hidden">
                                            <Link to={homeUrl} className="flex items-center gap-2">
                                                <Home className="h-4 w-4" />
