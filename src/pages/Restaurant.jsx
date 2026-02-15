@@ -54,6 +54,7 @@ export default function Restaurant() {
     const [showCartConflictDialog, setShowCartConflictDialog] = useState(false);
     const [previousCartData, setPreviousCartData] = useState(null);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
+    const [showOutsideHoursConfirmation, setShowOutsideHoursConfirmation] = useState(false);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
@@ -791,7 +792,20 @@ export default function Restaurant() {
             return;
         }
 
-        // Save to localStorage even if out of hours - checkout will handle scheduling
+        // Check if ordering is available for current order type
+        const availability = checkOrderingAvailable(orderType);
+        if (!availability.available) {
+            // Show confirmation dialog for outside hours ordering
+            setShowOutsideHoursConfirmation(true);
+            return;
+        }
+
+        // Proceed to checkout
+        proceedToCheckoutFinal();
+    };
+
+    const proceedToCheckoutFinal = () => {
+        // Save to localStorage
         try {
             localStorage.setItem('cart', JSON.stringify(cart));
             localStorage.setItem('cartRestaurantId', restaurantId);
@@ -810,6 +824,7 @@ export default function Restaurant() {
         
         // Close drawer and navigate using React Router
         setCartOpen(false);
+        setShowOutsideHoursConfirmation(false);
         navigate(createPageUrl('Checkout'));
     };
 
@@ -1346,6 +1361,44 @@ export default function Restaurant() {
                                     className="w-full"
                                 >
                                     Keep Current Cart
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Outside Hours Confirmation Dialog */}
+            {showOutsideHoursConfirmation && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+                    >
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Clock className="h-8 w-8 text-orange-500" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                Outside {orderType === 'collection' ? 'Collection' : 'Delivery'} Hours
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                                {checkOrderingAvailable(orderType).message}. You can still place your order and we'll prepare it when we're open.
+                            </p>
+                            <div className="space-y-2">
+                                <Button
+                                    onClick={proceedToCheckoutFinal}
+                                    className="w-full bg-orange-500 hover:bg-orange-600"
+                                >
+                                    Continue to Checkout
+                                </Button>
+                                <Button
+                                    onClick={() => setShowOutsideHoursConfirmation(false)}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    Go Back
                                 </Button>
                             </div>
                         </div>
