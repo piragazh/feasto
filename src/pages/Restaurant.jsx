@@ -1370,11 +1370,11 @@ export default function Restaurant() {
 
             {/* Outside Hours Confirmation Dialog */}
             {showOutsideHoursConfirmation && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 pb-32 md:pb-4">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[80vh] overflow-y-auto"
                     >
                         <div className="text-center">
                             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
