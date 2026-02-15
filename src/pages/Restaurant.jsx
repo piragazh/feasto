@@ -795,7 +795,8 @@ export default function Restaurant() {
         // Check if ordering is available for current order type
         const availability = checkOrderingAvailable(orderType);
         if (!availability.available) {
-            // Show confirmation dialog for outside hours ordering
+            // Close cart drawer and show confirmation dialog
+            setCartOpen(false);
             setShowOutsideHoursConfirmation(true);
             return;
         }
@@ -1370,11 +1371,12 @@ export default function Restaurant() {
 
             {/* Outside Hours Confirmation Dialog */}
             {showOutsideHoursConfirmation && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 pb-32 md:pb-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[80vh] overflow-y-auto"
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <div className="text-center">
                             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1388,13 +1390,22 @@ export default function Restaurant() {
                             </p>
                             <div className="space-y-2">
                                 <Button
-                                    onClick={proceedToCheckoutFinal}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        proceedToCheckoutFinal();
+                                    }}
                                     className="w-full bg-orange-500 hover:bg-orange-600"
                                 >
                                     Continue to Checkout
                                 </Button>
                                 <Button
-                                    onClick={() => setShowOutsideHoursConfirmation(false)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setShowOutsideHoursConfirmation(false);
+                                        setCartOpen(true);
+                                    }}
                                     variant="outline"
                                     className="w-full"
                                 >
