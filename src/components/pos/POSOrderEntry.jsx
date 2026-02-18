@@ -298,6 +298,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         cartTotal={cartTotal} 
                         onPaymentComplete={handleTakeawayPaymentComplete}
                         onBackToCart={() => setShowPayment(false)}
+                        restaurantId={restaurantId}
+                        restaurantName={restaurant?.name}
+                        orderType={orderType}
                     />
                 </div>
             );
