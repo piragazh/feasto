@@ -86,6 +86,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const processCardPayment = async () => {
         setIsProcessing(true);
         try {
+            await createOrder('card');
             toast.success('Card payment processed');
             onPaymentComplete();
             setPaymentMethod(null);
