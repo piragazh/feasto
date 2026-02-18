@@ -5,7 +5,7 @@ import KDSOrderCard from '@/components/kds/KDSOrderCard';
 import KDSColumn from '@/components/kds/KDSColumn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { UtensilsCrossed, Volume2, VolumeX, Maximize, RefreshCw, Clock, LogOut } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery'];
 
