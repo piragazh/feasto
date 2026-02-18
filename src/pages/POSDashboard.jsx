@@ -8,7 +8,7 @@ import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarC
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
-import POSKitchenDisplay from '@/components/pos/POSKitchenDisplay.jsx';
+import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import POSWaitlist from '@/components/pos/POSWaitlist.jsx';
 import POSReports from '@/components/pos/POSReports.jsx';
 import POSTablesView from '@/components/pos/POSTablesView.jsx';
