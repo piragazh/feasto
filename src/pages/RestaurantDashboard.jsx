@@ -539,6 +539,7 @@ export default function RestaurantDashboard() {
                             <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
                             <TabsTrigger value="integrations">Third-Party Orders</TabsTrigger>
                             <TabsTrigger value="pos">POS Configurations</TabsTrigger>
+                            <TabsTrigger value="staff">Staff</TabsTrigger>
                         </TabsList>
                         <TabsContent value="settings">
                             <RestaurantSettings restaurantId={restaurant.id} />
@@ -560,6 +561,9 @@ export default function RestaurantDashboard() {
                         </TabsContent>
                         <TabsContent value="pos">
                             <POSConfigurations restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="staff">
+                            <StaffManagement restaurantId={restaurant.id} />
                         </TabsContent>
                     </Tabs>
                 )}
