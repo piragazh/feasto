@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
             ...orderData,
             status: 'confirmed',
             payment_method: orderData.payment_method || 'cash',
-            order_type: orderData.order_type || 'dine_in'
+            order_type: orderData.order_type || 'collection'
         });
 
         return Response.json({ order });
