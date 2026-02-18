@@ -206,10 +206,30 @@ export default function StaffManagement({ restaurantId }) {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap justify-end">
                                             <Badge className={cfg?.color || 'bg-gray-100'}>
                                                 {cfg?.label || member.role}
                                             </Badge>
+                                            {member.onboarding_complete ? (
+                                                <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
+                                                    <CheckCircle2 className="h-3 w-3" /> Active
+                                                </Badge>
+                                            ) : (
+                                                <Badge className="bg-yellow-100 text-yellow-700 flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" /> Pending
+                                                </Badge>
+                                            )}
+                                            {!member.onboarding_complete && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Resend invite"
+                                                    onClick={() => resendInviteMutation.mutate(member)}
+                                                    disabled={resendInviteMutation.isPending}
+                                                >
+                                                    <RefreshCw className="h-4 w-4 text-blue-500" />
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
