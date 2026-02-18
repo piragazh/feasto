@@ -107,63 +107,6 @@ export default function KitchenDisplaySystem({ restaurant }) {
 
     return (
         <div className="min-h-screen bg-gray-950 flex flex-col select-none" style={{ fontFamily: "'Inter', sans-serif" }}>
-            {/* Top Bar */}
-            <div className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                        <UtensilsCrossed className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-white font-bold text-lg leading-none">{restaurant.name}</h1>
-                        <p className="text-gray-500 text-xs mt-0.5">Kitchen Display System</p>
-                    </div>
-                </div>
-
-                {/* Counters */}
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-sm px-3 py-1">
-                            🟡 {pendingOrders.length} New
-                        </Badge>
-                        <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-sm px-3 py-1">
-                            🔵 {preparingOrders.length} Preparing
-                        </Badge>
-                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-sm px-3 py-1">
-                            🟢 {readyOrders.length} Ready
-                        </Badge>
-                        {urgentCount > 0 && (
-                            <Badge className="bg-red-500 text-white animate-pulse text-sm px-3 py-1">
-                                🔥 {urgentCount} Urgent
-                            </Badge>
-                        )}
-                    </div>
-
-                    {/* Live Clock */}
-                    <LiveClock />
-
-                    {/* Controls */}
-                    <div className="flex items-center gap-1 ml-2">
-                        <Button variant="ghost" size="icon" onClick={() => setSoundEnabled(s => !s)}
-                            className="text-gray-400 hover:text-white" title={soundEnabled ? 'Mute' : 'Unmute'}>
-                            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={fetchOrders}
-                            className="text-gray-400 hover:text-white" title="Refresh">
-                            <RefreshCw className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon"
-                            onClick={() => document.documentElement.requestFullscreen?.()}
-                            className="text-gray-400 hover:text-white" title="Fullscreen">
-                            <Maximize className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => base44.auth.logout()}
-                            className="text-gray-400 hover:text-red-400" title="Sign out">
-                            <LogOut className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
             {/* Board — 3 columns */}
             <div className="flex-1 grid grid-cols-3 gap-0 overflow-hidden min-h-0">
                 <KDSColumn
