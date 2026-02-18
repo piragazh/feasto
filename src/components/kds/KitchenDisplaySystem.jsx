@@ -142,19 +142,3 @@ export default function KitchenDisplaySystem({ restaurant }) {
         </div>
     );
 }
-
-function LiveClock() {
-    const [time, setTime] = useState(new Date());
-    useEffect(() => {
-        const t = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(t);
-    }, []);
-    return (
-        <div className="flex items-center gap-2 text-gray-300 bg-gray-800 rounded-lg px-3 py-1.5">
-            <Clock className="h-4 w-4 text-gray-500" />
-            <span className="font-mono font-semibold text-base tabular-nums">
-                {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </span>
-        </div>
-    );
-}
