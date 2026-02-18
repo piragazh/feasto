@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { DollarSign, CreditCard, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
