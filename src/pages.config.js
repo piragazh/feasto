@@ -58,6 +58,7 @@ import Favorites from './pages/Favorites';
 import GoogleMenu from './pages/GoogleMenu';
 import GroupOrder from './pages/GroupOrder';
 import Home from './pages/Home';
+import KitchenDisplay from './pages/KitchenDisplay';
 import LoyaltyProgram from './pages/LoyaltyProgram';
 import ManageCoupons from './pages/ManageCoupons';
 import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
@@ -74,11 +75,10 @@ import PublicFilesManager from './pages/PublicFilesManager';
 import Restaurant from './pages/Restaurant';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import Sitemap from './pages/Sitemap';
+import StaffOnboarding from './pages/StaffOnboarding';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import StaffOnboarding from './pages/StaffOnboarding';
-import KitchenDisplay from './pages/KitchenDisplay';
 import __Layout from './Layout.jsx';
 
 
@@ -94,6 +94,7 @@ export const PAGES = {
     "GoogleMenu": GoogleMenu,
     "GroupOrder": GroupOrder,
     "Home": Home,
+    "KitchenDisplay": KitchenDisplay,
     "LoyaltyProgram": LoyaltyProgram,
     "ManageCoupons": ManageCoupons,
     "ManageRestaurantManagers": ManageRestaurantManagers,
@@ -110,11 +111,10 @@ export const PAGES = {
     "Restaurant": Restaurant,
     "RestaurantDashboard": RestaurantDashboard,
     "Sitemap": Sitemap,
+    "StaffOnboarding": StaffOnboarding,
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "StaffOnboarding": StaffOnboarding,
-    "KitchenDisplay": KitchenDisplay,
 }
 
 export const pagesConfig = {

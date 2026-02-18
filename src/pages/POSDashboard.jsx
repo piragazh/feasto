@@ -249,6 +249,9 @@ export default function POSDashboard() {
                             cart={cart}
                             cartTotal={cartTotal}
                             onPaymentComplete={clearCart}
+                            restaurantId={restaurant.id}
+                            restaurantName={restaurant.name}
+                            orderType={orderType}
                         />
                     </TabsContent>
 
