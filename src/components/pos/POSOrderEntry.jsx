@@ -187,7 +187,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         try {
             const orderData = {
                 restaurant_id: restaurantId,
-                restaurant_name: 'POS Order',
+                restaurant_name: restaurant?.name || 'POS Order',
                 items: optimisticCart.map(item => ({
                     menu_item_id: item.menu_item_id || item.id,
                     name: item.name,
