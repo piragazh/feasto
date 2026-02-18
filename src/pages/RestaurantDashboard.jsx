@@ -53,6 +53,7 @@ import NotificationSoundManager from '@/components/notifications/NotificationSou
 import BrandingManager from '@/components/restaurant/BrandingManager';
 import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
 import POSConfigurations from '@/components/restaurant/POSConfigurations';
+import StaffManagement from '@/components/restaurant/StaffManagement';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
