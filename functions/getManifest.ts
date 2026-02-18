@@ -42,11 +42,20 @@ Deno.serve(async (req) => {
                 const themeColor = restaurant.theme_primary_color || "#f97316";
 
                 if (mode === 'dashboard') {
-                    // Restaurant Dashboard PWA - uses restaurant name + logo, opens dashboard directly
+                    // Restaurant Dashboard PWA
                     manifest.name = `${restaurant.name} Dashboard`;
                     manifest.short_name = restaurant.name.substring(0, 12);
                     manifest.description = `Manage orders and settings for ${restaurant.name}`;
                     manifest.start_url = `/RestaurantDashboard?restaurant_id=${restaurantId}`;
+                    manifest.theme_color = themeColor;
+                    manifest.background_color = themeColor;
+                } else if (mode === 'pos') {
+                    // POS PWA
+                    manifest.name = `${restaurant.name} POS`;
+                    manifest.short_name = `${restaurant.name.substring(0, 9)} POS`;
+                    manifest.description = `Point of Sale for ${restaurant.name}`;
+                    manifest.start_url = `/POSDashboard?restaurant_id=${restaurantId}`;
+                    manifest.display = "fullscreen";
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
                 } else {
