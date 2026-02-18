@@ -54,6 +54,7 @@ import BrandingManager from '@/components/restaurant/BrandingManager';
 import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
 import POSConfigurations from '@/components/restaurant/POSConfigurations';
 import StaffManagement from '@/components/restaurant/StaffManagement';
+import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -495,6 +496,7 @@ export default function RestaurantDashboard() {
                 {activeSection === 'operations' && (
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="mb-4 flex-wrap">
+                            <TabsTrigger value="kds">Kitchen Display</TabsTrigger>
                             <TabsTrigger value="drivers">Driver Tracking</TabsTrigger>
                             <TabsTrigger value="driver-management">Manage Drivers</TabsTrigger>
                             <TabsTrigger value="crm">CRM</TabsTrigger>
@@ -509,6 +511,9 @@ export default function RestaurantDashboard() {
                             <TabsTrigger value="batching">Order Batching</TabsTrigger>
                             <TabsTrigger value="modifications">Modifications</TabsTrigger>
                         </TabsList>
+                        <TabsContent value="kds">
+                            <KitchenDisplaySystem restaurant={restaurant} />
+                        </TabsContent>
                         <TabsContent value="drivers">
                             <DriverTracking restaurantId={restaurant.id} />
                         </TabsContent>
