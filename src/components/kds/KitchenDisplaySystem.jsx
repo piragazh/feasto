@@ -3,9 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import KDSOrderCard from '@/components/kds/KDSOrderCard';
 import KDSColumn from '@/components/kds/KDSColumn';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+
 
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery'];
 
