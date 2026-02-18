@@ -23,7 +23,29 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     const change = cashReceived - cartTotal;
 
-    const handleCashPayment = () => {
+    const createOrder = async (method) => {
+        if (!restaurantId) return;
+        await base44.entities.Order.create({
+            restaurant_id: restaurantId,
+            restaurant_name: restaurantName || 'POS Order',
+            items: cart.map(item => ({
+                menu_item_id: item.menu_item_id || item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                customizations: item.customizations || {}
+            })),
+            subtotal: cartTotal,
+            delivery_fee: 0,
+            discount: 0,
+            total: cartTotal,
+            status: 'confirmed',
+            order_type: orderType || 'collection',
+            payment_method: method,
+        });
+    };
+
+    const handleCashPayment = async () => {
         if (cart.length === 0) {
             toast.error('Cart is empty');
             return;
@@ -36,6 +58,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             toast.error('Insufficient amount');
             return;
         }
+        await createOrder('cash');
         toast.success(`Payment complete. Change: £${change.toFixed(2)}`);
         onPaymentComplete();
         setCashReceived(0);
