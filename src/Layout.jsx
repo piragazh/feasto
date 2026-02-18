@@ -101,9 +101,16 @@ export default function Layout({ children, currentPageName }) {
             document.head.appendChild(manifestLink);
         }
         
-        // For restaurant dashboard, use restaurant-specific manifest
-        if (currentPageName === 'RestaurantDashboard' && customDomainRestaurantId) {
-            manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${customDomainRestaurantId}`;
+        // For restaurant dashboard, use restaurant-specific dashboard manifest
+        if (currentPageName === 'RestaurantDashboard') {
+            // Get restaurant ID from URL params or session storage
+            const urlParams = new URLSearchParams(window.location.search);
+            const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
+            if (dashboardRestaurantId) {
+                manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${dashboardRestaurantId}&mode=dashboard`;
+            } else {
+                manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest`;
+            }
         } else if (customDomainRestaurantId) {
             manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${customDomainRestaurantId}`;
         } else {
