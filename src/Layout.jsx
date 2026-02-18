@@ -250,16 +250,29 @@ export default function Layout({ children, currentPageName }) {
     }, [location]);
 
     const loadUser = async () => {
-        try {
-            const userData = await base44.auth.me();
-            setUser(userData);
-            
-            // Check if user is a restaurant manager
-            const managers = await base44.entities.RestaurantManager.filter({ user_email: userData.email });
-            setIsRestaurantManager(managers && managers.length > 0);
-        } catch (e) {
-            // User not logged in
+    try {
+        const userData = await base44.auth.me();
+        setUser(userData);
+
+        // Check if user is a restaurant manager
+        const managers = await base44.entities.RestaurantManager.filter({ user_email: userData.email });
+        setIsRestaurantManager(managers && managers.length > 0);
+
+        // Handle staff post-login redirect
+        const staffRole = sessionStorage.getItem('staff_post_login_role');
+        const staffEmail = sessionStorage.getItem('staff_post_login_email');
+        if (staffRole && staffEmail && userData.email?.toLowerCase() === staffEmail?.toLowerCase()) {
+            sessionStorage.removeItem('staff_post_login_role');
+            sessionStorage.removeItem('staff_post_login_email');
+            if (staffRole === 'cashier') {
+                window.location.href = createPageUrl('POSDashboard');
+            } else {
+                window.location.href = createPageUrl('RestaurantDashboard');
+            }
         }
+    } catch (e) {
+        // User not logged in
+    }
     };
 
     const updateCartCount = () => {
