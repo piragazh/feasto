@@ -6,11 +6,13 @@ Deno.serve(async (req) => {
         const url = new URLSearchParams(req.url.split('?')[1]);
         const restaurantId = url.get('restaurant_id');
 
+        const mode = url.get('mode'); // 'dashboard' for restaurant dashboard PWA
+
         let manifest = {
             "name": "MealDrop",
             "short_name": "MealDrop",
-            "description": "Restaurant Management Dashboard",
-            "start_url": "/RestaurantDashboard",
+            "description": "Order food from your favourite restaurants",
+            "start_url": "/",
             "display": "standalone",
             "background_color": "#ffffff",
             "theme_color": "#f97316",
@@ -37,27 +39,40 @@ Deno.serve(async (req) => {
             const restaurant = restaurants?.[0];
 
             if (restaurant) {
-                manifest.name = restaurant.name;
-                manifest.short_name = restaurant.name.substring(0, 12);
-                manifest.description = `${restaurant.name} - Restaurant Dashboard`;
-                manifest.theme_color = restaurant.theme_primary_color || "#f97316";
-                
-                if (restaurant.logo_url) {
-                    manifest.icons = [
-                        {
-                            "src": restaurant.logo_url,
-                            "sizes": "192x192",
-                            "type": "image/png",
-                            "purpose": "any maskable"
-                        },
-                        {
-                            "src": restaurant.logo_url,
-                            "sizes": "512x512",
-                            "type": "image/png",
-                            "purpose": "any maskable"
-                        }
-                    ];
+                const themeColor = restaurant.theme_primary_color || "#f97316";
+
+                if (mode === 'dashboard') {
+                    // Restaurant Dashboard PWA - uses restaurant name + logo, opens dashboard directly
+                    manifest.name = `${restaurant.name} Dashboard`;
+                    manifest.short_name = restaurant.name.substring(0, 12);
+                    manifest.description = `Manage orders and settings for ${restaurant.name}`;
+                    manifest.start_url = `/RestaurantDashboard?restaurant_id=${restaurantId}`;
+                    manifest.theme_color = themeColor;
+                    manifest.background_color = themeColor;
+                } else {
+                    // Customer-facing PWA for custom domain
+                    manifest.name = restaurant.name;
+                    manifest.short_name = restaurant.name.substring(0, 12);
+                    manifest.description = restaurant.description || `Order from ${restaurant.name}`;
+                    manifest.start_url = `/Restaurant?id=${restaurantId}`;
+                    manifest.theme_color = themeColor;
                 }
+                
+                const iconUrl = restaurant.logo_url || "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png";
+                manifest.icons = [
+                    {
+                        "src": iconUrl,
+                        "sizes": "192x192",
+                        "type": "image/png",
+                        "purpose": "any maskable"
+                    },
+                    {
+                        "src": iconUrl,
+                        "sizes": "512x512",
+                        "type": "image/png",
+                        "purpose": "any maskable"
+                    }
+                ];
             }
         }
 
