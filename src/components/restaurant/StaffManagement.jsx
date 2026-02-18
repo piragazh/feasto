@@ -62,6 +62,13 @@ export default function StaffManagement({ restaurantId }) {
     const queryClient = useQueryClient();
     const [showDialog, setShowDialog] = useState(false);
     const [form, setForm] = useState({ full_name: '', email: '', role: 'cashier', notes: '' });
+    const [restaurant, setRestaurant] = useState(null);
+
+    useEffect(() => {
+        base44.entities.Restaurant.filter({ id: restaurantId }).then(r => {
+            if (r.length) setRestaurant(r[0]);
+        });
+    }, [restaurantId]);
 
     const { data: staffMembers = [], isLoading } = useQuery({
         queryKey: ['staff-members', restaurantId],
@@ -74,21 +81,38 @@ export default function StaffManagement({ restaurantId }) {
             const staff = await base44.entities.StaffMember.create({
                 ...data,
                 restaurant_id: restaurantId,
-                invite_sent: true,
+                invite_sent: false,
+                onboarding_complete: false,
             });
-            // Invite user to the app
+            // Invite user to the app (so they can log in)
             await base44.users.inviteUser(data.email, 'user');
+            // Send custom onboarding email with secure token
+            await base44.functions.invoke('inviteStaff', {
+                staff_member_id: staff.id,
+                restaurant_name: restaurant?.name || '',
+            });
             return staff;
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['staff-members', restaurantId]);
-            toast.success('Staff member invited successfully');
+            toast.success('Staff member invited — onboarding email sent');
             setShowDialog(false);
             setForm({ full_name: '', email: '', role: 'cashier', notes: '' });
         },
         onError: (err) => {
             toast.error(err.message || 'Failed to invite staff member');
         }
+    });
+
+    const resendInviteMutation = useMutation({
+        mutationFn: async (member) => {
+            await base44.functions.invoke('inviteStaff', {
+                staff_member_id: member.id,
+                restaurant_name: restaurant?.name || '',
+            });
+        },
+        onSuccess: () => toast.success('Invite resent successfully'),
+        onError: () => toast.error('Failed to resend invite'),
     });
 
     const toggleActiveMutation = useMutation({
