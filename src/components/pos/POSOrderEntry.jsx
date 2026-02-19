@@ -56,24 +56,42 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
-            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
-            return restaurants[0];
+            try {
+                const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+                const r = restaurants[0];
+                if (r) cacheRestaurant(r);
+                return r;
+            } catch {
+                return getCachedRestaurant(restaurantId);
+            }
         },
         enabled: !!restaurantId,
     });
 
     const { data: menuItems = [] } = useQuery({
         queryKey: ['pos-menu-items', restaurantId],
-        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true }),
+        queryFn: async () => {
+            try {
+                const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true });
+                if (items?.length) cacheMenuItems(restaurantId, items);
+                return items;
+            } catch {
+                return getCachedMenuItems(restaurantId);
+            }
+        },
         enabled: !!restaurantId,
     });
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['pos-tables', restaurantId],
         queryFn: async () => {
-            const result = await base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true });
-            console.log('📊 Tables fetched:', result.length, result);
-            return result;
+            try {
+                const result = await base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true });
+                if (result?.length) cacheTables(restaurantId, result);
+                return result;
+            } catch {
+                return getCachedTables(restaurantId);
+            }
         },
         enabled: !!restaurantId,
     });
