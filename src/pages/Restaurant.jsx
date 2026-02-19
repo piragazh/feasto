@@ -1009,35 +1009,37 @@ export default function Restaurant() {
                 </div>
             </div>
 
-                        <div className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-3">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setOrderType('delivery')}
-                            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
-                                orderType === 'delivery'
-                                    ? 'bg-orange-500 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                        >
-                            🚚 Delivery
-                        </button>
-                        {restaurant?.collection_enabled && (
+                        {!tableId && (
+                <div className="bg-white border-b sticky top-0 z-10">
+                    <div className="max-w-4xl mx-auto px-4 py-3">
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setOrderType('collection')}
+                                onClick={() => setOrderType('delivery')}
                                 className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
-                                    orderType === 'collection'
+                                    orderType === 'delivery'
                                         ? 'bg-orange-500 text-white shadow-md'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                             >
-                                🏪 Collection
-                                {orderType === 'collection' && <span className="ml-2 text-xs">FREE</span>}
+                                🚚 Delivery
                             </button>
-                        )}
+                            {restaurant?.collection_enabled && (
+                                <button
+                                    onClick={() => setOrderType('collection')}
+                                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+                                        orderType === 'collection'
+                                            ? 'bg-orange-500 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    🏪 Collection
+                                    {orderType === 'collection' && <span className="ml-2 text-xs">FREE</span>}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
