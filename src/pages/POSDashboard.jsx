@@ -192,7 +192,7 @@ export default function POSDashboard() {
                                 <UtensilsCrossed className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-white">{restaurant.name} - POS</h1>
+                                <h1 className="text-xl font-bold text-white">{posName || `${restaurant.name} - POS`}</h1>
                                 <p className="text-xs text-gray-400">Point of Sale System</p>
                             </div>
                         </div>
