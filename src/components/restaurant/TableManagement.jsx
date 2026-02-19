@@ -288,6 +288,16 @@ export default function TableManagement({ restaurantId }) {
                 </DialogContent>
             </Dialog>
 
+            {/* ── QR Code Dialog ── */}
+            <QRDialog open={!!qrTable} onOpenChange={(o) => !o && setQrTable(null)}>
+                <QRDialogContent>
+                    <QRDialogHeader>
+                        <QRDialogTitle>QR Code – {qrTable?.table_number}</QRDialogTitle>
+                    </QRDialogHeader>
+                    {qrTable && <TableQRCode table={qrTable} restaurantId={restaurantId} />}
+                </QRDialogContent>
+            </QRDialog>
+
             {/* ── Bulk Add Dialog ── */}
             <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
                 <DialogContent>
