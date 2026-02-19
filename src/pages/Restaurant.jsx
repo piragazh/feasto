@@ -48,7 +48,7 @@ export default function Restaurant() {
     const [selectedDeal, setSelectedDeal] = useState(null);
     const [menuSearchQuery, setMenuSearchQuery] = useState('');
     const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
-    const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
+    const [orderType, setOrderType] = useState(tableId ? 'dine_in' : 'delivery'); // 'delivery', 'collection', or 'dine_in'
     const [showTimeWarning, setShowTimeWarning] = useState(false);
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
     const [activeCategoryScroll, setActiveCategoryScroll] = useState('');
