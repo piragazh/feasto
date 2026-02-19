@@ -246,6 +246,7 @@ export default function TableManagement({ restaurantId }) {
                                     table.status === 'reserved' ? 'bg-blue-500' :
                                     'bg-yellow-500'
                                 }`}>{table.status?.replace('_', ' ')}</Badge>
+                                <Button size="sm" variant="outline" className="text-purple-600 hover:text-purple-800" onClick={() => setQrTable(table)} title="QR Code"><QrCode className="h-4 w-4" /></Button>
                                 <Button size="sm" variant="outline" onClick={() => setEditTable(table)}><ChevronRight className="h-4 w-4" /></Button>
                                 <Button size="sm" variant="outline" className="text-red-500 hover:text-red-700" onClick={() => deleteMutation.mutate(table.id)}><Trash2 className="h-4 w-4" /></Button>
                             </div>
