@@ -229,6 +229,17 @@ export default function POSDashboard() {
                                 <DollarSign className="h-8 w-8 text-white mb-1" />
                                 <span className="text-lg font-bold text-white">£{cartTotal.toFixed(2)}</span>
                             </div>
+                            {maxPos > 1 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setPosNumber(null)}
+                                    className="text-gray-400 hover:text-white text-xs"
+                                >
+                                    <ChevronDown className="h-4 w-4 mr-1" />
+                                    Switch
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"
