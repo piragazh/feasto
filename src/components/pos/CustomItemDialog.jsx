@@ -65,8 +65,29 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
+                    {allItems.length > 0 && (
                     <div>
                         <Label className="text-white mb-2">Quick Add</Label>
+
+                        {/* Category Tabs */}
+                        {categories.length > 1 && (
+                            <div className="flex gap-1.5 mb-3 flex-wrap">
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setActiveTab(cat)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                            currentTab === cat
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-2">
                             {quickItems.map((item, idx) => (
                                 <Button
@@ -87,6 +108,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
                             ))}
                         </div>
                     </div>
+                    )}
 
                     <div>
                         <Label className="text-white mb-2">Item Name</Label>
