@@ -60,6 +60,21 @@ export default function POSConfigurations({ restaurantId }) {
                     <CustomItemsManager restaurantId={restaurantId} />
                 </CardContent>
             </Card>
-        </div>
-    );
-}
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5" />
+                        Table Layout Designer
+                    </CardTitle>
+                    <CardDescription>
+                        Add, configure and visually position tables on your floor plan. Changes reflect instantly in the POS terminal.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <TableManagement restaurantId={restaurantId} />
+                </CardContent>
+            </Card>
+            </div>
+            );
+            }
