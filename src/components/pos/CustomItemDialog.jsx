@@ -23,12 +23,18 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
         enabled: !!restaurantId,
     });
 
-    const quickItems = restaurant?.custom_pos_items || [
-        { name: 'Delivery Charge', price: '2.50' },
-        { name: 'Bag Fee', price: '0.50' },
-        { name: 'Service Charge', price: '1.00' },
-        { name: 'Extra Sauce', price: '0.75' },
-    ];
+    const allItems = restaurant?.custom_pos_items || [];
+
+    // Group items by category
+    const grouped = allItems.reduce((acc, item) => {
+        const cat = item.category || 'General';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(item);
+        return acc;
+    }, {});
+    const categories = Object.keys(grouped);
+    const currentTab = activeTab && grouped[activeTab] ? activeTab : categories[0] || null;
+    const quickItems = currentTab ? grouped[currentTab] : allItems;
 
     const handleAdd = () => {
         if (!itemName.trim() || !itemPrice || parseFloat(itemPrice) <= 0) {
