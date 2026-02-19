@@ -376,6 +376,44 @@ function TableForm({ restaurantId, initialData, tableCount, onSubmit, isLoading 
     );
 }
 
+// ─── Table QR Code ─────────────────────────────────────────────────────────────
+function TableQRCode({ table, restaurantId }) {
+    const qrUrl = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '')}#/TableOrder?restaurant_id=${restaurantId}&table_id=${table.id}`;
+    // Use a free QR API to generate the code
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl)}`;
+
+    const handlePrint = () => {
+        const win = window.open('', '_blank');
+        win.document.write(`
+            <html><head><title>QR – ${table.table_number}</title>
+            <style>body{font-family:sans-serif;text-align:center;padding:40px;}h2{margin-bottom:8px;}p{color:#666;font-size:14px;}</style>
+            </head><body>
+            <h2>${table.table_number}</h2>
+            <p>Scan to order</p>
+            <img src="${qrApiUrl}" width="220" height="220" />
+            <p style="margin-top:12px;font-size:12px;word-break:break-all;color:#aaa;">${qrUrl}</p>
+            <script>window.onload=()=>{window.print();}<\/script>
+            </body></html>`);
+        win.document.close();
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-4 py-2">
+            <p className="text-sm text-gray-500 text-center">Customers scan this to view the menu and order from their table.</p>
+            <img src={qrApiUrl} alt="QR Code" className="w-56 h-56 border rounded-xl" />
+            <p className="text-xs text-gray-400 break-all text-center max-w-xs">{qrUrl}</p>
+            <div className="flex gap-2 w-full">
+                <Button variant="outline" className="flex-1" onClick={() => navigator.clipboard.writeText(qrUrl).then(() => alert('Link copied!'))}>
+                    Copy Link
+                </Button>
+                <Button className="flex-1 bg-orange-500 hover:bg-orange-600" onClick={handlePrint}>
+                    Print QR
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 // ─── Bulk Add Form ─────────────────────────────────────────────────────────────
 function BulkAddForm({ restaurantId, existingCount, onCreate, isLoading }) {
     const [count, setCount] = useState(5);
