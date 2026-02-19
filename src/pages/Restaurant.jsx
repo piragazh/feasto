@@ -37,6 +37,8 @@ export default function Restaurant() {
         restaurantId = sessionStorage.getItem('customDomainRestaurantId');
     }
     
+    const tableId = urlParams.get('table_id') || sessionStorage.getItem('dineIn_tableId') || null;
+
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('all');
