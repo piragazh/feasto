@@ -4,202 +4,177 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, Edit2, X, Check } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Edit2, X, Check, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function CustomItemsManager({ restaurantId }) {
-    const [newItemName, setNewItemName] = useState('');
-    const [newItemPrice, setNewItemPrice] = useState('');
-    const [editingId, setEditingId] = useState(null);
-    const [editName, setEditName] = useState('');
-    const [editPrice, setEditPrice] = useState('');
+const EMPTY_FORM = { name: '', price: '', category: '' };
 
+export default function CustomItemsManager({ restaurantId }) {
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [editingIdx, setEditingIdx] = useState(null);
+    const [editForm, setEditForm] = useState(EMPTY_FORM);
     const queryClient = useQueryClient();
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
-            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
-            return restaurants[0];
+            const r = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return r[0];
         },
         enabled: !!restaurantId,
     });
 
     const customItems = restaurant?.custom_pos_items || [];
 
-    const updateMutation = useMutation({
-        mutationFn: async (newItems) => {
-            await base44.entities.Restaurant.update(restaurantId, {
-                custom_pos_items: newItems
-            });
-        },
+    // Derive unique categories for display
+    const categories = [...new Set(customItems.map(i => i.category).filter(Boolean))];
+
+    const saveMutation = useMutation({
+        mutationFn: (newItems) => base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems }),
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant', restaurantId]);
             toast.success('Custom items updated');
         },
-        onError: () => {
-            toast.error('Failed to update custom items');
-        }
+        onError: () => toast.error('Failed to update custom items'),
     });
 
     const handleAdd = () => {
-        if (!newItemName.trim() || !newItemPrice || parseFloat(newItemPrice) <= 0) {
-            toast.error('Please enter valid name and price');
+        if (!form.name.trim() || !form.price || parseFloat(form.price) < 0) {
+            toast.error('Please enter a valid name and price');
             return;
         }
-
-        const newItems = [
+        saveMutation.mutate([
             ...customItems,
-            { name: newItemName.trim(), price: parseFloat(newItemPrice) }
-        ];
-
-        updateMutation.mutate(newItems);
-        setNewItemName('');
-        setNewItemPrice('');
+            { name: form.name.trim(), price: parseFloat(form.price), category: form.category.trim() }
+        ]);
+        setForm(EMPTY_FORM);
     };
 
-    const handleDelete = (index) => {
-        const newItems = customItems.filter((_, i) => i !== index);
-        updateMutation.mutate(newItems);
+    const handleDelete = (idx) => saveMutation.mutate(customItems.filter((_, i) => i !== idx));
+
+    const startEdit = (idx) => {
+        setEditingIdx(idx);
+        setEditForm({ name: customItems[idx].name, price: String(customItems[idx].price), category: customItems[idx].category || '' });
     };
 
-    const handleEdit = (index) => {
-        setEditingId(index);
-        setEditName(customItems[index].name);
-        setEditPrice(customItems[index].price.toString());
-    };
-
-    const handleSaveEdit = (index) => {
-        if (!editName.trim() || !editPrice || parseFloat(editPrice) <= 0) {
-            toast.error('Please enter valid name and price');
+    const saveEdit = () => {
+        if (!editForm.name.trim() || !editForm.price || parseFloat(editForm.price) < 0) {
+            toast.error('Please enter a valid name and price');
             return;
         }
-
-        const newItems = customItems.map((item, i) => 
-            i === index 
-                ? { name: editName.trim(), price: parseFloat(editPrice) }
+        saveMutation.mutate(customItems.map((item, i) =>
+            i === editingIdx
+                ? { name: editForm.name.trim(), price: parseFloat(editForm.price), category: editForm.category.trim() }
                 : item
-        );
-
-        updateMutation.mutate(newItems);
-        setEditingId(null);
-        setEditName('');
-        setEditPrice('');
+        ));
+        setEditingIdx(null);
     };
 
-    const handleCancelEdit = () => {
-        setEditingId(null);
-        setEditName('');
-        setEditPrice('');
-    };
+    // Group items by category for display
+    const grouped = customItems.reduce((acc, item, idx) => {
+        const cat = item.category || 'Uncategorised';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push({ ...item, _idx: idx });
+        return acc;
+    }, {});
 
     return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <Label>Item Name</Label>
-                    <Input
-                        value={newItemName}
-                        onChange={(e) => setNewItemName(e.target.value)}
-                        placeholder="e.g., Delivery Charge"
-                        className="mt-1"
-                    />
-                </div>
-                <div>
-                    <Label>Price (£)</Label>
-                    <div className="flex gap-2 mt-1">
+        <div className="space-y-5">
+            {/* Add form */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
+                <p className="font-semibold text-sm text-gray-700">Add New Custom Item</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <Label className="text-xs">Item Name *</Label>
                         <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={newItemPrice}
-                            onChange={(e) => setNewItemPrice(e.target.value)}
-                            placeholder="0.00"
+                            value={form.name}
+                            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="e.g. Delivery Charge"
+                            className="mt-1"
+                            onKeyDown={e => e.key === 'Enter' && handleAdd()}
                         />
-                        <Button 
-                            onClick={handleAdd}
-                            disabled={!newItemName.trim() || !newItemPrice}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add
-                        </Button>
+                    </div>
+                    <div>
+                        <Label className="text-xs">Price (£) *</Label>
+                        <Input
+                            type="number" step="0.01" min="0"
+                            value={form.price}
+                            onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                            placeholder="0.00"
+                            className="mt-1"
+                            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                        />
+                    </div>
+                    <div>
+                        <Label className="text-xs flex items-center gap-1"><Tag className="h-3 w-3" /> Category (optional)</Label>
+                        <Input
+                            value={form.category}
+                            onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                            placeholder="e.g. Extras, Charges"
+                            className="mt-1"
+                            list="existing-categories"
+                            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                        />
+                        <datalist id="existing-categories">
+                            {categories.map(c => <option key={c} value={c} />)}
+                        </datalist>
                     </div>
                 </div>
+                <Button onClick={handleAdd} disabled={saveMutation.isPending} className="bg-orange-500 hover:bg-orange-600 w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" /> Add Item
+                </Button>
             </div>
 
-            <div className="space-y-2">
-                {customItems.length === 0 ? (
-                    <Card className="bg-gray-50">
-                        <CardContent className="p-6 text-center text-gray-500">
-                            No custom items yet. Add items like delivery charge, bag fee, etc.
-                        </CardContent>
-                    </Card>
-                ) : (
-                    customItems.map((item, index) => (
-                        <Card key={index}>
-                            <CardContent className="p-4">
-                                {editingId === index ? (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            value={editName}
-                                            onChange={(e) => setEditName(e.target.value)}
-                                            className="flex-1"
-                                        />
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            value={editPrice}
-                                            onChange={(e) => setEditPrice(e.target.value)}
-                                            className="w-32"
-                                        />
-                                        <Button
-                                            size="sm"
-                                            onClick={() => handleSaveEdit(index)}
-                                            className="bg-green-600 hover:bg-green-700"
-                                        >
-                                            <Check className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={handleCancelEdit}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+            {/* Items list grouped by category */}
+            {customItems.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <Tag className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">No custom items yet.</p>
+                    <p className="text-xs mt-1">Add items like Delivery Charge, Bag Fee, etc. They'll appear as quick-add buttons in the POS.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {Object.entries(grouped).map(([cat, items]) => (
+                        <div key={cat}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Tag className="h-3.5 w-3.5 text-orange-500" />
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{cat}</span>
+                                <Badge className="bg-orange-100 text-orange-700 text-xs">{items.length}</Badge>
+                            </div>
+                            <div className="space-y-2">
+                                {items.map(item => (
+                                    <div key={item._idx} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5">
+                                        {editingIdx === item._idx ? (
+                                            <>
+                                                <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="flex-1 h-8 text-sm" />
+                                                <Input type="number" step="0.01" min="0" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} className="w-24 h-8 text-sm" />
+                                                <Input value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} placeholder="Category" className="w-28 h-8 text-sm" list="existing-categories" />
+                                                <Button size="sm" onClick={saveEdit} className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"><Check className="h-3.5 w-3.5" /></Button>
+                                                <Button size="sm" variant="outline" onClick={() => setEditingIdx(null)} className="h-8 w-8 p-0"><X className="h-3.5 w-3.5" /></Button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="font-semibold text-sm flex-1">{item.name}</p>
+                                                <p className="text-orange-600 font-bold text-sm w-16 text-right">£{item.price.toFixed(2)}</p>
+                                                <Button size="sm" variant="outline" onClick={() => startEdit(item._idx)} className="h-8 w-8 p-0"><Edit2 className="h-3.5 w-3.5" /></Button>
+                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(item._idx)} className="h-8 w-8 p-0"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                            </>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="font-medium">{item.name}</p>
-                                            <p className="text-sm text-orange-600 font-semibold">
-                                                £{item.price.toFixed(2)}
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleEdit(index)}
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="destructive"
-                                                onClick={() => handleDelete(index)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ))
-                )}
-            </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {customItems.length > 0 && (
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <Tag className="h-3 w-3" />
+                    Items grouped by category will appear as separate button groups in the POS function bar.
+                </p>
+            )}
         </div>
     );
 }
