@@ -201,6 +201,11 @@ export default function TableManagement({ restaurantId }) {
 
                                 <div className="absolute top-1 right-1 flex gap-0.5">
                                     <button
+                                        className="w-5 h-5 bg-purple-500 rounded-full text-white text-[10px] flex items-center justify-center hover:bg-purple-600"
+                                        onClick={(e) => { e.stopPropagation(); setQrTable(table); }}
+                                        title="QR Code"
+                                    >Q</button>
+                                    <button
                                         className="w-5 h-5 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center hover:bg-blue-600"
                                         onClick={(e) => { e.stopPropagation(); setEditTable(table); }}
                                         title="Edit"
