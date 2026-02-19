@@ -15,7 +15,8 @@ import {
     DollarSign,
     LayoutDashboard,
     UtensilsCrossed,
-    Monitor
+    Monitor,
+    ShoppingCart
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
