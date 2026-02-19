@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, Save, Grid3x3, LayoutGrid, Info, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Save, Grid3x3, LayoutGrid, Info, ChevronRight, QrCode } from 'lucide-react';
+import { Dialog as QRDialog, DialogContent as QRDialogContent, DialogHeader as QRDialogHeader, DialogTitle as QRDialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const GRID_SIZE = 20; // snap to 20px grid
