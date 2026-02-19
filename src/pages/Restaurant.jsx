@@ -901,8 +901,12 @@ export default function Restaurant() {
                     }
                 `}</style>
             )}
-            {/* Order Type Selector */}
-
+            {/* Dine-In banner */}
+            {tableId && (
+                <div className="bg-orange-500 text-white text-center py-2 text-sm font-semibold">
+                    🍽️ Dine-In Order — Your items will be brought to your table
+                </div>
+            )}
 
             {/* Hero */}
             <div className="relative h-72 md:h-80 -mx-4 md:mx-0">
