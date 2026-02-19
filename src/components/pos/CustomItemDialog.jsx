@@ -12,6 +12,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId })
     const [itemPrice, setItemPrice] = useState('');
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [activeInput, setActiveInput] = useState(null);
+    const [activeTab, setActiveTab] = useState(null);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
