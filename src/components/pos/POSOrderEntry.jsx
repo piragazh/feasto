@@ -743,19 +743,59 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             {/* Bottom: Quick Access Function Buttons */}
             <div className="bg-gray-900 rounded-lg border border-gray-700 p-3">
-                <div className="grid grid-cols-8 gap-2">
+                <div className="flex flex-wrap gap-2">
                     {orderType === 'dine_in' && (
                         <Button 
                             onClick={() => setViewMode('tables')}
-                            className="aspect-square bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] border border-blue-500 rounded-lg p-2 flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105"
+                            className="h-14 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] border border-blue-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
                         >
                             <Users className="h-5 w-5" />
                             <span>Tables</span>
                         </Button>
                     )}
+                    {/* Custom item buttons grouped by category */}
+                    {(() => {
+                        const customPosItems = restaurant?.custom_pos_items || [];
+                        if (customPosItems.length === 0) {
+                            return (
+                                <Button 
+                                    onClick={() => setCustomItemOpen(true)}
+                                    className="h-14 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold text-[11px] border border-green-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
+                                >
+                                    <PlusCircle className="h-5 w-5" />
+                                    <span>Custom</span>
+                                </Button>
+                            );
+                        }
+                        // Group by category
+                        const grouped = customPosItems.reduce((acc, item) => {
+                            const cat = item.category || '';
+                            if (!acc[cat]) acc[cat] = [];
+                            acc[cat].push(item);
+                            return acc;
+                        }, {});
+                        const catColors = ['bg-green-600 border-green-500 hover:bg-green-700','bg-purple-600 border-purple-500 hover:bg-purple-700','bg-teal-600 border-teal-500 hover:bg-teal-700','bg-pink-600 border-pink-500 hover:bg-pink-700','bg-yellow-600 border-yellow-500 hover:bg-yellow-700'];
+                        let colorIdx = 0;
+                        return Object.entries(grouped).map(([cat, items]) => {
+                            const color = catColors[colorIdx++ % catColors.length];
+                            return items.map((item, i) => (
+                                <Button
+                                    key={`${cat}-${i}`}
+                                    onClick={() => onAddItem({ ...item, id: `custom-${item.name}-${Date.now()}`, quantity: 1, customizations: {} })}
+                                    className={`h-14 px-3 ${color} text-white font-semibold text-[11px] border rounded-lg flex flex-col items-center justify-center gap-0.5 shadow-lg transition-all hover:scale-105 min-w-[64px] max-w-[90px]`}
+                                    title={cat ? `${cat}: ${item.name}` : item.name}
+                                >
+                                    <PlusCircle className="h-4 w-4 flex-shrink-0" />
+                                    <span className="truncate w-full text-center leading-tight">{item.name}</span>
+                                    <span className="text-[10px] opacity-80">£{item.price.toFixed(2)}</span>
+                                </Button>
+                            ));
+                        });
+                    })()}
+                    {/* Manual custom item button always shown at end */}
                     <Button 
                         onClick={() => setCustomItemOpen(true)}
-                        className="aspect-square bg-green-600 hover:bg-green-700 text-white font-semibold text-[11px] border border-green-500 rounded-lg p-2 flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105"
+                        className="h-14 px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold text-[11px] border border-gray-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
                     >
                         <PlusCircle className="h-5 w-5" />
                         <span>Custom</span>
