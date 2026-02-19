@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard, AlertCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { DollarSign, CreditCard, AlertCircle, PlusCircle, Trash2, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
+import { savePendingOrder } from './POSOfflineDB';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
