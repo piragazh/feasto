@@ -28,6 +28,7 @@ export default function TableManagement({ restaurantId }) {
     const [addOpen, setAddOpen] = useState(false);
     const [editTable, setEditTable] = useState(null);
     const [bulkOpen, setBulkOpen] = useState(false);
+    const [qrTable, setQrTable] = useState(null);
     const [isDragging, setIsDragging] = useState(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const containerRef = useRef(null);
