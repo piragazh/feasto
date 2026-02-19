@@ -49,6 +49,15 @@ export default function RestaurantManagement() {
         },
     });
 
+    const updatePOSStatus = useMutation({
+        mutationFn: ({ restaurantId, enabled }) => 
+            base44.entities.Restaurant.update(restaurantId, { pos_enabled: enabled }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['all-restaurants']);
+            toast.success('POS access updated');
+        },
+    });
+
     const generateOnboardingLink = useMutation({
         mutationFn: async (restaurantId) => {
             const token = `onboard_${restaurantId}_${Date.now()}`;
