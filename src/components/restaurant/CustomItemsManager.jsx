@@ -33,7 +33,7 @@ export default function CustomItemsManager({ restaurantId }) {
     const saveMutation = useMutation({
         mutationFn: (newItems) => base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['restaurant', restaurantId]);
+            queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success('Custom items updated');
         },
         onError: () => toast.error('Failed to update custom items'),
