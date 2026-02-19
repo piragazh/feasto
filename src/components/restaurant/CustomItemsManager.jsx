@@ -32,13 +32,17 @@ export default function CustomItemsManager({ restaurantId }) {
     const categories = [...new Set(customItems.map(i => i.category).filter(Boolean))];
 
     const saveMutation = useMutation({
-        mutationFn: (newItems) => base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['restaurant-custom-items', restaurantId] });
+        mutationFn: async (newItems) => {
+            await base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems });
+            return newItems;
+        },
+        onSuccess: (newItems) => {
+            // Directly update cache with the new data to avoid stale reads
+            queryClient.setQueryData(['restaurant-custom-items', restaurantId], (old) => old ? { ...old, custom_pos_items: newItems } : old);
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success('Custom items updated');
         },
-        onError: () => toast.error('Failed to update custom items'),
+        onError: (err) => toast.error('Failed to update: ' + err.message),
     });
 
     const handleAdd = () => {
@@ -46,18 +50,24 @@ export default function CustomItemsManager({ restaurantId }) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        saveMutation.mutate([
-            ...customItems,
+        const current = restaurant?.custom_pos_items || [];
+        const newItems = [
+            ...current,
             { name: form.name.trim(), price: parseFloat(form.price), category: form.category.trim() }
-        ]);
+        ];
+        saveMutation.mutate(newItems);
         setForm(EMPTY_FORM);
     };
 
-    const handleDelete = (idx) => saveMutation.mutate(customItems.filter((_, i) => i !== idx));
+    const handleDelete = (idx) => {
+        const current = restaurant?.custom_pos_items || [];
+        saveMutation.mutate(current.filter((_, i) => i !== idx));
+    };
 
     const startEdit = (idx) => {
+        const current = restaurant?.custom_pos_items || [];
         setEditingIdx(idx);
-        setEditForm({ name: customItems[idx].name, price: String(customItems[idx].price), category: customItems[idx].category || '' });
+        setEditForm({ name: current[idx].name, price: String(current[idx].price), category: current[idx].category || '' });
     };
 
     const saveEdit = () => {
@@ -65,11 +75,13 @@ export default function CustomItemsManager({ restaurantId }) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        saveMutation.mutate(customItems.map((item, i) =>
+        const current = restaurant?.custom_pos_items || [];
+        const newItems = current.map((item, i) =>
             i === editingIdx
                 ? { name: editForm.name.trim(), price: parseFloat(editForm.price), category: editForm.category.trim() }
                 : item
-        ));
+        );
+        saveMutation.mutate(newItems);
         setEditingIdx(null);
     };
 
