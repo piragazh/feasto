@@ -35,6 +35,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [tableSelectionOpen, setTableSelectionOpen] = useState(false);
      const [customItemOpen, setCustomItemOpen] = useState(false);
      const [showKeyboard, setShowKeyboard] = useState(false);
+     const [expandedCategory, setExpandedCategory] = useState(null);
 
      React.useEffect(() => {
          setOptimisticCart(cart);
