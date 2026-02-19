@@ -17,9 +17,11 @@ import { toast } from 'sonner';
 export default function POSDashboard() {
     const [user, setUser] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
+    const [posNumber, setPosNumber] = useState(null); // which POS terminal (1-based)
     const [activeTab, setActiveTab] = useState('order-entry');
     const [cart, setCart] = useState([]);
     const [orderType, setOrderType] = useState('takeaway');
+    const [accessDenied, setAccessDenied] = useState(false);
 
     useEffect(() => {
         loadUserAndRestaurant();
@@ -35,46 +37,53 @@ export default function POSDashboard() {
             setUser(userData);
 
             let restaurantId = null;
-
-            // Check URL parameter first (for admin access)
             const urlParams = new URLSearchParams(window.location.search);
             const urlRestaurantId = urlParams.get('restaurantId');
+            const urlPosNum = parseInt(urlParams.get('posNum')) || null;
 
-            // Check if user is admin
             if (userData.role === 'admin') {
                 if (urlRestaurantId) {
                     restaurantId = urlRestaurantId;
                 } else {
                     const restaurants = await base44.entities.Restaurant.list();
-                    if (restaurants.length > 0) {
-                        restaurantId = restaurants[0].id;
-                    }
+                    if (restaurants.length > 0) restaurantId = restaurants[0].id;
                 }
             } else {
-                // Check if user is restaurant manager
                 const managers = await base44.entities.RestaurantManager.filter({
                     user_email: userData.email,
                     is_active: true
                 });
-
                 if (managers.length === 0) {
                     toast.error('You do not have access to the POS system');
                     base44.auth.redirectToLogin();
                     return;
                 }
-
                 const manager = managers[0];
                 if (!manager.restaurant_ids || manager.restaurant_ids.length === 0) {
                     toast.error('No restaurants assigned to your account');
                     return;
                 }
-                restaurantId = manager.restaurant_ids[0];
+                restaurantId = urlRestaurantId || manager.restaurant_ids[0];
             }
 
             if (restaurantId) {
                 const restaurantData = await base44.entities.Restaurant.filter({ id: restaurantId });
                 if (restaurantData && restaurantData.length > 0) {
-                    setRestaurant(restaurantData[0]);
+                    const r = restaurantData[0];
+                    // Check POS access (admins bypass)
+                    if (userData.role !== 'admin' && !r.pos_enabled) {
+                        setAccessDenied(true);
+                        return;
+                    }
+                    setRestaurant(r);
+                    // Determine POS terminal number
+                    const maxPos = r.max_pos_count || 1;
+                    if (urlPosNum && urlPosNum >= 1 && urlPosNum <= maxPos) {
+                        setPosNumber(urlPosNum);
+                    } else if (maxPos === 1) {
+                        setPosNumber(1);
+                    }
+                    // If maxPos > 1 and no posNum in URL, show selector (posNumber stays null)
                 } else {
                     toast.error('Restaurant not found');
                 }
