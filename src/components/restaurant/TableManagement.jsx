@@ -378,7 +378,8 @@ function TableForm({ restaurantId, initialData, tableCount, onSubmit, isLoading 
 
 // ─── Table QR Code ─────────────────────────────────────────────────────────────
 function TableQRCode({ table, restaurantId }) {
-    const qrUrl = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '')}#/TableOrder?restaurant_id=${restaurantId}&table_id=${table.id}`;
+    const base = window.location.origin + window.location.pathname;
+    const qrUrl = `${base}#/TableOrder?restaurant_id=${restaurantId}&table_id=${table.id}`;
     // Use a free QR API to generate the code
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl)}`;
 
