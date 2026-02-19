@@ -79,6 +79,7 @@ import StaffOnboarding from './pages/StaffOnboarding';
 import SuperAdmin from './pages/SuperAdmin';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
+import TableOrder from './pages/TableOrder';
 import __Layout from './Layout.jsx';
 
 
@@ -115,6 +116,7 @@ export const PAGES = {
     "SuperAdmin": SuperAdmin,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
+    "TableOrder": TableOrder,
 }
 
 export const pagesConfig = {
