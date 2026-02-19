@@ -17,12 +17,13 @@ export default function CustomItemsManager({ restaurantId }) {
     const queryClient = useQueryClient();
 
     const { data: restaurant } = useQuery({
-        queryKey: ['restaurant', restaurantId],
+        queryKey: ['restaurant-custom-items', restaurantId],
         queryFn: async () => {
             const r = await base44.entities.Restaurant.filter({ id: restaurantId });
             return r[0];
         },
         enabled: !!restaurantId,
+        staleTime: 0,
     });
 
     const customItems = restaurant?.custom_pos_items || [];
