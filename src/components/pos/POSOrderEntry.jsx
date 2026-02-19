@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      const [tableSelectionOpen, setTableSelectionOpen] = useState(false);
      const [customItemOpen, setCustomItemOpen] = useState(false);
      const [showKeyboard, setShowKeyboard] = useState(false);
-     const [expandedCategory, setExpandedCategory] = useState(null);
 
      React.useEffect(() => {
          setOptimisticCart(cart);
@@ -744,8 +743,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             {/* Bottom: Quick Access Function Buttons */}
             <div className="bg-gray-900 rounded-lg border border-gray-700 p-3">
-                {/* Category buttons row */}
-                <div className="flex flex-wrap gap-2 items-start">
+                <div className="flex flex-wrap gap-2">
                     {orderType === 'dine_in' && (
                         <Button 
                             onClick={() => setViewMode('tables')}
@@ -755,60 +753,46 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             <span>Tables</span>
                         </Button>
                     )}
+                    {/* Custom item buttons grouped by category */}
                     {(() => {
                         const customPosItems = restaurant?.custom_pos_items || [];
+                        if (customPosItems.length === 0) {
+                            return (
+                                <Button 
+                                    onClick={() => setCustomItemOpen(true)}
+                                    className="h-14 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold text-[11px] border border-green-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
+                                >
+                                    <PlusCircle className="h-5 w-5" />
+                                    <span>Custom</span>
+                                </Button>
+                            );
+                        }
+                        // Group by category
                         const grouped = customPosItems.reduce((acc, item) => {
-                            const cat = item.category || 'Quick Add';
+                            const cat = item.category || '';
                             if (!acc[cat]) acc[cat] = [];
                             acc[cat].push(item);
                             return acc;
                         }, {});
-
-                        const catColors = [
-                            { bg: 'bg-green-600', border: 'border-green-500', hover: 'hover:bg-green-700', expanded: 'bg-green-700' },
-                            { bg: 'bg-purple-600', border: 'border-purple-500', hover: 'hover:bg-purple-700', expanded: 'bg-purple-700' },
-                            { bg: 'bg-teal-600', border: 'border-teal-500', hover: 'hover:bg-teal-700', expanded: 'bg-teal-700' },
-                            { bg: 'bg-pink-600', border: 'border-pink-500', hover: 'hover:bg-pink-700', expanded: 'bg-pink-700' },
-                            { bg: 'bg-yellow-600', border: 'border-yellow-500', hover: 'hover:bg-yellow-700', expanded: 'bg-yellow-700' },
-                        ];
-
-                        return Object.entries(grouped).map(([cat, items], colorIdx) => {
-                            const c = catColors[colorIdx % catColors.length];
-                            const isExpanded = expandedCategory === cat;
-                            return (
-                                <div key={cat} className="flex flex-col gap-1">
-                                    {/* Category header button */}
-                                    <Button
-                                        onClick={() => setExpandedCategory(isExpanded ? null : cat)}
-                                        className={`h-14 px-4 ${isExpanded ? c.expanded : c.bg} ${c.hover} ${c.border} text-white font-semibold text-[11px] border rounded-lg flex flex-col items-center justify-center gap-0.5 shadow-lg transition-all min-w-[70px]`}
-                                    >
-                                        <PlusCircle className="h-4 w-4" />
-                                        <span className="truncate max-w-[80px] text-center leading-tight">{cat}</span>
-                                        <span className="text-[9px] opacity-70">{isExpanded ? '▲' : `${items.length} items ▼`}</span>
-                                    </Button>
-                                    {/* Expanded items */}
-                                    {isExpanded && (
-                                        <div className="flex flex-wrap gap-1 p-2 bg-gray-800 border border-gray-600 rounded-lg max-w-[400px]">
-                                            {items.map((item, i) => (
-                                                <Button
-                                                    key={i}
-                                                    onClick={() => {
-                                                        onAddItem({ ...item, id: `custom-${item.name}-${Date.now()}`, quantity: 1, customizations: {} });
-                                                        setExpandedCategory(null);
-                                                    }}
-                                                    className={`h-12 px-3 ${c.bg} ${c.hover} text-white font-semibold text-[11px] border ${c.border} rounded-lg flex flex-col items-center justify-center gap-0.5 shadow transition-all hover:scale-105 min-w-[60px] max-w-[90px]`}
-                                                >
-                                                    <span className="truncate w-full text-center leading-tight">{item.name}</span>
-                                                    <span className="text-[10px] opacity-80">£{item.price.toFixed(2)}</span>
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
+                        const catColors = ['bg-green-600 border-green-500 hover:bg-green-700','bg-purple-600 border-purple-500 hover:bg-purple-700','bg-teal-600 border-teal-500 hover:bg-teal-700','bg-pink-600 border-pink-500 hover:bg-pink-700','bg-yellow-600 border-yellow-500 hover:bg-yellow-700'];
+                        let colorIdx = 0;
+                        return Object.entries(grouped).map(([cat, items]) => {
+                            const color = catColors[colorIdx++ % catColors.length];
+                            return items.map((item, i) => (
+                                <Button
+                                    key={`${cat}-${i}`}
+                                    onClick={() => onAddItem({ ...item, id: `custom-${item.name}-${Date.now()}`, quantity: 1, customizations: {} })}
+                                    className={`h-14 px-3 ${color} text-white font-semibold text-[11px] border rounded-lg flex flex-col items-center justify-center gap-0.5 shadow-lg transition-all hover:scale-105 min-w-[64px] max-w-[90px]`}
+                                    title={cat ? `${cat}: ${item.name}` : item.name}
+                                >
+                                    <PlusCircle className="h-4 w-4 flex-shrink-0" />
+                                    <span className="truncate w-full text-center leading-tight">{item.name}</span>
+                                    <span className="text-[10px] opacity-80">£{item.price.toFixed(2)}</span>
+                                </Button>
+                            ));
                         });
                     })()}
-                    {/* Manual custom item button */}
+                    {/* Manual custom item button always shown at end */}
                     <Button 
                         onClick={() => setCustomItemOpen(true)}
                         className="h-14 px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold text-[11px] border border-gray-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
