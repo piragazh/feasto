@@ -2,211 +2,264 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
-import { Users, Settings } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Users, Settings, Grid3x3, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import TableActionsDialog from './TableActionsDialog';
 import POSPayment from './POSPayment';
+
+const TABLE_W = 90;
+const TABLE_H = 90;
 
 export default function POSTablesView({ restaurantId }) {
     const [showPayment, setShowPayment] = useState(false);
     const [viewingTable, setViewingTable] = useState(null);
     const [tableActionsOpen, setTableActionsOpen] = useState(false);
     const [selectedTableForActions, setSelectedTableForActions] = useState(null);
+    const [viewMode, setViewMode] = useState('floorplan'); // 'floorplan' | 'grid'
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['pos-tables', restaurantId],
-        queryFn: async () => {
-            const result = await base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true });
-            return result;
-        },
+        queryFn: () => base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId, is_active: true }),
         enabled: !!restaurantId,
     });
 
     const { data: tableOrders = [], refetch: refetchTableOrders } = useQuery({
         queryKey: ['pos-table-orders', restaurantId],
-        queryFn: async () => {
-            const orders = await base44.entities.Order.filter({ 
-                restaurant_id: restaurantId, 
-                order_type: 'dine_in',
-                status: { $in: ['preparing', 'confirmed', 'pending'] }
-            });
-            return orders;
-        },
+        queryFn: () => base44.entities.Order.filter({
+            restaurant_id: restaurantId,
+            order_type: 'dine_in',
+            status: { $in: ['preparing', 'confirmed', 'pending'] }
+        }),
         enabled: !!restaurantId,
         refetchInterval: 3000,
         staleTime: 0,
-        cacheTime: 0,
     });
 
     const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
-    const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, order) => sum + order.total, 0);
+    const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, o) => sum + o.total, 0);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'available': return 'bg-gray-700 border-gray-600';
-            case 'occupied': return 'bg-orange-500/20 border-orange-500';
-            case 'reserved': return 'bg-blue-500/20 border-blue-500';
-            case 'needs_cleaning': return 'bg-yellow-500/20 border-yellow-500';
-            default: return 'bg-gray-700 border-gray-600';
-        }
+    const statusColor = (status) => ({
+        available: 'bg-gray-700 border-gray-600',
+        occupied: 'bg-orange-500/20 border-orange-500',
+        reserved: 'bg-blue-500/20 border-blue-500',
+        needs_cleaning: 'bg-yellow-500/20 border-yellow-500',
+    }[status] || 'bg-gray-700 border-gray-600');
+
+    const statusBadgeColor = (status) => ({
+        available: 'bg-green-500',
+        occupied: 'bg-orange-500',
+        reserved: 'bg-blue-500',
+        needs_cleaning: 'bg-yellow-500',
+    }[status] || 'bg-gray-500');
+
+    const floorPlanStatusColor = (status, hasOrders) => {
+        if (hasOrders) return 'border-orange-500 bg-orange-500/25';
+        return {
+            available: 'border-green-500 bg-green-500/15',
+            occupied: 'border-orange-500 bg-orange-500/25',
+            reserved: 'border-blue-500 bg-blue-500/25',
+            needs_cleaning: 'border-yellow-400 bg-yellow-400/20',
+        }[status] || 'border-gray-500 bg-gray-700';
     };
 
-    const getStatusBadge = (status) => {
-        const colors = {
-            available: 'bg-green-500',
-            occupied: 'bg-orange-500',
-            reserved: 'bg-blue-500',
-            needs_cleaning: 'bg-yellow-500'
-        };
-        return colors[status] || 'bg-gray-500';
-    };
+    const shapeClass = (shape) => shape === 'round' ? 'rounded-full' : shape === 'rect' ? 'rounded-lg' : 'rounded-xl';
 
     const handlePaymentComplete = async () => {
-        if (!viewingTable) {
-            toast.error('No table selected');
-            return;
-        }
-
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
-
-        try {
-            for (const order of ordersForTable) {
-                await base44.entities.Order.update(order.id, { status: 'delivered' });
-            }
-
-            toast.success('Payment completed!');
-            setShowPayment(false);
-            setViewingTable(null);
-            refetchTableOrders();
-        } catch (error) {
-            toast.error('Failed to complete payment');
+        for (const order of ordersForTable) {
+            await base44.entities.Order.update(order.id, { status: 'delivered' });
         }
+        toast.success('Payment completed!');
+        setShowPayment(false);
+        setViewingTable(null);
+        refetchTableOrders();
     };
 
-    // Payment view
+    // ── Payment View ─────────────────────────────────────────────────────────
     if (showPayment && viewingTable) {
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
-        const total = ordersForTable.reduce((sum, order) => sum + order.total, 0);
-        const allItems = ordersForTable.flatMap(order => order.items);
-
+        const total = ordersForTable.reduce((sum, o) => sum + o.total, 0);
+        const allItems = ordersForTable.flatMap(o => o.items);
         return (
             <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white font-bold text-2xl">{viewingTable.table_number} - Payment</h2>
-                    <Button 
-                        onClick={() => {
-                            setShowPayment(false);
-                            setViewingTable(null);
-                        }}
-                        variant="outline"
-                        className="text-white border-gray-600"
-                    >
-                        Back
-                    </Button>
+                    <h2 className="text-white font-bold text-2xl">{viewingTable.table_number} – Payment</h2>
+                    <Button onClick={() => { setShowPayment(false); setViewingTable(null); }} variant="outline" className="text-white border-gray-600">Back</Button>
                 </div>
-                
-                <POSPayment 
-                    cart={allItems} 
-                    cartTotal={total} 
+                <POSPayment
+                    cart={allItems}
+                    cartTotal={total}
                     onPaymentComplete={handlePaymentComplete}
-                    onBackToCart={() => {
-                        setShowPayment(false);
-                        setViewingTable(null);
-                    }}
+                    onBackToCart={() => { setShowPayment(false); setViewingTable(null); }}
+                    restaurantId={restaurantId}
                 />
             </div>
         );
     }
 
-    // Tables grid view
-    return (
-        <div className="flex flex-col h-full w-full">
-            <h2 className="text-white font-bold text-2xl mb-4">Tables - Grid View</h2>
+    const hasPositions = tables.some(t => t.position);
 
-            <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-6 overflow-y-auto">
-                <div className="grid grid-cols-4 gap-4">
-                    {tables.map(table => {
+    // ── Tables View ──────────────────────────────────────────────────────────
+    return (
+        <div className="flex flex-col h-full w-full gap-4">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-white font-bold text-xl">Tables</h2>
+                    <p className="text-gray-400 text-xs">{tables.length} tables · {tableOrders.length} active orders</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        onClick={() => setViewMode('floorplan')}
+                        className={`h-9 px-3 ${viewMode === 'floorplan' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    >
+                        <LayoutGrid className="h-4 w-4 mr-1.5" /> Floor Plan
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={() => setViewMode('grid')}
+                        className={`h-9 px-3 ${viewMode === 'grid' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    >
+                        <Grid3x3 className="h-4 w-4 mr-1.5" /> Grid
+                    </Button>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex gap-4 text-xs text-gray-400 flex-wrap">
+                {[
+                    { label: 'Available', color: 'bg-green-500' },
+                    { label: 'Occupied', color: 'bg-orange-500' },
+                    { label: 'Reserved', color: 'bg-blue-500' },
+                    { label: 'Needs Cleaning', color: 'bg-yellow-400' },
+                ].map(s => (
+                    <span key={s.label} className="flex items-center gap-1.5">
+                        <span className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
+                        {s.label}
+                    </span>
+                ))}
+            </div>
+
+            {/* ── Floor Plan View ── */}
+            {viewMode === 'floorplan' && (
+                <div
+                    className="flex-1 bg-gray-800 rounded-xl border border-gray-700 relative overflow-auto"
+                    style={{
+                        minHeight: '500px',
+                        backgroundImage: 'radial-gradient(circle, #374151 1px, transparent 1px)',
+                        backgroundSize: '20px 20px',
+                    }}
+                >
+                    {tables.length === 0 && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
+                            <LayoutGrid className="h-16 w-16 mb-3 opacity-20" />
+                            <p>No tables configured. Set them up in Restaurant Settings → POS Configuration → Table Layout.</p>
+                        </div>
+                    )}
+                    {tables.map((table, idx) => {
+                        const pos = table.position || { x: (idx % 6) * 110 + 20, y: Math.floor(idx / 6) * 110 + 20 };
                         const orders = getTableOrders(table.id);
                         const total = getTableTotal(table.id);
                         const hasOrders = orders.length > 0;
-                        const isMerged = (table.merged_with || []).length > 0;
+                        const w = (table.shape === 'rect') ? 130 : TABLE_W;
 
                         return (
                             <div
                                 key={table.id}
-                                className={`aspect-square rounded-xl p-3 flex flex-col relative cursor-pointer transition-all border-2 ${getStatusColor(table.status)} hover:opacity-90`}
+                                className={`absolute flex flex-col items-center justify-center border-2 select-none transition-all ${shapeClass(table.shape || 'square')} ${floorPlanStatusColor(table.status, hasOrders)} ${hasOrders ? 'cursor-pointer hover:scale-105' : 'cursor-default'}`}
+                                style={{ left: `${pos.x}px`, top: `${pos.y}px`, width: `${w}px`, height: `${TABLE_H}px` }}
+                                onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(true); } }}
                             >
-                                {/* Status Indicator */}
-                                <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${getStatusBadge(table.status)}`} />
-                                
-                                {/* Actions Button */}
+                                {/* Status dot */}
+                                <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusBadgeColor(table.status)}`} />
+
+                                {/* Actions button */}
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedTableForActions(table);
-                                        setTableActionsOpen(true);
-                                    }}
-                                    className="absolute top-2 left-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
+                                    onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
+                                    className="absolute top-1 left-1 h-6 w-6 p-0 text-gray-400 hover:text-white"
                                 >
-                                    <Settings className="h-4 w-4" />
+                                    <Settings className="h-3.5 w-3.5" />
                                 </Button>
 
-                                <div 
-                                    className="flex-1 flex flex-col items-center justify-center"
-                                    onClick={() => {
-                                        if (hasOrders) {
-                                            setViewingTable(table);
-                                            setShowPayment(true);
-                                        }
-                                    }}
-                                >
-                                    <h3 className="text-white font-bold text-lg mb-1 text-center">{table.table_number}</h3>
-                                    
-                                    {table.assigned_server && (
-                                        <div className="flex items-center gap-1 text-indigo-400 text-xs mb-1">
-                                            <Users className="h-3 w-3" />
-                                            <span>{table.assigned_server}</span>
-                                        </div>
-                                    )}
-
-                                    {isMerged && (
-                                        <p className="text-purple-400 text-xs mb-1">Merged</p>
-                                    )}
-
-                                    {table.notes && (
-                                        <p className="text-gray-400 text-xs italic text-center line-clamp-2 mb-1">"{table.notes}"</p>
-                                    )}
-
-                                    {hasOrders ? (
-                                        <>
-                                            <p className="text-orange-400 text-xs">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                            <p className="text-white font-bold text-base mt-1">£{total.toFixed(2)}</p>
-                                        </>
-                                    ) : (
-                                        <p className="text-gray-400 text-xs capitalize">{table.status.replace('_', ' ')}</p>
-                                    )}
-                                </div>
+                                <p className="text-white font-bold text-sm text-center leading-tight px-1">{table.table_number}</p>
+                                {table.assigned_server && (
+                                    <div className="flex items-center gap-0.5 text-indigo-300 text-[10px] mt-0.5">
+                                        <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[70px]">{table.assigned_server}</span>
+                                    </div>
+                                )}
+                                {hasOrders ? (
+                                    <>
+                                        <p className="text-orange-300 text-[10px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                        <p className="text-white font-bold text-sm">£{total.toFixed(2)}</p>
+                                    </>
+                                ) : (
+                                    <p className="text-gray-400 text-[10px] capitalize mt-0.5">{table.status?.replace('_', ' ')}</p>
+                                )}
+                                <p className="text-gray-500 text-[9px]">{table.capacity} seats</p>
                             </div>
                         );
                     })}
                 </div>
-            </div>
+            )}
+
+            {/* ── Grid View ── */}
+            {viewMode === 'grid' && (
+                <div className="flex-1 bg-gray-800 rounded-xl border border-gray-700 p-4 overflow-y-auto">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {tables.map(table => {
+                            const orders = getTableOrders(table.id);
+                            const total = getTableTotal(table.id);
+                            const hasOrders = orders.length > 0;
+
+                            return (
+                                <div
+                                    key={table.id}
+                                    className={`aspect-square rounded-xl p-2 flex flex-col relative border-2 transition-all ${statusColor(table.status)} ${hasOrders ? 'cursor-pointer hover:opacity-90' : ''}`}
+                                    onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(true); } }}
+                                >
+                                    <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusBadgeColor(table.status)}`} />
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
+                                        className="absolute top-1 left-1 h-5 w-5 p-0 text-gray-400 hover:text-white"
+                                    >
+                                        <Settings className="h-3 w-3" />
+                                    </Button>
+                                    <div className="flex-1 flex flex-col items-center justify-center">
+                                        <p className="text-white font-bold text-sm text-center leading-tight">{table.table_number}</p>
+                                        {table.assigned_server && (
+                                            <div className="flex items-center gap-0.5 text-indigo-400 text-[10px]">
+                                                <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[60px]">{table.assigned_server}</span>
+                                            </div>
+                                        )}
+                                        {hasOrders ? (
+                                            <>
+                                                <p className="text-orange-400 text-[10px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                                <p className="text-white font-bold text-sm">£{total.toFixed(2)}</p>
+                                            </>
+                                        ) : (
+                                            <p className="text-gray-400 text-[10px] capitalize">{table.status?.replace('_', ' ')}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {tableActionsOpen && selectedTableForActions && (
                 <TableActionsDialog
                     open={tableActionsOpen}
-                    onClose={() => {
-                        setTableActionsOpen(false);
-                        setSelectedTableForActions(null);
-                    }}
+                    onClose={() => { setTableActionsOpen(false); setSelectedTableForActions(null); }}
                     table={selectedTableForActions}
                     tables={tables}
-                    onRefresh={() => {
-                        refetchTables();
-                        refetchTableOrders();
-                    }}
+                    onRefresh={() => { refetchTables(); refetchTableOrders(); }}
                 />
             )}
         </div>
