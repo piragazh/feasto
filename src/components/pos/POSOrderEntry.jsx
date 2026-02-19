@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import FloorPlanView from './FloorPlanView';
 import TableSelectionDialog from './TableSelectionDialog';
 import CustomItemDialog from './CustomItemDialog';
 import OnScreenKeyboard from './OnScreenKeyboard';
+import POSOfflineSyncBanner from './POSOfflineSyncBanner';
+import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
      const [searchQuery, setSearchQuery] = useState('');
