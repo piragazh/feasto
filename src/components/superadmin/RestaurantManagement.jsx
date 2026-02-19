@@ -184,6 +184,52 @@ export default function RestaurantManagement() {
                                         }
                                     />
                                 </div>
+
+                                {/* POS Module */}
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <ShoppingCart className="h-5 w-5 text-orange-600" />
+                                    <div className="flex-1">
+                                        <Label className="text-sm font-medium">POS Module Access</Label>
+                                        <p className="text-xs text-gray-500">Allow restaurant to use the Point of Sale system</p>
+                                    </div>
+                                    <Switch
+                                        checked={restaurant.pos_enabled || false}
+                                        onCheckedChange={(checked) => 
+                                            updatePOSStatus.mutate({ 
+                                                restaurantId: restaurant.id, 
+                                                enabled: checked 
+                                            })
+                                        }
+                                    />
+                                </div>
+
+                                {restaurant.pos_enabled && (
+                                    <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                        <ShoppingCart className="h-5 w-5 text-orange-600" />
+                                        <div className="flex-1">
+                                            <Label className="text-sm font-medium">Number of POS Terminals</Label>
+                                            <p className="text-xs text-gray-500">
+                                                Names will be: {restaurant.name} POS 1, {restaurant.name} POS 2, etc.
+                                            </p>
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="10"
+                                            value={restaurant.max_pos_count || 1}
+                                            onChange={(e) => {
+                                                const value = parseInt(e.target.value) || 1;
+                                                base44.entities.Restaurant.update(restaurant.id, { 
+                                                    max_pos_count: value 
+                                                }).then(() => {
+                                                    queryClient.invalidateQueries(['all-restaurants']);
+                                                    toast.success('POS terminal count updated');
+                                                });
+                                            }}
+                                            className="w-20"
+                                        />
+                                    </div>
+                                )}
                                 
                                 <div className="flex flex-wrap gap-2">
                                     <Button
