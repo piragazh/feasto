@@ -64,9 +64,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const completePayment = async (finalPayments) => {
         setIsProcessing(true);
         try {
-            await createOrder(finalPayments);
+            const result = await createOrder(finalPayments);
             const hasCash = finalPayments.find(p => p.method === 'cash');
-            if (hasCash) {
+            if (result?.offline) {
+                toast.success(
+                    `Order saved offline. Will sync when connection restores.`,
+                    { icon: <WifiOff className="h-4 w-4 text-yellow-400" />, duration: 4000 }
+                );
+            } else if (hasCash) {
                 toast.success(`Payment complete. Change: £${change.toFixed(2)}`);
             } else {
                 toast.success('Payment complete');
