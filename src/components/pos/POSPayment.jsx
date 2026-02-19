@@ -29,7 +29,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const createOrder = async (paymentSummary) => {
         if (!restaurantId) return;
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
-        await base44.entities.Order.create({
+        const orderData = {
             restaurant_id: restaurantId,
             restaurant_name: restaurantName || 'POS Order',
             items: cart.map(item => ({
@@ -49,7 +49,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             notes: paymentSummary.length > 1
                 ? paymentSummary.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
                 : undefined,
-        });
+        };
+
+        if (!navigator.onLine) {
+            // Save to IndexedDB for later sync
+            await savePendingOrder(orderData);
+            return { offline: true };
+        }
+
+        await base44.entities.Order.create(orderData);
+        return { offline: false };
     };
 
     const completePayment = async (finalPayments) => {
