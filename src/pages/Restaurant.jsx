@@ -811,7 +811,6 @@ export default function Restaurant() {
             localStorage.setItem('cart', JSON.stringify(cart));
             localStorage.setItem('cartRestaurantId', restaurantId);
             localStorage.setItem('orderType', orderType);
-            if (tableId) localStorage.setItem('dineIn_tableId', tableId);
             localStorage.setItem('cartRestaurantName', restaurant.name);
             if (appliedPromotions.length > 0) {
                 localStorage.setItem('appliedPromotions', JSON.stringify(appliedPromotions));
