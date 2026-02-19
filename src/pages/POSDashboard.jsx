@@ -125,16 +125,61 @@ export default function POSDashboard() {
 
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    if (!user || !restaurant) {
+    if (accessDenied) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading POS System...</p>
+                    <UtensilsCrossed className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                    <h2 className="text-white text-2xl font-bold mb-2">POS Access Not Enabled</h2>
+                    <p className="text-gray-400 mb-6">The POS module has not been enabled for your restaurant. Please contact your platform administrator.</p>
+                    <Button onClick={() => base44.auth.logout()} className="bg-gray-700 hover:bg-gray-600 text-white">
+                        Sign Out
+                    </Button>
                 </div>
             </div>
         );
     }
+
+    if (!user || !restaurant) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                    <p className="text-gray-400">Loading POS System...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // POS terminal selector (when multiple POS allowed and none selected)
+    const maxPos = restaurant.max_pos_count || 1;
+    if (maxPos > 1 && !posNumber) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-center max-w-md">
+                    <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <UtensilsCrossed className="h-8 w-8 text-white" />
+                    </div>
+                    <h2 className="text-white text-2xl font-bold mb-2">{restaurant.name}</h2>
+                    <p className="text-gray-400 mb-8">Select a POS terminal to continue</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        {Array.from({ length: maxPos }, (_, i) => i + 1).map(num => (
+                            <Button
+                                key={num}
+                                onClick={() => setPosNumber(num)}
+                                className="h-20 text-lg font-bold bg-gray-800 hover:bg-orange-500 text-white border border-gray-700 hover:border-orange-500 flex flex-col gap-1"
+                            >
+                                <ShoppingCart className="h-6 w-6" />
+                                {restaurant.name} POS {num}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const posName = maxPos > 1 ? `${restaurant.name} POS ${posNumber}` : `${restaurant.name} - POS`;
 
     return (
         <div className="min-h-screen bg-gray-900">
