@@ -754,44 +754,32 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             <span>Tables</span>
                         </Button>
                     )}
-                    {/* Custom item buttons grouped by category */}
+                    {/* Custom item buttons — one button per category, click to expand */}
                     {(() => {
                         const customPosItems = restaurant?.custom_pos_items || [];
-                        if (customPosItems.length === 0) {
-                            return (
-                                <Button 
-                                    onClick={() => setCustomItemOpen(true)}
-                                    className="h-14 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold text-[11px] border border-green-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
-                                >
-                                    <PlusCircle className="h-5 w-5" />
-                                    <span>Custom</span>
-                                </Button>
-                            );
-                        }
-                        // Group by category
+                        const catColors = [
+                            'bg-green-600 border-green-500 hover:bg-green-700',
+                            'bg-purple-600 border-purple-500 hover:bg-purple-700',
+                            'bg-teal-600 border-teal-500 hover:bg-teal-700',
+                            'bg-pink-600 border-pink-500 hover:bg-pink-700',
+                            'bg-yellow-600 border-yellow-500 hover:bg-yellow-700',
+                        ];
+                        if (customPosItems.length === 0) return null;
                         const grouped = customPosItems.reduce((acc, item) => {
-                            const cat = item.category || '';
+                            const cat = item.category || 'Custom';
                             if (!acc[cat]) acc[cat] = [];
                             acc[cat].push(item);
                             return acc;
                         }, {});
-                        const catColors = ['bg-green-600 border-green-500 hover:bg-green-700','bg-purple-600 border-purple-500 hover:bg-purple-700','bg-teal-600 border-teal-500 hover:bg-teal-700','bg-pink-600 border-pink-500 hover:bg-pink-700','bg-yellow-600 border-yellow-500 hover:bg-yellow-700'];
-                        let colorIdx = 0;
-                        return Object.entries(grouped).map(([cat, items]) => {
-                            const color = catColors[colorIdx++ % catColors.length];
-                            return items.map((item, i) => (
-                                <Button
-                                    key={`${cat}-${i}`}
-                                    onClick={() => onAddItem({ ...item, id: `custom-${item.name}-${Date.now()}`, quantity: 1, customizations: {} })}
-                                    className={`h-14 px-3 ${color} text-white font-semibold text-[11px] border rounded-lg flex flex-col items-center justify-center gap-0.5 shadow-lg transition-all hover:scale-105 min-w-[64px] max-w-[90px]`}
-                                    title={cat ? `${cat}: ${item.name}` : item.name}
-                                >
-                                    <PlusCircle className="h-4 w-4 flex-shrink-0" />
-                                    <span className="truncate w-full text-center leading-tight">{item.name}</span>
-                                    <span className="text-[10px] opacity-80">£{item.price.toFixed(2)}</span>
-                                </Button>
-                            ));
-                        });
+                        return Object.entries(grouped).map(([cat, items], idx) => (
+                            <CustomCategoryPopover
+                                key={cat}
+                                label={cat}
+                                items={items}
+                                color={catColors[idx % catColors.length]}
+                                onAddItem={onAddItem}
+                            />
+                        ));
                     })()}
                     {/* Manual custom item button always shown at end */}
                     <Button 
