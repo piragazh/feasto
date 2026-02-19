@@ -14,6 +14,7 @@ import SplitBillDialog from './SplitBillDialog';
 import FloorPlanView from './FloorPlanView';
 import TableSelectionDialog from './TableSelectionDialog';
 import CustomItemDialog from './CustomItemDialog';
+import CustomCategoryPopover from './CustomCategoryPopover';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import POSOfflineSyncBanner from './POSOfflineSyncBanner';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
