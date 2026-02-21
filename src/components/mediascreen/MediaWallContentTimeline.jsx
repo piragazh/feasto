@@ -535,6 +535,55 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                             </Select>
                         </div>
 
+                        {/* ── Menu config ── */}
+                        {(slotForm.type === 'menu' || slotForm.type === 'span_menu') && (
+                            <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+                                <div>
+                                    <Label className="text-xs font-semibold text-blue-800">Categories to display</Label>
+                                    <p className="text-[10px] text-gray-400 mb-2">Leave all unselected to show every category</p>
+                                    {menuCategories.length === 0 ? (
+                                        <p className="text-xs text-gray-400 italic">No categories found — all items will be shown</p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                                            {menuCategories.map(cat => {
+                                                const active = slotForm.menu_categories.includes(cat);
+                                                return (
+                                                    <button
+                                                        key={cat}
+                                                        type="button"
+                                                        onClick={() => setSlotForm(p => ({
+                                                            ...p,
+                                                            menu_categories: active
+                                                                ? p.menu_categories.filter(c => c !== cat)
+                                                                : [...p.menu_categories, cat]
+                                                        }))}
+                                                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}
+                                                    >
+                                                        {cat}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    {slotForm.menu_categories.length > 0 && (
+                                        <button type="button" onClick={() => setSlotForm(p => ({ ...p, menu_categories: [] }))} className="text-[10px] text-blue-500 hover:underline mt-1">Clear selection (show all)</button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSlotForm(p => ({ ...p, menu_display_images: !p.menu_display_images }))}
+                                        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors ${slotForm.menu_display_images ? 'bg-blue-600 border-blue-600' : 'bg-gray-200 border-gray-200'}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${slotForm.menu_display_images ? 'translate-x-4' : 'translate-x-0'}`} />
+                                    </button>
+                                    <Label className="text-xs cursor-pointer" onClick={() => setSlotForm(p => ({ ...p, menu_display_images: !p.menu_display_images }))}>
+                                        Show item images on screen
+                                    </Label>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Media picker for video types */}
                         {(slotForm.type === 'video' || slotForm.type === 'span_video') && (
                             <div>
