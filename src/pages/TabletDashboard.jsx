@@ -768,11 +768,14 @@ function OrderHistorySection({ restaurantId }) {
                             </div>
                             
                             {/* Expanded details */}
-                            {expandedOrder?.id === order.id && (
-                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-                                    {/* Items */}
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-600 mb-2">Items:</p>
+                             {expandedOrder?.id === order.id && (
+                                 <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                                     {/* AI Summary */}
+                                     <OrderSummary order={order} />
+
+                                     {/* Items */}
+                                     <div>
+                                         <p className="text-xs font-semibold text-gray-600 mb-2">Items:</p>
                                         <div className="bg-gray-50 rounded p-2 space-y-1">
                                             {order.items.map((item, i) => (
                                                 <div key={i} className="flex justify-between text-xs">
