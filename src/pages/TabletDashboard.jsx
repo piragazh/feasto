@@ -582,19 +582,17 @@ function MessagesSection({ restaurantId }) {
                                         Mark as read
                                     </Button>
                                 )}
-                                {msg.sender_type === 'customer' && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-xs"
-                                        onClick={() => {
-                                            setReplyingTo(replyingTo === msg.id ? null : msg.id);
-                                            if (replyingTo === msg.id) setReplyText('');
-                                        }}
-                                    >
-                                        {replyingTo === msg.id ? 'Cancel' : 'Reply'}
-                                    </Button>
-                                )}
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs"
+                                    onClick={() => {
+                                        setReplyingTo(replyingTo === msg.id ? null : msg.id);
+                                        if (replyingTo === msg.id) setReplyText('');
+                                    }}
+                                >
+                                    {replyingTo === msg.id ? 'Cancel' : 'Reply'}
+                                </Button>
                             </div>
 
                             {/* Reply form */}
