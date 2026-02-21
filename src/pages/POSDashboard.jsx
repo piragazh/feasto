@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown } from 'lucide-react';
+import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown, Wifi, WifiOff, Clock } from 'lucide-react';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
@@ -14,26 +13,42 @@ import POSReports from '@/components/pos/POSReports.jsx';
 import POSTablesView from '@/components/pos/POSTablesView.jsx';
 import { toast } from 'sonner';
 
+function useTime() {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const t = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(t);
+    }, []);
+    return time;
+}
+
 export default function POSDashboard() {
     const [user, setUser] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
-    const [posNumber, setPosNumber] = useState(null); // which POS terminal (1-based)
+    const [posNumber, setPosNumber] = useState(null);
     const [activeTab, setActiveTab] = useState('order-entry');
     const [cart, setCart] = useState([]);
     const [orderType, setOrderType] = useState('takeaway');
     const [accessDenied, setAccessDenied] = useState(false);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const time = useTime();
 
     useEffect(() => {
         loadUserAndRestaurant();
+        const onOnline = () => setIsOnline(true);
+        const onOffline = () => setIsOnline(false);
+        window.addEventListener('online', onOnline);
+        window.addEventListener('offline', onOffline);
+        return () => {
+            window.removeEventListener('online', onOnline);
+            window.removeEventListener('offline', onOffline);
+        };
     }, []);
 
     const loadUserAndRestaurant = async () => {
         try {
             const userData = await base44.auth.me();
-            if (!userData) {
-                base44.auth.redirectToLogin();
-                return;
-            }
+            if (!userData) { base44.auth.redirectToLogin(); return; }
             setUser(userData);
 
             let restaurantId = null;
@@ -42,51 +57,23 @@ export default function POSDashboard() {
             const urlPosNum = parseInt(urlParams.get('posNum')) || null;
 
             if (userData.role === 'admin') {
-                if (urlRestaurantId) {
-                    restaurantId = urlRestaurantId;
-                } else {
-                    const restaurants = await base44.entities.Restaurant.list();
-                    if (restaurants.length > 0) restaurantId = restaurants[0].id;
-                }
+                restaurantId = urlRestaurantId || (await base44.entities.Restaurant.list())?.[0]?.id;
             } else {
-                const managers = await base44.entities.RestaurantManager.filter({
-                    user_email: userData.email,
-                    is_active: true
-                });
-                if (managers.length === 0) {
-                    toast.error('You do not have access to the POS system');
-                    base44.auth.redirectToLogin();
-                    return;
-                }
+                const managers = await base44.entities.RestaurantManager.filter({ user_email: userData.email, is_active: true });
+                if (!managers.length) { toast.error('No POS access'); base44.auth.redirectToLogin(); return; }
                 const manager = managers[0];
-                if (!manager.restaurant_ids || manager.restaurant_ids.length === 0) {
-                    toast.error('No restaurants assigned to your account');
-                    return;
-                }
+                if (!manager.restaurant_ids?.length) { toast.error('No restaurants assigned'); return; }
                 restaurantId = urlRestaurantId || manager.restaurant_ids[0];
             }
 
             if (restaurantId) {
-                const restaurantData = await base44.entities.Restaurant.filter({ id: restaurantId });
-                if (restaurantData && restaurantData.length > 0) {
-                    const r = restaurantData[0];
-                    // Check POS access (admins bypass)
-                    if (userData.role !== 'admin' && !r.pos_enabled) {
-                        setAccessDenied(true);
-                        return;
-                    }
-                    setRestaurant(r);
-                    // Determine POS terminal number
-                    const maxPos = r.max_pos_count || 1;
-                    if (urlPosNum && urlPosNum >= 1 && urlPosNum <= maxPos) {
-                        setPosNumber(urlPosNum);
-                    } else if (maxPos === 1) {
-                        setPosNumber(1);
-                    }
-                    // If maxPos > 1 and no posNum in URL, show selector (posNumber stays null)
-                } else {
-                    toast.error('Restaurant not found');
-                }
+                const [r] = await base44.entities.Restaurant.filter({ id: restaurantId });
+                if (!r) { toast.error('Restaurant not found'); return; }
+                if (userData.role !== 'admin' && !r.pos_enabled) { setAccessDenied(true); return; }
+                setRestaurant(r);
+                const maxPos = r.max_pos_count || 1;
+                if (urlPosNum && urlPosNum >= 1 && urlPosNum <= maxPos) setPosNumber(urlPosNum);
+                else if (maxPos === 1) setPosNumber(1);
             } else {
                 toast.error('No restaurants available');
             }
@@ -100,239 +87,192 @@ export default function POSDashboard() {
     const addToCart = (item) => {
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
-            if (existing) {
-                return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-            }
+            if (existing) return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
             return [...prev, { ...item, quantity: 1 }];
         });
     };
-
-    const removeFromCart = (itemId) => {
-        setCart(prev => prev.filter(i => i.id !== itemId));
-    };
-
+    const removeFromCart = (itemId) => setCart(prev => prev.filter(i => i.id !== itemId));
     const updateQuantity = (itemId, quantity) => {
-        if (quantity < 1) {
-            removeFromCart(itemId);
-            return;
-        }
+        if (quantity < 1) { removeFromCart(itemId); return; }
         setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity } : i));
     };
-
-    const clearCart = () => {
-        setCart([]);
-    };
-
+    const clearCart = () => setCart([]);
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    if (accessDenied) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                    <UtensilsCrossed className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                    <h2 className="text-white text-2xl font-bold mb-2">POS Access Not Enabled</h2>
-                    <p className="text-gray-400 mb-6">The POS module has not been enabled for your restaurant. Please contact your platform administrator.</p>
-                    <Button onClick={() => base44.auth.logout()} className="bg-gray-700 hover:bg-gray-600 text-white">
-                        Sign Out
-                    </Button>
-                </div>
-            </div>
-        );
-    }
+    const ORDER_TYPES = [
+        { id: 'takeaway', label: 'Takeaway' },
+        { id: 'collection', label: 'Collection' },
+        { id: 'dine_in', label: 'Dine In' },
+    ];
 
-    if (!user || !restaurant) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading POS System...</p>
-                </div>
-            </div>
-        );
-    }
+    const TABS = [
+        { id: 'order-entry', label: 'Orders', icon: ShoppingCart },
+        { id: 'queue', label: 'Queue', icon: UtensilsCrossed },
+        { id: 'tables', label: 'Tables', icon: Monitor },
+        { id: 'waitlist', label: 'Waitlist', icon: Users },
+        { id: 'payment', label: 'Payment', icon: DollarSign },
+        { id: 'kitchen', label: 'Kitchen', icon: Monitor },
+        { id: 'reports', label: 'Reports', icon: BarChart3 },
+    ];
 
-    // POS terminal selector (when multiple POS allowed and none selected)
+    if (accessDenied) return (
+        <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+            <div className="text-center">
+                <div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <UtensilsCrossed className="h-10 w-10 text-red-400" />
+                </div>
+                <h2 className="text-white text-2xl font-bold mb-2">POS Access Not Enabled</h2>
+                <p className="text-gray-400 mb-8 max-w-sm">The POS module has not been enabled for your restaurant.</p>
+                <Button onClick={() => base44.auth.logout()} className="bg-gray-800 hover:bg-gray-700 text-white border border-gray-700">
+                    Sign Out
+                </Button>
+            </div>
+        </div>
+    );
+
+    if (!user || !restaurant) return (
+        <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+            <div className="text-center">
+                <div className="w-16 h-16 rounded-full border-4 border-orange-500/30 border-t-orange-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-400 font-medium">Loading POS System...</p>
+            </div>
+        </div>
+    );
+
     const maxPos = restaurant.max_pos_count || 1;
-    if (maxPos > 1 && !posNumber) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="text-center max-w-md">
-                    <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <UtensilsCrossed className="h-8 w-8 text-white" />
-                    </div>
-                    <h2 className="text-white text-2xl font-bold mb-2">{restaurant.name}</h2>
-                    <p className="text-gray-400 mb-8">Select a POS terminal to continue</p>
-                    <div className="grid grid-cols-2 gap-3">
-                        {Array.from({ length: maxPos }, (_, i) => i + 1).map(num => (
-                            <Button
-                                key={num}
-                                onClick={() => setPosNumber(num)}
-                                className="h-20 text-lg font-bold bg-gray-800 hover:bg-orange-500 text-white border border-gray-700 hover:border-orange-500 flex flex-col gap-1"
-                            >
-                                <ShoppingCart className="h-6 w-6" />
-                                {restaurant.name} POS {num}
-                            </Button>
-                        ))}
-                    </div>
+    if (maxPos > 1 && !posNumber) return (
+        <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+            <div className="text-center max-w-md w-full px-6">
+                <div className="w-20 h-20 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/30">
+                    <UtensilsCrossed className="h-10 w-10 text-white" />
+                </div>
+                <h2 className="text-white text-2xl font-bold mb-1">{restaurant.name}</h2>
+                <p className="text-gray-400 mb-8">Select a terminal to continue</p>
+                <div className="grid grid-cols-2 gap-3">
+                    {Array.from({ length: maxPos }, (_, i) => i + 1).map(num => (
+                        <button key={num} onClick={() => setPosNumber(num)}
+                            className="h-24 bg-[#1a1d27] hover:bg-orange-500/10 border border-gray-700 hover:border-orange-500 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group">
+                            <ShoppingCart className="h-7 w-7 text-gray-400 group-hover:text-orange-400 transition-colors" />
+                            <span className="text-white font-semibold text-sm">Terminal {num}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
 
-    const posName = maxPos > 1 ? `${restaurant.name} POS ${posNumber}` : `${restaurant.name} - POS`;
+    const posName = maxPos > 1 ? `${restaurant.name} · Terminal ${posNumber}` : restaurant.name;
 
     return (
-        <div className="min-h-screen bg-gray-900">
-            {/* Header */}
-            <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-10 shadow-lg">
-                <div className="max-w-7xl mx-auto px-4 py-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                                <UtensilsCrossed className="h-6 w-6 text-white" />
+        <div className="min-h-screen bg-[#0f1117] flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {/* ── Header ── */}
+            <header className="bg-[#151720] border-b border-white/[0.06] sticky top-0 z-20">
+                <div className="px-5 py-0 flex items-center justify-between h-16">
+                    {/* Left: Brand */}
+                    <div className="flex items-center gap-3">
+                        {restaurant.logo_url ? (
+                            <img src={restaurant.logo_url} alt={restaurant.name} className="w-9 h-9 rounded-xl object-cover" />
+                        ) : (
+                            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                                <UtensilsCrossed className="h-5 w-5 text-white" />
                             </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-white">{posName || `${restaurant.name} - POS`}</h1>
-                                <p className="text-xs text-gray-400">Point of Sale System</p>
+                        )}
+                        <div>
+                            <h1 className="text-white font-bold text-base leading-tight">{posName}</h1>
+                            <div className="flex items-center gap-1.5">
+                                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`} />
+                                <span className="text-xs text-gray-500">{isOnline ? 'Online' : 'Offline'}</span>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex gap-3 justify-start">
-                                <Button
-                                    variant={orderType === 'collection' ? 'default' : 'outline'}
-                                    onClick={() => setOrderType('collection')}
-                                    className={`h-14 px-6 text-base font-bold ${orderType === 'collection' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                                >
-                                    Collection
-                                </Button>
-                                <Button
-                                    variant={orderType === 'takeaway' ? 'default' : 'outline'}
-                                    onClick={() => setOrderType('takeaway')}
-                                    className={`h-14 px-6 text-base font-bold ${orderType === 'takeaway' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                                >
-                                    Takeaway
-                                </Button>
-                                <Button
-                                    variant={orderType === 'dine_in' ? 'default' : 'outline'}
-                                    onClick={() => setOrderType('dine_in')}
-                                    className={`h-14 px-6 text-base font-bold ${orderType === 'dine_in' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                                >
-                                    Dine In
-                                </Button>
-                            </div>
-                            <div className="w-24 h-24 bg-orange-500 rounded-lg flex flex-col items-center justify-center">
-                                <ShoppingCart className="h-8 w-8 text-white mb-1" />
-                                <span className="text-lg font-bold text-white">{cart.length}</span>
-                                <span className="text-xs text-white">items</span>
-                            </div>
-                            <div className="w-24 h-24 bg-blue-500 rounded-lg flex flex-col items-center justify-center">
-                                <DollarSign className="h-8 w-8 text-white mb-1" />
-                                <span className="text-lg font-bold text-white">£{cartTotal.toFixed(2)}</span>
-                            </div>
-                            {maxPos > 1 && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setPosNumber(null)}
-                                    className="text-gray-400 hover:text-white text-xs"
-                                >
-                                    <ChevronDown className="h-4 w-4 mr-1" />
-                                    Switch
-                                </Button>
-                            )}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => base44.auth.logout()}
-                                className="text-gray-400 hover:text-white"
-                            >
-                                <LogOut className="h-5 w-5" />
-                            </Button>
                         </div>
                     </div>
+
+                    {/* Center: Order type switcher */}
+                    <div className="flex items-center bg-[#0f1117] rounded-xl p-1 border border-white/[0.06]">
+                        {ORDER_TYPES.map(t => (
+                            <button key={t.id} onClick={() => setOrderType(t.id)}
+                                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                    orderType === t.id
+                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
+                                        : 'text-gray-400 hover:text-white'
+                                }`}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Right: Stats + actions */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 bg-[#0f1117] border border-white/[0.06] rounded-xl px-4 py-2">
+                            <Clock className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-white text-sm font-mono font-semibold">
+                                {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-2">
+                            <ShoppingCart className="h-4 w-4 text-orange-400" />
+                            <span className="text-orange-300 font-bold text-sm">{cart.length} items</span>
+                            <span className="text-orange-400 font-bold text-sm">·</span>
+                            <span className="text-white font-bold text-sm">£{cartTotal.toFixed(2)}</span>
+                        </div>
+
+                        {maxPos > 1 && (
+                            <button onClick={() => setPosNumber(null)}
+                                className="flex items-center gap-1.5 text-gray-400 hover:text-white text-xs px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+                                <ChevronDown className="h-4 w-4" />
+                                Switch
+                            </button>
+                        )}
+
+                        <button onClick={() => base44.auth.logout()}
+                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                            <LogOut className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* ── Tab Bar ── */}
+            <div className="bg-[#151720] border-b border-white/[0.06] px-5">
+                <div className="flex gap-1">
+                    {TABS.map(tab => {
+                        const Icon = tab.icon;
+                        const active = activeTab === tab.id;
+                        return (
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                    active
+                                        ? 'text-orange-400 border-orange-500'
+                                        : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600'
+                                }`}>
+                                <Icon className="h-4 w-4" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto p-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-7 bg-gray-800 border border-gray-700 mb-6">
-                        <TabsTrigger value="order-entry" className="text-white data-[state=active]:bg-orange-500">
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            Orders
-                        </TabsTrigger>
-                        <TabsTrigger value="queue" className="text-white data-[state=active]:bg-orange-500">
-                            <UtensilsCrossed className="h-4 w-4 mr-2" />
-                            Queue
-                        </TabsTrigger>
-                        <TabsTrigger value="tables" className="text-white data-[state=active]:bg-orange-500">
-                            <Monitor className="h-4 w-4 mr-2" />
-                            Tables
-                        </TabsTrigger>
-                        <TabsTrigger value="waitlist" className="text-white data-[state=active]:bg-orange-500">
-                            <Users className="h-4 w-4 mr-2" />
-                            Waitlist
-                        </TabsTrigger>
-                        <TabsTrigger value="payment" className="text-white data-[state=active]:bg-orange-500">
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            Payment
-                        </TabsTrigger>
-                        <TabsTrigger value="kitchen" className="text-white data-[state=active]:bg-orange-500">
-                            <Monitor className="h-4 w-4 mr-2" />
-                            Kitchen
-                        </TabsTrigger>
-                        <TabsTrigger value="reports" className="text-white data-[state=active]:bg-orange-500">
-                            <BarChart3 className="h-4 w-4 mr-2" />
-                            Reports
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="order-entry">
-                        <POSOrderEntry 
-                            restaurantId={restaurant.id}
-                            cart={cart}
-                            onAddItem={addToCart}
-                            onRemoveItem={removeFromCart}
-                            onUpdateQuantity={updateQuantity}
-                            onClearCart={clearCart}
-                            cartTotal={cartTotal}
-                            orderType={orderType}
-                            setOrderType={setOrderType}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="queue">
-                        <POSOrderQueue restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="tables">
-                        <POSTablesView restaurantId={restaurant.id} />
-                    </TabsContent>
-
-                    <TabsContent value="payment">
-                        <POSPayment 
-                            cart={cart}
-                            cartTotal={cartTotal}
-                            onPaymentComplete={clearCart}
-                            restaurantId={restaurant.id}
-                            restaurantName={restaurant.name}
-                            orderType={orderType}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="kitchen">
-                        <KitchenDisplaySystem restaurant={restaurant} />
-                    </TabsContent>
-
-                    <TabsContent value="waitlist">
-                        <POSWaitlist />
-                    </TabsContent>
-
-                    <TabsContent value="reports">
-                        <POSReports restaurantId={restaurant.id} />
-                    </TabsContent>
-                </Tabs>
-            </div>
+            {/* ── Content ── */}
+            <main className="flex-1 p-4 overflow-hidden">
+                {activeTab === 'order-entry' && (
+                    <POSOrderEntry
+                        restaurantId={restaurant.id} cart={cart}
+                        onAddItem={addToCart} onRemoveItem={removeFromCart}
+                        onUpdateQuantity={updateQuantity} onClearCart={clearCart}
+                        cartTotal={cartTotal} orderType={orderType} setOrderType={setOrderType}
+                    />
+                )}
+                {activeTab === 'queue' && <POSOrderQueue restaurantId={restaurant.id} />}
+                {activeTab === 'tables' && <POSTablesView restaurantId={restaurant.id} />}
+                {activeTab === 'waitlist' && <POSWaitlist />}
+                {activeTab === 'payment' && (
+                    <POSPayment cart={cart} cartTotal={cartTotal} onPaymentComplete={clearCart}
+                        restaurantId={restaurant.id} restaurantName={restaurant.name} orderType={orderType} />
+                )}
+                {activeTab === 'kitchen' && <KitchenDisplaySystem restaurant={restaurant} />}
+                {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} />}
+            </main>
         </div>
     );
 }
