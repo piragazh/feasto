@@ -291,26 +291,19 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         // Takeaway payment
         if (!viewingTable) {
             const handleTakeawayPaymentComplete = async () => {
-                try {
-                    toast.success('Payment completed!');
-                    setShowPayment(false);
-                    onClearCart();
-                } catch (error) {
-                    toast.error('Failed to complete payment');
-                }
+                toast.success('Payment completed!');
+                setShowPayment(false);
+                onClearCart();
             };
 
             return (
                 <div className="flex flex-col h-[calc(100vh-200px)]">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-white font-bold text-2xl">Takeaway Payment</h2>
-                        <Button 
-                            onClick={() => setShowPayment(false)}
-                            variant="outline"
-                            className="text-white border-gray-600"
-                        >
-                            Back
-                        </Button>
+                        <h2 className="text-white font-bold text-xl">Payment</h2>
+                        <button onClick={() => setShowPayment(false)}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/[0.08] text-gray-300 text-sm font-semibold rounded-xl transition-colors">
+                            ← Back
+                        </button>
                     </div>
 
                     <POSPayment 
