@@ -101,6 +101,7 @@ function LoginScreen({ onLogin }) {
 const NAV_ITEMS = [
     { id: 'orders', label: 'Live Orders', icon: ShoppingBag },
     { id: 'history', label: 'Order History', icon: Clock },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'menu', label: 'Menu Items', icon: UtensilsCrossed },
     { id: 'printer', label: 'Printer Settings', icon: Printer },
 ];
