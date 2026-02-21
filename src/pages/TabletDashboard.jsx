@@ -286,15 +286,20 @@ function LiveOrdersSection({ restaurantId }) {
                             <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
                         </div>
 
-                        {/* Items */}
-                        <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-1">
-                            {order.items.map((item, i) => (
-                                <div key={i} className="flex justify-between text-sm">
-                                    <span className="font-medium">{item.quantity}x {item.name}</span>
-                                    <span className="text-gray-600">£{(item.price * item.quantity).toFixed(2)}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {/* AI Summary */}
+                         <div className="mb-3">
+                             <OrderSummary order={order} />
+                         </div>
+
+                         {/* Items */}
+                         <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-1">
+                             {order.items.map((item, i) => (
+                                 <div key={i} className="flex justify-between text-sm">
+                                     <span className="font-medium">{item.quantity}x {item.name}</span>
+                                     <span className="text-gray-600">£{(item.price * item.quantity).toFixed(2)}</span>
+                                 </div>
+                             ))}
+                         </div>
 
                         {/* Details */}
                         <div className="space-y-1 mb-4 text-sm text-gray-600">
