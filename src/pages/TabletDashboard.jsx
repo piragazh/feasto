@@ -100,6 +100,7 @@ function LoginScreen({ onLogin }) {
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
     { id: 'orders', label: 'Live Orders', icon: ShoppingBag },
+    { id: 'history', label: 'Order History', icon: Clock },
     { id: 'menu', label: 'Menu Items', icon: UtensilsCrossed },
     { id: 'printer', label: 'Printer Settings', icon: Printer },
 ];
