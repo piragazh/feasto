@@ -687,15 +687,41 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
 
                         {/* ── Weather config ── */}
                         {slotForm.type === 'widget_weather' && (
-                            <div>
-                                <Label>Location (city or postcode)</Label>
-                                <Input
-                                    value={slotForm.weather_location}
-                                    onChange={e => setSlotForm(p => ({ ...p, weather_location: e.target.value }))}
-                                    placeholder="e.g. London, Manchester, SW1A 1AA"
-                                    className="mt-1"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Leave blank to use the restaurant's location</p>
+                            <div className="space-y-3 rounded-xl border border-sky-100 bg-sky-50/50 p-3">
+                                <div>
+                                    <Label className="text-xs font-semibold text-sky-800">Location (city or postcode)</Label>
+                                    <Input
+                                        value={slotForm.weather_location}
+                                        onChange={e => setSlotForm(p => ({ ...p, weather_location: e.target.value }))}
+                                        placeholder="e.g. London, Manchester, SW1A 1AA"
+                                        className="mt-1"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">Leave blank to use the restaurant's location</p>
+                                </div>
+                                {/* Units */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-sky-800">Units</Label>
+                                    <div className="flex gap-2 mt-1.5">
+                                        {[{ value: 'celsius', label: '°C  Celsius' }, { value: 'fahrenheit', label: '°F  Fahrenheit' }].map(opt => (
+                                            <button key={opt.value} type="button"
+                                                onClick={() => setSlotForm(p => ({ ...p, weather_units: opt.value }))}
+                                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${slotForm.weather_units === opt.value ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-600 border-gray-300 hover:border-sky-400'}`}
+                                            >{opt.label}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* Mode */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-sky-800">Display mode</Label>
+                                    <div className="flex gap-2 mt-1.5">
+                                        {[{ value: 'current', label: '🌡️ Current' }, { value: 'forecast', label: '📅 3-Day Forecast' }].map(opt => (
+                                            <button key={opt.value} type="button"
+                                                onClick={() => setSlotForm(p => ({ ...p, weather_mode: opt.value }))}
+                                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${slotForm.weather_mode === opt.value ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-600 border-gray-300 hover:border-sky-400'}`}
+                                            >{opt.label}</button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
 
