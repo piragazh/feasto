@@ -16,37 +16,36 @@ export default function CustomItemsManager({ restaurantId }) {
     const [editForm, setEditForm] = useState(EMPTY_FORM);
     const queryClient = useQueryClient();
 
-    const { data: restaurant } = useQuery({
+    const { data: restaurant, isLoading } = useQuery({
         queryKey: ['restaurant-custom-items', restaurantId],
         queryFn: async () => {
             const r = await base44.entities.Restaurant.filter({ id: restaurantId });
-            return r[0];
+            return r[0] || null;
         },
         enabled: !!restaurantId,
         staleTime: 0,
+        refetchOnWindowFocus: false,
     });
 
     const customItems = restaurant?.custom_pos_items || [];
-
-    // Derive unique categories for display
     const categories = [...new Set(customItems.map(i => i.category).filter(Boolean))];
 
     const saveMutation = useMutation({
         mutationFn: async (newItems) => {
-            await base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems });
+            const result = await base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems });
             return newItems;
         },
         onSuccess: (newItems) => {
-            queryClient.setQueryData(['restaurant-custom-items', restaurantId], (old) => old ? { ...old, custom_pos_items: newItems } : old);
-            queryClient.invalidateQueries({ queryKey: ['restaurant-custom-items', restaurantId] });
-            queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
-            toast.success('Custom items updated');
+            queryClient.setQueryData(['restaurant-custom-items', restaurantId], (old) =>
+                old ? { ...old, custom_pos_items: newItems } : old
+            );
+            toast.success('Saved!');
         },
-        onError: (err) => toast.error('Failed to update: ' + err.message),
+        onError: (err) => toast.error('Failed to save: ' + err.message),
     });
 
     const handleAdd = () => {
-        if (!form.name.trim() || !form.price || parseFloat(form.price) < 0) {
+        if (!form.name.trim() || form.price === '' || parseFloat(form.price) < 0) {
             toast.error('Please enter a valid name and price');
             return;
         }
@@ -59,30 +58,34 @@ export default function CustomItemsManager({ restaurantId }) {
     };
 
     const handleDelete = (idx) => {
-        saveMutation.mutate(customItems.filter((_, i) => i !== idx));
+        const newItems = customItems.filter((_, i) => i !== idx);
+        saveMutation.mutate(newItems);
     };
 
     const startEdit = (idx) => {
+        const item = customItems[idx];
         setEditingIdx(idx);
-        setEditForm({ name: customItems[idx].name, price: String(customItems[idx].price), category: customItems[idx].category || '' });
+        setEditForm({ name: item.name, price: String(item.price), category: item.category || '' });
     };
 
     const saveEdit = (idx) => {
-        if (!editForm.name.trim() || !editForm.price || parseFloat(editForm.price) < 0) {
+        if (!editForm.name.trim() || editForm.price === '' || parseFloat(editForm.price) < 0) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        const latest = queryClient.getQueryData(['restaurant-custom-items', restaurantId]);
-        const current = (latest?.custom_pos_items || customItems).map((item, i) =>
+        // Build new items array from current customItems state
+        const newItems = customItems.map((item, i) =>
             i === idx
                 ? { name: editForm.name.trim(), price: parseFloat(editForm.price), category: editForm.category.trim() }
-                : item
+                : { ...item }
         );
         setEditingIdx(null);
-        saveMutation.mutate(current);
+        saveMutation.mutate(newItems);
     };
 
-    // Group items by category for display
+    if (isLoading) return <div className="py-8 text-center text-gray-400 text-sm">Loading...</div>;
+
+    // Group by category for display only — use original flat index
     const grouped = customItems.reduce((acc, item, idx) => {
         const cat = item.category || 'Uncategorised';
         if (!acc[cat]) acc[cat] = [];
@@ -124,10 +127,10 @@ export default function CustomItemsManager({ restaurantId }) {
                             onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                             placeholder="e.g. Extras, Charges"
                             className="mt-1"
-                            list="existing-categories"
+                            list="add-categories"
                             onKeyDown={e => e.key === 'Enter' && handleAdd()}
                         />
-                        <datalist id="existing-categories">
+                        <datalist id="add-categories">
                             {categories.map(c => <option key={c} value={c} />)}
                         </datalist>
                     </div>
@@ -137,12 +140,12 @@ export default function CustomItemsManager({ restaurantId }) {
                 </Button>
             </div>
 
-            {/* Items list grouped by category */}
+            {/* Items list */}
             {customItems.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                     <Tag className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">No custom items yet.</p>
-                    <p className="text-xs mt-1">Add items like Delivery Charge, Bag Fee, etc. They'll appear as quick-add buttons in the POS.</p>
+                    <p className="text-xs mt-1">Add items like Delivery Charge, Bag Fee etc. They'll appear as quick-add buttons in the POS.</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -158,18 +161,49 @@ export default function CustomItemsManager({ restaurantId }) {
                                     <div key={item._idx} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5">
                                         {editingIdx === item._idx ? (
                                             <>
-                                                <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="flex-1 h-8 text-sm" />
-                                                <Input type="number" step="0.01" min="0" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} className="w-24 h-8 text-sm" />
-                                                <Input value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} placeholder="Category" className="w-28 h-8 text-sm" list="existing-categories" />
-                                                <Button size="sm" onClick={() => saveEdit(item._idx)} className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"><Check className="h-3.5 w-3.5" /></Button>
-                                                <Button size="sm" variant="outline" onClick={() => setEditingIdx(null)} className="h-8 w-8 p-0"><X className="h-3.5 w-3.5" /></Button>
+                                                <Input
+                                                    value={editForm.name}
+                                                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                                                    className="flex-1 h-8 text-sm"
+                                                />
+                                                <Input
+                                                    type="number" step="0.01" min="0"
+                                                    value={editForm.price}
+                                                    onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
+                                                    className="w-24 h-8 text-sm"
+                                                />
+                                                <Input
+                                                    value={editForm.category}
+                                                    onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                                                    placeholder="Category"
+                                                    className="w-28 h-8 text-sm"
+                                                    list="edit-categories"
+                                                />
+                                                <datalist id="edit-categories">
+                                                    {categories.map(c => <option key={c} value={c} />)}
+                                                </datalist>
+                                                <Button
+                                                    size="sm"
+                                                    disabled={saveMutation.isPending}
+                                                    onClick={() => saveEdit(item._idx)}
+                                                    className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={() => setEditingIdx(null)} className="h-8 w-8 p-0">
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
                                             </>
                                         ) : (
                                             <>
                                                 <p className="font-semibold text-sm flex-1">{item.name}</p>
-                                                <p className="text-orange-600 font-bold text-sm w-16 text-right">£{item.price.toFixed(2)}</p>
-                                                <Button size="sm" variant="outline" onClick={() => startEdit(item._idx)} className="h-8 w-8 p-0"><Edit2 className="h-3.5 w-3.5" /></Button>
-                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(item._idx)} className="h-8 w-8 p-0"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                <p className="text-orange-600 font-bold text-sm w-16 text-right">£{Number(item.price).toFixed(2)}</p>
+                                                <Button size="sm" variant="outline" onClick={() => startEdit(item._idx)} className="h-8 w-8 p-0">
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(item._idx)} className="h-8 w-8 p-0">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
                                             </>
                                         )}
                                     </div>
