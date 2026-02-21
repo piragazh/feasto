@@ -259,13 +259,39 @@ export class PrinterService {
             clearInterval(this.connectionCheckInterval);
         }
         
-        // Check connection every 30 seconds
-        this.connectionCheckInterval = setInterval(() => {
-            if (!this.device?.gatt?.connected && this.printerInfo) {
+        // Check connection every 15 seconds
+        this.connectionCheckInterval = setInterval(async () => {
+            if (!this.device?.gatt?.connected && this.printerInfo && !this.reconnecting) {
                 console.log('🔄 Connection lost, attempting reconnect...');
-                this.handleDisconnect();
+                await this.handleDisconnect();
             }
-        }, 30000);
+        }, 15000);
+    }
+
+    setConnectionStatusCallback(callback) {
+        this.connectionStatusCallback = callback;
+    }
+
+    notifyConnectionStatus(isConnected) {
+        if (this.connectionStatusCallback) {
+            this.connectionStatusCallback(isConnected);
+        }
+    }
+
+    enableAutoReconnect(enabled = true) {
+        this.autoReconnectEnabled = enabled;
+        if (enabled && !this.device?.gatt?.connected && this.printerInfo) {
+            this.handleDisconnect();
+        }
+    }
+
+    getConnectionStatus() {
+        return {
+            connected: this.isConnected(),
+            reconnecting: this.reconnecting,
+            lastConnectionTime: this.lastConnectionTime,
+            reconnectAttempts: this.reconnectAttempts
+        };
     }
 
     stopConnectionMonitor() {
