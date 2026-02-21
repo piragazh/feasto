@@ -14,6 +14,18 @@ const TYPE_META = {
 };
 
 // ── Widget mock renderers ─────────────────────────────────────────────────────
+const CLOCK_COLORS = {
+    white:  'text-white',
+    orange: 'text-orange-400',
+    teal:   'text-teal-400',
+    yellow: 'text-yellow-300',
+};
+const CLOCK_SIZES = {
+    small:  { time: 'text-3xl', ampm: 'text-base', secs: 'text-sm', date: 'text-xs' },
+    medium: { time: 'text-4xl', ampm: 'text-lg',   secs: 'text-base', date: 'text-sm' },
+    large:  { time: 'text-5xl', ampm: 'text-xl',   secs: 'text-lg',   date: 'text-sm' },
+};
+
 function ClockWidget({ slot }) {
     const [now, setNow] = useState(new Date());
     useEffect(() => {
@@ -25,6 +37,9 @@ function ClockWidget({ slot }) {
     const timeStr = is12h ? format(now, 'hh:mm') : format(now, 'HH:mm');
     const ampm = is12h ? format(now, 'a') : null;
     const secs = format(now, 'ss');
+    const showSecs = slot?.clock_show_seconds ?? false;
+    const color = CLOCK_COLORS[slot?.clock_color] || CLOCK_COLORS.white;
+    const sz = CLOCK_SIZES[slot?.clock_font_size] || CLOCK_SIZES.large;
 
     const dateStr = (() => {
         switch (slot?.date_format) {
@@ -36,13 +51,13 @@ function ClockWidget({ slot }) {
     })();
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white select-none">
-            <div className="flex items-end gap-2">
-                <div className="text-5xl font-bold tabular-nums tracking-tight">{timeStr}</div>
-                {ampm && <div className="text-xl font-semibold opacity-70 pb-1">{ampm}</div>}
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 select-none">
+            <div className={`flex items-end gap-2 ${color}`}>
+                <div className={`${sz.time} font-bold tabular-nums tracking-tight`}>{timeStr}</div>
+                {ampm && <div className={`${sz.ampm} font-semibold opacity-70 pb-1`}>{ampm}</div>}
+                {showSecs && <div className={`${sz.secs} opacity-60 pb-0.5`}>{secs}</div>}
             </div>
-            <div className="text-lg opacity-60 mt-1">{secs}s</div>
-            {dateStr && <div className="text-sm opacity-50 mt-2">{dateStr}</div>}
+            {dateStr && <div className={`${sz.date} ${color} opacity-50 mt-2`}>{dateStr}</div>}
         </div>
     );
 }
