@@ -62,12 +62,40 @@ function ClockWidget({ slot }) {
     );
 }
 
+const FORECAST_DAYS = [
+    { day: 'Mon', icon: '🌤️', hi: 15, lo: 9 },
+    { day: 'Tue', icon: '🌧️', hi: 12, lo: 7 },
+    { day: 'Wed', icon: '☀️', hi: 18, lo: 11 },
+];
+
 function WeatherWidget({ slot }) {
     const location = slot?.weather_location || 'Restaurant location';
+    const isFahrenheit = slot?.weather_units === 'fahrenheit';
+    const isForecast = slot?.weather_mode === 'forecast';
+    const toUnit = (c) => isFahrenheit ? Math.round(c * 9/5 + 32) : c;
+    const unit = isFahrenheit ? '°F' : '°C';
+
+    if (isForecast) return (
+        <div className="w-full h-full flex flex-col bg-gradient-to-br from-blue-900 to-sky-700 text-white select-none p-3">
+            <div className="text-xs opacity-60 mb-2 flex items-center gap-1">📍 {location}</div>
+            <div className="flex-1 flex gap-2">
+                {FORECAST_DAYS.map(d => (
+                    <div key={d.day} className="flex-1 flex flex-col items-center justify-center bg-white/10 rounded-xl gap-1">
+                        <div className="text-[10px] font-semibold opacity-70">{d.day}</div>
+                        <div className="text-2xl">{d.icon}</div>
+                        <div className="text-sm font-bold">{toUnit(d.hi)}{unit}</div>
+                        <div className="text-[10px] opacity-50">{toUnit(d.lo)}{unit}</div>
+                    </div>
+                ))}
+            </div>
+            <div className="text-center text-[9px] opacity-30 mt-2">Preview — live data on screen</div>
+        </div>
+    );
+
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-800 to-sky-500 text-white select-none">
             <div className="text-5xl mb-2">🌤️</div>
-            <div className="text-4xl font-bold">14°C</div>
+            <div className="text-4xl font-bold">{toUnit(14)}{unit}</div>
             <div className="text-sm opacity-80 mt-1">Partly Cloudy</div>
             <div className="text-xs opacity-60 mt-2 bg-black/20 px-3 py-1 rounded-full">📍 {location}</div>
         </div>
