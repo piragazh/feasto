@@ -67,21 +67,19 @@ export default function CustomItemsManager({ restaurantId }) {
         setEditForm({ name: customItems[idx].name, price: String(customItems[idx].price), category: customItems[idx].category || '' });
     };
 
-    const saveEdit = () => {
+    const saveEdit = (idx) => {
         if (!editForm.name.trim() || !editForm.price || parseFloat(editForm.price) < 0) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        // Re-read latest items from query cache to avoid stale data
         const latest = queryClient.getQueryData(['restaurant-custom-items', restaurantId]);
-        const current = latest?.custom_pos_items || customItems;
-        const newItems = current.map((item, i) =>
-            i === editingIdx
+        const current = (latest?.custom_pos_items || customItems).map((item, i) =>
+            i === idx
                 ? { name: editForm.name.trim(), price: parseFloat(editForm.price), category: editForm.category.trim() }
                 : item
         );
         setEditingIdx(null);
-        saveMutation.mutate(newItems);
+        saveMutation.mutate(current);
     };
 
     // Group items by category for display
