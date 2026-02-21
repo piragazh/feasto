@@ -64,16 +64,19 @@ function promisify(req) {
 
 export async function cacheMenuItems(restaurantId, items) {
     const db = await openDB();
-    const store = txStore(db, STORES.MENU_ITEMS, 'readwrite');
-    // Clear old items for this restaurant first
+    // Use a single transaction for the whole operation
+    const tx = db.transaction(STORES.MENU_ITEMS, 'readwrite');
+    const store = tx.objectStore(STORES.MENU_ITEMS);
     const index = store.index('restaurant_id');
-    const keysReq = index.getAllKeys(restaurantId);
-    const keys = await promisify(keysReq);
-    await Promise.all(keys.map(k => promisify(store.delete(k))));
-    // Insert new items
-    for (const item of items) {
-        store.put({ ...item, restaurant_id: restaurantId });
-    }
+    const keys = await promisify(index.getAllKeys(restaurantId));
+    for (const k of keys) store.delete(k);
+    for (const item of items) store.put({ ...item, restaurant_id: restaurantId });
+    // Wait for transaction to complete
+    await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+    });
 }
 
 export async function getCachedMenuItems(restaurantId) {
