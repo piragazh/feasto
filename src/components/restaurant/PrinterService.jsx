@@ -216,26 +216,41 @@ export class PrinterService {
     }
 
     async handleDisconnect() {
-        if (this.reconnecting) return;
+        if (this.reconnecting || !this.autoReconnectEnabled) return;
         
         this.reconnecting = true;
-        console.log('🔄 Attempting to reconnect...');
+        this.reconnectAttempts = 0;
         
-        // Try to reconnect after 2 seconds
-        setTimeout(async () => {
-            try {
-                if (this.printerInfo) {
-                    await this.connect(this.printerInfo, true);
-                    console.log('✅ Reconnected successfully');
-                }
-            } catch (error) {
-                console.error('❌ Reconnection failed:', error);
-                // Try again after 10 seconds
-                setTimeout(() => this.handleDisconnect(), 10000);
-            } finally {
+        const attemptReconnect = async () => {
+            if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                console.error('❌ Max reconnection attempts reached');
+                this.notifyConnectionStatus(false);
                 this.reconnecting = false;
+                return;
             }
-        }, 2000);
+            
+            this.reconnectAttempts++;
+            const delayMs = Math.min(2000 * this.reconnectAttempts, 30000); // Exponential backoff, max 30s
+            
+            console.log(`🔄 Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delayMs}ms...`);
+            
+            setTimeout(async () => {
+                try {
+                    if (this.printerInfo && this.autoReconnectEnabled) {
+                        await this.connect(this.printerInfo, true);
+                        console.log('✅ Reconnected successfully');
+                        this.reconnectAttempts = 0;
+                        this.notifyConnectionStatus(true);
+                        this.reconnecting = false;
+                    }
+                } catch (error) {
+                    console.error(`❌ Reconnection attempt ${this.reconnectAttempts} failed:`, error.message);
+                    await attemptReconnect();
+                }
+            }, delayMs);
+        };
+        
+        await attemptReconnect();
     }
 
     startConnectionMonitor() {
