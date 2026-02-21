@@ -389,7 +389,7 @@ export default function ContentManagement({ restaurantId }) {
 
         try {
             if (editingContent) {
-                await updateMutation.mutateAsync({ id: editingContent.id, data });
+                await updateMutation.mutateAsync({ id: editingContent.id, data, _closeDialog: true });
             } else {
                 await createMutation.mutateAsync(data);
             }
