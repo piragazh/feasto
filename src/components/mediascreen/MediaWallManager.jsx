@@ -123,7 +123,7 @@ export default function MediaWallManager({ restaurantId }) {
             }
 
             await base44.entities.Screen.bulkCreate(screensToCreate);
-            queryClient.invalidateQueries(['screens']);
+            queryClient.invalidateQueries({ queryKey: ['screens'] });
 
             toast.dismiss();
             toast.success(`Media wall "${wallName}" created with ${totalScreens} screens!`);
