@@ -1088,7 +1088,40 @@ export default function TabletDashboard() {
             .then(u => setUser(u))
             .catch(() => setUser(null))
             .finally(() => setAuthLoading(false));
+
+        // Setup PWA manifest and service worker
+        setupPWA();
     }, []);
+
+    const setupPWA = async () => {
+        try {
+            // Get restaurant from URL or default
+            const urlParams = new URLSearchParams(window.location.search);
+            const rid = urlParams.get('restaurant_id');
+            
+            if (rid) {
+                // Update manifest link for tablet mode
+                let manifestLink = document.querySelector('link[rel="manifest"]');
+                if (!manifestLink) {
+                    manifestLink = document.createElement('link');
+                    manifestLink.rel = 'manifest';
+                    document.head.appendChild(manifestLink);
+                }
+                manifestLink.href = `/.netlify/functions/getManifest?restaurant_id=${rid}&mode=tablet`;
+
+                // Register service worker for offline support
+                if ('serviceWorker' in navigator) {
+                    try {
+                        await navigator.serviceWorker.register('/sw.js');
+                    } catch (err) {
+                        console.log('Service worker registration failed:', err);
+                    }
+                }
+            }
+        } catch (err) {
+            console.log('PWA setup error:', err);
+        }
+    };
 
     // Load restaurant for this user
     const { data: restaurant } = useQuery({
