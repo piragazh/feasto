@@ -224,16 +224,16 @@ export default function TimelineRowPreview({ open, onClose, row, numScreens, row
                 <div className="p-4 bg-gray-100">
                     {/* Simulated "wall" - 16:9 aspect per screen panel */}
                     <div
-                        className="flex gap-1 w-full rounded-xl overflow-hidden shadow-2xl border border-gray-800"
-                        style={{ aspectRatio: `${numScreens * 16} / 9`, position: 'relative' }}
+                        className="flex w-full rounded-xl overflow-hidden shadow-2xl border border-gray-800"
+                        style={{ aspectRatio: `${numScreens * 16} / 9` }}
                     >
                         {rendered.map(({ si: sIdx, slot, colSpan }) => {
                             const widthPct = (colSpan / totalWeight) * 100;
                             return (
                                 <div
                                     key={sIdx}
-                                    className="relative overflow-hidden flex-shrink-0"
-                                    style={{ width: `${widthPct}%`, position: 'absolute', top: 0, bottom: 0, left: `${rendered.slice(0, rendered.findIndex(r => r.si === sIdx)).reduce((s, r) => s + (r.colSpan / totalWeight) * 100, 0)}%` }}
+                                    className="relative overflow-hidden flex-shrink-0 h-full"
+                                    style={{ width: `${widthPct}%` }}
                                 >
                                     {/* Bezel separator (except first) */}
                                     {sIdx > 0 && (
