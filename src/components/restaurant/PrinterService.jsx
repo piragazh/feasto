@@ -194,6 +194,15 @@ export class PrinterService {
             }
 
             this.characteristic = characteristicFound;
+            this.lastConnectionTime = new Date();
+            this.reconnectAttempts = 0;
+            
+            // Save printer info to localStorage for auto-connect
+            try {
+                localStorage.setItem('printerInfo', JSON.stringify(this.printerInfo));
+            } catch (e) {
+                console.log('Could not save printer info:', e);
+            }
             
             // Set up disconnect listener for auto-reconnect
             this.device.addEventListener('gattserverdisconnected', () => {
@@ -203,6 +212,7 @@ export class PrinterService {
             
             // Start connection monitoring
             this.startConnectionMonitor();
+            this.notifyConnectionStatus(true);
             
             if (!silent) {
                 console.log('🎉 Printer connected successfully!');
