@@ -80,6 +80,7 @@ import SuperAdmin from './pages/SuperAdmin';
 import TableOrder from './pages/TableOrder';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
+import TabletDashboard from './pages/TabletDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -117,6 +118,7 @@ export const PAGES = {
     "TableOrder": TableOrder,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
+    "TabletDashboard": TabletDashboard,
 }
 
 export const pagesConfig = {
