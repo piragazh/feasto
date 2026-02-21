@@ -1,323 +1,353 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Layout, Plus, Trash2, Edit2, PlayCircle, PauseCircle, GripVertical } from 'lucide-react';
+import { Label } from "@/components/ui/label";
+import { Plus, Trash2, Edit2, GripVertical, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function MediaWallContentTimeline({ 
-    content = [], 
-    layouts = [], 
-    onAddToTimeline, 
-    onRemoveFromTimeline,
-    onApplyLayout 
-}) {
-    const [selectedLayout, setSelectedLayout] = useState(null);
-    const [timelineItems, setTimelineItems] = useState([]);
-    const [selectedRow, setSelectedRow] = useState(0);
-    const [rowLabels, setRowLabels] = useState({
-        0: 'Row 1',
-        1: 'Row 2', 
-        2: 'Row 3',
-        3: 'Row 4',
-        4: 'Row 5'
+/**
+ * Timeline grid that mirrors the design in the reference image:
+ *   - Left column: row duration + transition label
+ *   - N columns: one per physical screen
+ *   - Content blocks can span multiple columns (like "Span video 1")
+ *   - Each row = one time-slot in the playback sequence
+ */
+export default function MediaWallContentTimeline({ restaurantId, wallName, wallConfig }) {
+    const queryClient = useQueryClient();
+    const numScreens = wallConfig ? wallConfig.cols || 4 : 4;
+
+    // ── State ────────────────────────────────────────────────────────────────
+    // rows: array of { id, duration, transition, slots: [ {screenStart, span, title, type} | null ] }
+    const [rows, setRows] = useState([]);
+    const [showAddDialog, setShowAddDialog] = useState(false);
+    const [addingToRow, setAddingToRow] = useState(null); // row index
+    const [addingSlotStart, setAddingSlotStart] = useState(0); // which screen column
+    const [editingRow, setEditingRow] = useState(null); // row index for duration edit
+    const [slotForm, setSlotForm] = useState({
+        title: '',
+        type: 'menu', // menu | video | span_video | span_menu
+        span: 1,
+        media_url: '',
     });
-    const [editingRowLabel, setEditingRowLabel] = useState(null);
-    const [tempRowLabel, setTempRowLabel] = useState('');
-    const [playingRow, setPlayingRow] = useState(null);
-    const [playbackProgress, setPlaybackProgress] = useState({});
-    const [editingItem, setEditingItem] = useState(null);
+    const [rowForm, setRowForm] = useState({ duration: 30, transition: 'fade' });
 
-    const handleApplyLayout = (item) => {
-        if (!selectedLayout) {
-            toast.error('Please select a layout');
-            return;
-        }
-
-        // Find items in the selected row to determine start time
-        const rowItems = timelineItems.filter(t => t.row === selectedRow);
-        const lastItemInRow = rowItems.length > 0 
-            ? rowItems.reduce((max, item) => {
-                const endTime = item.startTime + item.duration;
-                return endTime > max ? endTime : max;
-            }, 0)
-            : 0;
-
-        const timelineItem = {
-            id: `timeline-${Date.now()}`,
-            contentId: item.id,
-            contentTitle: item.title,
-            contentMediaUrl: item.media_url,
-            contentMediaType: item.media_type,
-            layoutId: selectedLayout.id,
-            layoutName: selectedLayout.name,
-            duration: item.duration || 10,
-            row: selectedRow,
-            startTime: lastItemInRow
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    const addRow = () => {
+        const newRow = {
+            id: Date.now(),
+            duration: 30,
+            transition: 'fade',
+            // slots array: one entry per screen; null = empty; object = content
+            // An object with span > 1 occupies that many consecutive screen columns
+            slots: Array(numScreens).fill(null),
         };
-
-        setTimelineItems([...timelineItems, timelineItem]);
-        onApplyLayout(item, selectedLayout);
-        toast.success(`Content added to ${rowLabels[selectedRow]}`);
+        setRows(prev => [...prev, newRow]);
     };
 
-    const updateItemDuration = (id, newDuration) => {
-        setTimelineItems(timelineItems.map(item => 
-            item.id === id ? { ...item, duration: newDuration } : item
-        ));
-        toast.success('Duration updated');
+    const deleteRow = (rowIdx) => {
+        setRows(prev => prev.filter((_, i) => i !== rowIdx));
     };
 
-    const updateRowLabel = (rowNum) => {
-        if (tempRowLabel.trim()) {
-            setRowLabels({ ...rowLabels, [rowNum]: tempRowLabel.trim() });
-        }
-        setEditingRowLabel(null);
-        setTempRowLabel('');
+    const updateRowMeta = (rowIdx, field, value) => {
+        setRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, [field]: value } : r));
     };
 
-    const playRow = (rowNum) => {
-        if (playingRow === rowNum) {
-            setPlayingRow(null);
-            setPlaybackProgress({});
-            return;
-        }
+    const openAddSlot = (rowIdx, screenIdx) => {
+        setAddingToRow(rowIdx);
+        setAddingSlotStart(screenIdx);
+        setSlotForm({ title: '', type: 'menu', span: 1, media_url: '' });
+        setShowAddDialog(true);
+    };
 
-        setPlayingRow(rowNum);
-        const rowItems = timelineItems.filter(item => item.row === rowNum);
-        const maxTime = Math.max(...rowItems.map(item => item.startTime + item.duration), 1);
+    const handleAddSlot = () => {
+        if (!slotForm.title.trim()) { toast.error('Title is required'); return; }
+        const span = Math.min(slotForm.span, numScreens - addingSlotStart);
 
-        let currentTime = 0;
-        const interval = setInterval(() => {
-            currentTime += 0.1;
-            if (currentTime >= maxTime) {
-                clearInterval(interval);
-                setPlayingRow(null);
-                setPlaybackProgress({});
-            } else {
-                setPlaybackProgress({ [rowNum]: currentTime });
+        setRows(prev => prev.map((row, i) => {
+            if (i !== addingToRow) return row;
+            const newSlots = [...row.slots];
+            // Place the content block starting at addingSlotStart
+            newSlots[addingSlotStart] = { title: slotForm.title, type: slotForm.type, span, screenStart: addingSlotStart };
+            // Null out spanned columns so we skip rendering them
+            for (let s = addingSlotStart + 1; s < addingSlotStart + span; s++) {
+                newSlots[s] = '__spanned__';
             }
-        }, 100);
+            return { ...row, slots: newSlots };
+        }));
+        setShowAddDialog(false);
+        toast.success('Content added');
     };
 
-    const removeFromTimeline = (id) => {
-        setTimelineItems(timelineItems.filter(t => t.id !== id));
-        onRemoveFromTimeline(id);
+    const removeSlot = (rowIdx, screenIdx) => {
+        setRows(prev => prev.map((row, i) => {
+            if (i !== rowIdx) return row;
+            const newSlots = [...row.slots];
+            const slot = newSlots[screenIdx];
+            if (slot && slot !== '__spanned__') {
+                const span = slot.span || 1;
+                for (let s = screenIdx; s < screenIdx + span; s++) {
+                    newSlots[s] = null;
+                }
+            }
+            return { ...row, slots: newSlots };
+        }));
     };
 
-    const getTotalDuration = () => {
-        return timelineItems.reduce((sum, item) => sum + item.duration, 0);
+    const TRANSITION_OPTIONS = ['fade', 'cut', 'slide', 'zoom'];
+    const TYPE_COLORS = {
+        menu: 'bg-[#1e4d7b] hover:bg-[#1e4d7b]',
+        span_video: 'bg-[#1e4d7b] hover:bg-[#1e4d7b]',
+        span_menu: 'bg-[#1e4d7b] hover:bg-[#1e4d7b]',
+        video: 'bg-[#1e4d7b] hover:bg-[#1e4d7b]',
     };
-
-    const moveItem = (itemId, direction) => {
-        const item = timelineItems.find(i => i.id === itemId);
-        if (!item) return;
-
-        const rowItems = timelineItems.filter(i => i.row === item.row).sort((a, b) => a.startTime - b.startTime);
-        const currentIndex = rowItems.findIndex(i => i.id === itemId);
-        
-        if (direction === 'up' && currentIndex > 0) {
-            const prevItem = rowItems[currentIndex - 1];
-            const newStartTime = prevItem.startTime;
-            const prevNewStartTime = item.startTime;
-            
-            setTimelineItems(timelineItems.map(i => {
-                if (i.id === itemId) return { ...i, startTime: newStartTime };
-                if (i.id === prevItem.id) return { ...i, startTime: prevNewStartTime };
-                return i;
-            }));
-        } else if (direction === 'down' && currentIndex < rowItems.length - 1) {
-            const nextItem = rowItems[currentIndex + 1];
-            const newStartTime = nextItem.startTime;
-            const nextNewStartTime = item.startTime;
-            
-            setTimelineItems(timelineItems.map(i => {
-                if (i.id === itemId) return { ...i, startTime: newStartTime };
-                if (i.id === nextItem.id) return { ...i, startTime: nextNewStartTime };
-                return i;
-            }));
-        }
-    };
-
-    const COLUMNS = 3;
 
     return (
-        <div className="space-y-4">
-            {/* Content Library */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm">Available Content</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {content.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-6">No content available</p>
-                    ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {content.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="flex flex-col gap-2 p-2 bg-gray-50 rounded-lg border cursor-pointer hover:bg-gray-100"
-                                    onClick={() => handleApplyLayout(item)}
-                                >
-                                    <div className="w-full h-20 bg-gray-200 rounded overflow-hidden">
-                                        {item.media_type === 'video' ? (
-                                            <video src={item.media_url} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-xs truncate">{item.title}</p>
-                                        <p className="text-[10px] text-gray-500">{item.duration}s</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+        <div className="space-y-3">
+            {/* ── Toolbar ── */}
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                    Configure what each screen shows at each time slot in the sequence.
+                </p>
+                <Button size="sm" onClick={addRow} className="gap-1.5">
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Row
+                </Button>
+            </div>
 
-            {/* Grid Timeline */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Timeline Grid - Each Column = Screen
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-0 border">
-                        {/* Column Headers */}
-                        <div className="flex border-b bg-gray-100">
-                            <div className="w-24 flex-shrink-0 border-r"></div>
-                            <div className="flex-1 grid grid-cols-3">
-                                {[1, 2, 3].map(screenNum => (
-                                    <div key={screenNum} className="border-r last:border-r-0 p-2 text-center">
-                                        <div className="font-medium text-sm">Screen {screenNum}</div>
-                                    </div>
+            {/* ── Table ── */}
+            {rows.length === 0 ? (
+                <div className="border-2 border-dashed rounded-xl py-16 text-center text-gray-400">
+                    <p className="text-sm font-medium">No timeline rows yet</p>
+                    <p className="text-xs mt-1 mb-4">Add rows to build your content schedule</p>
+                    <Button size="sm" variant="outline" onClick={addRow}>
+                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        Add First Row
+                    </Button>
+                </div>
+            ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+                    <table className="w-full border-collapse text-sm">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                                {/* Drag handle + Time column */}
+                                <th className="w-6 border-r border-gray-200" />
+                                <th className="w-28 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 border-r border-gray-200">
+                                    Time
+                                </th>
+                                {Array.from({ length: numScreens }, (_, i) => (
+                                    <th key={i} className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
+                                        Screen {i + 1}
+                                    </th>
                                 ))}
-                            </div>
-                        </div>
+                                <th className="w-8 border-l border-gray-200" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, rowIdx) => {
+                                // Build rendered columns, skipping __spanned__ entries
+                                const renderedCols = [];
+                                let screenIdx = 0;
+                                while (screenIdx < numScreens) {
+                                    const slot = row.slots[screenIdx];
+                                    if (slot === '__spanned__') {
+                                        screenIdx++;
+                                        continue;
+                                    }
+                                    if (slot && typeof slot === 'object') {
+                                        const span = slot.span || 1;
+                                        renderedCols.push({ screenIdx, slot, colSpan: span });
+                                        screenIdx += span;
+                                    } else {
+                                        renderedCols.push({ screenIdx, slot: null, colSpan: 1 });
+                                        screenIdx++;
+                                    }
+                                }
 
-                        {/* Timeline Rows */}
-                        {[0, 1, 2, 3, 4, 5, 6, 7].map(rowNum => {
-                            const rowItems = timelineItems.filter(item => item.row === rowNum);
-                            const sortedItems = rowItems.sort((a, b) => a.startTime - b.startTime);
+                                return (
+                                    <tr key={row.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/50 align-top">
+                                        {/* Drag handle */}
+                                        <td className="border-r border-gray-200 text-center py-3">
+                                            <GripVertical className="h-4 w-4 text-gray-300 mx-auto" />
+                                        </td>
 
-                            return (
-                                <div key={rowNum} className="flex border-b">
-                                    {/* Timeline Label Column */}
-                                    <div className="w-24 flex-shrink-0 border-r p-3 bg-gray-50">
-                                        <div className="flex flex-col items-center justify-center h-full">
-                                            <div className="flex gap-1 mb-1">
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-5 w-5 p-0"
-                                                    disabled={sortedItems.length === 0}
-                                                >
-                                                    ↑
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-5 w-5 p-0"
-                                                    disabled={sortedItems.length === 0}
-                                                >
-                                                    ↓
-                                                </Button>
-                                            </div>
-                                            <div className="text-sm font-medium">#{rowNum + 1}</div>
-                                            <div className="text-xs text-gray-500">{sortedItems.reduce((sum, i) => sum + i.duration, 0)}s</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Screen Content Columns */}
-                                    <div className="flex-1 grid grid-cols-3">
-                                        {[0, 1, 2].map(screenIndex => {
-                                            const item = sortedItems[screenIndex];
-
-                                            if (!item) {
-                                                return (
-                                                    <div key={screenIndex} className="border-r last:border-r-0 p-3 min-h-[120px]">
-                                                        <Button
-                                                            variant="outline"
-                                                            className="w-full h-full border-dashed border-2 hover:bg-gray-50"
-                                                            onClick={() => setSelectedRow(rowNum)}
+                                        {/* Time/Duration column */}
+                                        <td className="border-r border-gray-200 px-3 py-3 align-middle">
+                                            {editingRow === rowIdx ? (
+                                                <div className="space-y-1.5">
+                                                    <Input
+                                                        type="number"
+                                                        value={rowForm.duration}
+                                                        onChange={e => setRowForm(p => ({ ...p, duration: parseInt(e.target.value) || 0 }))}
+                                                        className="h-7 text-xs px-2"
+                                                        min={1}
+                                                    />
+                                                    <select
+                                                        value={rowForm.transition}
+                                                        onChange={e => setRowForm(p => ({ ...p, transition: e.target.value }))}
+                                                        className="w-full h-7 text-xs border rounded px-1"
+                                                    >
+                                                        {TRANSITION_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                                                    </select>
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                updateRowMeta(rowIdx, 'duration', rowForm.duration);
+                                                                updateRowMeta(rowIdx, 'transition', rowForm.transition);
+                                                                setEditingRow(null);
+                                                            }}
+                                                            className="flex-1 h-6 bg-blue-600 text-white rounded text-[10px] font-medium"
                                                         >
-                                                            <Plus className="h-4 w-4 mr-2" />
-                                                            Add
-                                                        </Button>
-                                                    </div>
-                                                );
-                                            }
-
-                                            return (
-                                                <div key={screenIndex} className="border-r last:border-r-0 p-2">
-                                                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 h-full">
-                                                        <div className="flex gap-2 mb-2">
-                                                            <div className="w-20 h-16 bg-gray-900 rounded overflow-hidden flex-shrink-0">
-                                                                {item.contentMediaType === 'video' ? (
-                                                                    <video src={item.contentMediaUrl} className="w-full h-full object-cover" />
-                                                                ) : item.contentMediaType?.startsWith('widget_') ? (
-                                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-xs">
-                                                                        {item.contentMediaType === 'widget_time' && '🕐'}
-                                                                        {item.contentMediaType === 'widget_weather' && '🌤️'}
-                                                                        {item.contentMediaType === 'widget_orders' && '📦'}
-                                                                    </div>
-                                                                ) : (
-                                                                    <img src={item.contentMediaUrl} alt={item.contentTitle} className="w-full h-full object-cover" />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="font-medium text-sm truncate">{item.contentTitle}</div>
-                                                                <div className="text-xs text-gray-600 mt-1">
-                                                                    {item.contentMediaType}
-                                                                </div>
-                                                                <div className="flex items-center gap-1 mt-1">
-                                                                    <input type="checkbox" defaultChecked className="rounded" />
-                                                                    <span className="text-xs text-gray-500">→</span>
-                                                                    <span className="text-xs font-medium">{item.duration}s</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-gray-600">
-                                                            <div className="flex gap-1">
-                                                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                                                                    <Clock className="h-3 w-3" />
-                                                                </Button>
-                                                                <Button 
-                                                                    size="sm" 
-                                                                    variant="ghost" 
-                                                                    className="h-6 w-6 p-0"
-                                                                    onClick={() => setEditingItem(item.id)}
-                                                                >
-                                                                    <Edit2 className="h-3 w-3" />
-                                                                </Button>
-                                                                <Button 
-                                                                    size="sm" 
-                                                                    variant="ghost" 
-                                                                    className="h-6 w-6 p-0"
-                                                                    onClick={() => removeFromTimeline(item.id)}
-                                                                >
-                                                                    <Trash2 className="h-3 w-3 text-red-500" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
+                                                            <Save className="h-2.5 w-2.5 inline" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingRow(null)}
+                                                            className="flex-1 h-6 bg-gray-100 text-gray-600 rounded text-[10px]"
+                                                        >
+                                                            <X className="h-2.5 w-2.5 inline" />
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                            ) : (
+                                                <button
+                                                    onClick={() => { setRowForm({ duration: row.duration, transition: row.transition }); setEditingRow(rowIdx); }}
+                                                    className="text-left group"
+                                                >
+                                                    <div className="text-orange-600 font-semibold text-sm">
+                                                        {row.duration}sec
+                                                        {row.transition && row.transition !== 'cut' && (
+                                                            <span className="text-gray-400 font-normal"> / {row.transition}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[10px] text-gray-400 group-hover:text-blue-500 transition-colors">click to edit</div>
+                                                </button>
+                                            )}
+                                        </td>
+
+                                        {/* Screen content columns */}
+                                        {renderedCols.map(({ screenIdx: sIdx, slot, colSpan }) => (
+                                            <td
+                                                key={sIdx}
+                                                colSpan={colSpan}
+                                                className="border-r border-gray-200 last:border-r-0 p-2 align-middle"
+                                                style={{ minWidth: 120 }}
+                                            >
+                                                {slot ? (
+                                                    <div className={`rounded-lg px-3 py-2.5 text-white text-sm font-medium flex items-center justify-between gap-2 ${TYPE_COLORS[slot.type] || 'bg-[#1e4d7b]'}`}>
+                                                        <span className="truncate">{slot.title}</span>
+                                                        <button
+                                                            onClick={() => removeSlot(rowIdx, sIdx)}
+                                                            className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => openAddSlot(rowIdx, sIdx)}
+                                                        className="w-full h-12 border-2 border-dashed border-gray-200 rounded-lg text-gray-300 hover:border-blue-400 hover:text-blue-400 transition-colors flex items-center justify-center"
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </td>
+                                        ))}
+
+                                        {/* Delete row */}
+                                        <td className="border-l border-gray-200 px-1 py-2 align-middle text-center">
+                                            <button
+                                                onClick={() => deleteRow(rowIdx)}
+                                                className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* ── Add Row button at bottom ── */}
+            {rows.length > 0 && (
+                <button
+                    onClick={addRow}
+                    className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors text-sm flex items-center justify-center gap-1.5"
+                >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Row
+                </button>
+            )}
+
+            {/* ── Add Slot Dialog ── */}
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Add Content Block</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Title</Label>
+                            <Input
+                                value={slotForm.title}
+                                onChange={e => setSlotForm(p => ({ ...p, title: e.target.value }))}
+                                placeholder="e.g. Menu 1, Span video 1"
+                                className="mt-1"
+                            />
+                        </div>
+
+                        <div>
+                            <Label>Type</Label>
+                            <Select value={slotForm.type} onValueChange={v => setSlotForm(p => ({ ...p, type: v }))}>
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="menu">Menu</SelectItem>
+                                    <SelectItem value="video">Video</SelectItem>
+                                    <SelectItem value="span_video">Span Video (multi-screen)</SelectItem>
+                                    <SelectItem value="span_menu">Span Menu (multi-screen)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <Label>Span (number of screens)</Label>
+                            <Select
+                                value={String(slotForm.span)}
+                                onValueChange={v => setSlotForm(p => ({ ...p, span: parseInt(v) }))}
+                            >
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Array.from({ length: numScreens - addingSlotStart }, (_, i) => i + 1).map(n => (
+                                        <SelectItem key={n} value={String(n)}>
+                                            {n} screen{n > 1 ? 's' : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {slotForm.span > 1 && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                    Will span Screen {addingSlotStart + 1} → Screen {addingSlotStart + slotForm.span}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <Button onClick={handleAddSlot} className="flex-1">Add</Button>
+                            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
