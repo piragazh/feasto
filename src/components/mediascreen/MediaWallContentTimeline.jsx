@@ -153,6 +153,7 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
     const [rowForm, setRowForm] = useState({ duration: 30, transition: 'fade' });
     const [showFileManager, setShowFileManager] = useState(false);
     const [showTemplates, setShowTemplates] = useState(false);
+    const [previewRow, setPreviewRow] = useState(null); // { row, rowIndex }
 
     const [slotForm, setSlotForm] = useState({
         title: '',
