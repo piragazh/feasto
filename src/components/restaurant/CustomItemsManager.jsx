@@ -50,9 +50,8 @@ export default function CustomItemsManager({ restaurantId }) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        const current = restaurant?.custom_pos_items || [];
         const newItems = [
-            ...current,
+            ...customItems,
             { name: form.name.trim(), price: parseFloat(form.price), category: form.category.trim() }
         ];
         saveMutation.mutate(newItems);
@@ -60,14 +59,12 @@ export default function CustomItemsManager({ restaurantId }) {
     };
 
     const handleDelete = (idx) => {
-        const current = restaurant?.custom_pos_items || [];
-        saveMutation.mutate(current.filter((_, i) => i !== idx));
+        saveMutation.mutate(customItems.filter((_, i) => i !== idx));
     };
 
     const startEdit = (idx) => {
-        const current = restaurant?.custom_pos_items || [];
         setEditingIdx(idx);
-        setEditForm({ name: current[idx].name, price: String(current[idx].price), category: current[idx].category || '' });
+        setEditForm({ name: customItems[idx].name, price: String(customItems[idx].price), category: customItems[idx].category || '' });
     };
 
     const saveEdit = () => {
@@ -75,8 +72,7 @@ export default function CustomItemsManager({ restaurantId }) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        const current = restaurant?.custom_pos_items || [];
-        const newItems = current.map((item, i) =>
+        const newItems = customItems.map((item, i) =>
             i === editingIdx
                 ? { name: editForm.name.trim(), price: parseFloat(editForm.price), category: editForm.category.trim() }
                 : item
