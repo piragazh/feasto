@@ -37,8 +37,8 @@ export default function CustomItemsManager({ restaurantId }) {
             return newItems;
         },
         onSuccess: (newItems) => {
-            // Directly update cache with the new data to avoid stale reads
             queryClient.setQueryData(['restaurant-custom-items', restaurantId], (old) => old ? { ...old, custom_pos_items: newItems } : old);
+            queryClient.invalidateQueries({ queryKey: ['restaurant-custom-items', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success('Custom items updated');
         },
