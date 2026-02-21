@@ -596,21 +596,39 @@ function MessagesSection({ restaurantId }) {
 
                             {/* Reply form */}
                             {replyingTo === msg.id && (
-                                <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
-                                    <Input
-                                        placeholder="Type your reply..."
-                                        value={replyText}
-                                        onChange={e => setReplyText(e.target.value)}
-                                        className="h-9 text-sm"
-                                    />
-                                    <Button
-                                        size="icon"
-                                        onClick={() => replyMutation.mutate({ orderId: msg.order_id, messageText: replyText })}
-                                        disabled={!replyText.trim()}
-                                        className="h-9 w-9 shrink-0"
-                                    >
-                                        <Send className="h-4 w-4" />
-                                    </Button>
+                                <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Type your reply..."
+                                            value={replyText}
+                                            onChange={e => setReplyText(e.target.value)}
+                                            className="h-9 text-sm"
+                                        />
+                                        <Button
+                                            size="icon"
+                                            onClick={() => replyMutation.mutate({ orderId: msg.order_id, messageText: replyText })}
+                                            disabled={!replyText.trim()}
+                                            className="h-9 w-9 shrink-0"
+                                        >
+                                            <Send className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <p className="text-xs font-semibold text-gray-600">Quick replies:</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {['Your order is being prepared!', 'Your order is on the way!', 'We received your order. Thanks!', 'Thank you for contacting us!', 'Your order is ready for pickup!'].map((template, i) => (
+                                                <Button
+                                                    key={i}
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="text-xs h-7 px-2"
+                                                    onClick={() => { setReplyText(template); replyMutation.mutate({ orderId: msg.order_id, messageText: template }); }}
+                                                >
+                                                    {template}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
