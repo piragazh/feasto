@@ -585,6 +585,15 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                 </DialogContent>
             </Dialog>
 
+            {/* Row preview */}
+            <TimelineRowPreview
+                open={!!previewRow}
+                onClose={() => setPreviewRow(null)}
+                row={previewRow?.row}
+                rowIndex={previewRow?.rowIndex}
+                numScreens={numScreens}
+            />
+
             {/* File manager */}
             <FileManager
                 restaurantId={restaurantId}
