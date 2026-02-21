@@ -106,7 +106,7 @@ export default function ContentManagement({ restaurantId }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.PromotionalContent.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['promotional-content']);
+            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
             toast.success('Content created successfully');
             resetForm();
         },
