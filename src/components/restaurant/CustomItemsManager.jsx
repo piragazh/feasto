@@ -32,16 +32,22 @@ export default function CustomItemsManager({ restaurantId }) {
 
     const saveMutation = useMutation({
         mutationFn: async (newItems) => {
-            const result = await base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems });
+            if (!restaurantId) throw new Error('No restaurantId');
+            console.log('[CustomItemsManager] Saving items to restaurant:', restaurantId, newItems);
+            await base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems });
             return newItems;
         },
         onSuccess: (newItems) => {
+            console.log('[CustomItemsManager] Save success:', newItems);
             queryClient.setQueryData(['restaurant-custom-items', restaurantId], (old) =>
                 old ? { ...old, custom_pos_items: newItems } : old
             );
             toast.success('Saved!');
         },
-        onError: (err) => toast.error('Failed to save: ' + err.message),
+        onError: (err) => {
+            console.error('[CustomItemsManager] Save error:', err);
+            toast.error('Failed to save: ' + err.message);
+        },
     });
 
     const handleAdd = () => {
