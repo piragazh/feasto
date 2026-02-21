@@ -47,13 +47,14 @@ function ClockWidget({ slot }) {
     );
 }
 
-function WeatherWidget() {
+function WeatherWidget({ slot }) {
+    const location = slot?.weather_location || 'Restaurant location';
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-800 to-sky-500 text-white select-none">
             <div className="text-5xl mb-2">🌤️</div>
             <div className="text-4xl font-bold">14°C</div>
             <div className="text-sm opacity-80 mt-1">Partly Cloudy</div>
-            <div className="text-xs opacity-60 mt-3">Live weather on real screen</div>
+            <div className="text-xs opacity-60 mt-2 bg-black/20 px-3 py-1 rounded-full">📍 {location}</div>
         </div>
     );
 }
