@@ -541,228 +541,222 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      }
 
      return (
-        <div className="flex flex-col h-[calc(100vh-200px)]">
+        <div className="flex flex-col h-[calc(100vh-130px)]">
             <POSOfflineSyncBanner restaurantId={restaurantId} />
             {/* Main 3-Column Layout */}
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 overflow-hidden pb-4">
-                {/* Left: Categories/Menu */}
-                <div className="col-span-1 md:col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-gray-700 flex-shrink-0">
-                        <h2 className="text-white font-bold text-lg">Categories</h2>
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
+
+                {/* Left: Categories */}
+                <div className="col-span-1 md:col-span-2 bg-[#151720] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col">
+                    <div className="px-4 py-3 border-b border-white/[0.06] flex-shrink-0">
+                        <h2 className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Categories</h2>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
-                        <Button
-                            variant={!selectedCategory ? "default" : "outline"}
-                            onClick={() => setSelectedCategory('')}
-                            className={`w-full justify-start text-sm h-10 px-3 font-bold ${!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                        >
-                            <span className="truncate">All Items</span>
-                        </Button>
-                        {categories.map(cat => (
-                            <Button
-                                key={cat}
-                                variant={selectedCategory === cat ? "default" : "outline"}
-                                onClick={() => setSelectedCategory(cat)}
-                                className={`w-full justify-start text-sm h-10 px-3 font-bold ${selectedCategory === cat ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                                title={cat}
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
+                        {[{ id: '', label: 'All Items' }, ...categories.map(c => ({ id: c, label: c }))].map(({ id, label }) => (
+                            <button
+                                key={id}
+                                onClick={() => setSelectedCategory(id)}
+                                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all truncate ${
+                                    selectedCategory === id
+                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                                title={label}
                             >
-                                <span className="truncate">{cat}</span>
-                            </Button>
+                                {label}
+                            </button>
                         ))}
                     </div>
                 </div>
 
                 {/* Middle: Items Grid */}
-                <div className="col-span-1 md:col-span-7 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-gray-700">
-                        <Input
-                            type="text"
-                            placeholder="Search items..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setShowKeyboard(true)}
-                            className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 text-lg h-12 px-4"
-                        />
+                <div className="col-span-1 md:col-span-7 bg-[#151720] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-white/[0.06] flex-shrink-0">
+                        <div className="relative">
+                            <ShoppingCart className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                            <Input
+                                type="text"
+                                placeholder="Search menu items..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onFocus={() => setShowKeyboard(true)}
+                                className="bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 h-11 pl-9 rounded-xl focus:border-orange-500/50 focus:ring-0"
+                            />
+                        </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                         {filteredItems.map(item => (
-                            <div
+                            <button
                                 key={item.id}
                                 onClick={() => handleItemClick(item)}
-                                className="bg-gray-700 border border-gray-600 rounded-lg p-3 hover:border-orange-500 hover:shadow-lg transition-all cursor-pointer group flex flex-col"
+                                className="bg-[#1a1d27] border border-white/[0.06] hover:border-orange-500/50 rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg hover:shadow-orange-500/10 active:scale-[0.97] flex flex-col"
                             >
-                                <div className="w-full aspect-square bg-gray-600 rounded-lg overflow-hidden mb-2">
+                                <div className="w-full aspect-[4/3] bg-[#0f1117] overflow-hidden">
                                     {item.image_url ? (
-                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                     ) : (
-                                        <div className="w-full h-full bg-gray-500 flex items-center justify-center">
-                                            <ShoppingCart className="h-8 w-8 text-gray-400" />
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <ShoppingCart className="h-7 w-7 text-gray-600" />
                                         </div>
                                     )}
                                 </div>
-                                <h3 className="font-bold text-white text-sm line-clamp-2 group-hover:text-orange-400 transition-colors mb-1">{item.name}</h3>
-                                <p className="text-orange-400 font-bold text-lg mt-auto">£{item.price.toFixed(2)}</p>
-                            </div>
+                                <div className="p-2.5 flex flex-col flex-1">
+                                    <h3 className="font-semibold text-white text-xs line-clamp-2 leading-snug mb-1 group-hover:text-orange-300 transition-colors">{item.name}</h3>
+                                    <p className="text-orange-400 font-bold text-sm mt-auto">£{item.price.toFixed(2)}</p>
+                                </div>
+                            </button>
                         ))}
                     </div>
                 </div>
 
                 {/* Right: Cart */}
-                <div className="col-span-1 md:col-span-3 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-gray-700">
-                        <h2 className="text-white font-bold text-lg">Cart</h2>
+                <div className="col-span-1 md:col-span-3 bg-[#151720] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col">
+                    <div className="px-4 py-3 border-b border-white/[0.06] flex-shrink-0 flex items-center justify-between">
+                        <h2 className="text-white font-bold text-base">Order</h2>
                         {orderType === 'dine_in' && selectedTable && (
-                            <div className="bg-gray-700 p-2 rounded mt-2 text-center">
-                                <p className="text-gray-400 text-xs">Table: <span className="text-white font-bold">{selectedTable.table_number}</span></p>
-                            </div>
+                            <span className="text-xs bg-orange-500/20 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-lg font-medium">{selectedTable.table_number}</span>
                         )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-hide">
                         {optimisticCart.length === 0 ? (
-                            <p className="text-gray-400 text-center py-8 text-sm">No items in cart</p>
+                            <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                                <ShoppingCart className="h-10 w-10 text-gray-700 mb-3" />
+                                <p className="text-gray-500 text-sm font-medium">Cart is empty</p>
+                                <p className="text-gray-600 text-xs mt-1">Tap items to add them</p>
+                            </div>
                         ) : (
                             optimisticCart.map(item => (
-                                <div key={item.id} className="bg-gray-700 p-2 rounded border border-gray-600">
+                                <div key={item.id} className="bg-[#1a1d27] rounded-xl border border-white/[0.05] p-2.5">
                                     <div className="flex justify-between items-start mb-2">
-                                        <div className="flex-1 pr-2">
-                                            <p className="text-white font-semibold text-xs leading-tight">{item.name}</p>
+                                        <div className="flex-1 pr-2 min-w-0">
+                                            <p className="text-white font-semibold text-xs leading-tight truncate">{item.name}</p>
                                             {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                                <div className="text-gray-300 text-[9px] mt-0.5 space-y-0.5 max-h-10 overflow-hidden">
-                                                    {Object.entries(item.customizations).map(([key, value]) => (
-                                                        <p key={key} className="line-clamp-1 truncate">
-                                                            {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                                        </p>
+                                                <div className="text-gray-500 text-[9px] mt-0.5 space-y-0.5">
+                                                    {Object.entries(item.customizations).slice(0, 2).map(([key, value]) => (
+                                                        <p key={key} className="truncate">{key}: {Array.isArray(value) ? value.join(', ') : value}</p>
                                                     ))}
                                                 </div>
                                             )}
-                                            <p className="text-orange-400 text-sm mt-1 font-bold">£{item.price.toFixed(2)}</p>
+                                            <p className="text-orange-400 text-xs mt-1 font-bold">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>
-                                        <Button
+                                        <button
                                             onClick={() => onRemoveItem(item.id)}
-                                            className="text-red-400 hover:text-red-500 bg-red-500/10 hover:bg-red-500/20 h-8 w-8 rounded-full transition-all p-0 flex items-center justify-center"
+                                            className="w-6 h-6 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-colors flex-shrink-0"
                                         >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                            <X className="h-3 w-3" />
+                                        </button>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button
+                                    <div className="flex items-center gap-1.5">
+                                        <button
                                             onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                            className="h-9 w-9 p-0 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded flex items-center justify-center"
+                                            className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
                                         >
-                                            <Minus className="h-4 w-4" />
-                                        </Button>
-                                        <span className="text-white font-bold text-base flex-1 text-center">{item.quantity}</span>
-                                        <Button
+                                            <Minus className="h-3 w-3" />
+                                        </button>
+                                        <span className="text-white font-bold text-sm flex-1 text-center">{item.quantity}</span>
+                                        <button
                                             onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                            className="h-9 w-9 p-0 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded flex items-center justify-center"
+                                            className="h-7 w-7 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 flex items-center justify-center transition-colors"
                                         >
-                                            <Plus className="h-4 w-4" />
-                                        </Button>
+                                            <Plus className="h-3 w-3" />
+                                        </button>
                                     </div>
                                 </div>
                             ))
                         )}
                     </div>
 
-                    <div className="border-t border-gray-700 p-3 space-y-2">
-                        <div className="bg-gray-700 p-2 rounded">
-                            <p className="text-gray-400 text-xs">Total</p>
-                            <p className="text-white text-2xl font-bold">£{cartTotal.toFixed(2)}</p>
+                    <div className="border-t border-white/[0.06] p-3 space-y-2">
+                        {/* Total */}
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-gray-400 text-sm font-medium">Total</span>
+                            <span className="text-white text-2xl font-bold">£{cartTotal.toFixed(2)}</span>
                         </div>
 
                         {orderType === 'dine_in' ? (
-                             <>
-                                 {!selectedTable ? (
-                                     <Button
-                                         onClick={() => setTableSelectionOpen(true)}
-                                         disabled={tables.length === 0}
-                                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
-                                     >
-                                         <ShoppingCart className="h-5 w-5 mr-2" />
-                                         Select Table ({tables.length} available)
-                                     </Button>
-                                 ) : (
-                                     <>
-                                         <div className="bg-orange-500/20 border border-orange-500 rounded p-2 text-center">
-                                             <p className="text-orange-400 text-xs">Table Selected</p>
-                                             <p className="text-white font-bold text-lg">{selectedTable.table_number}</p>
-                                         </div>
-                                         <Button
-                                             onClick={() => {
-                                                 console.log('🔴 BUTTON CLICKED!');
-                                                 handleAddToTable(selectedTable);
-                                             }}
-                                             disabled={optimisticCart.length === 0 || isAddingToTable}
-                                             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
-                                         >
-                                             <ShoppingCart className="h-5 w-5 mr-2" />
-                                             {isAddingToTable ? 'Adding...' : 'Add to Table'}
-                                         </Button>
-                                         <Button
-                                             onClick={() => setSelectedTable(null)}
-                                             className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-10 text-sm"
-                                         >
-                                             Change Table
-                                         </Button>
-                                     </>
-                                 )}
-                                <Button
+                            <>
+                                {!selectedTable ? (
+                                    <button
+                                        onClick={() => setTableSelectionOpen(true)}
+                                        disabled={tables.length === 0}
+                                        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                                    >
+                                        <Users className="h-4 w-4" />
+                                        Select Table ({tables.length})
+                                    </button>
+                                ) : (
+                                    <>
+                                        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-2.5 text-center">
+                                            <p className="text-orange-400 text-[10px] font-medium uppercase tracking-wide">Selected</p>
+                                            <p className="text-white font-bold text-base">{selectedTable.table_number}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleAddToTable(selectedTable)}
+                                            disabled={optimisticCart.length === 0 || isAddingToTable}
+                                            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                                        >
+                                            <ShoppingCart className="h-4 w-4" />
+                                            {isAddingToTable ? 'Adding...' : 'Send to Table'}
+                                        </button>
+                                        <button onClick={() => setSelectedTable(null)}
+                                            className="w-full bg-white/5 hover:bg-white/10 text-gray-300 font-semibold h-9 rounded-xl text-xs transition-colors">
+                                            Change Table
+                                        </button>
+                                    </>
+                                )}
+                                <button
                                     onClick={onClearCart}
                                     disabled={optimisticCart.length === 0}
-                                    className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-12 text-base disabled:opacity-50"
+                                    className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Trash2 className="h-5 w-5 mr-2" />
-                                    Clear Cart
-                                </Button>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Clear
+                                </button>
                             </>
                         ) : (
                             <>
-                                <Button
+                                <button
                                     onClick={() => setShowPayment(true)}
                                     disabled={optimisticCart.length === 0}
-                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-14 text-lg disabled:opacity-50"
+                                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
                                 >
-                                    <ShoppingCart className="h-5 w-5 mr-2" />
-                                    Checkout
-                                </Button>
-                                <Button
+                                    <ShoppingCart className="h-4 w-4" />
+                                    Charge · £{cartTotal.toFixed(2)}
+                                </button>
+                                <button
                                     onClick={onClearCart}
                                     disabled={optimisticCart.length === 0}
-                                    className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold h-12 text-base disabled:opacity-50"
+                                    className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Trash2 className="h-5 w-5 mr-2" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                     Clear Cart
-                                </Button>
+                                </button>
                             </>
                         )}
-                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Bottom: Quick Access Function Buttons */}
-            <div className="bg-gray-900 rounded-lg border border-gray-700 p-3">
-                <div className="flex flex-wrap gap-2">
-                    {orderType === 'dine_in' && (
-                        <Button 
-                            onClick={() => setViewMode('tables')}
-                            className="h-14 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] border border-blue-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
-                        >
-                            <Users className="h-5 w-5" />
-                            <span>Tables</span>
-                        </Button>
-                    )}
-
-                    {/* Manual custom item button always shown at end */}
-                    <Button 
-                        onClick={() => setCustomItemOpen(true)}
-                        className="h-14 px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold text-[11px] border border-gray-500 rounded-lg flex flex-col items-center justify-center gap-1 shadow-lg transition-all hover:scale-105 min-w-[64px]"
+            {/* Bottom Quick Actions */}
+            <div className="bg-[#151720] rounded-2xl border border-white/[0.06] p-2.5 flex items-center gap-2">
+                {orderType === 'dine_in' && (
+                    <button
+                        onClick={() => setViewMode('tables')}
+                        className="h-12 px-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors"
                     >
-                        <PlusCircle className="h-5 w-5" />
-                        <span>Custom</span>
-                    </Button>
-                </div>
+                        <Users className="h-4 w-4" />
+                        Tables
+                    </button>
+                )}
+                <button
+                    onClick={() => setCustomItemOpen(true)}
+                    className="h-12 px-4 bg-white/5 hover:bg-white/10 border border-white/[0.08] text-gray-300 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors"
+                >
+                    <PlusCircle className="h-4 w-4" />
+                    Custom Item
+                </button>
             </div>
 
             {selectedItem && (
