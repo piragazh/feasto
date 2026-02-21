@@ -1463,10 +1463,24 @@ export default function ContentManagement({ restaurantId }) {
                 </TabsContent>
 
                 <TabsContent value="walls" className="mt-6">
+                    <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-start gap-3">
+                        <span className="text-2xl">🖥️</span>
+                        <div>
+                            <p className="font-semibold text-orange-900 text-sm">Media Wall — configure what shows on your screens</p>
+                            <p className="text-xs text-orange-700 mt-0.5">Choose a wall below, then set up what each screen displays: your menu, live orders, the clock, weather, or a video.</p>
+                        </div>
+                    </div>
                     <MediaWallManager restaurantId={restaurantId} />
                 </TabsContent>
 
                 <TabsContent value="control" className="mt-6">
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
+                        <span className="text-2xl">⚡</span>
+                        <div>
+                            <p className="font-semibold text-blue-900 text-sm">Live Control — push instant updates to your screens</p>
+                            <p className="text-xs text-blue-700 mt-0.5">Refresh screens, push new content, or send commands without physically touching the TV.</p>
+                        </div>
+                    </div>
                     <ScreenControl restaurantId={restaurantId} />
                 </TabsContent>
             </Tabs>
