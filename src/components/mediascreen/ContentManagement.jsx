@@ -1505,7 +1505,7 @@ export default function ContentManagement({ restaurantId }) {
                                                                            </div>
                                                                            <Switch
                                                                                checked={content.is_active}
-                                                                               onCheckedChange={(checked) => updateMutation.mutate({ id: content.id, data: { is_active: checked } })}
+                                                                               onCheckedChange={(checked) => updateMutation.mutate({ id: content.id, data: { is_active: checked }, _closeDialog: false })}
                                                                            />
                                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEdit(content)}>
                                                                                <Edit className="h-3 w-3" />
