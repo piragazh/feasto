@@ -251,7 +251,11 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                 span,
                 screenStart: addingSlotStart,
                 media_url: slotForm.media_url || null,
-                // widget-specific config
+                // widget-specific & menu config
+                ...(['menu', 'span_menu'].includes(slotForm.type) && {
+                    menu_categories: slotForm.menu_categories,
+                    menu_display_images: slotForm.menu_display_images,
+                }),
                 ...(slotForm.type === 'widget_orders' && { order_statuses: slotForm.order_statuses }),
                 ...(slotForm.type === 'widget_weather' && { weather_location: slotForm.weather_location }),
                 ...(slotForm.type === 'widget_time' && { clock_format: slotForm.clock_format, date_format: slotForm.date_format }),
