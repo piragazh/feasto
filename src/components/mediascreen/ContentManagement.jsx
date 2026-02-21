@@ -733,7 +733,8 @@ export default function ContentManagement({ restaurantId }) {
                                                         onCheckedChange={(checked) => 
                                                             updateMutation.mutate({ 
                                                                 id: content.id, 
-                                                                data: { is_active: checked } 
+                                                                data: { is_active: checked },
+                                                                _closeDialog: false
                                                             })
                                                         }
                                                     />
