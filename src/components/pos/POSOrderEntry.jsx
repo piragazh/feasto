@@ -327,25 +327,20 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         return (
             <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white font-bold text-2xl">{viewingTable.table_number} - Payment</h2>
+                    <div>
+                        <h2 className="text-white font-bold text-xl">{viewingTable.table_number}</h2>
+                        <p className="text-gray-500 text-xs">Payment · £{total.toFixed(2)}</p>
+                    </div>
                     <div className="flex gap-2">
-                        <Button 
-                            onClick={() => setSplitBillOpen(true)}
-                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
-                        >
-                            <Scissors className="h-4 w-4 mr-2" />
+                        <button onClick={() => setSplitBillOpen(true)}
+                            className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-semibold rounded-xl transition-colors flex items-center gap-2">
+                            <Scissors className="h-3.5 w-3.5" />
                             Split Bill
-                        </Button>
-                        <Button 
-                            onClick={() => {
-                                setShowPayment(false);
-                                setViewMode('tables');
-                            }}
-                            variant="outline"
-                            className="text-white border-gray-600"
-                        >
-                            Back
-                        </Button>
+                        </button>
+                        <button onClick={() => { setShowPayment(false); setViewMode('tables'); }}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/[0.08] text-gray-300 text-sm font-semibold rounded-xl transition-colors">
+                            ← Back
+                        </button>
                     </div>
                 </div>
 
