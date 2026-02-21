@@ -877,6 +877,7 @@ export default function TabletDashboard() {
                     ) : (
                         <>
                             {activeTab === 'orders' && <LiveOrdersSection restaurantId={restaurant.id} />}
+                            {activeTab === 'history' && <OrderHistorySection restaurantId={restaurant.id} />}
                             {activeTab === 'menu' && <MenuSection restaurantId={restaurant.id} />}
                             {activeTab === 'printer' && <PrinterSettingsSection restaurant={restaurant} />}
                         </>
