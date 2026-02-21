@@ -36,10 +36,11 @@ export default function POSOfflineSyncBanner({ restaurantId }) {
 
     // Auto-sync when back online
     useEffect(() => {
-        if (isOnline && pendingCount > 0) {
+        if (isOnline && pendingCount > 0 && !isSyncing) {
             syncOrders();
         }
-    }, [isOnline]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOnline, pendingCount]);
 
     const syncOrders = async () => {
         if (isSyncing) return;
