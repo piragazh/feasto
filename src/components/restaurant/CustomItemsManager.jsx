@@ -72,13 +72,16 @@ export default function CustomItemsManager({ restaurantId }) {
             toast.error('Please enter a valid name and price');
             return;
         }
-        const newItems = customItems.map((item, i) =>
+        // Re-read latest items from query cache to avoid stale data
+        const latest = queryClient.getQueryData(['restaurant-custom-items', restaurantId]);
+        const current = latest?.custom_pos_items || customItems;
+        const newItems = current.map((item, i) =>
             i === editingIdx
                 ? { name: editForm.name.trim(), price: parseFloat(editForm.price), category: editForm.category.trim() }
                 : item
         );
-        saveMutation.mutate(newItems);
         setEditingIdx(null);
+        saveMutation.mutate(newItems);
     };
 
     // Group items by category for display
