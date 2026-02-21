@@ -525,34 +525,40 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                         <p className="text-sm text-gray-500">Choose a content type and configure it below</p>
                     </DialogHeader>
                     <div className="space-y-4">
+                        {/* Content type picker */}
                         <div>
-                            <Label>Label</Label>
-                            <Input
-                                value={slotForm.title}
-                                onChange={e => setSlotForm(p => ({ ...p, title: e.target.value }))}
-                                placeholder="e.g. Menu 1, Span video"
-                                className="mt-1"
-                            />
+                            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Content Type</Label>
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                {[
+                                    { value: 'menu', icon: '🍽️', label: 'Menu', desc: 'Show your food menu' },
+                                    { value: 'widget_orders', icon: '📦', label: 'Live Orders', desc: 'Orders from your POS' },
+                                    { value: 'widget_time', icon: '🕐', label: 'Clock', desc: 'Current time & date' },
+                                    { value: 'widget_weather', icon: '🌤️', label: 'Weather', desc: 'Local weather forecast' },
+                                    { value: 'video', icon: '🎬', label: 'Video / Image', desc: 'Play media file' },
+                                    { value: 'span_video', icon: '🖥️', label: 'Span Video', desc: 'Stretch across all screens' },
+                                ].map(opt => (
+                                    <button key={opt.value} type="button"
+                                        onClick={() => setSlotForm(p => ({ ...p, type: opt.value, title: p.title || opt.label }))}
+                                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${slotForm.type === opt.value ? 'border-orange-400 bg-orange-50' : 'border-gray-200 bg-white hover:border-orange-200'}`}
+                                    >
+                                        <span className="text-xl">{opt.icon}</span>
+                                        <div>
+                                            <div className="text-xs font-semibold text-gray-900">{opt.label}</div>
+                                            <div className="text-[10px] text-gray-400 leading-tight">{opt.desc}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div>
-                            <Label>Type</Label>
-                            <Select value={slotForm.type} onValueChange={v => {
-                                setSlotForm(p => ({ ...p, type: v, title: p.title || TYPE_META[v]?.label || '' }));
-                            }}>
-                                <SelectTrigger className="mt-1">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="menu">🍽️ Menu</SelectItem>
-                                    <SelectItem value="video">🎬 Video (single screen)</SelectItem>
-                                    <SelectItem value="span_video">🎬 Span Video (multi-screen)</SelectItem>
-                                    <SelectItem value="span_menu">🍽️ Span Menu (multi-screen)</SelectItem>
-                                    <SelectItem value="widget_time">🕐 Clock</SelectItem>
-                                    <SelectItem value="widget_weather">🌤️ Weather</SelectItem>
-                                    <SelectItem value="widget_orders">📦 Live Orders (POS)</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Label (for your reference)</Label>
+                            <Input
+                                value={slotForm.title}
+                                onChange={e => setSlotForm(p => ({ ...p, title: e.target.value }))}
+                                placeholder="e.g. Main Menu, Drinks Board"
+                                className="mt-1"
+                            />
                         </div>
 
                         {/* ── Menu config ── */}
