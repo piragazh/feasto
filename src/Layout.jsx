@@ -627,7 +627,7 @@ export default function Layout({ children, currentPageName }) {
             </main>
 
                 {/* AI Chatbot Widget */}
-                <ChatbotWidget />
+                {!['AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'RestaurantDashboard', 'POSDashboard'].includes(currentPageName) && <ChatbotWidget />}
 
                 {/* Footer */}
                 {!hideFooter && (
