@@ -352,8 +352,8 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                             <tr className="bg-gray-50 border-b border-gray-200">
                                 <th className="w-5 border-r border-gray-200" />
                                 <th className="w-28 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 border-r border-gray-200 whitespace-nowrap">
-                                    Time / FX
-                                </th>
+                                                        Duration
+                                                    </th>
                                 {Array.from({ length: numScreens }, (_, i) => (
                                     <th key={i} className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0 whitespace-nowrap">
                                         Screen {i + 1}
