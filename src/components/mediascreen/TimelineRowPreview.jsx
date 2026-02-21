@@ -59,29 +59,41 @@ function WeatherWidget({ slot }) {
     );
 }
 
-function OrdersWidget() {
-    const preparing = ['#A1042', '#A1043', '#A1044'];
-    const ready     = ['#A1039', '#A1040'];
+const STATUS_STYLE = {
+    confirmed:            { label: 'Confirmed',       color: 'text-blue-300',   bg: 'bg-blue-500/20',   border: 'border-blue-500/30' },
+    preparing:            { label: 'Preparing',       color: 'text-yellow-300', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
+    ready_for_collection: { label: 'Ready ✓',         color: 'text-green-300',  bg: 'bg-green-500/20',  border: 'border-green-500/30' },
+    out_for_delivery:     { label: 'Out for Delivery', color: 'text-purple-300', bg: 'bg-purple-500/20', border: 'border-purple-500/30' },
+};
+
+const MOCK_ORDERS = {
+    confirmed:            ['#A1048', '#A1049'],
+    preparing:            ['#A1042', '#A1043', '#A1044'],
+    ready_for_collection: ['#A1039', '#A1040'],
+    out_for_delivery:     ['#A1035'],
+};
+
+function OrdersWidget({ slot }) {
+    const statuses = slot?.order_statuses?.length ? slot.order_statuses : ['preparing', 'ready_for_collection'];
+    const cols = statuses.length <= 2 ? statuses.length : 2;
     return (
         <div className="w-full h-full flex flex-col bg-gray-950 text-white p-4 select-none overflow-hidden">
             <h3 className="text-sm font-bold uppercase tracking-widest opacity-50 mb-3">Collection Orders</h3>
-            <div className="grid grid-cols-2 gap-3 flex-1 overflow-hidden">
-                <div>
-                    <div className="text-xs font-semibold text-yellow-400 mb-2 uppercase tracking-wide">Preparing</div>
-                    <div className="space-y-1.5">
-                        {preparing.map(n => (
-                            <div key={n} className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg px-3 py-2 text-yellow-300 font-mono text-sm font-bold">{n}</div>
-                        ))}
-                    </div>
-                </div>
-                <div>
-                    <div className="text-xs font-semibold text-green-400 mb-2 uppercase tracking-wide">Ready ✓</div>
-                    <div className="space-y-1.5">
-                        {ready.map(n => (
-                            <div key={n} className="bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-2 text-green-300 font-mono text-sm font-bold">{n}</div>
-                        ))}
-                    </div>
-                </div>
+            <div className={`grid gap-3 flex-1 overflow-hidden`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+                {statuses.map(s => {
+                    const style = STATUS_STYLE[s] || STATUS_STYLE.preparing;
+                    const orders = MOCK_ORDERS[s] || [];
+                    return (
+                        <div key={s}>
+                            <div className={`text-xs font-semibold mb-2 uppercase tracking-wide ${style.color}`}>{style.label}</div>
+                            <div className="space-y-1.5">
+                                {orders.map(n => (
+                                    <div key={n} className={`${style.bg} border ${style.border} rounded-lg px-3 py-2 ${style.color} font-mono text-sm font-bold`}>{n}</div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
