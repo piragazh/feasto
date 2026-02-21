@@ -146,9 +146,9 @@ function VideoWidget({ mediaUrl }) {
 function SlotContent({ slot }) {
     if (!slot) return null;
     switch (slot.type) {
-        case 'widget_time':    return <ClockWidget />;
-        case 'widget_weather': return <WeatherWidget />;
-        case 'widget_orders':  return <OrdersWidget />;
+        case 'widget_time':    return <ClockWidget slot={slot} />;
+        case 'widget_weather': return <WeatherWidget slot={slot} />;
+        case 'widget_orders':  return <OrdersWidget slot={slot} />;
         case 'menu':
         case 'span_menu':      return <MenuWidget />;
         case 'video':
