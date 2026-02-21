@@ -484,8 +484,8 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
             )}
 
             {rows.length > 0 && (
-                <button onClick={addRow} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors text-sm flex items-center justify-center gap-1.5">
-                    <Plus className="h-3.5 w-3.5" /> Add Row
+                <button onClick={addRow} className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-orange-400 hover:text-orange-500 transition-colors text-sm flex items-center justify-center gap-1.5">
+                    <Plus className="h-3.5 w-3.5" /> Add Another Layout Row
                 </button>
             )}
 
