@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, Save, X, FolderOpen, Upload, Zap, Clock, Cloud, Package, Utensils, Video } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Save, X, FolderOpen, Upload, Zap, Clock, Cloud, Package, Utensils, Video, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import FileManager from './FileManager';
+import TimelineRowPreview from './TimelineRowPreview';
 
 // ── Template definitions ──────────────────────────────────────────────────────
 const TEMPLATES = [
