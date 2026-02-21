@@ -1324,28 +1324,31 @@ export default function ContentManagement({ restaurantId }) {
                     <Card>
                         <CardHeader>
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Settings className="h-5 w-5 text-blue-600" />
-                                    <CardTitle>Screen Manager</CardTitle>
-                                    <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                                        {screenNames.length}/{maxScreensAllowed}
-                                    </Badge>
+                                <div>
+                                    <CardTitle>My Screens</CardTitle>
+                                    <p className="text-sm text-gray-500 mt-1">Each screen is a TV or display in your restaurant — {screenNames.length} of {maxScreensAllowed} set up</p>
                                 </div>
                                 {canAddNewScreen && (
                                     <Button
                                         onClick={() => handleScreenAction('add')}
-                                        className="bg-blue-600 hover:bg-blue-700"
+                                        className="bg-orange-500 hover:bg-orange-600"
                                     >
                                         <Plus className="h-4 w-4 mr-1" />
-                                        Add Screen
+                                        Add a Screen
                                     </Button>
                                 )}
                             </div>
                         </CardHeader>
                         <CardContent>
                             {screenNames.length === 0 ? (
-                                <div className="text-center py-12 text-gray-500">
-                                    No screens yet. Click "Add Screen" to create your first screen.
+                                <div className="text-center py-16 text-gray-500">
+                                    <Monitor className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                                    <p className="font-medium">No screens set up yet</p>
+                                    <p className="text-sm mt-1">Add your first screen to get started</p>
+                                    <Button onClick={() => handleScreenAction('add')} className="mt-4 bg-orange-500 hover:bg-orange-600">
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add a Screen
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="grid gap-3">
