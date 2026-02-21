@@ -330,16 +330,17 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
 
             {/* Table */}
             {rows.length === 0 ? (
-                <div className="border-2 border-dashed rounded-xl py-16 text-center text-gray-400">
-                    <p className="text-sm font-medium">No timeline rows yet</p>
-                    <p className="text-xs mt-1 mb-4">Add a row manually or pick a template to get started</p>
-                    <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="outline" onClick={() => setShowTemplates(true)}>
-                            <Zap className="h-3.5 w-3.5 mr-1.5 text-indigo-500" />
-                            Templates
+                <div className="border-2 border-dashed rounded-xl py-16 text-center">
+                    <div className="text-5xl mb-4">🖥️</div>
+                    <p className="text-base font-semibold text-gray-700">No layouts yet</p>
+                    <p className="text-sm text-gray-400 mt-1 mb-6 max-w-sm mx-auto">Start with a template — it'll set everything up for you. Or build your own from scratch.</p>
+                    <div className="flex gap-3 justify-center">
+                        <Button size="sm" onClick={() => setShowTemplates(true)} className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+                            <Zap className="h-3.5 w-3.5" />
+                            Use a Template
                         </Button>
-                        <Button size="sm" variant="outline" onClick={addRow}>
-                            <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        <Button size="sm" variant="outline" onClick={addRow} className="gap-1.5">
+                            <Plus className="h-3.5 w-3.5" />
                             Blank Row
                         </Button>
                     </div>
