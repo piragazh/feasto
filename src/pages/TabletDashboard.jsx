@@ -929,6 +929,62 @@ function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
     );
 }
 
+// ─── Status Bar Component ──────────────────────────────────────────────────────
+function StatusBar({ restaurant }) {
+    const [network, setNetwork] = useState({ online: true, speed: 'good', latency: 0 });
+    const [printerStatus, setPrinterStatus] = useState('disconnected');
+
+    useEffect(() => {
+        // Network status
+        const updateNetwork = async () => {
+            setNetwork(prev => ({ ...prev, online: navigator.onLine }));
+            try {
+                const start = performance.now();
+                await fetch('/api/health', { method: 'HEAD' });
+                const latency = Math.round(performance.now() - start);
+                setNetwork(prev => ({ ...prev, latency, speed: latency < 100 ? 'good' : latency < 500 ? 'fair' : 'poor' }));
+            } catch {
+                setNetwork(prev => ({ ...prev, online: false }));
+            }
+        };
+
+        updateNetwork();
+        const interval = setInterval(updateNetwork, 10000);
+
+        // Printer status
+        const checkPrinter = () => {
+            const hasPrinter = restaurant?.printer_config?.bluetooth_printer?.id;
+            setPrinterStatus(hasPrinter ? 'connected' : 'disconnected');
+        };
+        checkPrinter();
+        const printerInterval = setInterval(checkPrinter, 8000);
+
+        return () => { clearInterval(interval); clearInterval(printerInterval); };
+    }, [restaurant?.printer_config?.bluetooth_printer?.id]);
+
+    const speedColors = { good: 'text-green-600', fair: 'text-yellow-600', poor: 'text-red-600' };
+    const networkIcon = network.online ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />;
+
+    return (
+        <div className="bg-white border-b border-gray-200 px-5 py-2 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 text-gray-600">
+                    {networkIcon}
+                    <span className="font-medium">{network.online ? 'Online' : 'Offline'}</span>
+                    {network.online && <span className={`font-medium ${speedColors[network.speed]}`}>({network.latency}ms)</span>}
+                </div>
+                <div className="flex items-center gap-1.5">
+                    {printerStatus === 'connected' ? (
+                        <><Zap className="h-4 w-4 text-green-600" /><span className="text-green-600 font-medium">Printer Connected</span></>
+                    ) : (
+                        <><AlertCircle className="h-4 w-4 text-gray-400" /><span className="text-gray-500">No Printer</span></>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function TabletDashboard() {
     const [user, setUser] = useState(null);
