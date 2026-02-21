@@ -832,30 +832,29 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                             </div>
                         )}
 
-                        <div>
-                            <Label>Span (number of screens)</Label>
-                            <Select
-                                value={String(slotForm.span)}
-                                onValueChange={v => setSlotForm(p => ({ ...p, span: parseInt(v) }))}
-                            >
-                                <SelectTrigger className="mt-1">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
+                        {numScreens > 1 && (
+                            <div>
+                                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">How many screens should this fill?</Label>
+                                <div className="flex gap-2 mt-2">
                                     {Array.from({ length: numScreens - addingSlotStart }, (_, i) => i + 1).map(n => (
-                                        <SelectItem key={n} value={String(n)}>{n} screen{n > 1 ? 's' : ''}</SelectItem>
+                                        <button key={n} type="button"
+                                            onClick={() => setSlotForm(p => ({ ...p, span: n }))}
+                                            className={`flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-all ${slotForm.span === n ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-orange-200'}`}
+                                        >
+                                            {n === 1 ? '1 screen' : `${n} screens`}
+                                        </button>
                                     ))}
-                                </SelectContent>
-                            </Select>
-                            {slotForm.span > 1 && (
-                                <p className="text-xs text-blue-600 mt-1">
-                                    Spans Screen {addingSlotStart + 1} → {addingSlotStart + slotForm.span}
-                                </p>
-                            )}
-                        </div>
+                                </div>
+                                {slotForm.span > 1 && (
+                                    <p className="text-xs text-orange-600 mt-1">
+                                        Will fill screens {addingSlotStart + 1} through {addingSlotStart + slotForm.span}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         <div className="flex gap-2 pt-1">
-                            <Button onClick={handleAddSlot} className="flex-1">Add</Button>
+                            <Button onClick={handleAddSlot} className="flex-1 bg-orange-500 hover:bg-orange-600">Add to Layout</Button>
                             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
                         </div>
                     </div>
