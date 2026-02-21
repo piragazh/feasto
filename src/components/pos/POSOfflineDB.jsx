@@ -104,13 +104,17 @@ export async function getCachedRestaurant(restaurantId) {
 
 export async function cacheTables(restaurantId, tables) {
     const db = await openDB();
-    const store = txStore(db, STORES.TABLES, 'readwrite');
+    const tx = db.transaction(STORES.TABLES, 'readwrite');
+    const store = tx.objectStore(STORES.TABLES);
     const index = store.index('restaurant_id');
     const keys = await promisify(index.getAllKeys(restaurantId));
-    await Promise.all(keys.map(k => promisify(store.delete(k))));
-    for (const table of tables) {
-        store.put({ ...table, restaurant_id: restaurantId });
-    }
+    for (const k of keys) store.delete(k);
+    for (const table of tables) store.put({ ...table, restaurant_id: restaurantId });
+    await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+    });
 }
 
 export async function getCachedTables(restaurantId) {
