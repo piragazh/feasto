@@ -670,31 +670,19 @@ export default function ContentManagement({ restaurantId }) {
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                            <CardTitle>Promotional Content</CardTitle>
+                            <CardTitle>Media Library</CardTitle>
                             <p className="text-sm text-gray-500 mt-1">
-                                Manage media for your restaurant screens ({screenNames.length}/{maxScreensAllowed} screens used)
+                                Your uploaded images & videos — used across your screens
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Button onClick={() => setShowFileManager(true)} variant="outline">
-                                <FolderOpen className="h-4 w-4 mr-2" />
-                                File Manager
-                            </Button>
-                            <Button onClick={() => handleScreenAction('add')} variant="outline">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Manage Screens
-                            </Button>
-                            <Button onClick={() => setShowAIDialog(true)} variant="outline">
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Generate with AI
-                            </Button>
-                            <Button onClick={() => setShowEnhancedUploader(true)} variant="outline">
+                            <Button onClick={() => setShowEnhancedUploader(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
                                 <Upload className="h-4 w-4 mr-2" />
                                 Upload Files
                             </Button>
-                            <Button onClick={() => setShowDialog(true)}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Content
+                            <Button onClick={() => setShowAIDialog(true)} variant="outline">
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                AI Generate
                             </Button>
                         </div>
                     </div>
