@@ -190,6 +190,7 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
     // ── Mutations ─────────────────────────────────────────────────────────────
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.MediaWallContent.delete(id),
+        onError: () => toast.error('Failed to delete row'),
     });
 
     // ── Save all rows to DB ───────────────────────────────────────────────────
