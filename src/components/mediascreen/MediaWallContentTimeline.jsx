@@ -566,6 +566,96 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                             </div>
                         )}
 
+                        {/* ── Live Orders config ── */}
+                        {slotForm.type === 'widget_orders' && (
+                            <div>
+                                <Label>Show order statuses</Label>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {[
+                                        { value: 'confirmed',            label: 'Confirmed' },
+                                        { value: 'preparing',            label: 'Preparing' },
+                                        { value: 'ready_for_collection', label: 'Ready ✓' },
+                                        { value: 'out_for_delivery',     label: 'Out for Delivery' },
+                                    ].map(s => {
+                                        const active = slotForm.order_statuses.includes(s.value);
+                                        return (
+                                            <button
+                                                key={s.value}
+                                                type="button"
+                                                onClick={() => setSlotForm(p => ({
+                                                    ...p,
+                                                    order_statuses: active
+                                                        ? p.order_statuses.filter(x => x !== s.value)
+                                                        : [...p.order_statuses, s.value]
+                                                }))}
+                                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}
+                                            >
+                                                {s.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {slotForm.order_statuses.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">Select at least one status</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ── Weather config ── */}
+                        {slotForm.type === 'widget_weather' && (
+                            <div>
+                                <Label>Location (city or postcode)</Label>
+                                <Input
+                                    value={slotForm.weather_location}
+                                    onChange={e => setSlotForm(p => ({ ...p, weather_location: e.target.value }))}
+                                    placeholder="e.g. London, Manchester, SW1A 1AA"
+                                    className="mt-1"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Leave blank to use the restaurant's location</p>
+                            </div>
+                        )}
+
+                        {/* ── Clock config ── */}
+                        {slotForm.type === 'widget_time' && (
+                            <div className="space-y-3">
+                                <div>
+                                    <Label>Time format</Label>
+                                    <div className="flex gap-2 mt-1.5">
+                                        {[{ value: '24h', label: '24-hour (14:30)' }, { value: '12h', label: '12-hour (2:30 PM)' }].map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => setSlotForm(p => ({ ...p, clock_format: opt.value }))}
+                                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${slotForm.clock_format === opt.value ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <Label>Date format</Label>
+                                    <div className="flex flex-wrap gap-2 mt-1.5">
+                                        {[
+                                            { value: 'full',    label: 'Monday, 21 Feb 2026' },
+                                            { value: 'short',   label: '21 Feb 2026' },
+                                            { value: 'numeric', label: '21/02/2026' },
+                                            { value: 'none',    label: 'No date' },
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => setSlotForm(p => ({ ...p, date_format: opt.value }))}
+                                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${slotForm.date_format === opt.value ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <Label>Span (number of screens)</Label>
                             <Select
