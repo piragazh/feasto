@@ -12,7 +12,7 @@ import {
     ShoppingBag, UtensilsCrossed, Printer,
     CheckCircle, XCircle, Clock, Phone, MapPin,
     LogOut, Menu, X, ChevronRight, Search, Bluetooth, AlertCircle,
-    MessageSquare, Send
+    MessageSquare, Send, Wifi, WifiOff, Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { printerService } from '@/components/restaurant/PrinterService';
