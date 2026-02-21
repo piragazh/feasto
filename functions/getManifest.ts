@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
                     manifest.name = `${restaurant.name} POS`;
                     manifest.short_name = `${restaurant.name.substring(0, 9)} POS`;
                     manifest.description = `Point of Sale for ${restaurant.name}`;
-                    manifest.start_url = `/POSDashboard?restaurant_id=${restaurantId}`;
+                    manifest.start_url = `/POSDashboard?restaurantId=${restaurantId}`;
                     manifest.display = "fullscreen";
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
