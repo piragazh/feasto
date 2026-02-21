@@ -56,6 +56,7 @@ export default function ContentManagement({ restaurantId }) {
     const [newGroupName, setNewGroupName] = useState('');
     const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
     const [currentScreenForTemplate, setCurrentScreenForTemplate] = useState(null);
+    const [managingScreen, setManagingScreen] = useState(null); // screen name being managed
 
     const [formData, setFormData] = useState({
         title: '',
