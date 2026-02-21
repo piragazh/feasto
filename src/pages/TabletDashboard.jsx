@@ -484,6 +484,149 @@ function MenuSection({ restaurantId }) {
     );
 }
 
+// ─── Messages Section ────────────────────────────────────────────────────────
+function MessagesSection({ restaurantId }) {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const queryClient = useQueryClient();
+
+    const { data: messages = [], isLoading } = useQuery({
+        queryKey: ['tablet-messages', restaurantId],
+        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurantId }, '-created_date'),
+        refetchInterval: 15000,
+    });
+
+    const markReadMutation = useMutation({
+        mutationFn: ({ id }) => base44.entities.Message.update(id, { is_read: true }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tablet-messages', restaurantId] }),
+    });
+
+    const replyMutation = useMutation({
+        mutationFn: async ({ orderId, messageText }) => {
+            await base44.entities.Message.create({
+                order_id: orderId,
+                restaurant_id: restaurantId,
+                sender_type: 'restaurant',
+                message: messageText,
+                is_read: false,
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['tablet-messages', restaurantId] });
+            setReplyingTo(null);
+            setReplyText('');
+            toast.success('Message sent');
+        },
+    });
+
+    const filteredMessages = messages.filter(msg =>
+        msg.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        msg.order_id?.includes(searchTerm)
+    );
+
+    const unreadCount = messages.filter(m => !m.is_read).length;
+
+    if (isLoading) return (
+        <div className="flex items-center justify-center h-64 text-gray-400">
+            <p>Loading messages...</p>
+        </div>
+    );
+
+    return (
+        <div className="space-y-4">
+            {/* Search & Unread Count */}
+            <div className="flex gap-3 items-center">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                        placeholder="Search messages or order ID..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-10 h-10"
+                    />
+                </div>
+                {unreadCount > 0 && (
+                    <Badge className="bg-red-500 text-white">{unreadCount} new</Badge>
+                )}
+            </div>
+
+            {/* Messages list */}
+            <div className="space-y-2">
+                {filteredMessages.map(msg => (
+                    <Card key={msg.id} className={`border ${msg.is_read ? 'border-gray-200 bg-gray-50' : 'border-orange-300 bg-orange-50'}`}>
+                        <CardContent className="p-4">
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-gray-900">{msg.sender_type === 'customer' ? 'Customer' : 'Restaurant'}</span>
+                                    <Badge variant="outline" className="text-xs">Order #{msg.order_id?.slice(-6)}</Badge>
+                                    {!msg.is_read && <div className="w-2 h-2 bg-orange-500 rounded-full" />}
+                                </div>
+                                <span className="text-xs text-gray-500">{format(new Date(msg.created_date), 'HH:mm')}</span>
+                            </div>
+
+                            {/* Message text */}
+                            <p className="text-sm text-gray-700 mb-3">{msg.message}</p>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 flex-wrap">
+                                {!msg.is_read && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs"
+                                        onClick={() => markReadMutation.mutate({ id: msg.id })}
+                                    >
+                                        Mark as read
+                                    </Button>
+                                )}
+                                {msg.sender_type === 'customer' && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs"
+                                        onClick={() => setReplyingTo(replyingTo === msg.id ? null : msg.id)}
+                                    >
+                                        {replyingTo === msg.id ? 'Cancel' : 'Reply'}
+                                    </Button>
+                                )}
+                            </div>
+
+                            {/* Reply form */}
+                            {replyingTo === msg.id && (
+                                <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
+                                    <Input
+                                        placeholder="Type your reply..."
+                                        value={replyText}
+                                        onChange={e => setReplyText(e.target.value)}
+                                        className="h-9 text-sm"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        onClick={() => replyMutation.mutate({ orderId: msg.order_id, messageText: replyText })}
+                                        disabled={!replyText.trim()}
+                                        className="h-9 w-9 shrink-0"
+                                    >
+                                        <Send className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            {filteredMessages.length === 0 && (
+                <div className="text-center py-12 text-gray-400">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>{searchTerm ? 'No messages found' : 'No messages'}</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Order History Section ───────────────────────────────────────────────────
 function OrderHistorySection({ restaurantId }) {
     const [dateFilter, setDateFilter] = useState('all');
