@@ -99,29 +99,56 @@ function OrdersWidget({ slot }) {
     );
 }
 
-function MenuWidget() {
-    const items = [
-        { name: 'Classic Burger', price: '£10.99', cat: 'Burgers' },
-        { name: 'Chicken Wrap',   price: '£8.99',  cat: 'Wraps' },
-        { name: 'Loaded Fries',   price: '£4.99',  cat: 'Sides' },
-        { name: 'Milkshake',      price: '£3.99',  cat: 'Drinks' },
-        { name: 'Veggie Burger',  price: '£9.99',  cat: 'Burgers' },
-        { name: 'Onion Rings',    price: '£3.49',  cat: 'Sides' },
-    ];
+const ALL_MOCK_ITEMS = [
+    { name: 'Classic Burger', price: '£10.99', cat: 'Burgers', img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&h=80&fit=crop' },
+    { name: 'Chicken Wrap',   price: '£8.99',  cat: 'Wraps',   img: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=80&h=80&fit=crop' },
+    { name: 'Loaded Fries',   price: '£4.99',  cat: 'Sides',   img: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?w=80&h=80&fit=crop' },
+    { name: 'Milkshake',      price: '£3.99',  cat: 'Drinks',  img: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=80&h=80&fit=crop' },
+    { name: 'Veggie Burger',  price: '£9.99',  cat: 'Burgers', img: 'https://images.unsplash.com/photo-1520072959219-c595dc870360?w=80&h=80&fit=crop' },
+    { name: 'Onion Rings',    price: '£3.49',  cat: 'Sides',   img: 'https://images.unsplash.com/photo-1639024471283-03518883512d?w=80&h=80&fit=crop' },
+    { name: 'Fish Tacos',     price: '£11.49', cat: 'Mains',   img: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=80&h=80&fit=crop' },
+    { name: 'Lemonade',       price: '£2.99',  cat: 'Drinks',  img: 'https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9e?w=80&h=80&fit=crop' },
+];
+
+function MenuWidget({ slot }) {
+    const selectedCats = slot?.menu_categories || [];
+    const showImages = slot?.menu_display_images || false;
+    const items = selectedCats.length > 0
+        ? ALL_MOCK_ITEMS.filter(i => selectedCats.includes(i.cat))
+        : ALL_MOCK_ITEMS;
+
+    // Group by category
+    const grouped = items.reduce((acc, item) => {
+        if (!acc[item.cat]) acc[item.cat] = [];
+        acc[item.cat].push(item);
+        return acc;
+    }, {});
+
     return (
         <div className="w-full h-full flex flex-col bg-gray-950 text-white overflow-hidden select-none">
-            <div className="bg-orange-500 px-4 py-2 flex items-center justify-between">
+            <div className="bg-orange-500 px-4 py-2 flex items-center justify-between flex-shrink-0">
                 <span className="font-bold text-sm tracking-wide">MENU</span>
-                <span className="text-xs opacity-80">Live from POS</span>
+                <span className="text-xs opacity-80">
+                    {selectedCats.length > 0 ? selectedCats.join(', ') : 'All Categories'}
+                </span>
             </div>
-            <div className="flex-1 overflow-hidden p-3 grid grid-cols-2 gap-2 content-start">
-                {items.map((item, i) => (
-                    <div key={i} className="bg-white/5 rounded-lg px-3 py-2 flex justify-between items-center">
-                        <div>
-                            <p className="text-xs font-semibold">{item.name}</p>
-                            <p className="text-[10px] opacity-50">{item.cat}</p>
+            <div className="flex-1 overflow-hidden p-2">
+                {Object.entries(grouped).map(([cat, catItems]) => (
+                    <div key={cat} className="mb-2">
+                        <div className="text-[9px] font-bold uppercase tracking-widest text-orange-400 opacity-70 mb-1 px-1">{cat}</div>
+                        <div className={`grid gap-1.5 ${showImages ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                            {catItems.map((item, i) => (
+                                <div key={i} className="bg-white/5 rounded-lg flex items-center gap-2 overflow-hidden">
+                                    {showImages && (
+                                        <img src={item.img} alt={item.name} className="h-10 w-10 object-cover flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1 px-2 py-1.5 flex justify-between items-center min-w-0">
+                                        <p className="text-[10px] font-semibold truncate">{item.name}</p>
+                                        <p className="text-orange-400 font-bold text-[10px] ml-2 flex-shrink-0">{item.price}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        <p className="text-orange-400 font-bold text-xs">{item.price}</p>
                     </div>
                 ))}
             </div>
