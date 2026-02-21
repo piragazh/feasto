@@ -161,7 +161,7 @@ export default function CustomItemsManager({ restaurantId }) {
                                                 <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="flex-1 h-8 text-sm" />
                                                 <Input type="number" step="0.01" min="0" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} className="w-24 h-8 text-sm" />
                                                 <Input value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} placeholder="Category" className="w-28 h-8 text-sm" list="existing-categories" />
-                                                <Button size="sm" onClick={saveEdit} className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"><Check className="h-3.5 w-3.5" /></Button>
+                                                <Button size="sm" onClick={() => saveEdit(item._idx)} className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"><Check className="h-3.5 w-3.5" /></Button>
                                                 <Button size="sm" variant="outline" onClick={() => setEditingIdx(null)} className="h-8 w-8 p-0"><X className="h-3.5 w-3.5" /></Button>
                                             </>
                                         ) : (
