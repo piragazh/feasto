@@ -482,6 +482,134 @@ function MenuSection({ restaurantId }) {
     );
 }
 
+// ─── Order History Section ───────────────────────────────────────────────────
+function OrderHistorySection({ restaurantId }) {
+    const [dateFilter, setDateFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
+
+    const { data: orders = [], isLoading } = useQuery({
+        queryKey: ['tablet-history', restaurantId],
+        queryFn: () => base44.entities.Order.filter({
+            restaurant_id: restaurantId,
+            status: { $in: ['delivered', 'collected', 'cancelled', 'refunded', 'completed'] }
+        }, '-created_date'),
+        refetchInterval: 30000,
+    });
+
+    const getStatusColor = (status) => {
+        const colors = {
+            delivered: 'bg-green-100 text-green-800 border-green-300',
+            collected: 'bg-green-100 text-green-800 border-green-300',
+            completed: 'bg-blue-100 text-blue-800 border-blue-300',
+            cancelled: 'bg-red-100 text-red-800 border-red-300',
+            refunded: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+        };
+        return colors[status] || 'bg-gray-100 text-gray-700';
+    };
+
+    const getStatusLabel = (status) => {
+        const labels = {
+            delivered: '✓ Delivered',
+            collected: '✓ Collected',
+            completed: '✓ Completed',
+            cancelled: '✗ Cancelled',
+            refunded: '↺ Refunded',
+        };
+        return labels[status] || status;
+    };
+
+    const filterOrders = () => {
+        return orders.filter(order => {
+            const statusMatch = statusFilter === 'all' || order.status === statusFilter;
+            if (dateFilter === 'all') return statusMatch;
+            
+            const orderDate = new Date(order.created_date);
+            const now = new Date();
+            const daysAgo = Math.floor((now - orderDate) / (1000 * 60 * 60 * 24));
+
+            if (dateFilter === 'today') return statusMatch && daysAgo === 0;
+            if (dateFilter === 'week') return statusMatch && daysAgo <= 7;
+            if (dateFilter === 'month') return statusMatch && daysAgo <= 30;
+            return statusMatch;
+        });
+    };
+
+    const filteredOrders = filterOrders();
+
+    if (isLoading) return (
+        <div className="flex items-center justify-center h-64 text-gray-400">
+            <p>Loading order history...</p>
+        </div>
+    );
+
+    return (
+        <div className="space-y-4">
+            {/* Filters */}
+            <div className="flex gap-3 flex-wrap">
+                <select
+                    value={dateFilter}
+                    onChange={e => setDateFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700"
+                >
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                </select>
+                <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700"
+                >
+                    <option value="all">All Status</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="collected">Collected</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="refunded">Refunded</option>
+                </select>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-4 text-sm">
+                <span className="text-gray-500">{filteredOrders.length} orders</span>
+                <span className="text-green-600 font-medium">{filteredOrders.filter(o => ['delivered', 'collected', 'completed'].includes(o.status)).length} completed</span>
+                <span className="text-red-500 font-medium">{filteredOrders.filter(o => o.status === 'cancelled').length} cancelled</span>
+            </div>
+
+            {/* Orders list */}
+            <div className="space-y-2">
+                {filteredOrders.map(order => (
+                    <Card key={order.id} className="border border-gray-200">
+                        <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-gray-900">{order.order_type === 'collection' && order.order_number ? order.order_number : `#${order.id.slice(-6)}`}</span>
+                                    <Badge className={`text-xs capitalize border ${getStatusColor(order.status)}`}>
+                                        {getStatusLabel(order.status)}
+                                    </Badge>
+                                </div>
+                                <span className="text-lg font-bold text-gray-900">£{order.total.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span>{format(new Date(order.created_date), 'd MMM, HH:mm')}</span>
+                                <span className="text-gray-600 font-medium">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            {filteredOrders.length === 0 && (
+                <div className="text-center py-12 text-gray-400">
+                    <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No orders found</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Printer Settings Section ─────────────────────────────────────────────────
 function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
     const [isConnecting, setIsConnecting] = useState(false);
