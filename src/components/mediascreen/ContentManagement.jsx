@@ -1406,53 +1406,116 @@ export default function ContentManagement({ restaurantId }) {
 
                                                     {/* Actions */}
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => handleConfigureMediaWall(name)}
-                                                            className="bg-orange-500 hover:bg-orange-600 text-white h-9"
-                                                        >
-                                                            <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
-                                                            Configure Layout
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => handleOpenTemplateLibrary(name)}
-                                                            className="h-9"
-                                                        >
-                                                            <Sparkles className="h-3.5 w-3.5 mr-1.5 text-purple-500" />
-                                                            Use Template
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => handleManageGroups(name)}
-                                                            className="h-9 text-gray-600"
-                                                        >
-                                                            <Tag className="h-3.5 w-3.5 mr-1.5" />
-                                                            Groups
-                                                        </Button>
-                                                        <div className="flex gap-1.5">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => handleScreenAction('rename', name, name)}
-                                                                className="flex-1 h-9 text-gray-600"
-                                                                title="Rename screen"
-                                                            >
-                                                                <Edit className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => handleScreenAction('delete', name)}
-                                                                className="h-9 text-red-500 hover:bg-red-50 hover:border-red-200 px-2.5"
-                                                                title="Delete screen"
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </div>
+                                                       <Button
+                                                           size="sm"
+                                                           onClick={() => setManagingScreen(managingScreen === name ? null : name)}
+                                                           className="bg-orange-500 hover:bg-orange-600 text-white h-9 col-span-2"
+                                                       >
+                                                           <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+                                                           {managingScreen === name ? 'Close Content Manager' : 'Manage Content (Slideshow)'}
+                                                       </Button>
+                                                       <Button
+                                                           size="sm"
+                                                           onClick={() => handleConfigureMediaWall(name)}
+                                                           variant="outline"
+                                                           className="h-9"
+                                                       >
+                                                           <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
+                                                           Layout
+                                                       </Button>
+                                                       <Button
+                                                           size="sm"
+                                                           variant="outline"
+                                                           onClick={() => handleOpenTemplateLibrary(name)}
+                                                           className="h-9"
+                                                       >
+                                                           <Sparkles className="h-3.5 w-3.5 mr-1.5 text-purple-500" />
+                                                           Template
+                                                       </Button>
+                                                       <Button
+                                                           size="sm"
+                                                           variant="outline"
+                                                           onClick={() => handleManageGroups(name)}
+                                                           className="h-9 text-gray-600"
+                                                       >
+                                                           <Tag className="h-3.5 w-3.5 mr-1.5" />
+                                                           Groups
+                                                       </Button>
+                                                       <div className="flex gap-1.5">
+                                                           <Button
+                                                               size="sm"
+                                                               variant="outline"
+                                                               onClick={() => handleScreenAction('rename', name, name)}
+                                                               className="flex-1 h-9 text-gray-600"
+                                                               title="Rename screen"
+                                                           >
+                                                               <Edit className="h-3.5 w-3.5" />
+                                                           </Button>
+                                                           <Button
+                                                               size="sm"
+                                                               variant="outline"
+                                                               onClick={() => handleScreenAction('delete', name)}
+                                                               className="h-9 text-red-500 hover:bg-red-50 hover:border-red-200 px-2.5"
+                                                               title="Delete screen"
+                                                           >
+                                                               <Trash2 className="h-3.5 w-3.5" />
+                                                           </Button>
+                                                       </div>
                                                     </div>
+
+                                                    {/* Inline content manager */}
+                                                    {managingScreen === name && (
+                                                       <div className="mt-4 border-t pt-4 space-y-3">
+                                                           <div className="flex items-center justify-between">
+                                                               <p className="text-sm font-semibold text-gray-700">Slideshow content for "{name}"</p>
+                                                               <Button
+                                                                   size="sm"
+                                                                   className="bg-orange-500 hover:bg-orange-600 text-white h-8 text-xs"
+                                                                   onClick={() => {
+                                                                       setFormData(prev => ({ ...prev, screen_name: name }));
+                                                                       setEditingContent(null);
+                                                                       setShowDialog(true);
+                                                                   }}
+                                                               >
+                                                                   <Plus className="h-3 w-3 mr-1" /> Add Item
+                                                               </Button>
+                                                           </div>
+                                                           {allContent.filter(c => c.screen_name === name).length === 0 ? (
+                                                               <div className="text-center py-6 border-2 border-dashed rounded-xl text-gray-400 text-sm">
+                                                                   No content yet — click "Add Item" to upload media
+                                                               </div>
+                                                           ) : (
+                                                               <div className="space-y-2">
+                                                                   {allContent.filter(c => c.screen_name === name).sort((a,b) => a.display_order - b.display_order).map(content => (
+                                                                       <div key={content.id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                                                                           <div className="w-12 h-9 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                                                                               {content.media_type === 'video' ? (
+                                                                                   <video src={content.media_url} className="w-full h-full object-cover" />
+                                                                               ) : (
+                                                                                   <img src={content.media_url} alt={content.title} className="w-full h-full object-cover" />
+                                                                               )}
+                                                                           </div>
+                                                                           <div className="flex-1 min-w-0">
+                                                                               <p className="text-xs font-medium truncate">{content.title || 'Untitled'}</p>
+                                                                               <p className="text-[10px] text-gray-400">{content.media_type === 'video' ? `Loop ×${content.video_loop_count||1}` : `${content.duration}s`}</p>
+                                                                           </div>
+                                                                           <Switch
+                                                                               checked={content.is_active}
+                                                                               onCheckedChange={(checked) => updateMutation.mutate({ id: content.id, data: { is_active: checked } })}
+                                                                           />
+                                                                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEdit(content)}>
+                                                                               <Edit className="h-3 w-3" />
+                                                                           </Button>
+                                                                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => deleteMutation.mutate(content.id)}>
+                                                                               <Trash2 className="h-3 w-3" />
+                                                                           </Button>
+                                                                       </div>
+                                                                   ))}
+                                                               </div>
+                                                           )}
+                                                       </div>
+                                                    )}
+
                                                 </div>
                                             </div>
                                         );
