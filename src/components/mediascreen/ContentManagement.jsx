@@ -296,7 +296,8 @@ export default function ContentManagement({ restaurantId }) {
         try {
             await updateMutation.mutateAsync({
                 id: schedulingContent.id,
-                data: { schedule, priority }
+                data: { schedule, priority },
+                _closeDialog: false
             });
             toast.success('Schedule updated successfully');
             setShowScheduler(false);
