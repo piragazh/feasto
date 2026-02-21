@@ -587,7 +587,10 @@ function MessagesSection({ restaurantId }) {
                                         size="sm"
                                         variant="outline"
                                         className="text-xs"
-                                        onClick={() => setReplyingTo(replyingTo === msg.id ? null : msg.id)}
+                                        onClick={() => {
+                                            setReplyingTo(replyingTo === msg.id ? null : msg.id);
+                                            if (replyingTo === msg.id) setReplyText('');
+                                        }}
                                     >
                                         {replyingTo === msg.id ? 'Cancel' : 'Reply'}
                                     </Button>
