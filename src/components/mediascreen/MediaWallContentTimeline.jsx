@@ -146,12 +146,14 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
     });
     const menuCategories = [...new Set(menuItems.map(m => m.category).filter(Boolean))].sort();
 
-    // Sync loaded records into state once
+    // Sync loaded records into state — also re-sync if wallName changes
     useEffect(() => {
-        if (!isLoading && savedRecords.length > 0 && rows.length === 0) {
-            setRows(recordsToRows(savedRecords));
+        if (!isLoading) {
+            setRows(savedRecords.length > 0 ? recordsToRows(savedRecords) : []);
+            setDirty(false);
         }
-    }, [isLoading, savedRecords]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isLoading, wallName]);
 
     // ── Dialog state ─────────────────────────────────────────────────────────
     const [showAddDialog, setShowAddDialog] = useState(false);
