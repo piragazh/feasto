@@ -262,9 +262,22 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                     menu_categories: slotForm.menu_categories,
                     menu_display_images: slotForm.menu_display_images,
                 }),
-                ...(slotForm.type === 'widget_orders' && { order_statuses: slotForm.order_statuses }),
-                ...(slotForm.type === 'widget_weather' && { weather_location: slotForm.weather_location }),
-                ...(slotForm.type === 'widget_time' && { clock_format: slotForm.clock_format, date_format: slotForm.date_format }),
+                ...(slotForm.type === 'widget_orders' && {
+                    order_statuses: slotForm.order_statuses,
+                    order_types: slotForm.order_types,
+                }),
+                ...(slotForm.type === 'widget_weather' && {
+                    weather_location: slotForm.weather_location,
+                    weather_units: slotForm.weather_units,
+                    weather_mode: slotForm.weather_mode,
+                }),
+                ...(slotForm.type === 'widget_time' && {
+                    clock_format: slotForm.clock_format,
+                    date_format: slotForm.date_format,
+                    clock_show_seconds: slotForm.clock_show_seconds,
+                    clock_font_size: slotForm.clock_font_size,
+                    clock_color: slotForm.clock_color,
+                }),
             };
             for (let s = addingSlotStart + 1; s < addingSlotStart + span; s++) {
                 newSlots[s] = '__spanned__';
