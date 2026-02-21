@@ -138,6 +138,14 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    // ── Fetch menu categories for menu widget config ──────────────────────────
+    const { data: menuItems = [] } = useQuery({
+        queryKey: ['menu-items-cats', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+    const menuCategories = [...new Set(menuItems.map(m => m.category).filter(Boolean))].sort();
+
     // Sync loaded records into state once
     useEffect(() => {
         if (!isLoading && savedRecords.length > 0 && rows.length === 0) {
