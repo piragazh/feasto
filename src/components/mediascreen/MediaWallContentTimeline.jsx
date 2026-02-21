@@ -412,7 +412,7 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                                                                 updateRowMeta(rowIdx, 'transition', rowForm.transition);
                                                                 setEditingRow(null);
                                                             }}
-                                                            className="flex-1 h-6 bg-blue-600 text-white rounded text-[10px] font-medium"
+                                                            className="flex-1 h-6 bg-orange-500 text-white rounded text-[10px] font-medium"
                                                         >✓</button>
                                                         <button onClick={() => setEditingRow(null)} className="flex-1 h-6 bg-gray-100 text-gray-600 rounded text-[10px]">✕</button>
                                                     </div>
