@@ -521,7 +521,8 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Add Content Block</DialogTitle>
+                        <DialogTitle>What should this screen show?</DialogTitle>
+                        <p className="text-sm text-gray-500">Choose a content type and configure it below</p>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div>
