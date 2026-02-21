@@ -621,6 +621,7 @@ export class PrinterService {
     }
 
     disconnect() {
+        this.autoReconnectEnabled = false;
         this.stopConnectionMonitor();
         if (this.device?.gatt?.connected) {
             this.device.gatt.disconnect();
@@ -628,6 +629,22 @@ export class PrinterService {
         this.device = null;
         this.characteristic = null;
         this.printerInfo = null;
+        this.notifyConnectionStatus(false);
+    }
+
+    async tryAutoConnect() {
+        try {
+            const saved = localStorage.getItem('printerInfo');
+            if (saved) {
+                const printerInfo = JSON.parse(saved);
+                console.log('🔍 Attempting auto-connect to saved printer...');
+                await this.connect(printerInfo, true);
+                return true;
+            }
+        } catch (e) {
+            console.log('Auto-connect failed:', e);
+        }
+        return false;
     }
 }
 
