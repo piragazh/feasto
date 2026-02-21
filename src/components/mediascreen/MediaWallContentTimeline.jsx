@@ -701,39 +701,73 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
 
                         {/* ── Clock config ── */}
                         {slotForm.type === 'widget_time' && (
-                            <div className="space-y-3">
+                            <div className="space-y-3 rounded-xl border border-teal-100 bg-teal-50/50 p-3">
+                                {/* Time format */}
                                 <div>
-                                    <Label>Time format</Label>
+                                    <Label className="text-xs font-semibold text-teal-800">Time format</Label>
                                     <div className="flex gap-2 mt-1.5">
-                                        {[{ value: '24h', label: '24-hour (14:30)' }, { value: '12h', label: '12-hour (2:30 PM)' }].map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                type="button"
+                                        {[{ value: '24h', label: '24-hour' }, { value: '12h', label: '12-hour' }].map(opt => (
+                                            <button key={opt.value} type="button"
                                                 onClick={() => setSlotForm(p => ({ ...p, clock_format: opt.value }))}
                                                 className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${slotForm.clock_format === opt.value ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'}`}
-                                            >
-                                                {opt.label}
-                                            </button>
+                                            >{opt.label}</button>
                                         ))}
                                     </div>
                                 </div>
+                                {/* Show seconds */}
+                                <div className="flex items-center gap-2">
+                                    <button type="button"
+                                        onClick={() => setSlotForm(p => ({ ...p, clock_show_seconds: !p.clock_show_seconds }))}
+                                        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors ${slotForm.clock_show_seconds ? 'bg-teal-600 border-teal-600' : 'bg-gray-200 border-gray-200'}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${slotForm.clock_show_seconds ? 'translate-x-4' : 'translate-x-0'}`} />
+                                    </button>
+                                    <Label className="text-xs cursor-pointer" onClick={() => setSlotForm(p => ({ ...p, clock_show_seconds: !p.clock_show_seconds }))}>Show seconds</Label>
+                                </div>
+                                {/* Font size */}
                                 <div>
-                                    <Label>Date format</Label>
-                                    <div className="flex flex-wrap gap-2 mt-1.5">
+                                    <Label className="text-xs font-semibold text-teal-800">Font size</Label>
+                                    <div className="flex gap-2 mt-1.5">
+                                        {[{ value: 'small', label: 'S' }, { value: 'medium', label: 'M' }, { value: 'large', label: 'L' }].map(opt => (
+                                            <button key={opt.value} type="button"
+                                                onClick={() => setSlotForm(p => ({ ...p, clock_font_size: opt.value }))}
+                                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${slotForm.clock_font_size === opt.value ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'}`}
+                                            >{opt.label}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* Color */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-teal-800">Colour</Label>
+                                    <div className="flex gap-2 mt-1.5">
                                         {[
-                                            { value: 'full',    label: 'Monday, 21 Feb 2026' },
-                                            { value: 'short',   label: '21 Feb 2026' },
-                                            { value: 'numeric', label: '21/02/2026' },
-                                            { value: 'none',    label: 'No date' },
+                                            { value: 'white',  bg: 'bg-white border-gray-300', ring: 'ring-gray-400' },
+                                            { value: 'orange', bg: 'bg-orange-400 border-orange-400', ring: 'ring-orange-400' },
+                                            { value: 'teal',   bg: 'bg-teal-400 border-teal-400', ring: 'ring-teal-400' },
+                                            { value: 'yellow', bg: 'bg-yellow-300 border-yellow-300', ring: 'ring-yellow-400' },
                                         ].map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                type="button"
+                                            <button key={opt.value} type="button"
+                                                onClick={() => setSlotForm(p => ({ ...p, clock_color: opt.value }))}
+                                                className={`w-7 h-7 rounded-full border-2 ${opt.bg} ${slotForm.clock_color === opt.value ? `ring-2 ring-offset-1 ${opt.ring}` : ''}`}
+                                                title={opt.value}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* Date format */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-teal-800">Date format</Label>
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                        {[
+                                            { value: 'full', label: 'Full' },
+                                            { value: 'short', label: 'Short' },
+                                            { value: 'numeric', label: 'Numeric' },
+                                            { value: 'none', label: 'None' },
+                                        ].map(opt => (
+                                            <button key={opt.value} type="button"
                                                 onClick={() => setSlotForm(p => ({ ...p, date_format: opt.value }))}
                                                 className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${slotForm.date_format === opt.value ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'}`}
-                                            >
-                                                {opt.label}
-                                            </button>
+                                            >{opt.label}</button>
                                         ))}
                                     </div>
                                 </div>
