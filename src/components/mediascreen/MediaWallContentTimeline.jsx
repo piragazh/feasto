@@ -160,6 +160,13 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
         type: 'menu',
         span: 1,
         media_url: '',
+        // widget_orders config
+        order_statuses: ['preparing', 'ready_for_collection'],
+        // widget_weather config
+        weather_location: '',
+        // widget_time config
+        clock_format: '24h',
+        date_format: 'full',
     });
 
     // ── Mutations ─────────────────────────────────────────────────────────────
