@@ -136,7 +136,7 @@ export default function ContentManagement({ restaurantId }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.PromotionalContent.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['promotional-content']);
+            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
             toast.success('Content deleted');
         },
     });
@@ -144,21 +144,21 @@ export default function ContentManagement({ restaurantId }) {
     const createScreenMutation = useMutation({
         mutationFn: (data) => base44.entities.Screen.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['screens']);
+            queryClient.invalidateQueries({ queryKey: ['screens'] });
         },
     });
 
     const updateScreenMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['screens']);
+            queryClient.invalidateQueries({ queryKey: ['screens'] });
         },
     });
 
     const deleteScreenMutation = useMutation({
         mutationFn: (id) => base44.entities.Screen.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['screens']);
+            queryClient.invalidateQueries({ queryKey: ['screens'] });
         },
     });
 
