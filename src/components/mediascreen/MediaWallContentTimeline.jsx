@@ -163,11 +163,14 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
     const [showTemplates, setShowTemplates] = useState(false);
     const [previewRow, setPreviewRow] = useState(null); // { row, rowIndex }
 
-    const [slotForm, setSlotForm] = useState({
+    const DEFAULT_SLOT_FORM = {
         title: '',
         type: 'menu',
         span: 1,
         media_url: '',
+        // menu config
+        menu_categories: [],        // empty = all categories
+        menu_display_images: false, // show item images
         // widget_orders config
         order_statuses: ['preparing', 'ready_for_collection'],
         // widget_weather config
@@ -175,7 +178,8 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
         // widget_time config
         clock_format: '24h',
         date_format: 'full',
-    });
+    };
+    const [slotForm, setSlotForm] = useState(DEFAULT_SLOT_FORM);
 
     // ── Mutations ─────────────────────────────────────────────────────────────
     const deleteMutation = useMutation({
