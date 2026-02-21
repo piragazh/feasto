@@ -118,10 +118,14 @@ export default function ContentManagement({ restaurantId }) {
 
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.PromotionalContent.update(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries(['promotional-content']);
-            toast.success('Content updated successfully');
-            resetForm();
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
+            // Only close the dialog if we were editing (i.e. the dialog was open)
+            // For inline toggle/switch updates, editingContent is null so we skip resetForm
+            if (variables._closeDialog) {
+                toast.success('Content updated successfully');
+                resetForm();
+            }
         },
         onError: (error) => {
             console.error('Update error:', error);
