@@ -655,12 +655,12 @@ export default function ContentManagement({ restaurantId }) {
 
     return (
         <div className="space-y-6">
-            <Tabs defaultValue="content" className="w-full">
+            <Tabs defaultValue="walls" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="content">Content Library</TabsTrigger>
-                    <TabsTrigger value="screens">Screen Manager</TabsTrigger>
-                    <TabsTrigger value="walls">Media Walls</TabsTrigger>
-                    <TabsTrigger value="control">Screen Control</TabsTrigger>
+                    <TabsTrigger value="walls">🖥️ Media Wall</TabsTrigger>
+                    <TabsTrigger value="screens">📺 My Screens</TabsTrigger>
+                    <TabsTrigger value="content">🖼️ Media Library</TabsTrigger>
+                    <TabsTrigger value="control">⚡ Live Control</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="content" className="mt-6">
