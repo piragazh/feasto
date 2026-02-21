@@ -652,36 +652,61 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
 
                         {/* ── Live Orders config ── */}
                         {slotForm.type === 'widget_orders' && (
-                            <div>
-                                <Label>Show order statuses</Label>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    {[
-                                        { value: 'confirmed',            label: 'Confirmed' },
-                                        { value: 'preparing',            label: 'Preparing' },
-                                        { value: 'ready_for_collection', label: 'Ready ✓' },
-                                        { value: 'out_for_delivery',     label: 'Out for Delivery' },
-                                    ].map(s => {
-                                        const active = slotForm.order_statuses.includes(s.value);
-                                        return (
-                                            <button
-                                                key={s.value}
-                                                type="button"
-                                                onClick={() => setSlotForm(p => ({
-                                                    ...p,
-                                                    order_statuses: active
-                                                        ? p.order_statuses.filter(x => x !== s.value)
-                                                        : [...p.order_statuses, s.value]
-                                                }))}
-                                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}
-                                            >
-                                                {s.label}
-                                            </button>
-                                        );
-                                    })}
+                            <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+                                {/* Statuses */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-emerald-800">Show order statuses</Label>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {[
+                                            { value: 'confirmed',            label: 'Confirmed' },
+                                            { value: 'preparing',            label: 'Preparing' },
+                                            { value: 'ready_for_collection', label: 'Ready ✓' },
+                                            { value: 'out_for_delivery',     label: 'Out for Delivery' },
+                                        ].map(s => {
+                                            const active = slotForm.order_statuses.includes(s.value);
+                                            return (
+                                                <button key={s.value} type="button"
+                                                    onClick={() => setSlotForm(p => ({
+                                                        ...p,
+                                                        order_statuses: active
+                                                            ? p.order_statuses.filter(x => x !== s.value)
+                                                            : [...p.order_statuses, s.value]
+                                                    }))}
+                                                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}
+                                                >{s.label}</button>
+                                            );
+                                        })}
+                                    </div>
+                                    {slotForm.order_statuses.length === 0 && (
+                                        <p className="text-xs text-red-500 mt-1">Select at least one status</p>
+                                    )}
                                 </div>
-                                {slotForm.order_statuses.length === 0 && (
-                                    <p className="text-xs text-red-500 mt-1">Select at least one status</p>
-                                )}
+                                {/* Order types */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-emerald-800">Filter by order type</Label>
+                                    <p className="text-[10px] text-gray-400 mb-1.5">Leave all unselected to show every type</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { value: 'delivery',   label: '🚗 Delivery' },
+                                            { value: 'collection', label: '🏃 Collection' },
+                                            { value: 'dine_in',    label: '🍽️ Dine-in' },
+                                            { value: 'takeaway',   label: '📦 Takeaway' },
+                                        ].map(t => {
+                                            const active = slotForm.order_types.includes(t.value);
+                                            return (
+                                                <button key={t.value} type="button"
+                                                    onClick={() => setSlotForm(p => ({
+                                                        ...p,
+                                                        order_types: active
+                                                            ? p.order_types.filter(x => x !== t.value)
+                                                            : [...p.order_types, t.value]
+                                                    }))}
+                                                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}
+                                                >{t.label}</button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         )}
 
