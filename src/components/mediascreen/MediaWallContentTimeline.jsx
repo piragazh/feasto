@@ -420,12 +420,12 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                                             ) : (
                                                 <button onClick={() => { setRowForm({ duration: row.duration, transition: row.transition }); setEditingRow(rowIdx); }} className="text-left group">
                                                     <div className="text-orange-600 font-semibold text-sm">
-                                                        {row.duration > 0 ? `${row.duration}s` : '∞'}
-                                                        {row.transition && row.transition !== 'cut' && (
-                                                            <span className="text-gray-400 font-normal"> / {row.transition}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-[10px] text-gray-400 group-hover:text-blue-500 transition-colors">tap to edit</div>
+                                                            {row.duration > 0 ? `${row.duration}s` : '∞'}
+                                                            {row.transition && row.transition !== 'cut' && (
+                                                                <span className="text-gray-400 font-normal"> · {row.transition}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] text-gray-400 group-hover:text-orange-500 transition-colors">tap to edit</div>
                                                 </button>
                                             )}
                                         </td>
