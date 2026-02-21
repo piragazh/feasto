@@ -84,10 +84,10 @@ export default function POSOfflineSyncBanner({ restaurantId }) {
     }
 
     return (
-        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-semibold mb-3 ${
+        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium mb-3 border ${
             !isOnline
-                ? 'bg-red-900/80 border border-red-700 text-red-200'
-                : 'bg-yellow-900/80 border border-yellow-700 text-yellow-200'
+                ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
         }`}>
             {!isOnline ? (
                 <WifiOff className="h-4 w-4 shrink-0" />
@@ -95,10 +95,10 @@ export default function POSOfflineSyncBanner({ restaurantId }) {
                 <Wifi className="h-4 w-4 shrink-0" />
             )}
 
-            <span className="flex-1">
+            <span className="flex-1 text-xs">
                 {!isOnline
-                    ? `Offline mode — orders will be queued and synced when connection is restored`
-                    : `Back online — ${pendingCount} order${pendingCount > 1 ? 's' : ''} pending sync`
+                    ? 'Offline — orders will sync when connection is restored'
+                    : `Back online · ${pendingCount} order${pendingCount > 1 ? 's' : ''} pending sync`
                 }
             </span>
 
@@ -106,9 +106,9 @@ export default function POSOfflineSyncBanner({ restaurantId }) {
                 <button
                     onClick={syncOrders}
                     disabled={isSyncing}
-                    className="flex items-center gap-1.5 bg-yellow-700 hover:bg-yellow-600 px-3 py-1 rounded-md text-xs font-bold transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
                 >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
                     {isSyncing ? 'Syncing...' : 'Sync Now'}
                 </button>
             )}
