@@ -629,54 +629,7 @@ export default function Layout({ children, currentPageName }) {
                 {/* AI Chatbot Widget */}
                 <ChatbotWidget />
 
-                {/* Footer */}
-                {!hideFooter && (
-                <footer className="bg-gray-900 text-gray-300 border-t border-gray-800 mt-auto">
-                    <div className="max-w-6xl mx-auto px-4 py-8">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div>
-                                <h3 className="text-white font-bold text-lg mb-4">MealDrop</h3>
-                                <p className="text-sm text-gray-400">
-                                    Your favourite restaurants, delivered to your door.
-                                </p>
-                            </div>
-                            <div>
-                                <h4 className="text-white font-semibold mb-4">Legal</h4>
-                                <ul className="space-y-2 text-sm">
-                                    <li>
-                                        <Link to={createPageUrl('PrivacyPolicy')} className="hover:text-white transition-colors">
-                                            Privacy Policy
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to={createPageUrl('TermsOfService')} className="hover:text-white transition-colors">
-                                            Terms of Service
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to={createPageUrl('CookiesPolicy')} className="hover:text-white transition-colors">
-                                            Cookies Policy
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h4 className="text-white font-semibold mb-4">Support</h4>
-                                <ul className="space-y-2 text-sm">
-                                    <li>
-                                        <Link to={createPageUrl('Messages')} className="hover:text-white transition-colors">
-                                            Contact Us
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-400">
-                            © {new Date().getFullYear()} MealDrop. All rights reserved.
-                        </div>
-                        </div>
-                        </footer>
-                        )}
+
 
                 {/* Mobile Bottom Navigation */}
                 {showBottomNav && (
