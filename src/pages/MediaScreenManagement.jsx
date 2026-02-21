@@ -92,28 +92,33 @@ export default function MediaScreenManagement() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="bg-white border-b sticky top-0 z-10">
+            <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => navigate(createPageUrl('RestaurantDashboard'))}
+                                className="rounded-full"
                             >
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900">Media Screen Management</h1>
-                                <p className="text-sm text-gray-500">{restaurant.name}</p>
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
+                                    <Monitor className="h-5 w-5 text-orange-600" />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-bold text-gray-900 leading-tight">Your Screens</h1>
+                                    <p className="text-xs text-gray-500">{restaurant.name}</p>
+                                </div>
                             </div>
                         </div>
-                        <Monitor className="h-6 w-6 text-orange-500" />
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <ContentManagement restaurantId={restaurant.id} />
             </div>
         </div>
