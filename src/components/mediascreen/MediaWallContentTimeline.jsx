@@ -450,11 +450,12 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                                                     </div>
                                                 ) : (
                                                     <button
-                                                        onClick={() => openAddSlot(rowIdx, sIdx)}
-                                                        className="w-full h-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-300 hover:border-blue-400 hover:text-blue-400 transition-colors flex items-center justify-center"
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                    </button>
+                                                            onClick={() => openAddSlot(rowIdx, sIdx)}
+                                                            className="w-full h-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-colors flex items-center justify-center gap-1.5"
+                                                        >
+                                                            <Plus className="h-4 w-4" />
+                                                            <span className="text-[10px]">Add</span>
+                                                        </button>
                                                 )}
                                             </td>
                                         ))}
