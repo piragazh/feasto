@@ -125,7 +125,7 @@ function Sidebar({ restaurant, activeTab, onTabChange, onLogout, mobileOpen, onM
             `}>
                 {/* Restaurant Info */}
                 <div className="p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mb-3">
                         {restaurant?.logo_url ? (
                             <img src={restaurant.logo_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-orange-200" />
                         ) : (
@@ -140,6 +140,7 @@ function Sidebar({ restaurant, activeTab, onTabChange, onLogout, mobileOpen, onM
                             </Badge>
                         </div>
                     </div>
+                    {restaurant && <StatusBar restaurant={restaurant} />}
                 </div>
 
                 {/* Nav */}
