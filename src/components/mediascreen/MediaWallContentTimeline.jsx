@@ -412,11 +412,20 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                                             </td>
                                         ))}
 
-                                        {/* delete row */}
+                                        {/* preview + delete row */}
                                         <td className="border-l border-gray-200 px-1 py-2 align-middle text-center">
-                                            <button onClick={() => deleteRow(rowIdx)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors mx-auto">
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </button>
+                                            <div className="flex flex-col gap-1 items-center">
+                                                <button
+                                                    onClick={() => setPreviewRow({ row, rowIndex: rowIdx })}
+                                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors"
+                                                    title="Preview row"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button onClick={() => deleteRow(rowIdx)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
