@@ -755,7 +755,19 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     )}
                     {/* Custom item quick-add buttons */}
                     {(restaurant?.custom_pos_items || []).map((item, idx) => (
-                       
+                        <Button
+                            key={idx}
+                            onClick={() => onAddItem({
+                                ...item,
+                                id: `custom-${item.name}-${Date.now()}`,
+                                menu_item_id: `custom-${item.name}-${Date.now()}`,
+                                quantity: 1,
+                                customizations: {},
+                                isCustomItem: true
+                            })}
+                            className="h-14 px-3 bg-green-600 hover:bg-green-700 text-white font-semibold text-[11px] border border-green-500 rounded-lg flex flex-col items-center justify-center gap-0.5 shadow-lg transition-all hover:scale-105 min-w-[64px] max-w-[90px]"
+                            title={item.name}
+                        >
                             <PlusCircle className="h-4 w-4 flex-shrink-0" />
                             <span className="truncate w-full text-center leading-tight">{item.name}</span>
                             <span className="text-[9px] opacity-80">£{Number(item.price).toFixed(2)}</span>
