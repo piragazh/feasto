@@ -78,9 +78,9 @@ import Sitemap from './pages/Sitemap';
 import StaffOnboarding from './pages/StaffOnboarding';
 import SuperAdmin from './pages/SuperAdmin';
 import TableOrder from './pages/TableOrder';
+import TabletDashboard from './pages/TabletDashboard';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import TabletDashboard from './pages/TabletDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -116,9 +116,9 @@ export const PAGES = {
     "StaffOnboarding": StaffOnboarding,
     "SuperAdmin": SuperAdmin,
     "TableOrder": TableOrder,
+    "TabletDashboard": TabletDashboard,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "TabletDashboard": TabletDashboard,
 }
 
 export const pagesConfig = {

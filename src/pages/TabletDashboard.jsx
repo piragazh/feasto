@@ -851,19 +851,41 @@ function OrderHistorySection({ restaurantId }) {
 function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
     const [isConnecting, setIsConnecting] = useState(false);
     const [connStatus, setConnStatus] = useState('disconnected');
+    const [autoReconnect, setAutoReconnect] = useState(true);
+    const [connectionStats, setConnectionStats] = useState(null);
     const queryClient = useQueryClient();
 
     const printer = restaurant?.printer_config?.bluetooth_printer;
 
     useEffect(() => {
+        // Setup connection status callback
+        printerService.setConnectionStatusCallback((isConnected) => {
+            setConnStatus(isConnected ? 'connected' : 'disconnected');
+        });
+
+        // Try auto-connect on mount
         if (printer?.id) {
-            setConnStatus(printerService.isConnected() ? 'connected' : 'disconnected');
-            const interval = setInterval(() => {
-                setConnStatus(printerService.isConnected() ? 'connected' : 'disconnected');
-            }, 8000);
-            return () => clearInterval(interval);
+            const attemptAutoConnect = async () => {
+                if (!printerService.isConnected()) {
+                    await printerService.tryAutoConnect();
+                }
+            };
+            attemptAutoConnect();
         }
+
+        // Monitor connection status
+        const statusInterval = setInterval(() => {
+            const status = printerService.getConnectionStatus();
+            setConnStatus(status.connected ? 'connected' : 'disconnected');
+            setConnectionStats(status);
+        }, 5000);
+
+        return () => clearInterval(statusInterval);
     }, [printer?.id]);
+
+    useEffect(() => {
+        printerService.enableAutoReconnect(autoReconnect);
+    }, [autoReconnect]);
 
     const saveConfig = async (updates) => {
         const newConfig = { ...(restaurant?.printer_config || {}), ...updates };
