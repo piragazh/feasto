@@ -58,6 +58,16 @@ Deno.serve(async (req) => {
                     manifest.display = "fullscreen";
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
+                } else if (mode === 'tablet') {
+                    // Tablet Dashboard PWA
+                    manifest.name = `${restaurant.name} Tablet`;
+                    manifest.short_name = restaurant.name.substring(0, 12);
+                    manifest.description = `Tablet management for ${restaurant.name}`;
+                    manifest.start_url = `/TabletDashboard?restaurant_id=${restaurantId}`;
+                    manifest.display = "standalone";
+                    manifest.orientation = "landscape-primary";
+                    manifest.theme_color = themeColor;
+                    manifest.background_color = themeColor;
                 } else {
                     // Customer-facing PWA for custom domain
                     manifest.name = restaurant.name;
