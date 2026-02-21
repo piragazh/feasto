@@ -939,15 +939,21 @@ function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
                     </h3>
                     {printer ? (
                         <div className={`rounded-xl p-4 flex items-center justify-between mb-4 ${connStatus === 'connected' ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-1">
                                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${connStatus === 'connected' ? 'bg-green-500' : 'bg-yellow-500'}`}>
                                     <Printer className="h-5 w-5 text-white" />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <p className="font-semibold text-gray-900">{printer.name || 'Printer'}</p>
-                                    <p className={`text-xs ${connStatus === 'connected' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                        {connStatus === 'connected' ? '● Connected' : '○ Disconnected'}
-                                    </p>
+                                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                                        <span className={`${connStatus === 'connected' ? 'text-green-600' : 'text-yellow-600'}`}>
+                                            {connStatus === 'connected' ? '● Connected' : '○ Disconnected'}
+                                        </span>
+                                        {connectionStats?.reconnecting && <span className="text-blue-600">🔄 Reconnecting...</span>}
+                                        {connectionStats?.reconnectAttempts > 0 && (
+                                            <span className="text-gray-500">Attempt {connectionStats.reconnectAttempts}/5</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={disconnectPrinter}>
@@ -959,11 +965,50 @@ function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
                             {isConnecting ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Scanning...</> : <><Bluetooth className="h-4 w-4 mr-2" />Scan & Connect Printer</>}
                         </Button>
                     )}
-                    <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
-                        Turn on your Bluetooth printer, put it in pairing mode, then tap "Scan & Connect Printer".
+                    <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 space-y-1">
+                        <p>Turn on your Bluetooth printer, put it in pairing mode, then tap "Scan & Connect Printer".</p>
+                        <p>Once connected, the printer will auto-reconnect if the connection drops.</p>
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Auto Reconnect Setting */}
+            {printer && (
+                <Card>
+                    <CardContent className="p-6 space-y-4">
+                        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <Wifi className="h-5 w-5 text-gray-500" />
+                            Connection Stability
+                        </h3>
+                        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                            <div className="flex-1">
+                                <span className="text-sm font-medium text-gray-700">Auto-Reconnect</span>
+                                <p className="text-xs text-gray-500 mt-1">Automatically reconnect if connection drops</p>
+                            </div>
+                            <Switch
+                                checked={autoReconnect}
+                                onCheckedChange={setAutoReconnect}
+                            />
+                        </div>
+                        {connectionStats && (
+                            <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-xs text-gray-600">
+                                <div className="flex justify-between">
+                                    <span>Status:</span>
+                                    <span className={connStatus === 'connected' ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
+                                        {connStatus === 'connected' ? 'Connected' : 'Disconnected'}
+                                    </span>
+                                </div>
+                                {connectionStats.lastConnectionTime && (
+                                    <div className="flex justify-between">
+                                        <span>Last Connection:</span>
+                                        <span>{format(new Date(connectionStats.lastConnectionTime), 'HH:mm:ss')}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Print Settings */}
             <Card>
