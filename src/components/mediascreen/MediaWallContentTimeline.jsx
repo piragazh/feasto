@@ -223,7 +223,7 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
     const openAddSlot = (rowIdx, screenIdx) => {
         setAddingToRow(rowIdx);
         setAddingSlotStart(screenIdx);
-        setSlotForm({ title: '', type: 'menu', span: 1, media_url: '' });
+        setSlotForm({ title: '', type: 'menu', span: 1, media_url: '', order_statuses: ['preparing', 'ready_for_collection'], weather_location: '', clock_format: '24h', date_format: 'full' });
         setShowAddDialog(true);
     };
 
