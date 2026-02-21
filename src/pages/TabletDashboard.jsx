@@ -967,20 +967,18 @@ function StatusBar({ restaurant }) {
     const networkIcon = network.online ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />;
 
     return (
-        <div className="bg-white border-b border-gray-200 px-5 py-2 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 text-gray-600">
-                    {networkIcon}
-                    <span className="font-medium">{network.online ? 'Online' : 'Offline'}</span>
-                    {network.online && <span className={`font-medium ${speedColors[network.speed]}`}>({network.latency}ms)</span>}
-                </div>
-                <div className="flex items-center gap-1.5">
-                    {printerStatus === 'connected' ? (
-                        <><Zap className="h-4 w-4 text-green-600" /><span className="text-green-600 font-medium">Printer Connected</span></>
-                    ) : (
-                        <><AlertCircle className="h-4 w-4 text-gray-400" /><span className="text-gray-500">No Printer</span></>
-                    )}
-                </div>
+        <div className="space-y-2 text-xs">
+            <div className="flex items-center gap-1.5 text-gray-600">
+                {networkIcon}
+                <span className="font-medium">{network.online ? 'Online' : 'Offline'}</span>
+                {network.online && <span className={`font-medium ${speedColors[network.speed]}`}>({network.latency}ms)</span>}
+            </div>
+            <div className="flex items-center gap-1.5">
+                {printerStatus === 'connected' ? (
+                    <><Zap className="h-4 w-4 text-green-600" /><span className="text-green-600 font-medium">Printer OK</span></>
+                ) : (
+                    <><AlertCircle className="h-4 w-4 text-gray-400" /><span className="text-gray-500">No Printer</span></>
+                )}
             </div>
         </div>
     );
