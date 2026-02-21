@@ -838,7 +838,7 @@ export default function TabletDashboard() {
 
     if (!user) return <LoginScreen onLogin={(u) => { setUser(u); setAuthLoading(false); }} />;
 
-    const tabLabels = { orders: 'Live Orders', menu: 'Menu Items', printer: 'Printer Settings' };
+    const tabLabels = { orders: 'Live Orders', history: 'Order History', menu: 'Menu Items', printer: 'Printer Settings' };
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
