@@ -116,13 +116,32 @@ const MOCK_ORDERS = {
     out_for_delivery:     ['#A1035'],
 };
 
+const ORDER_TYPE_LABELS = {
+    delivery: '🚗 Delivery',
+    collection: '🏃 Collection',
+    dine_in: '🍽️ Dine-in',
+    takeaway: '📦 Takeaway',
+};
+
 function OrdersWidget({ slot }) {
     const statuses = slot?.order_statuses?.length ? slot.order_statuses : ['preparing', 'ready_for_collection'];
+    const orderTypes = slot?.order_types || [];
     const cols = statuses.length <= 2 ? statuses.length : 2;
     return (
-        <div className="w-full h-full flex flex-col bg-gray-950 text-white p-4 select-none overflow-hidden">
-            <h3 className="text-sm font-bold uppercase tracking-widest opacity-50 mb-3">Collection Orders</h3>
-            <div className={`grid gap-3 flex-1 overflow-hidden`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+        <div className="w-full h-full flex flex-col bg-gray-950 text-white p-3 select-none overflow-hidden">
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold uppercase tracking-widest opacity-50">Live Orders</h3>
+                {orderTypes.length > 0 && (
+                    <div className="flex gap-1">
+                        {orderTypes.map(t => (
+                            <span key={t} className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full opacity-70">
+                                {ORDER_TYPE_LABELS[t] || t}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+            <div className="grid gap-3 flex-1 overflow-hidden" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
                 {statuses.map(s => {
                     const style = STATUS_STYLE[s] || STATUS_STYLE.preparing;
                     const orders = MOCK_ORDERS[s] || [];
