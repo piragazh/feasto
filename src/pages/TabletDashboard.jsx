@@ -745,7 +745,7 @@ function OrderHistorySection({ restaurantId }) {
             {/* Orders list */}
             <div className="space-y-2">
                 {filteredOrders.map(order => (
-                    <Card key={order.id} className="border border-gray-200">
+                    <Card key={order.id} className="border border-gray-200 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setExpandedOrder(expandedOrder?.id === order.id ? null : order)}>
                         <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-2">
@@ -760,6 +760,41 @@ function OrderHistorySection({ restaurantId }) {
                                 <span>{format(new Date(order.created_date), 'd MMM, HH:mm')}</span>
                                 <span className="text-gray-600 font-medium">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
                             </div>
+                            
+                            {/* Expanded details */}
+                            {expandedOrder?.id === order.id && (
+                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                                    {/* Items */}
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-600 mb-2">Items:</p>
+                                        <div className="bg-gray-50 rounded p-2 space-y-1">
+                                            {order.items.map((item, i) => (
+                                                <div key={i} className="flex justify-between text-xs">
+                                                    <span className="font-medium">{item.quantity}x {item.name}</span>
+                                                    <span className="text-gray-600">£{(item.price * item.quantity).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Details */}
+                                    <div className="space-y-1 text-xs text-gray-600">
+                                        {order.phone && <div><span className="font-medium">Phone:</span> {order.phone}</div>}
+                                        {order.order_type === 'delivery' && order.delivery_address && <div><span className="font-medium">Address:</span> {typeof order.delivery_address === 'string' ? order.delivery_address : 'See address'}</div>}
+                                        {order.notes && <div className="bg-yellow-50 p-2 rounded"><span className="font-medium">Note:</span> {order.notes}</div>}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <Button 
+                                        onClick={(e) => { e.stopPropagation(); printOrder(order); toast.success('Printing...'); }} 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="w-full text-xs"
+                                    >
+                                        <Printer className="h-3 w-3 mr-1" /> Reprint Receipt
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 ))}
