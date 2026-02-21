@@ -43,7 +43,7 @@ export default function MediaWallManager({ restaurantId }) {
     const updateScreenMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['screens', restaurantId]);
+            queryClient.invalidateQueries({ queryKey: ['screens', restaurantId] });
             toast.success('Screen updated');
         }
     });
