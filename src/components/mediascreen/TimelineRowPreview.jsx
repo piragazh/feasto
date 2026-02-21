@@ -14,17 +14,35 @@ const TYPE_META = {
 };
 
 // ── Widget mock renderers ─────────────────────────────────────────────────────
-function ClockWidget() {
+function ClockWidget({ slot }) {
     const [now, setNow] = useState(new Date());
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(t);
     }, []);
+
+    const is12h = slot?.clock_format === '12h';
+    const timeStr = is12h ? format(now, 'hh:mm') : format(now, 'HH:mm');
+    const ampm = is12h ? format(now, 'a') : null;
+    const secs = format(now, 'ss');
+
+    const dateStr = (() => {
+        switch (slot?.date_format) {
+            case 'none':    return null;
+            case 'short':   return format(now, 'd MMM yyyy');
+            case 'numeric': return format(now, 'dd/MM/yyyy');
+            default:        return format(now, 'EEEE, d MMMM yyyy');
+        }
+    })();
+
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white select-none">
-            <div className="text-5xl font-bold tabular-nums tracking-tight">{format(now, 'HH:mm')}</div>
-            <div className="text-lg opacity-60 mt-1">{format(now, 'ss')}s</div>
-            <div className="text-sm opacity-50 mt-2">{format(now, 'EEEE, d MMMM yyyy')}</div>
+            <div className="flex items-end gap-2">
+                <div className="text-5xl font-bold tabular-nums tracking-tight">{timeStr}</div>
+                {ampm && <div className="text-xl font-semibold opacity-70 pb-1">{ampm}</div>}
+            </div>
+            <div className="text-lg opacity-60 mt-1">{secs}s</div>
+            {dateStr && <div className="text-sm opacity-50 mt-2">{dateStr}</div>}
         </div>
     );
 }
