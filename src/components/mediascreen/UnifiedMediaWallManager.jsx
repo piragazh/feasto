@@ -309,6 +309,9 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
                         </CardHeader>
                         <CardContent>
                             <MediaWallContentTimeline
+                                restaurantId={restaurantId}
+                                wallName={wallName}
+                                wallConfig={wallConfig}
                                 content={individualContent}
                                 layouts={layoutTemplates}
                                 onAddToTimeline={() => {}}
