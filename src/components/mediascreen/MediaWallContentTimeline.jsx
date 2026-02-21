@@ -169,15 +169,21 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
         span: 1,
         media_url: '',
         // menu config
-        menu_categories: [],        // empty = all categories
-        menu_display_images: false, // show item images
+        menu_categories: [],
+        menu_display_images: false,
         // widget_orders config
         order_statuses: ['preparing', 'ready_for_collection'],
+        order_types: [],              // empty = all types
         // widget_weather config
         weather_location: '',
+        weather_units: 'celsius',     // 'celsius' | 'fahrenheit'
+        weather_mode: 'current',      // 'current' | 'forecast'
         // widget_time config
         clock_format: '24h',
         date_format: 'full',
+        clock_show_seconds: false,
+        clock_font_size: 'large',     // 'small' | 'medium' | 'large'
+        clock_color: 'white',         // 'white' | 'orange' | 'teal' | 'yellow'
     };
     const [slotForm, setSlotForm] = useState(DEFAULT_SLOT_FORM);
 
