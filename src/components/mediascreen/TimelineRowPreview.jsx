@@ -177,7 +177,7 @@ function SlotContent({ slot }) {
         case 'widget_weather': return <WeatherWidget slot={slot} />;
         case 'widget_orders':  return <OrdersWidget slot={slot} />;
         case 'menu':
-        case 'span_menu':      return <MenuWidget />;
+        case 'span_menu':      return <MenuWidget slot={slot} />;
         case 'video':
         case 'span_video':     return <VideoWidget mediaUrl={slot.media_url} />;
         default:               return <MenuWidget />;
