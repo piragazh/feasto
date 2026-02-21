@@ -493,18 +493,18 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Zap className="h-5 w-5 text-indigo-500" />
-                            Layout Templates
+                            Quick Start Templates
                         </DialogTitle>
-                        <p className="text-sm text-gray-500 mt-1">Pick a template to add a pre-configured row</p>
+                        <p className="text-sm text-gray-500 mt-1">Not sure where to start? Pick one of these ready-made layouts and customise from there.</p>
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                         {TEMPLATES.map(tpl => (
                             <button
                                 key={tpl.id}
                                 onClick={() => applyTemplate(tpl)}
-                                className="flex flex-col items-start gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left group"
+                                className="flex flex-col items-start gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
                             >
-                                <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors">
                                     {tpl.icon}
                                 </div>
                                 <div>
