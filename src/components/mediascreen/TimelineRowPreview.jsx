@@ -223,15 +223,17 @@ export default function TimelineRowPreview({ open, onClose, row, numScreens, row
                 {/* Wall preview */}
                 <div className="p-4 bg-gray-100">
                     {/* Simulated "wall" - 16:9 aspect per screen panel */}
-                    <div className="flex gap-1 w-full rounded-xl overflow-hidden shadow-2xl border border-gray-800" style={{ aspectRatio: `${numScreens * 16} / 9` }}>
+                    <div
+                        className="flex gap-1 w-full rounded-xl overflow-hidden shadow-2xl border border-gray-800"
+                        style={{ aspectRatio: `${numScreens * 16} / 9`, position: 'relative' }}
+                    >
                         {rendered.map(({ si: sIdx, slot, colSpan }) => {
-                            const meta = TYPE_META[slot?.type] || TYPE_META.menu;
                             const widthPct = (colSpan / totalWeight) * 100;
                             return (
                                 <div
                                     key={sIdx}
                                     className="relative overflow-hidden flex-shrink-0"
-                                    style={{ width: `${widthPct}%` }}
+                                    style={{ width: `${widthPct}%`, position: 'absolute', top: 0, bottom: 0, left: `${rendered.slice(0, rendered.findIndex(r => r.si === sIdx)).reduce((s, r) => s + (r.colSpan / totalWeight) * 100, 0)}%` }}
                                 >
                                     {/* Bezel separator (except first) */}
                                     {sIdx > 0 && (
@@ -248,7 +250,7 @@ export default function TimelineRowPreview({ open, onClose, row, numScreens, row
                                     </div>
 
                                     {/* Content */}
-                                    <div className="w-full h-full">
+                                    <div className="absolute inset-0">
                                         {slot ? (
                                             <SlotContent slot={slot} />
                                         ) : (
