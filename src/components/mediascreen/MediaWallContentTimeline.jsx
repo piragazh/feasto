@@ -306,11 +306,11 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
         <div className="space-y-3">
             {/* Toolbar */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-                <p className="text-sm text-gray-500">Configure what each screen shows per time-slot.</p>
+                <p className="text-sm text-gray-500">Each row is a layout — screens cycle through them in order.</p>
                 <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => setShowTemplates(true)} className="gap-1.5">
                         <Zap className="h-3.5 w-3.5 text-indigo-500" />
-                        Templates
+                        Quick Start
                     </Button>
                     <Button size="sm" variant="outline" onClick={addRow} className="gap-1.5">
                         <Plus className="h-3.5 w-3.5" />
@@ -320,10 +320,10 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                         size="sm"
                         onClick={handleSave}
                         disabled={!dirty || saving}
-                        className={`gap-1.5 ${dirty ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                        className={`gap-1.5 ${dirty ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400'}`}
                     >
                         <Save className="h-3.5 w-3.5" />
-                        {saving ? 'Saving…' : 'Save'}
+                        {saving ? 'Saving…' : dirty ? 'Save Changes' : 'Saved'}
                     </Button>
                 </div>
             </div>
