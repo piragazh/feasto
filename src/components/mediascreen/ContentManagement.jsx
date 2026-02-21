@@ -1351,108 +1351,102 @@ export default function ContentManagement({ restaurantId }) {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="grid gap-3">
+                                <div className="grid gap-4">
                                     {screenNames.map(name => {
                                         const stats = getScreenStats(name);
                                         const isEmpty = stats.total === 0;
+                                        const screenObj = screens.find(s => s.screen_name === name);
+                                        const screenUrl = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screenName=${encodeURIComponent(name)}`;
                                         return (
-                                            <div key={name} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                                            <div key={name} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                                {/* Header bar */}
+                                                <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3 flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                                                        <Monitor className="h-4 w-4 text-white" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-semibold text-white truncate">{name}</h4>
+                                                        <p className="text-xs text-gray-400">{isEmpty ? 'No content yet' : `${stats.active} active item${stats.active !== 1 ? 's' : ''}`}</p>
+                                                    </div>
+                                                    <Badge className={isEmpty ? 'bg-gray-600 text-gray-300' : 'bg-green-500 text-white border-0'}>
+                                                        {isEmpty ? 'Empty' : '● Live'}
+                                                    </Badge>
+                                                </div>
+
+                                                {/* Body */}
                                                 <div className="p-4">
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div className="flex-1 min-w-0">
-                                                           <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                               <h4 className="font-semibold text-gray-900 truncate">{name}</h4>
-                                                               {isEmpty ? (
-                                                                   <Badge variant="outline" className="bg-gray-50 text-gray-500 text-xs">
-                                                                       Empty
-                                                                   </Badge>
-                                                               ) : (
-                                                                   <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
-                                                                       Active
-                                                                   </Badge>
-                                                               )}
-                                                               {screens.find(s => s.screen_name === name)?.groups?.map(group => (
-                                                                   <Badge key={group} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                                                                       <Tag className="h-3 w-3 mr-1" />
-                                                                       {group}
-                                                                   </Badge>
-                                                               ))}
-                                                           </div>
-                                                            <div className="grid grid-cols-3 gap-3 text-xs text-gray-600">
-                                                                <div>
-                                                                    <span className="text-gray-500">Content:</span>
-                                                                    <span className="ml-1 font-medium text-gray-900">{stats.total}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-gray-500">Active:</span>
-                                                                    <span className="ml-1 font-medium text-green-600">{stats.active}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-gray-500">Duration:</span>
-                                                                    <span className="ml-1 font-medium text-gray-900">{stats.duration}s</span>
-                                                                </div>
-                                                            </div>
+                                                    {/* Quick stats */}
+                                                    <div className="flex gap-4 mb-4 text-sm">
+                                                        <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                                                            <div className="font-bold text-gray-900 text-lg">{stats.total}</div>
+                                                            <div className="text-xs text-gray-500">Media items</div>
                                                         </div>
-                                                        <div className="flex flex-col gap-1.5">
-                                                           <Button
-                                                               size="sm"
-                                                               variant="outline"
-                                                               onClick={() => handleManageGroups(name)}
-                                                               className="text-xs h-8 bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                                                           >
-                                                               <Tag className="h-3.5 w-3.5 mr-1" />
-                                                               Groups
-                                                           </Button>
-                                                           <Button
-                                                               size="sm"
-                                                               variant="outline"
-                                                               onClick={() => handleConfigureMediaWall(name)}
-                                                               className="text-xs h-8 bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
-                                                           >
-                                                               <Grid3x3 className="h-3.5 w-3.5 mr-1" />
-                                                               Media Wall
-                                                           </Button>
-                                                           <Button
-                                                               size="sm"
-                                                               variant="outline"
-                                                               onClick={() => handleOpenTemplateLibrary(name)}
-                                                               className="text-xs h-8 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
-                                                           >
-                                                               <Settings className="h-3.5 w-3.5 mr-1" />
-                                                               Template
-                                                           </Button>
-                                                           <Button
-                                                               size="sm"
-                                                               variant="outline"
-                                                               onClick={() => handleEditLayout(name)}
-                                                               className="text-xs h-8 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
-                                                           >
-                                                               <Edit className="h-3.5 w-3.5 mr-1" />
-                                                               Custom
-                                                           </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => copyScreenUrl(name)}
-                                                                className="text-xs h-8"
-                                                            >
-                                                                <Copy className="h-3.5 w-3.5 mr-1" />
-                                                                URL
-                                                            </Button>
+                                                        <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                                                            <div className="font-bold text-gray-900 text-lg">{stats.duration}s</div>
+                                                            <div className="text-xs text-gray-500">Total loop</div>
+                                                        </div>
+                                                        <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                                                            <div className="font-bold text-gray-900 text-lg">{stats.active}</div>
+                                                            <div className="text-xs text-gray-500">Active</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* URL bar */}
+                                                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-4">
+                                                        <span className="text-xs text-gray-400 flex-1 truncate font-mono">{screenUrl}</span>
+                                                        <button
+                                                            onClick={() => copyScreenUrl(name)}
+                                                            className="flex-shrink-0 text-xs text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                                                        >
+                                                            <Copy className="h-3 w-3" />
+                                                            Copy
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleConfigureMediaWall(name)}
+                                                            className="bg-orange-500 hover:bg-orange-600 text-white h-9"
+                                                        >
+                                                            <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
+                                                            Configure Layout
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleOpenTemplateLibrary(name)}
+                                                            className="h-9"
+                                                        >
+                                                            <Sparkles className="h-3.5 w-3.5 mr-1.5 text-purple-500" />
+                                                            Use Template
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleManageGroups(name)}
+                                                            className="h-9 text-gray-600"
+                                                        >
+                                                            <Tag className="h-3.5 w-3.5 mr-1.5" />
+                                                            Groups
+                                                        </Button>
+                                                        <div className="flex gap-1.5">
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => handleScreenAction('rename', name, name)}
-                                                                className="text-xs h-8"
+                                                                className="flex-1 h-9 text-gray-600"
+                                                                title="Rename screen"
                                                             >
-                                                                <Edit className="h-3.5 w-3.5 mr-1" />
-                                                                Rename
+                                                                <Edit className="h-3.5 w-3.5" />
                                                             </Button>
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => handleScreenAction('delete', name)}
-                                                                className="text-xs h-8 text-red-600 hover:bg-red-50"
+                                                                className="h-9 text-red-500 hover:bg-red-50 hover:border-red-200 px-2.5"
+                                                                title="Delete screen"
                                                             >
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
