@@ -657,6 +657,34 @@ function MessagesSection({ restaurantId }) {
 function OrderHistorySection({ restaurantId }) {
     const [dateFilter, setDateFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [expandedOrder, setExpandedOrder] = useState(null);
+
+    const printOrder = async (order) => {
+        const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+        const restaurant = restaurants?.[0];
+        const config = restaurant?.printer_config || {};
+        const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
+
+        const printWindow = window.open('', '', 'width=300,height=600');
+        const orderLabel = order.order_type === 'collection' && order.order_number
+            ? order.order_number : `#${order.id.slice(-6)}`;
+        printWindow.document.write(`<html><head><title>Order ${orderLabel}</title><style>
+            body{font-family:monospace;width:${printerWidth};margin:10px;font-size:30px;}
+            h2{text-align:center;} .sep{border-top:2px dashed #000;margin:8px 0;} .total{font-weight:bold;}
+        </style></head><body>
+        <h2>${restaurant?.name || 'ORDER'}</h2>
+        <div class="sep"></div>
+        <p><strong>Order:</strong> ${orderLabel}</p>
+        <p><strong>Type:</strong> ${order.order_type?.toUpperCase()}</p>
+        <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
+        <div class="sep"></div>
+        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — £${(i.price * i.quantity).toFixed(2)}</p>`).join('')}
+        <div class="sep"></div>
+        <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
+        </body></html>`);
+        printWindow.document.close();
+        printWindow.print();
+    };
 
     const { data: orders = [], isLoading } = useQuery({
         queryKey: ['tablet-history', restaurantId],
