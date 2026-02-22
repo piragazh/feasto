@@ -107,9 +107,13 @@ export default function POSDashboard() {
 
     const addToCart = (item) => {
         setCart(prev => {
-            const existing = prev.find(i => i.id === item.id);
-            if (existing) return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-            return [...prev, { ...item, quantity: 1 }];
+            // Items with customizations should always be separate entries
+            const hasCustomizations = item.customizations && Object.keys(item.customizations).length > 0;
+            if (!hasCustomizations) {
+                const existing = prev.find(i => i.id === item.id && (!i.customizations || Object.keys(i.customizations).length === 0));
+                if (existing) return prev.map(i => i.id === existing.id ? { ...i, quantity: i.quantity + (item.quantity || 1) } : i);
+            }
+            return [...prev, { ...item, quantity: item.quantity || 1 }];
         });
     };
     const removeFromCart = (itemId) => setCart(prev => prev.filter(i => i.id !== itemId));
