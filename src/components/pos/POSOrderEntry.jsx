@@ -433,24 +433,29 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
         const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, order) => sum + order.total, 0);
 
-        const statusStyles = {
+        const statusStyles = isDark ? {
             available: { card: 'border-white/[0.06] hover:border-green-500/40', dot: 'bg-green-400', label: 'text-green-400' },
             occupied:  { card: 'border-orange-500/40 bg-orange-500/5', dot: 'bg-orange-400', label: 'text-orange-400' },
             reserved:  { card: 'border-blue-500/30 bg-blue-500/5', dot: 'bg-blue-400', label: 'text-blue-400' },
             needs_cleaning: { card: 'border-yellow-500/30 bg-yellow-500/5', dot: 'bg-yellow-400', label: 'text-yellow-400' },
+        } : {
+            available: { card: 'border-gray-200 hover:border-green-400', dot: 'bg-green-400', label: 'text-green-600' },
+            occupied:  { card: 'border-orange-400 bg-orange-50', dot: 'bg-orange-400', label: 'text-orange-600' },
+            reserved:  { card: 'border-blue-300 bg-blue-50', dot: 'bg-blue-400', label: 'text-blue-600' },
+            needs_cleaning: { card: 'border-yellow-400 bg-yellow-50', dot: 'bg-yellow-400', label: 'text-yellow-600' },
         };
 
         return (
             <div className="flex flex-col h-full w-full">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white font-bold text-xl">Tables</h2>
+                    <h2 className={`${t.text} font-bold text-xl`}>Tables</h2>
                     <button onClick={() => setViewMode('entry')}
-                        className="text-gray-400 hover:text-white text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                        className={`${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'} text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:${isDark ? 'bg-white/5' : 'bg-gray-100'} transition-colors`}>
                         ← Back to Order
                     </button>
                 </div>
 
-                <div className="flex-1 bg-[#151720] rounded-2xl border border-white/[0.06] p-4 overflow-y-auto">
+                <div className={`flex-1 ${t.tableContainer} rounded-2xl border p-4 overflow-y-auto`}>
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                         {tables.map(table => {
                             const orders = getTableOrders(table.id);
@@ -460,7 +465,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
                             return (
                                 <div key={table.id}
-                                    className={`aspect-square rounded-2xl border-2 p-3 flex flex-col relative cursor-pointer transition-all bg-[#1a1d27] ${s.card}`}>
+                                    className={`aspect-square rounded-2xl border-2 p-3 flex flex-col relative cursor-pointer transition-all ${isDark ? 'bg-[#1a1d27]' : 'bg-white'} ${s.card}`}>
                                     <div className={`absolute top-2.5 right-2.5 w-2 h-2 rounded-full ${s.dot}`} />
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
