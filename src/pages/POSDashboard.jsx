@@ -137,14 +137,14 @@ export default function POSDashboard() {
     ];
 
     if (accessDenied) return (
-        <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+        <div className={`min-h-screen ${t.bg} flex items-center justify-center`}>
             <div className="text-center">
                 <div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <UtensilsCrossed className="h-10 w-10 text-red-400" />
                 </div>
-                <h2 className="text-white text-2xl font-bold mb-2">POS Access Not Enabled</h2>
-                <p className="text-gray-400 mb-8 max-w-sm">The POS module has not been enabled for your restaurant.</p>
-                <Button onClick={() => base44.auth.logout()} className="bg-gray-800 hover:bg-gray-700 text-white border border-gray-700">
+                <h2 className={`${t.text} text-2xl font-bold mb-2`}>POS Access Not Enabled</h2>
+                <p className={`${t.textMuted} mb-8 max-w-sm`}>The POS module has not been enabled for your restaurant.</p>
+                <Button onClick={() => base44.auth.logout()} className={isDark ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700' : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200'}>
                     Sign Out
                 </Button>
             </div>
@@ -152,29 +152,29 @@ export default function POSDashboard() {
     );
 
     if (!user || !restaurant) return (
-        <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+        <div className={`min-h-screen ${t.bg} flex items-center justify-center`}>
             <div className="text-center">
                 <div className="w-16 h-16 rounded-full border-4 border-orange-500/30 border-t-orange-500 animate-spin mx-auto mb-4" />
-                <p className="text-gray-400 font-medium">Loading POS System...</p>
+                <p className={`${t.textMuted} font-medium`}>Loading POS System...</p>
             </div>
         </div>
     );
 
     const maxPos = restaurant.max_pos_count || 1;
     if (maxPos > 1 && !posNumber) return (
-        <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+        <div className={`min-h-screen ${t.bg} flex items-center justify-center`}>
             <div className="text-center max-w-md w-full px-6">
                 <div className="w-20 h-20 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/30">
                     <UtensilsCrossed className="h-10 w-10 text-white" />
                 </div>
-                <h2 className="text-white text-2xl font-bold mb-1">{restaurant.name}</h2>
-                <p className="text-gray-400 mb-8">Select a terminal to continue</p>
+                <h2 className={`${t.text} text-2xl font-bold mb-1`}>{restaurant.name}</h2>
+                <p className={`${t.textMuted} mb-8`}>Select a terminal to continue</p>
                 <div className="grid grid-cols-2 gap-3">
                     {Array.from({ length: maxPos }, (_, i) => i + 1).map(num => (
                         <button key={num} onClick={() => setPosNumber(num)}
-                            className="h-24 bg-[#1a1d27] hover:bg-orange-500/10 border border-gray-700 hover:border-orange-500 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group">
-                            <ShoppingCart className="h-7 w-7 text-gray-400 group-hover:text-orange-400 transition-colors" />
-                            <span className="text-white font-semibold text-sm">Terminal {num}</span>
+                            className={`h-24 ${isDark ? 'bg-[#1a1d27] border-gray-700' : 'bg-white border-gray-200'} hover:bg-orange-500/10 border hover:border-orange-500 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group`}>
+                            <ShoppingCart className={`h-7 w-7 ${t.textMuted} group-hover:text-orange-400 transition-colors`} />
+                            <span className={`${t.text} font-semibold text-sm`}>Terminal {num}</span>
                         </button>
                     ))}
                 </div>
