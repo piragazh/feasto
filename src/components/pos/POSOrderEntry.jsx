@@ -323,9 +323,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             return (
                 <div className="flex flex-col h-[calc(100vh-200px)]">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-white font-bold text-xl">Payment</h2>
+                        <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)}
-                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/[0.08] text-gray-300 text-sm font-semibold rounded-xl transition-colors">
+                            className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>
                             ← Back
                         </button>
                     </div>
