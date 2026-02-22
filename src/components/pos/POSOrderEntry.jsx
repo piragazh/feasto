@@ -352,8 +352,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h2 className="text-white font-bold text-xl">{viewingTable.table_number}</h2>
-                        <p className="text-gray-500 text-xs">Payment · £{total.toFixed(2)}</p>
+                        <h2 className={`${t.text} font-bold text-xl`}>{viewingTable.table_number}</h2>
+                        <p className={`${t.textSub} text-xs`}>Payment · £{total.toFixed(2)}</p>
                     </div>
                     <div className="flex gap-2">
                         <button onClick={() => setSplitBillOpen(true)}
@@ -362,7 +362,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             Split Bill
                         </button>
                         <button onClick={() => { setShowPayment(false); setViewMode('tables'); }}
-                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/[0.08] text-gray-300 text-sm font-semibold rounded-xl transition-colors">
+                            className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>
                             ← Back
                         </button>
                     </div>
