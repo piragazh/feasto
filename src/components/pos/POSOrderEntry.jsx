@@ -133,7 +133,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         enabled: !!restaurantId,
         refetchInterval: 3000,
         staleTime: 0,
-        cacheTime: 0,
+        gcTime: 0,
     });
 
     // Get ordered categories based on restaurant settings
