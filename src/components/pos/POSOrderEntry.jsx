@@ -517,9 +517,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
 
                 {/* Left: Categories */}
-                <div className="col-span-1 md:col-span-2 bg-[#151720] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col">
-                    <div className="px-4 py-3 border-b border-white/[0.06] flex-shrink-0">
-                        <h2 className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Categories</h2>
+                <div className={`col-span-1 md:col-span-2 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
+                    <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0`}>
+                        <h2 className={`${t.textMuted} text-xs font-semibold uppercase tracking-wider`}>Categories</h2>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
                         {[{ id: '', label: 'All Items' }, ...categories.map(c => ({ id: c, label: c }))].map(({ id, label }) => (
@@ -529,7 +529,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all truncate ${
                                     selectedCategory === id
                                         ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                        : t.catBtn
                                 }`}
                                 title={label}
                             >
@@ -540,17 +540,17 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
 
                 {/* Middle: Items Grid */}
-                <div className="col-span-1 md:col-span-7 bg-[#151720] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-white/[0.06] flex-shrink-0">
+                <div className={`col-span-1 md:col-span-7 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
+                    <div className={`p-3 border-b ${t.panelHead} flex-shrink-0`}>
                         <div className="relative">
-                            <ShoppingCart className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                            <ShoppingCart className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${t.textSub}`} />
                             <Input
                                 type="text"
                                 placeholder="Search menu items..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onFocus={() => setShowKeyboard(true)}
-                                className="bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 h-11 pl-9 rounded-xl focus:border-orange-500/50 focus:ring-0"
+                                className={`${t.searchBg} h-11 pl-9 rounded-xl focus:ring-0`}
                             />
                         </div>
                     </div>
@@ -560,20 +560,20 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             <button
                                 key={item.id}
                                 onClick={() => handleItemClick(item)}
-                                className="bg-[#1a1d27] border border-white/[0.06] hover:border-orange-500/50 rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg hover:shadow-orange-500/10 active:scale-[0.97] flex flex-col"
+                                className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col`}
                             >
-                                <div className="w-full aspect-[4/3] bg-[#0f1117] overflow-hidden">
+                                <div className={`w-full aspect-[4/3] ${t.itemImg} overflow-hidden`}>
                                     {item.image_url ? (
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <ShoppingCart className="h-7 w-7 text-gray-600" />
+                                            <ShoppingCart className={`h-7 w-7 ${t.textSub}`} />
                                         </div>
                                     )}
                                 </div>
                                 <div className="p-2.5 flex flex-col flex-1">
-                                    <h3 className="font-semibold text-white text-xs line-clamp-2 leading-snug mb-1 group-hover:text-orange-300 transition-colors">{item.name}</h3>
-                                    <p className="text-orange-400 font-bold text-sm mt-auto">£{item.price.toFixed(2)}</p>
+                                    <h3 className={`font-semibold text-xs line-clamp-2 leading-snug mb-1 transition-colors ${t.itemName}`}>{item.name}</h3>
+                                    <p className="text-orange-500 font-bold text-sm mt-auto">£{item.price.toFixed(2)}</p>
                                 </div>
                             </button>
                         ))}
@@ -581,35 +581,35 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
 
                 {/* Right: Cart */}
-                <div className="col-span-1 md:col-span-3 bg-[#151720] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col">
-                    <div className="px-4 py-3 border-b border-white/[0.06] flex-shrink-0 flex items-center justify-between">
-                        <h2 className="text-white font-bold text-base">Order</h2>
+                <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
+                    <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0 flex items-center justify-between`}>
+                        <h2 className={`${t.text} font-bold text-base`}>Order</h2>
                         {orderType === 'dine_in' && selectedTable && (
-                            <span className="text-xs bg-orange-500/20 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-lg font-medium">{selectedTable.table_number}</span>
+                            <span className="text-xs bg-orange-500/20 text-orange-500 border border-orange-500/30 px-2 py-0.5 rounded-lg font-medium">{selectedTable.table_number}</span>
                         )}
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-hide">
                         {optimisticCart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                                <ShoppingCart className="h-10 w-10 text-gray-700 mb-3" />
-                                <p className="text-gray-500 text-sm font-medium">Cart is empty</p>
-                                <p className="text-gray-600 text-xs mt-1">Tap items to add them</p>
+                                <ShoppingCart className={`h-10 w-10 ${t.emptyIcon} mb-3`} />
+                                <p className={`${t.emptyText} text-sm font-medium`}>Cart is empty</p>
+                                <p className={`${t.emptySub} text-xs mt-1`}>Tap items to add them</p>
                             </div>
                         ) : (
                             optimisticCart.map(item => (
-                                <div key={item.id} className="bg-[#1a1d27] rounded-xl border border-white/[0.05] p-2.5">
+                                <div key={item.id} className={`${t.cartItem} rounded-xl border p-2.5`}>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex-1 pr-2 min-w-0">
-                                            <p className="text-white font-semibold text-xs leading-tight truncate">{item.name}</p>
+                                            <p className={`${t.text} font-semibold text-xs leading-tight truncate`}>{item.name}</p>
                                             {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                                <div className="text-gray-500 text-[9px] mt-0.5 space-y-0.5">
+                                                <div className={`${t.textSub} text-[9px] mt-0.5 space-y-0.5`}>
                                                     {Object.entries(item.customizations).slice(0, 2).map(([key, value]) => (
                                                         <p key={key} className="truncate">{key}: {Array.isArray(value) ? value.join(', ') : value}</p>
                                                     ))}
                                                 </div>
                                             )}
-                                            <p className="text-orange-400 text-xs mt-1 font-bold">£{(item.price * item.quantity).toFixed(2)}</p>
+                                            <p className="text-orange-500 text-xs mt-1 font-bold">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>
                                         <button
                                             onClick={() => onRemoveItem(item.id)}
@@ -621,14 +621,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     <div className="flex items-center gap-1.5">
                                         <button
                                             onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                            className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
+                                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.qtyMinus}`}
                                         >
                                             <Minus className="h-3 w-3" />
                                         </button>
-                                        <span className="text-white font-bold text-sm flex-1 text-center">{item.quantity}</span>
+                                        <span className={`${t.text} font-bold text-sm flex-1 text-center`}>{item.quantity}</span>
                                         <button
                                             onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                            className="h-7 w-7 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 flex items-center justify-center transition-colors"
+                                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.qtyPlus}`}
                                         >
                                             <Plus className="h-3 w-3" />
                                         </button>
@@ -638,11 +638,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         )}
                     </div>
 
-                    <div className="border-t border-white/[0.06] p-3 space-y-2">
+                    <div className={`border-t ${t.panelHead} p-3 space-y-2`}>
                         {/* Total */}
                         <div className="flex items-center justify-between px-1">
-                            <span className="text-gray-400 text-sm font-medium">Total</span>
-                            <span className="text-white text-2xl font-bold">£{cartTotal.toFixed(2)}</span>
+                            <span className={`${t.textMuted} text-sm font-medium`}>Total</span>
+                            <span className={`${t.text} text-2xl font-bold`}>£{cartTotal.toFixed(2)}</span>
                         </div>
 
                         {orderType === 'dine_in' ? (
