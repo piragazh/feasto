@@ -710,11 +710,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             </div>
 
             {/* Bottom Quick Actions */}
-            <div className="bg-[#151720] rounded-2xl border border-white/[0.06] p-2.5 flex items-center gap-2">
+            <div className={`${t.bottomBar} rounded-2xl border p-2.5 flex items-center gap-2`}>
                 {orderType === 'dine_in' && (
                     <button
                         onClick={() => setViewMode('tables')}
-                        className="h-12 px-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors"
+                        className={`h-12 px-4 ${t.floorBack} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
                     >
                         <Users className="h-4 w-4" />
                         Tables
@@ -722,7 +722,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 )}
                 <button
                     onClick={() => setCustomItemOpen(true)}
-                    className="h-12 px-4 bg-white/5 hover:bg-white/10 border border-white/[0.08] text-gray-300 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors"
+                    className={`h-12 px-4 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
                 >
                     <PlusCircle className="h-4 w-4" />
                     Custom Item
