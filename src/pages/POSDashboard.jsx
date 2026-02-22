@@ -31,7 +31,28 @@ export default function POSDashboard() {
     const [orderType, setOrderType] = useState('takeaway');
     const [accessDenied, setAccessDenied] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [posTheme, setPosTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
     const time = useTime();
+
+    const toggleTheme = () => {
+        const next = posTheme === 'dark' ? 'light' : 'dark';
+        setPosTheme(next);
+        localStorage.setItem('pos_theme', next);
+    };
+
+    const isDark = posTheme === 'dark';
+    const t = {
+        bg:         isDark ? 'bg-[#0f1117]'   : 'bg-gray-100',
+        header:     isDark ? 'bg-[#151720]'   : 'bg-white',
+        border:     isDark ? 'border-white/[0.06]' : 'border-gray-200',
+        text:       isDark ? 'text-white'      : 'text-gray-900',
+        textMuted:  isDark ? 'text-gray-400'  : 'text-gray-500',
+        textSub:    isDark ? 'text-gray-500'  : 'text-gray-400',
+        pill:       isDark ? 'bg-[#0f1117]'   : 'bg-gray-100',
+        iconBtn:    isDark ? 'bg-white/5 hover:bg-white/10 border border-white/[0.06] text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-500 hover:text-gray-900',
+        tabActive:  isDark ? 'text-orange-400 border-orange-500' : 'text-orange-500 border-orange-500',
+        tabInactive:isDark ? 'text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600' : 'text-gray-400 border-transparent hover:text-gray-700 hover:border-gray-300',
+    };
 
     useEffect(() => {
         loadUserAndRestaurant();
