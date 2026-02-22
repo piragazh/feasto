@@ -185,9 +185,9 @@ export default function POSDashboard() {
     const posName = maxPos > 1 ? `${restaurant.name} · Terminal ${posNumber}` : restaurant.name;
 
     return (
-        <div className="min-h-screen bg-[#0f1117] flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className={`min-h-screen ${t.bg} flex flex-col`} style={{ fontFamily: "'Inter', sans-serif" }}>
             {/* ── Header ── */}
-            <header className="bg-[#151720] border-b border-white/[0.06] sticky top-0 z-20">
+            <header className={`${t.header} border-b ${t.border} sticky top-0 z-20 shadow-sm`}>
                 <div className="px-5 py-0 flex items-center justify-between h-16">
                     {/* Left: Brand */}
                     <div className="flex items-center gap-3">
@@ -199,54 +199,58 @@ export default function POSDashboard() {
                             </div>
                         )}
                         <div>
-                            <h1 className="text-white font-bold text-base leading-tight">{posName}</h1>
+                            <h1 className={`${t.text} font-bold text-base leading-tight`}>{posName}</h1>
                             <div className="flex items-center gap-1.5">
                                 <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`} />
-                                <span className="text-xs text-gray-500">{isOnline ? 'Online' : 'Offline'}</span>
+                                <span className={`text-xs ${t.textSub}`}>{isOnline ? 'Online' : 'Offline'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Center: Order type switcher */}
-                    <div className="flex items-center bg-[#0f1117] rounded-xl p-1 border border-white/[0.06]">
-                        {ORDER_TYPES.map(t => (
-                            <button key={t.id} onClick={() => setOrderType(t.id)}
+                    <div className={`flex items-center ${t.pill} rounded-xl p-1 border ${t.border}`}>
+                        {ORDER_TYPES.map(ot => (
+                            <button key={ot.id} onClick={() => setOrderType(ot.id)}
                                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                    orderType === t.id
+                                    orderType === ot.id
                                         ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
-                                        : 'text-gray-400 hover:text-white'
+                                        : `${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'}`
                                 }`}>
-                                {t.label}
+                                {ot.label}
                             </button>
                         ))}
                     </div>
 
                     {/* Right: Stats + actions */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 bg-[#0f1117] border border-white/[0.06] rounded-xl px-4 py-2">
-                            <Clock className="h-3.5 w-3.5 text-gray-500" />
-                            <span className="text-white text-sm font-mono font-semibold">
+                    <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-1.5 ${t.pill} border ${t.border} rounded-xl px-3 py-2`}>
+                            <Clock className={`h-3.5 w-3.5 ${t.textSub}`} />
+                            <span className={`${t.text} text-sm font-mono font-semibold`}>
                                 {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-2">
+                        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2">
                             <ShoppingCart className="h-4 w-4 text-orange-400" />
-                            <span className="text-orange-300 font-bold text-sm">{cart.length} items</span>
-                            <span className="text-orange-400 font-bold text-sm">·</span>
-                            <span className="text-white font-bold text-sm">£{cartTotal.toFixed(2)}</span>
+                            <span className="text-orange-500 font-bold text-sm">{cart.length} · £{cartTotal.toFixed(2)}</span>
                         </div>
+
+                        {/* Theme toggle */}
+                        <button onClick={toggleTheme}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        </button>
 
                         {maxPos > 1 && (
                             <button onClick={() => setPosNumber(null)}
-                                className="flex items-center gap-1.5 text-gray-400 hover:text-white text-xs px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+                                className={`flex items-center gap-1 ${t.textMuted} text-xs px-3 py-2 rounded-lg hover:${isDark ? 'bg-white/5' : 'bg-gray-100'} transition-colors`}>
                                 <ChevronDown className="h-4 w-4" />
                                 Switch
                             </button>
                         )}
 
                         <button onClick={() => base44.auth.logout()}
-                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             <LogOut className="h-4 w-4" />
                         </button>
                     </div>
@@ -254,7 +258,7 @@ export default function POSDashboard() {
             </header>
 
             {/* ── Tab Bar ── */}
-            <div className="bg-[#151720] border-b border-white/[0.06] px-5">
+            <div className={`${t.header} border-b ${t.border} px-5`}>
                 <div className="flex gap-1">
                     {TABS.map(tab => {
                         const Icon = tab.icon;
@@ -262,9 +266,7 @@ export default function POSDashboard() {
                         return (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                                 className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all ${
-                                    active
-                                        ? 'text-orange-400 border-orange-500'
-                                        : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600'
+                                    active ? t.tabActive : t.tabInactive
                                 }`}>
                                 <Icon className="h-4 w-4" />
                                 {tab.label}
