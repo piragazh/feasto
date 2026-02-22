@@ -660,7 +660,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     <>
                                         <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-2.5 text-center">
                                             <p className="text-orange-400 text-[10px] font-medium uppercase tracking-wide">Selected</p>
-                                            <p className="text-white font-bold text-base">{selectedTable.table_number}</p>
+                                            <p className={`${t.text} font-bold text-base`}>{selectedTable.table_number}</p>
                                         </div>
                                         <button
                                             onClick={() => handleAddToTable(selectedTable)}
