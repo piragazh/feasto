@@ -18,7 +18,31 @@ import OnScreenKeyboard from './OnScreenKeyboard';
 import POSOfflineSyncBanner from './POSOfflineSyncBanner';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
 
-export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType }) {
+export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
+    const t = {
+        panel:      isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
+        panelHead:  isDark ? 'border-white/[0.06]' : 'border-gray-100',
+        text:       isDark ? 'text-white'      : 'text-gray-900',
+        textMuted:  isDark ? 'text-gray-400'  : 'text-gray-500',
+        textSub:    isDark ? 'text-gray-500'  : 'text-gray-400',
+        catBtn:     isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
+        itemCard:   isDark ? 'bg-[#1a1d27] border-white/[0.06] hover:border-orange-500/50 hover:shadow-orange-500/10' : 'bg-white border-gray-200 hover:border-orange-400 hover:shadow-orange-100',
+        itemImg:    isDark ? 'bg-[#0f1117]'   : 'bg-gray-50',
+        itemName:   isDark ? 'text-white group-hover:text-orange-300' : 'text-gray-800 group-hover:text-orange-500',
+        cartItem:   isDark ? 'bg-[#1a1d27] border-white/[0.05]' : 'bg-gray-50 border-gray-100',
+        qtyMinus:   isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700',
+        qtyPlus:    isDark ? 'bg-orange-500/20 hover:bg-orange-500/30 text-orange-400' : 'bg-orange-100 hover:bg-orange-200 text-orange-600',
+        searchBg:   isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400',
+        emptyIcon:  isDark ? 'text-gray-700'  : 'text-gray-300',
+        emptyText:  isDark ? 'text-gray-500'  : 'text-gray-400',
+        emptySub:   isDark ? 'text-gray-600'  : 'text-gray-300',
+        bottomBar:  isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
+        tableCard:  isDark ? 'bg-[#1a1d27] border-white/[0.06] border-2' : 'bg-white border-2 border-gray-200',
+        tableContainer: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-gray-50 border-gray-200',
+        payBack:    isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-700',
+        floorBack:  isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600',
+    };
      const [searchQuery, setSearchQuery] = useState('');
      const [selectedCategory, setSelectedCategory] = useState('');
      const [customizationOpen, setCustomizationOpen] = useState(false);
