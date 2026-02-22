@@ -476,7 +476,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
                                     <div className="flex-1 flex flex-col items-center justify-center"
                                         onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(true); } }}>
-                                        <h3 className="text-white font-bold text-sm text-center leading-tight mb-1">{table.table_number}</h3>
+                                        <h3 className={`${t.text} font-bold text-sm text-center leading-tight mb-1`}>{table.table_number}</h3>
                                         {table.assigned_server && (
                                             <div className="flex items-center gap-0.5 text-indigo-400 text-[9px] mb-1">
                                                 <Users className="h-2.5 w-2.5" />
