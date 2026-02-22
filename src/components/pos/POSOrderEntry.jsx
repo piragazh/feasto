@@ -671,7 +671,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                             {isAddingToTable ? 'Adding...' : 'Send to Table'}
                                         </button>
                                         <button onClick={() => setSelectedTable(null)}
-                                            className="w-full bg-white/5 hover:bg-white/10 text-gray-300 font-semibold h-9 rounded-xl text-xs transition-colors">
+                                            className={`w-full ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'} font-semibold h-9 rounded-xl text-xs transition-colors`}>
                                             Change Table
                                         </button>
                                     </>
