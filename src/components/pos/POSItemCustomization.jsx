@@ -202,7 +202,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             />
                                             <Label 
                                                 htmlFor={opt.label} 
-                                                className={`text-white cursor-pointer flex-1 font-medium ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}
+                                                className={`${isDark ? 'text-white' : 'text-gray-900'} cursor-pointer flex-1 font-medium ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}
                                             >
                                                 {opt.label}
                                             </Label>
@@ -211,15 +211,15 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     +£{opt.price.toFixed(2)}
                                                 </span>
                                             )}
-                                        </div>
-                                    ))}
-                                </RadioGroup>
-                            ) : (
-                                <div className={`space-y-${columns > 2 ? '1' : '2'}`}>
-                                    {option.options?.map(opt => (
-                                        <div 
+                                            </div>
+                                            ))}
+                                            </RadioGroup>
+                                            ) : (
+                                            <div className={`space-y-${columns > 2 ? '1' : '2'}`}>
+                                            {option.options?.map(opt => (
+                                            <div 
                                             key={opt.label}
-                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
+                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
                                             onClick={() => handleMultipleSelect(option.name, opt.label)}
                                         >
                                             <Checkbox
