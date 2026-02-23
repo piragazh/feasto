@@ -738,6 +738,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         setSelectedItem(null);
                     }}
                     onConfirm={handleCustomizationConfirm}
+                    posTheme={posTheme}
                 />
             )}
 
