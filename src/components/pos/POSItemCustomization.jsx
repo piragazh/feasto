@@ -248,7 +248,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     
                     {/* Meal Customizations - Show when meal is selected */}
                     {isMeal && item.customization_options?.find(opt => opt.type === 'meal_upgrade')?.meal_customizations?.map(mealOpt => (
-                        <div key={mealOpt.name} className="space-y-2 col-span-full border-t border-orange-500/30 pt-3">
+                        <div key={mealOpt.name} className={`space-y-2 col-span-full border-t ${isDark ? 'border-orange-500/30' : 'border-orange-300'} pt-3`}>
                             <div className="flex items-baseline gap-1">
                                 <Label className="font-bold text-orange-400 text-base">
                                     {mealOpt.name}
