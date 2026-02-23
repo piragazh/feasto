@@ -296,10 +296,10 @@ export default function POSDashboard() {
                 {activeTab === 'waitlist' && <POSWaitlist />}
                 {activeTab === 'payment' && (
                     <POSPayment cart={cart} cartTotal={cartTotal} onPaymentComplete={clearCart}
-                        restaurantId={restaurant.id} restaurantName={restaurant.name} orderType={orderType} />
+                        restaurantId={restaurant.id} restaurantName={restaurant.name} orderType={orderType} posTheme={posTheme} />
                 )}
                 {activeTab === 'kitchen' && <KitchenDisplaySystem restaurant={restaurant} />}
-                {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} />}
+                {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} posTheme={posTheme} />}
             </main>
         </div>
     );
