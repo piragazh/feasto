@@ -26,7 +26,25 @@ const PRESETS = [
 const ESC = '\x1B';
 const GS = '\x1D';
 
-export default function POSReports({ restaurantId }) {
+export default function POSReports({ restaurantId, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
+    const t = {
+        panel:      isDark ? 'bg-gray-800 border-gray-700'   : 'bg-white border-gray-200',
+        label:      isDark ? 'text-gray-400'                  : 'text-gray-500',
+        text:       isDark ? 'text-white'                     : 'text-gray-900',
+        subtext:    isDark ? 'text-gray-300'                  : 'text-gray-600',
+        inactivBtn: isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200',
+        input:      isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900',
+        tabActive:  isDark ? 'text-orange-400 border-orange-400'  : 'text-orange-500 border-orange-500',
+        tabInactive:isDark ? 'text-gray-400 hover:text-white'      : 'text-gray-500 hover:text-gray-900',
+        tabBorder:  isDark ? 'border-gray-700'                     : 'border-gray-200',
+        chartGrid:  isDark ? '#374151' : '#e5e7eb',
+        chartAxis:  isDark ? '#9ca3af' : '#6b7280',
+        chartTip:   isDark ? { backgroundColor: '#1f2937', border: '1px solid #374151' } : { backgroundColor: '#fff', border: '1px solid #e5e7eb' },
+        chartTipLabel: isDark ? { color: '#fff' } : { color: '#111' },
+        row:        isDark ? 'border-gray-700/50 hover:bg-gray-700/30' : 'border-gray-100 hover:bg-gray-50',
+        badge:      isDark ? 'bg-gray-700 text-gray-300 text-xs'      : 'bg-gray-100 text-gray-600 text-xs',
+    };
     const [preset, setPreset] = useState('today');
     const [startDate, setStartDate] = useState(moment().format('YYYY-MM-DD'));
     const [endDate, setEndDate] = useState(moment().format('YYYY-MM-DD'));
