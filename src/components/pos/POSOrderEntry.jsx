@@ -555,25 +555,25 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[180px]">
                         {filteredItems.map(item => (
                             <button
                                 key={item.id}
                                 onClick={() => handleItemClick(item)}
-                                className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col`}
+                                className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col h-full`}
                             >
-                                <div className={`w-full aspect-square ${t.itemImg} overflow-hidden`}>
+                                <div className={`h-24 flex-shrink-0 w-full ${t.itemImg} overflow-hidden`}>
                                     {item.image_url ? (
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <ShoppingCart className={`h-10 w-10 ${t.textSub}`} />
+                                            <ShoppingCart className={`h-8 w-8 ${t.textSub}`} />
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-3 flex flex-col flex-1">
-                                    <h3 className={`font-semibold text-sm line-clamp-2 leading-snug mb-1.5 transition-colors ${t.itemName}`}>{item.name}</h3>
-                                    <p className="text-orange-500 font-bold text-base mt-auto">£{item.price.toFixed(2)}</p>
+                                <div className="p-2.5 flex flex-col flex-1 min-h-0">
+                                    <h3 className={`font-semibold text-xs line-clamp-2 leading-snug mb-1 transition-colors ${t.itemName}`}>{item.name}</h3>
+                                    <p className="text-orange-500 font-bold text-sm mt-auto">£{item.price.toFixed(2)}</p>
                                 </div>
                             </button>
                         ))}
