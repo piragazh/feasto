@@ -421,9 +421,9 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
 
             {/* ── Payment Method Split ── */}
             <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className={`${t.panel} border`}>
                     <CardHeader className="pb-2 pt-4 px-4">
-                        <CardTitle className="text-white text-sm">Payment Methods</CardTitle>
+                        <CardTitle className={`${t.text} text-sm`}>Payment Methods</CardTitle>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
                         {['cash', 'card'].map(method => {
@@ -432,25 +432,25 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                             return (
                                 <div key={method} className="flex items-center gap-3 mb-2">
                                     <div className={`w-3 h-3 rounded-full ${method === 'cash' ? 'bg-green-400' : 'bg-blue-400'}`} />
-                                    <span className="text-gray-300 text-sm capitalize flex-1">{method}</span>
-                                    <span className="text-white font-bold text-sm">£{rev.toFixed(2)}</span>
-                                    <Badge className="bg-gray-700 text-gray-300 text-xs">{pct}%</Badge>
+                                    <span className={`${t.subtext} text-sm capitalize flex-1`}>{method}</span>
+                                    <span className={`${t.text} font-bold text-sm`}>£{rev.toFixed(2)}</span>
+                                    <Badge className={t.badge}>{pct}%</Badge>
                                 </div>
                             );
                         })}
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className={`${t.panel} border`}>
                     <CardHeader className="pb-2 pt-4 px-4">
-                        <CardTitle className="text-white text-sm">Order Types</CardTitle>
+                        <CardTitle className={`${t.text} text-sm`}>Order Types</CardTitle>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                        {orderTypeData.map((t, i) => (
-                            <div key={t.name} className="flex items-center gap-3 mb-2">
+                        {orderTypeData.map((ot, i) => (
+                            <div key={ot.name} className="flex items-center gap-3 mb-2">
                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                <span className="text-gray-300 text-sm capitalize flex-1">{t.name.replace('_', ' ')}</span>
-                                <span className="text-white font-bold text-sm">{t.value}</span>
+                                <span className={`${t.subtext} text-sm capitalize flex-1`}>{ot.name.replace('_', ' ')}</span>
+                                <span className={`${t.text} font-bold text-sm`}>{ot.value}</span>
                             </div>
                         ))}
                     </CardContent>
@@ -458,33 +458,33 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
             </div>
 
             {/* ── Top Items Table ── */}
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className={`${t.panel} border`}>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-white text-sm">Menu Item Breakdown</CardTitle>
+                    <CardTitle className={`${t.text} text-sm`}>Menu Item Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-gray-700">
-                                    <th className="text-left text-gray-400 text-xs py-2 px-4">Item</th>
-                                    <th className="text-right text-gray-400 text-xs py-2 px-4">Qty</th>
-                                    <th className="text-right text-gray-400 text-xs py-2 px-4">Revenue</th>
-                                    <th className="text-right text-gray-400 text-xs py-2 px-4">Avg</th>
+                                <tr className={`border-b ${t.tabBorder}`}>
+                                    <th className={`text-left ${t.label} text-xs py-2 px-4`}>Item</th>
+                                    <th className={`text-right ${t.label} text-xs py-2 px-4`}>Qty</th>
+                                    <th className={`text-right ${t.label} text-xs py-2 px-4`}>Revenue</th>
+                                    <th className={`text-right ${t.label} text-xs py-2 px-4`}>Avg</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {menuItemsData.map((item, idx) => (
-                                    <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                                        <td className="text-white text-sm py-2 px-4">{item.name}</td>
-                                        <td className="text-white text-sm text-right py-2 px-4">{item.count}</td>
-                                        <td className="text-green-400 text-sm text-right py-2 px-4">£{item.revenue.toFixed(2)}</td>
-                                        <td className="text-gray-300 text-sm text-right py-2 px-4">£{(item.revenue / item.count).toFixed(2)}</td>
+                                    <tr key={idx} className={`border-b ${t.row}`}>
+                                        <td className={`${t.text} text-sm py-2 px-4`}>{item.name}</td>
+                                        <td className={`${t.text} text-sm text-right py-2 px-4`}>{item.count}</td>
+                                        <td className="text-green-500 text-sm text-right py-2 px-4">£{item.revenue.toFixed(2)}</td>
+                                        <td className={`${t.subtext} text-sm text-right py-2 px-4`}>£{(item.revenue / item.count).toFixed(2)}</td>
                                     </tr>
                                 ))}
                                 {menuItemsData.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="text-gray-500 text-center py-8 text-sm">No data for this period</td>
+                                        <td colSpan={4} className={`${t.label} text-center py-8 text-sm`}>No data for this period</td>
                                     </tr>
                                 )}
                             </tbody>
