@@ -317,21 +317,21 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             />
                                             <Label 
                                                 htmlFor={`meal-${opt.label}`}
-                                                className="text-white cursor-pointer flex-1 font-medium text-xs"
-                                            >
-                                                {opt.label}
-                                            </Label>
-                                            {opt.price > 0 && (
-                                                <span className="font-bold text-orange-400 text-xs">
-                                                    +£{opt.price.toFixed(2)}
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                                                className={`${isDark ? 'text-white' : 'text-gray-900'} cursor-pointer flex-1 font-medium text-xs`}
+                                                    >
+                                                        {opt.label}
+                                                    </Label>
+                                                    {opt.price > 0 && (
+                                                        <span className="font-bold text-orange-400 text-xs">
+                                                            +£{opt.price.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                ))}
+                                                </div>
+                                                )}
+                                                </div>
+                                                ))}
                     
 
                     {/* Special Instructions Section */}
