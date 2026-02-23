@@ -13,7 +13,23 @@ import {
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
+    const t = {
+        panel:    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
+        right:    isDark ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200',
+        text:     isDark ? 'text-white' : 'text-gray-900',
+        subtext:  isDark ? 'text-gray-300' : 'text-gray-600',
+        divider:  isDark ? 'border-gray-600' : 'border-gray-200',
+        row:      isDark ? 'bg-gray-700' : 'bg-gray-100',
+        inactBtn: isDark ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300',
+        backBtn:  isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900',
+        cancelBtn:isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800',
+        dialog:   isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
+        dialogTxt:isDark ? 'text-white' : 'text-gray-900',
+        dialogDesc:isDark ? 'text-gray-300' : 'text-gray-600',
+        cancelDlg:isDark ? 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-300',
+    };
     // Split payment: array of { method, amount }
     const [payments, setPayments] = useState([]);
     const [activeMethod, setActiveMethod] = useState(null); // 'cash' | 'card' | null
