@@ -133,7 +133,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     {item.customization_options?.map(option => (
                         <div key={option.name} className="space-y-2">
                            <div className="flex items-baseline gap-1">
-                               <Label className={`font-bold text-white ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
+                               <Label className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
                                    {option.name}
                                </Label>
                                {option.required && (
