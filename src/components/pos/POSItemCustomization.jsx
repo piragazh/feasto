@@ -270,7 +270,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                     {mealOpt.options?.map(opt => (
                                         <div 
                                             key={opt.label} 
-                                            className="flex items-center space-x-2 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                            className={`flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
                                             onClick={() => setMealCustomizations(prev => ({
                                                 ...prev,
                                                 [mealOpt.name]: opt.label
