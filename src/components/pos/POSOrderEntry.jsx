@@ -589,7 +589,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-hide">
+                    <div className="h-0 flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-hide">
                         {optimisticCart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-12 text-center">
                                 <ShoppingCart className={`h-10 w-10 ${t.emptyIcon} mb-3`} />
