@@ -103,9 +103,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     maxWidth: columns === 1 ? '90vw' : columns === 2 ? '95vw' : '98vw'
                 }}
             >
-                <div className="flex items-center justify-between p-3 md:p-4 border-b border-gray-700 flex-shrink-0">
+                <div className={`flex items-center justify-between p-3 md:p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
                     <div className="flex-1">
-                        <DialogTitle className={`font-bold text-white ${columns === 1 ? 'text-lg' : 'text-base'}`}>
+                        <DialogTitle className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} ${columns === 1 ? 'text-lg' : 'text-base'}`}>
                             {item.name}
                         </DialogTitle>
                         <p className="text-orange-400 font-bold text-lg mt-1">
