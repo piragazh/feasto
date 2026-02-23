@@ -350,11 +350,11 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     </div>
                 </div>
 
-                <div className="flex gap-2 p-3 md:p-4 border-t border-gray-700 flex-shrink-0 bg-gray-800">
+                <div className={`flex gap-2 p-3 md:p-4 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'} flex-shrink-0`}>
                     <Button 
                         variant="outline" 
                         onClick={onClose}
-                        className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600 font-bold rounded-lg h-12 text-sm"
+                        className={`flex-1 ${isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200'} font-bold rounded-lg h-12 text-sm`}
                     >
                         Cancel
                     </Button>
