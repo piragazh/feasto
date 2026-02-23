@@ -283,24 +283,24 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             />
                                             <Label 
                                                 htmlFor={`meal-${opt.label}`}
-                                                className="text-white cursor-pointer flex-1 font-medium text-xs"
-                                            >
-                                                {opt.label}
-                                            </Label>
-                                            {opt.price > 0 && (
-                                                <span className="font-bold text-orange-400 text-xs">
-                                                    +£{opt.price.toFixed(2)}
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))}
-                                </RadioGroup>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {mealOpt.options?.map(opt => (
-                                        <div 
-                                            key={opt.label}
-                                            className="flex items-center space-x-2 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-all border-2 border-transparent hover:border-orange-500"
+                                                className={`${isDark ? 'text-white' : 'text-gray-900'} cursor-pointer flex-1 font-medium text-xs`}
+                                                    >
+                                                        {opt.label}
+                                                    </Label>
+                                                    {opt.price > 0 && (
+                                                        <span className="font-bold text-orange-400 text-xs">
+                                                            +£{opt.price.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                ))}
+                                                </RadioGroup>
+                                                ) : (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                {mealOpt.options?.map(opt => (
+                                                <div 
+                                                key={opt.label}
+                                                className={`flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
                                             onClick={() => {
                                                 setMealCustomizations(prev => ({
                                                     ...prev,
