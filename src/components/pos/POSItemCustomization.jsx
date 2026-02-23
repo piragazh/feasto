@@ -336,16 +336,16 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
 
                     {/* Special Instructions Section */}
                     <div className="space-y-2 col-span-full">
-                        <Label className="font-bold text-white text-base">Special Instructions</Label>
+                        <Label className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} text-base`}>Special Instructions</Label>
                         <Textarea
-                            placeholder="Add any special requests (e.g., extra spicy, no onions, etc.)"
-                            value={specialInstructions}
-                            onChange={(e) => setSpecialInstructions(e.target.value)}
-                            onFocus={(e) => {
-                                setShowKeyboard(true);
-                                setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-                            }}
-                            className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 resize-none h-24"
+                           placeholder="Add any special requests (e.g., extra spicy, no onions, etc.)"
+                           value={specialInstructions}
+                           onChange={(e) => setSpecialInstructions(e.target.value)}
+                           onFocus={(e) => {
+                               setShowKeyboard(true);
+                               setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                           }}
+                           className={`${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'} resize-none h-24`}
                         />
                     </div>
                 </div>
