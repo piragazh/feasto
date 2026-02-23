@@ -351,8 +351,8 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
             </div>
 
             {/* ── Chart Tabs ── */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700">
-                <div className="flex border-b border-gray-700">
+            <div className={`${t.panel} rounded-lg border`}>
+                <div className={`flex border-b ${t.tabBorder}`}>
                     {[
                         { key: 'sales', label: 'Sales Trend' },
                         { key: 'items', label: 'Top Items' },
@@ -362,8 +362,8 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                         <button key={tab.key} onClick={() => setActiveChart(tab.key)}
                             className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
                                 activeChart === tab.key
-                                    ? 'text-orange-400 border-b-2 border-orange-400'
-                                    : 'text-gray-400 hover:text-white'
+                                    ? `${t.tabActive} border-b-2`
+                                    : t.tabInactive
                             }`}>
                             {tab.label}
                         </button>
@@ -373,11 +373,10 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     {activeChart === 'sales' && (
                         <ResponsiveContainer width="100%" height={260}>
                             <LineChart data={salesData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                                <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                    labelStyle={{ color: '#fff' }} formatter={v => [`£${v.toFixed(2)}`, 'Revenue']} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+                                <XAxis dataKey="date" stroke={t.chartAxis} tick={{ fontSize: 11 }} />
+                                <YAxis stroke={t.chartAxis} tick={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={t.chartTip} labelStyle={t.chartTipLabel} formatter={v => [`£${v.toFixed(2)}`, 'Revenue']} />
                                 <Line type="monotone" dataKey="total" stroke="#f97316" strokeWidth={2} dot={{ r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -385,11 +384,10 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     {activeChart === 'items' && (
                         <ResponsiveContainer width="100%" height={260}>
                             <BarChart data={menuItemsData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                <XAxis dataKey="name" stroke="#9ca3af" angle={-30} textAnchor="end" height={70} tick={{ fontSize: 10 }} />
-                                <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                    labelStyle={{ color: '#fff' }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+                                <XAxis dataKey="name" stroke={t.chartAxis} angle={-30} textAnchor="end" height={70} tick={{ fontSize: 10 }} />
+                                <YAxis stroke={t.chartAxis} tick={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={t.chartTip} labelStyle={t.chartTipLabel} />
                                 <Bar dataKey="count" fill="#f97316" name="Qty" />
                             </BarChart>
                         </ResponsiveContainer>
@@ -397,11 +395,10 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     {activeChart === 'hours' && (
                         <ResponsiveContainer width="100%" height={260}>
                             <BarChart data={peakHoursData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                <XAxis dataKey="hour" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                                <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                    labelStyle={{ color: '#fff' }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+                                <XAxis dataKey="hour" stroke={t.chartAxis} tick={{ fontSize: 11 }} />
+                                <YAxis stroke={t.chartAxis} tick={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={t.chartTip} labelStyle={t.chartTipLabel} />
                                 <Bar dataKey="orders" fill="#3b82f6" name="Orders" />
                             </BarChart>
                         </ResponsiveContainer>
@@ -415,8 +412,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                                     dataKey="value">
                                     {orderTypeData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                    labelStyle={{ color: '#fff' }} />
+                                <Tooltip contentStyle={t.chartTip} labelStyle={t.chartTipLabel} />
                             </PieChart>
                         </ResponsiveContainer>
                     )}
