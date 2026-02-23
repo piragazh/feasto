@@ -58,19 +58,25 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
         onClose();
     };
 
+    const dlg = isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900';
+    const labelCls = isDark ? 'text-white' : 'text-gray-900';
+    const inputCls = isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900';
+    const inactTabCls = isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200';
+    const quickBtnCls = isDark ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border border-gray-200';
+    const cancelCls = isDark ? 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-300';
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className={`bg-gray-800 border-gray-700 text-white max-w-md max-h-[85vh] overflow-y-auto ${showKeyboard ? 'pb-80' : ''}`}>
+            <DialogContent className={`${dlg} max-w-md max-h-[85vh] overflow-y-auto ${showKeyboard ? 'pb-80' : ''}`}>
                 <DialogHeader>
-                    <DialogTitle className="text-white text-xl">Add Custom Item</DialogTitle>
+                    <DialogTitle className={`${labelCls} text-xl`}>Add Custom Item</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
                     {allItems.length > 0 && (
                     <div>
-                        <Label className="text-white mb-2">Quick Add</Label>
+                        <Label className={`${labelCls} mb-2`}>Quick Add</Label>
 
-                        {/* Category Tabs */}
                         {categories.length > 1 && (
                             <div className="flex gap-1.5 mb-3 flex-wrap">
                                 {categories.map(cat => (
@@ -78,9 +84,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                         key={cat}
                                         onClick={() => setActiveTab(cat)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                            currentTab === cat
-                                                ? 'bg-orange-500 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            currentTab === cat ? 'bg-orange-500 text-white' : inactTabCls
                                         }`}
                                     >
                                         {cat}
@@ -97,7 +101,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                         setItemName(item.name);
                                         setItemPrice(typeof item.price === 'number' ? item.price.toFixed(2) : item.price);
                                     }}
-                                    className="bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 h-auto py-3"
+                                    className={`${quickBtnCls} h-auto py-3`}
                                 >
                                     <div className="text-left w-full">
                                         <div className="text-sm font-medium">{item.name}</div>
@@ -112,7 +116,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                     )}
 
                     <div>
-                        <Label className="text-white mb-2">Item Name</Label>
+                        <Label className={`${labelCls} mb-2`}>Item Name</Label>
                         <Input
                             value={itemName}
                             onChange={(e) => setItemName(e.target.value)}
@@ -122,12 +126,12 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                 setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
                             }}
                             placeholder="e.g., Delivery Charge"
-                            className="bg-gray-700 border-gray-600 text-white text-lg h-12"
+                            className={`${inputCls} text-lg h-12`}
                         />
                     </div>
 
                     <div>
-                        <Label className="text-white mb-2">Price (£)</Label>
+                        <Label className={`${labelCls} mb-2`}>Price (£)</Label>
                         <Input
                             type="number"
                             step="0.01"
@@ -140,17 +144,13 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                 setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
                             }}
                             placeholder="0.00"
-                            className="bg-gray-700 border-gray-600 text-white text-lg h-12"
+                            className={`${inputCls} text-lg h-12`}
                         />
                     </div>
                 </div>
 
                 <div className="flex gap-2">
-                    <Button
-                        onClick={onClose}
-                        variant="outline"
-                        className="flex-1 bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-                    >
+                    <Button onClick={onClose} variant="outline" className={`flex-1 ${cancelCls}`}>
                         Cancel
                     </Button>
                     <Button
