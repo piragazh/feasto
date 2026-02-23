@@ -230,7 +230,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             />
                                             <Label 
                                                 htmlFor={opt.label} 
-                                                className={`text-white cursor-pointer flex-1 font-medium ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}
+                                                className={`${isDark ? 'text-white' : 'text-gray-900'} cursor-pointer flex-1 font-medium ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}
                                             >
                                                 {opt.label}
                                             </Label>
@@ -239,10 +239,10 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     +£{opt.price.toFixed(2)}
                                                 </span>
                                             )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                            </div>
+                                            ))}
+                                            </div>
+                                            )}
                         </div>
                     ))}
                     
