@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { X } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 
-export default function POSItemCustomization({ item, open, onClose, onConfirm }) {
+export default function POSItemCustomization({ item, open, onClose, onConfirm, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
      const [customizations, setCustomizations] = useState({});
      const [specialInstructions, setSpecialInstructions] = useState('');
      const [isMeal, setIsMeal] = useState(false);
