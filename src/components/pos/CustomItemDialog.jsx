@@ -7,7 +7,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import OnScreenKeyboard from './OnScreenKeyboard';
 
-export default function CustomItemDialog({ open, onClose, onAdd, restaurantId }) {
+export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
     const [itemName, setItemName] = useState('');
     const [itemPrice, setItemPrice] = useState('');
     const [showKeyboard, setShowKeyboard] = useState(false);
