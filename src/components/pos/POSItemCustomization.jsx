@@ -171,19 +171,19 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                            />
                                            <Label 
                                                htmlFor={opt.label} 
-                                               className="text-white cursor-pointer flex-1 font-medium text-sm"
-                                           >
-                                               {opt.label}
-                                           </Label>
-                                           {opt.price > 0 && (
-                                               <span className="font-bold text-orange-400 text-sm">
-                                                   +£{opt.price.toFixed(2)}
-                                               </span>
-                                           )}
-                                       </div>
-                                   ))}
-                               </RadioGroup>
-                           ) : option.type === 'single' ? (
+                                               className={`${isDark ? 'text-white' : 'text-gray-900'} cursor-pointer flex-1 font-medium text-sm`}
+                                                   >
+                                                       {opt.label}
+                                                   </Label>
+                                                   {opt.price > 0 && (
+                                                       <span className="font-bold text-orange-400 text-sm">
+                                                           +£{opt.price.toFixed(2)}
+                                                       </span>
+                                                   )}
+                                               </div>
+                                               ))}
+                                               </RadioGroup>
+                                               ) : option.type === 'single' ? (
                                 <RadioGroup 
                                     value={customizations[option.name] || ''}
                                     onValueChange={(value) => handleSingleSelect(option.name, value)}
