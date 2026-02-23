@@ -338,12 +338,12 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     { label: 'Cash', value: `£${cashRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-yellow-400' },
                     { label: 'Peak Hour', value: peakHour, icon: Clock, color: 'text-purple-400' },
                 ].map(({ label, value, icon: Icon, color }) => (
-                    <Card key={label} className="bg-gray-800 border-gray-700">
+                    <Card key={label} className={`${t.panel} border`}>
                         <CardContent className="p-4">
-                            <p className="text-gray-400 text-xs mb-1">{label}</p>
+                            <p className={`${t.label} text-xs mb-1`}>{label}</p>
                             <div className="flex items-center gap-2">
                                 <Icon className={`h-5 w-5 ${color}`} />
-                                <p className="text-xl font-bold text-white">{value}</p>
+                                <p className={`text-xl font-bold ${t.text}`}>{value}</p>
                             </div>
                         </CardContent>
                     </Card>
