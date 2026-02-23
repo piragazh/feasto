@@ -281,7 +281,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
         <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pb-6">
 
             {/* ── Filter Bar ── */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+            <div className={`${t.panel} rounded-lg border p-4`}>
                 <div className="flex flex-wrap gap-2 mb-3">
                     {PRESETS.map(p => (
                         <Button
@@ -291,7 +291,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                             className={`h-9 px-4 font-bold text-sm ${
                                 preset === p.key
                                     ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600'
+                                    : t.inactivBtn
                             }`}
                         >
                             {p.label}
@@ -302,20 +302,20 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                 {preset === 'custom' && (
                     <div className="flex flex-wrap gap-3 mt-2">
                         <div>
-                            <label className="text-gray-400 text-xs block mb-1">From</label>
+                            <label className={`${t.label} text-xs block mb-1`}>From</label>
                             <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                                className="bg-gray-700 border-gray-600 text-white h-9 w-40" />
+                                className={`${t.input} h-9 w-40`} />
                         </div>
                         <div>
-                            <label className="text-gray-400 text-xs block mb-1">To</label>
+                            <label className={`${t.label} text-xs block mb-1`}>To</label>
                             <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                                className="bg-gray-700 border-gray-600 text-white h-9 w-40" />
+                                className={`${t.input} h-9 w-40`} />
                         </div>
                     </div>
                 )}
 
                 <div className="flex items-center gap-2 mt-3">
-                    <span className="text-gray-400 text-xs flex-1">
+                    <span className={`${t.label} text-xs flex-1`}>
                         {filteredOrders.length} orders · {effectiveStart.format('DD MMM YYYY')} → {effectiveEnd.format('DD MMM YYYY')}
                     </span>
                     <Button onClick={exportCSV} size="sm" className="bg-green-700 hover:bg-green-600 text-white h-9 px-3">
