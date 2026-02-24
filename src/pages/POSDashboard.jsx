@@ -32,7 +32,7 @@ export default function POSDashboard() {
     const [cart, setCart] = useState([]);
     const [orderType, setOrderType] = useState('takeaway');
     const [accessDenied, setAccessDenied] = useState(false);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const { isOnline, pendingCount, isSyncing } = useOfflineSyncState();
     const [posTheme, setPosTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
     const time = useTime();
 
