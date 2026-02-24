@@ -10,6 +10,7 @@ import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import POSWaitlist from '@/components/pos/POSWaitlist.jsx';
 import POSReports from '@/components/pos/POSReports.jsx';
+import POSOrderHistory from '@/components/pos/POSOrderHistory.jsx';
 import POSTablesView from '@/components/pos/POSTablesView.jsx';
 import { toast } from 'sonner';
 
