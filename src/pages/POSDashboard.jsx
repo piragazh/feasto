@@ -269,6 +269,17 @@ export default function POSDashboard() {
                             </button>
                         )}
 
+                                        {/* Customer Display button */}
+                        <button
+                            title="Open Customer Display"
+                            onClick={() => {
+                                publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url });
+                                window.open(createPageUrl('CustomerDisplay'), '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
+                            }}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            <ExternalLink className="h-4 w-4" />
+                        </button>
+
                         <button onClick={() => base44.auth.logout()}
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             <LogOut className="h-4 w-4" />
