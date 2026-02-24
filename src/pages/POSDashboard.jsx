@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown, Wifi, WifiOff, Clock, Sun, Moon, ClipboardList } from 'lucide-react';
+import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown, WifiOff, RefreshCw, Clock, Sun, Moon, ClipboardList } from 'lucide-react';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import { useOfflineSyncState } from '@/components/pos/POSOfflineSyncBanner';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
