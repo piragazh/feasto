@@ -293,6 +293,9 @@ export default function POSDashboard() {
                         onUpdateQuantity={updateQuantity} onClearCart={clearCart}
                         cartTotal={cartTotal} orderType={orderType} setOrderType={setOrderType}
                         posTheme={posTheme}
+                        discount={discount}
+                        onApplyDiscount={setDiscount}
+                        onRemoveDiscount={() => setDiscount(null)}
                     />
                 )}
                 {activeTab === 'queue' && <POSOrderQueue restaurantId={restaurant.id} />}
