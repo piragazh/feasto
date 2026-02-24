@@ -145,7 +145,7 @@ export default function POSCart({
                             className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
                         >
                             <ShoppingCart className="h-4 w-4" />
-                            Charge · £{cartTotal.toFixed(2)}
+                            Charge · £{discountedTotal.toFixed(2)}
                         </button>
                         <button
                             onClick={onClearCart}
