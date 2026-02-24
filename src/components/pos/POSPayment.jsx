@@ -253,7 +253,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </Button>
 
                         <Button onClick={() => { setActiveMethod('card'); }}
-                            className="w-full h-10 text-sm font-bold bg-blue-800 hover:bg-blue-700 text-white border border-blue-700">
+                            className={`w-full h-10 text-sm font-bold ${t.cardBtn}`}>
                             Charge £{remaining.toFixed(2)} to Card
                         </Button>
                     </>
