@@ -67,9 +67,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 quantity: item.quantity,
                 customizations: item.customizations || {}
             })),
-            subtotal: cartTotal,
+            subtotal: cartTotal + (discount?.amount || 0),
             delivery_fee: 0,
-            discount: 0,
+            discount: discount?.amount || 0,
             total: cartTotal,
             status: 'confirmed',
             order_type: orderType || 'collection',
