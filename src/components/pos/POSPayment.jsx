@@ -204,14 +204,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             </div>
 
                             {remaining > 0 ? (
-                                <div className="bg-red-700 p-2.5 rounded-lg">
-                                    <p className="text-red-200 text-xs">Still owed</p>
-                                    <p className="text-white text-2xl font-bold">£{remaining.toFixed(2)}</p>
+                                <div className={`${t.owedBox} p-2.5 rounded-xl`}>
+                                    <p className={`${t.owedTxt} text-xs`}>Still owed</p>
+                                    <p className={`${t.owedAmt} text-2xl font-bold`}>£{remaining.toFixed(2)}</p>
                                 </div>
                             ) : (
-                                <div className="bg-green-700 p-2.5 rounded-lg">
-                                    <p className="text-green-200 text-xs">Change</p>
-                                    <p className="text-white text-2xl font-bold">£{change.toFixed(2)}</p>
+                                <div className={`${t.changeBox} p-2.5 rounded-xl`}>
+                                    <p className={`${t.changeTxt} text-xs`}>Change</p>
+                                    <p className={`${t.changeAmt} text-2xl font-bold`}>£{change.toFixed(2)}</p>
                                 </div>
                             )}
                         </>
