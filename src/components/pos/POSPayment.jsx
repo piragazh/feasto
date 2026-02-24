@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
 import POSDiscountPanel from './POSDiscountPanel';
 import { savePendingOrder } from './POSOfflineDB';
+import { publishCustomerDisplay } from './CustomerDisplay';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
