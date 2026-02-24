@@ -184,9 +184,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
                 {/* Totals */}
                 <div className={`border-t ${t.divider} pt-3 space-y-2`}>
-                    <div className="bg-blue-700 p-3 rounded-lg">
-                        <p className="text-blue-200 text-xs">Total</p>
-                        <p className="text-white text-3xl font-bold">£{cartTotal.toFixed(2)}</p>
+                    <div className={`${t.totalBox} p-3 rounded-xl`}>
+                        <p className={`${t.totalTxt} text-xs`}>Total</p>
+                        <p className={`${t.totalAmt} text-3xl font-bold`}>£{cartTotal.toFixed(2)}</p>
                     </div>
 
                     {payments.length > 0 && (
