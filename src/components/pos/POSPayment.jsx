@@ -18,7 +18,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
-        right:    isDark ? 'bg-[#0f1117] border-white/[0.06]' : 'bg-gray-50 border-gray-200',
+        right:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
         text:     isDark ? 'text-white' : 'text-gray-900',
         subtext:  isDark ? 'text-gray-300' : 'text-gray-600',
         divider:  isDark ? 'border-white/[0.06]' : 'border-gray-200',
