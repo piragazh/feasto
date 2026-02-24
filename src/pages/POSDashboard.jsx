@@ -202,8 +202,19 @@ export default function POSDashboard() {
                         <div>
                             <h1 className={`${t.text} font-bold text-base leading-tight`}>{posName}</h1>
                             <div className="flex items-center gap-1.5">
-                                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`} />
-                                <span className={`text-xs ${t.textSub}`}>{isOnline ? 'Online' : 'Offline'}</span>
+                                {isSyncing ? (
+                                    <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
+                                ) : (
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`} />
+                                )}
+                                <span className={`text-xs ${isSyncing ? 'text-blue-400' : isOnline ? t.textSub : 'text-red-400'}`}>
+                                    {isSyncing ? 'Syncing...' : isOnline ? 'Online' : 'Offline'}
+                                </span>
+                                {!isOnline && pendingCount > 0 && (
+                                    <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                        {pendingCount}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
