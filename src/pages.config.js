@@ -81,6 +81,7 @@ import TableOrder from './pages/TableOrder';
 import TabletDashboard from './pages/TabletDashboard';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
+import CustomerDisplay from './pages/CustomerDisplay';
 import __Layout from './Layout.jsx';
 
 
@@ -119,6 +120,7 @@ export const PAGES = {
     "TabletDashboard": TabletDashboard,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
+    "CustomerDisplay": CustomerDisplay,
 }
 
 export const pagesConfig = {
