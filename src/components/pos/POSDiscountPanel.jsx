@@ -23,8 +23,8 @@ export default function POSDiscountPanel({ cartSubtotal, discount, onApply, onRe
 
     const inputCls = `w-full px-3 py-2 rounded-xl border text-sm font-medium outline-none transition-colors ${
         isDark
-            ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50'
-            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
+            ? 'bg-white/5 border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50'
+            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
     }`;
 
     const typeBtnActive = 'bg-orange-500 text-white';
