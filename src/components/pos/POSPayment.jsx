@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard, AlertCircle, PlusCircle, Trash2, WifiOff } from 'lucide-react';
+import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
+import POSDiscountPanel from './POSDiscountPanel';
 import { savePendingOrder } from './POSOfflineDB';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -13,7 +14,7 @@ import {
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
