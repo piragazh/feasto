@@ -131,6 +131,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             } else {
                 toast.success('Payment complete');
             }
+            publishCustomerDisplay({
+                status: 'paid',
+                restaurantName,
+                change: Math.max(0, change),
+            });
             onPaymentComplete();
         } catch (e) {
             toast.error('Payment failed');
