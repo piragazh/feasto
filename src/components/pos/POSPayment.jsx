@@ -184,6 +184,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
                 {/* Totals */}
                 <div className={`border-t ${t.divider} pt-3 space-y-2`}>
+                    {discount && (
+                        <div className={`flex justify-between text-sm ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                            <span>Discount ({discount.type === 'percentage' ? `${discount.value}%` : `£${discount.value.toFixed(2)}`})</span>
+                            <span>−£{discount.amount.toFixed(2)}</span>
+                        </div>
+                    )}
                     <div className={`${t.totalBox} p-3 rounded-xl`}>
                         <p className={`${t.totalTxt} text-xs`}>Total</p>
                         <p className={`${t.totalAmt} text-3xl font-bold`}>£{cartTotal.toFixed(2)}</p>
