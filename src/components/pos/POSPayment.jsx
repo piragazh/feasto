@@ -284,11 +284,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <p className="text-blue-500 text-sm font-semibold">Card payment</p>
                         <div className="grid grid-cols-2 gap-3">
                             <Button onClick={() => { setRawValue(String(Math.round(remaining * 100))); setShowCardConfirm(true); }}
-                                className="h-14 text-sm font-bold bg-blue-700 hover:bg-blue-600 text-white">
+                                className={`h-14 text-sm font-bold ${t.cardBtn}`}>
                                 Full remaining<br/>£{remaining.toFixed(2)}
                             </Button>
                             <Button onClick={() => setShowCardConfirm(true)} disabled={numericInput <= 0}
-                                className="h-14 text-sm font-bold bg-blue-900 hover:bg-blue-800 text-white border border-blue-700">
+                                className={`h-14 text-sm font-bold ${t.cardBtn2}`}>
                                 Custom amount<br/>{numericInput > 0 ? `£${numericInput.toFixed(2)}` : '(enter below)'}
                             </Button>
                         </div>
