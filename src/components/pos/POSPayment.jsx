@@ -43,6 +43,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         cardBtn:  'bg-blue-600 hover:bg-blue-500 text-white',
         cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
     };
+    // Local discount state — initialised from prop (set in cart), can be changed on payment screen too
+    const [discount, setDiscount] = useState(initialDiscount || null);
+    const handleApplyDiscount = (d) => { setDiscount(d); if (onApplyDiscount) onApplyDiscount(d); };
+    const handleRemoveDiscount = () => { setDiscount(null); if (onRemoveDiscount) onRemoveDiscount(); };
+
+    const cartSubtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const effectiveTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartTotal;
+
     // Split payment: array of { method, amount }
     const [payments, setPayments] = useState([]);
     const [activeMethod, setActiveMethod] = useState(null); // 'cash' | 'card' | null
@@ -51,8 +59,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const [isProcessing, setIsProcessing] = useState(false);
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-    const remaining = Math.max(0, cartTotal - totalPaid);
-    const change = totalPaid - cartTotal;
+    const remaining = Math.max(0, effectiveTotal - totalPaid);
+    const change = totalPaid - effectiveTotal;
     const numericInput = rawValue === '' ? 0 : parseInt(rawValue, 10) / 100;
 
     const createOrder = async (paymentSummary) => {
