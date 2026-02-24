@@ -138,6 +138,7 @@ export default function POSDashboard() {
         { id: 'waitlist', label: 'Waitlist', icon: Users },
         { id: 'payment', label: 'Payment', icon: DollarSign },
         { id: 'kitchen', label: 'Kitchen', icon: Monitor },
+        { id: 'history', label: 'History', icon: BarChart3 },
         { id: 'reports', label: 'Reports', icon: BarChart3 },
     ];
 
