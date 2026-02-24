@@ -226,11 +226,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <>
                         <div className="grid grid-cols-2 gap-3 mb-4">
                             <Button onClick={() => setActiveMethod('cash')}
-                                className="h-14 text-lg font-bold bg-green-700 hover:bg-green-600 text-white">
+                                className={`h-14 text-lg font-bold ${t.cashBtn}`}>
                                 <DollarSign className="h-5 w-5 mr-1" /> Cash
                             </Button>
                             <Button onClick={() => setActiveMethod('card')}
-                                className="h-14 text-lg font-bold bg-blue-700 hover:bg-blue-600 text-white">
+                                className={`h-14 text-lg font-bold ${t.cardBtn}`}>
                                 <CreditCard className="h-5 w-5 mr-1" /> Card
                             </Button>
                         </div>
