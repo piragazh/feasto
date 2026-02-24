@@ -130,7 +130,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setRawValue('');
 
         const newTotalPaid = allPayments.reduce((s, p) => s + p.amount, 0);
-        if (newTotalPaid >= cartTotal) {
+        if (newTotalPaid >= effectiveTotal) {
             // Auto complete
             completePayment(allPayments);
         }
