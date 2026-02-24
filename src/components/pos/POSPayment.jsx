@@ -67,6 +67,20 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const change = totalPaid - effectiveTotal;
     const numericInput = rawValue === '' ? 0 : parseInt(rawValue, 10) / 100;
 
+    // Sync to customer display whenever relevant state changes
+    React.useEffect(() => {
+        publishCustomerDisplay({
+            status: 'order',
+            restaurantName,
+            items: cart,
+            subtotal: cartSubtotal,
+            discount,
+            total: effectiveTotal,
+            remaining,
+            paymentMethod: activeMethod,
+        });
+    }, [cart, discount, effectiveTotal, remaining, activeMethod]);
+
     const createOrder = async (paymentSummary) => {
         if (!restaurantId) return;
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
