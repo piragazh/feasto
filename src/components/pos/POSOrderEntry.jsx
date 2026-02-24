@@ -42,6 +42,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         tableContainer: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-gray-50 border-gray-200',
         payBack:    isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-700',
         floorBack:  isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600',
+        bg:         isDark ? 'bg-[#0c0e16]' : 'bg-gray-50',
     };
      const [searchQuery, setSearchQuery] = useState('');
      const [selectedCategory, setSelectedCategory] = useState('');
