@@ -512,7 +512,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
      }
 
      return (
-        <div className="flex flex-col h-[calc(100vh-130px)]">
+        <div className={`flex flex-col h-[calc(100vh-130px)] ${t.bg}`}>
             <POSOfflineSyncBanner restaurantId={restaurantId} />
             {/* Main 3-Column Layout */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
