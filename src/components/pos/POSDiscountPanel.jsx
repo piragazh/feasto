@@ -68,7 +68,7 @@ export default function POSDiscountPanel({ cartSubtotal, discount, onApply, onRe
     }
 
     return (
-        <div className={`rounded-xl border p-3 space-y-2 ${isDark ? 'bg-[#1a1d27] border-white/[0.08]' : 'bg-gray-50 border-gray-200'}`}>
+        <div className={`rounded-xl border p-3 space-y-2 ${isDark ? 'bg-white/5 border-white/[0.08]' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center justify-between mb-1">
                 <span className={`text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Apply Discount</span>
                 <button onClick={() => { setOpen(false); setValue(''); }} className={`${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} transition-colors`}>
