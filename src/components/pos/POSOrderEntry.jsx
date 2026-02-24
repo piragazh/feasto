@@ -321,7 +321,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             };
 
             return (
-                <div className="flex flex-col h-[calc(100vh-200px)]">
+                <div className={`flex flex-col h-[calc(100vh-200px)] ${t.bg}`}>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)}
