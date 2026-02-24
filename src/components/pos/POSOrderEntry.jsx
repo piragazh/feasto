@@ -256,6 +256,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     onAddToTable={() => handleAddToTable(selectedTable)}
                     onCharge={() => setShowPayment(true)}
                     isAddingToTable={isAddingToTable}
+                    discount={discount}
+                    onApplyDiscount={onApplyDiscount}
+                    onRemoveDiscount={onRemoveDiscount}
                 />
             </div>
 
