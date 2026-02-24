@@ -350,7 +350,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         const allItems = ordersForTable.flatMap(order => order.items);
 
         return (
-            <div className="flex flex-col h-[calc(100vh-200px)]">
+            <div className={`flex flex-col h-[calc(100vh-200px)] ${t.bg}`}>
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h2 className={`${t.text} font-bold text-xl`}>{viewingTable.table_number}</h2>
