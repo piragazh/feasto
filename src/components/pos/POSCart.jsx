@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, Users } from 'lucide-react';
+import POSDiscountPanel from './POSDiscountPanel';
 
 export default function POSCart({
     t, isDark, optimisticCart, cartTotal, orderType,
@@ -7,7 +8,10 @@ export default function POSCart({
     onRemoveItem, onUpdateQuantity, onClearCart,
     onSelectTable, onAddToTable, onCharge,
     isAddingToTable,
+    discount, onApplyDiscount, onRemoveDiscount,
 }) {
+    const cartSubtotal = optimisticCart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const discountedTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
     return (
         <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
             <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0 flex items-center justify-between`}>
