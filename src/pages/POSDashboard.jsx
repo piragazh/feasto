@@ -235,6 +235,12 @@ export default function POSDashboard() {
 
                     {/* Right: Stats + actions */}
                     <div className="flex items-center gap-2">
+                        {!isOnline && (
+                            <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/40 rounded-xl px-3 py-2">
+                                <WifiOff className="h-3.5 w-3.5 text-red-400" />
+                                <span className="text-red-400 font-bold text-xs">OFFLINE</span>
+                            </div>
+                        )}
                         <div className={`flex items-center gap-1.5 ${t.pill} border ${t.border} rounded-xl px-3 py-2`}>
                             <Clock className={`h-3.5 w-3.5 ${t.textSub}`} />
                             <span className={`${t.text} text-sm font-mono font-semibold`}>
