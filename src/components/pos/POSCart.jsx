@@ -73,9 +73,26 @@ export default function POSCart({
             </div>
 
             <div className={`border-t ${t.panelHead} p-3 space-y-2`}>
+                {/* Discount Panel */}
+                {optimisticCart.length > 0 && (
+                    <POSDiscountPanel
+                        cartSubtotal={cartSubtotal}
+                        discount={discount}
+                        onApply={onApplyDiscount}
+                        onRemove={onRemoveDiscount}
+                        t={t}
+                        isDark={isDark}
+                    />
+                )}
+
                 <div className="flex items-center justify-between px-1">
                     <span className={`${t.textMuted} text-sm font-medium`}>Total</span>
-                    <span className={`${t.text} text-2xl font-bold`}>£{cartTotal.toFixed(2)}</span>
+                    <div className="text-right">
+                        {discount && (
+                            <p className={`${t.textMuted} text-xs line-through`}>£{cartSubtotal.toFixed(2)}</p>
+                        )}
+                        <span className={`${t.text} text-2xl font-bold`}>£{discountedTotal.toFixed(2)}</span>
+                    </div>
                 </div>
 
                 {orderType === 'dine_in' ? (
