@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown, Wifi, WifiOff, Clock, Sun, Moon, ClipboardList } from 'lucide-react';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
+import { useOfflineSyncState } from '@/components/pos/POSOfflineSyncBanner';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
