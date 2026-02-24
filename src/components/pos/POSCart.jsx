@@ -72,18 +72,6 @@ export default function POSCart({
             </div>
 
             <div className={`border-t ${t.panelHead} p-3 space-y-2`}>
-                {/* Discount Panel */}
-                {optimisticCart.length > 0 && (
-                    <POSDiscountPanel
-                        cartSubtotal={cartSubtotal}
-                        discount={discount}
-                        onApply={onApplyDiscount}
-                        onRemove={onRemoveDiscount}
-                        t={t}
-                        isDark={isDark}
-                    />
-                )}
-
                 <div className="flex items-center justify-between px-1">
                     <span className={`${t.textMuted} text-sm font-medium`}>Total</span>
                     <div className="text-right">
