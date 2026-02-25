@@ -315,6 +315,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             onOrderTypeChange={setOrderType}
                             isDark={isDark}
                             t={t}
+                            restaurantId={restaurantId}
                         />
                     )}
                     <POSCart
