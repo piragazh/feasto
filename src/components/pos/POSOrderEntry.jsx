@@ -300,7 +300,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 <div className={`${layoutCols.menu} overflow-hidden`}>
                     <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
                 </div>
-                <div className={`${layoutCols.cart} overflow-hidden`}>
+                <div className={`${layoutCols.cart} overflow-hidden flex flex-col gap-2`}>
+                    {(orderType === 'phone_collection' || orderType === 'phone_delivery') && (
+                        <PhoneOrderPanel
+                            orderType={orderType}
+                            onOrderTypeChange={setOrderType}
+                            isDark={isDark}
+                            t={t}
+                        />
+                    )}
                     <POSCart
                         t={t} isDark={isDark}
                         optimisticCart={optimisticCart} cartTotal={cartTotal} orderType={orderType}
