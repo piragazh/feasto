@@ -360,15 +360,22 @@ export default function Checkout() {
     // Calculate subtotal: sum of all item prices × quantities
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Delivery fee: FREE for collection, otherwise use zone-specific or restaurant default
-    const deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 2.99);
+    // Tiered delivery: if no delivery zone info, apply restaurant's tiered delivery config
+    const tiered = restaurant?.tiered_delivery;
+    let deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 0);
+    if (orderType === 'delivery' && !deliveryZoneInfo?.deliveryFee && tiered?.enabled && tiered.lower_minimum > 0) {
+        if (subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity)) {
+            deliveryFee = tiered.lower_minimum_fee ?? 0;
+        }
+    }
 
-    // Small order surcharge: if subtotal is below minimum order, add the difference (only for delivery)
-    // Use zone-specific minimum order only (no fallback to restaurant settings)
-    const minimumOrder = orderType === 'delivery' && deliveryZoneInfo?.available ? (deliveryZoneInfo?.minimumOrder || 0) : 0;
-    const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
-        ? (minimumOrder - subtotal) 
-        : 0;
+    // Minimum order: use zone-based if available, otherwise restaurant setting
+    const minimumOrder = orderType === 'delivery' && deliveryZoneInfo?.available
+        ? (deliveryZoneInfo?.minimumOrder || 0)
+        : (orderType === 'delivery' && tiered?.enabled && subtotal < (tiered.lower_minimum || 0))
+            ? (tiered.lower_minimum || 0)
+            : 0;
+    const smallOrderSurcharge = 0;
 
     // Discount from applied coupons and promotions
     const couponDiscount = appliedCoupons.reduce((sum, c) => sum + (c.discount || 0), 0);
