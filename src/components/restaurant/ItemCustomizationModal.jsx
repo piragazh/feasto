@@ -4,9 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, AlertTriangle, Activity } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
+
+const ALLERGEN_ICONS = {
+    gluten: '🌾', crustaceans: '🦞', eggs: '🥚', fish: '🐟', peanuts: '🥜',
+    soya: '🫘', milk: '🥛', nuts: '🌰', celery: '🥬', mustard: '🌿',
+    sesame: '🌱', sulphites: '🍷', lupin: '🌸', molluscs: '🐚'
+};
 
 export default function ItemCustomizationModal({ item, open, onClose, onAddToCart }) {
     const [quantity, setQuantity] = useState(1);
