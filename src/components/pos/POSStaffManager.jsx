@@ -36,7 +36,7 @@ function RoleBadge({ role }) {
 
 function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }) {
     const qc = useQueryClient();
-    const [form, setForm] = useState(staff ? { ...staff } : { full_name: '', email: '', role: 'waiter', pin: '', notes: '' });
+    const [form, setForm] = useState(staff ? { ...staff } : { full_name: '', email: '', role: 'waiter', staff_number: '', pin: '', notes: '' });
     const [saving, setSaving] = useState(false);
     const t = {
         bg:    isDark ? 'bg-[#151720]' : 'bg-white',
