@@ -353,23 +353,26 @@ export default function Checkout() {
         }
     };
 
-    // Re-run zone check whenever restaurantId or deliveryCoordinates change (catches saved address auto-select race)
+    // Re-run zone check when restaurantId or deliveryCoordinates change (handles async load race with saved address)
     useEffect(() => {
         if (!restaurantId || !deliveryCoordinates?.lat || !deliveryCoordinates?.lng || orderType !== 'delivery') return;
-        if (zoneCheckComplete) return; // Already done
+
+        let cancelled = false;
+        setZoneCheckComplete(false);
 
         const runZoneCheck = async () => {
             try {
                 const zoneInfo = await calculateDeliveryDetails(restaurantId, deliveryCoordinates);
-                setDeliveryZoneInfo(zoneInfo);
+                if (!cancelled) setDeliveryZoneInfo(zoneInfo);
             } catch (error) {
                 console.error('Zone check failed:', error);
             } finally {
-                setZoneCheckComplete(true);
+                if (!cancelled) setZoneCheckComplete(true);
             }
         };
 
         runZoneCheck();
+        return () => { cancelled = true; };
     }, [restaurantId, deliveryCoordinates, orderType]);
 
     // ============================================
