@@ -60,9 +60,26 @@ export async function findDeliveryZone(restaurantId, customerLocation) {
  * Calculate delivery fee and ETA for a location
  */
 export async function calculateDeliveryDetails(restaurantId, customerLocation) {
+    // First check if any zones exist at all for this restaurant
+    let allZones = [];
+    try {
+        allZones = await base44.entities.DeliveryZone.filter({
+            restaurant_id: restaurantId,
+            is_active: true
+        });
+    } catch (e) {
+        allZones = [];
+    }
+
+    // No zones configured at all → return null so tiered pricing / standard fee applies
+    if (!allZones || allZones.length === 0) {
+        return null;
+    }
+
     const zone = await findDeliveryZone(restaurantId, customerLocation);
 
     if (!zone) {
+        // Zones exist but customer is outside all of them
         return {
             available: false,
             message: 'Sorry, delivery is not available to your location.',
