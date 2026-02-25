@@ -333,10 +333,21 @@ export default function RestaurantSettings({ restaurantId }) {
                     <Printer className="h-4 w-4 mr-2" />
                     Printing
                 </Button>
+                <Button
+                    variant={activeSection === 'info' ? 'default' : 'outline'}
+                    onClick={() => setActiveSection('info')}
+                >
+                    <Info className="h-4 w-4 mr-2" />
+                    Info Section
+                </Button>
             </div>
 
             {activeSection === 'profile' && (
                 <ProfileManagement restaurantId={restaurantId} />
+            )}
+
+            {activeSection === 'info' && (
+                <InfoSectionSettings restaurantId={restaurantId} initialData={restaurant} />
             )}
 
             {activeSection === 'general' && (
