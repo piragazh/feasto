@@ -55,6 +55,7 @@ import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegratio
 import POSConfigurations from '@/components/restaurant/POSConfigurations';
 import StaffManagement from '@/components/restaurant/StaffManagement';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
+import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -544,6 +545,7 @@ export default function RestaurantDashboard() {
                             <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
                             <TabsTrigger value="integrations">Third-Party Orders</TabsTrigger>
                             <TabsTrigger value="pos">POS Configurations</TabsTrigger>
+                            <TabsTrigger value="sms">SMS Notifications</TabsTrigger>
                             <TabsTrigger value="staff">Staff</TabsTrigger>
                         </TabsList>
                         <TabsContent value="settings">
@@ -566,6 +568,9 @@ export default function RestaurantDashboard() {
                         </TabsContent>
                         <TabsContent value="pos">
                             <POSConfigurations restaurantId={restaurant.id} />
+                        </TabsContent>
+                        <TabsContent value="sms">
+                            <SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} />
                         </TabsContent>
                         <TabsContent value="staff">
                             <StaffManagement restaurantId={restaurant.id} />
