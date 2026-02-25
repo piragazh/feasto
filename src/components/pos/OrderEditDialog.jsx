@@ -37,7 +37,12 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
     };
 
     const removeItem = (index) => {
-        setItems(items.filter((_, i) => i !== index));
+        setPendingRemoveIdx(index);
+    };
+
+    const confirmRemoveItem = () => {
+        setItems(items.filter((_, i) => i !== pendingRemoveIdx));
+        setPendingRemoveIdx(null);
     };
 
     const addItem = (menuItem) => {
