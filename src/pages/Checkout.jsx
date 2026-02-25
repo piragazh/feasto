@@ -873,33 +873,40 @@ export default function Checkout() {
                 }
             }
 
-            // Send SMS confirmation to customer with order details
+            // Send SMS confirmation to customer with order details (respecting restaurant SMS settings)
             try {
-                const orderLabel = orderType === 'collection' && newOrder.order_number
-                    ? newOrder.order_number
-                    : `#${newOrder.id.slice(-6)}`;
-                
-                // Build order summary
-                const itemsList = cart.slice(0, 3).map(item => 
-                    `${item.quantity}x ${item.name}`
-                ).join('\n');
-                
-                const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
-
-                const customerMessage = orderType === 'collection'
-                    ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min\n\nShow this number when collecting!`
-                    : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}\n\nYou'll receive SMS updates when your order is being prepared and dispatched.`;
-
-                console.log('Sending customer SMS to:', formData.phone);
-                const smsResult = await base44.functions.invoke('sendSMS', {
-                    to: formData.phone,
-                    message: customerMessage,
-                    orderId: newOrder.id // Allow guest checkout SMS
+                // Check if restaurant wants confirmation SMS
+                const smsCheckResult = await base44.functions.invoke('shouldSendOrderStatusSms', {
+                    restaurantId: restaurantId,
+                    status: 'confirmed'
                 });
-                console.log('Customer SMS result:', smsResult);
+
+                if (smsCheckResult?.data?.shouldSend) {
+                    const orderLabel = orderType === 'collection' && newOrder.order_number
+                        ? newOrder.order_number
+                        : `#${newOrder.id.slice(-6)}`;
+                    
+                    const itemsList = cart.slice(0, 3).map(item => 
+                        `${item.quantity}x ${item.name}`
+                    ).join('\n');
+                    
+                    const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
+
+                    const customerMessage = orderType === 'collection'
+                        ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min\n\nShow this number when collecting!`
+                        : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}\n\nYou'll receive SMS updates when your order is being prepared and dispatched.`;
+
+                    console.log('Sending customer SMS to:', formData.phone);
+                    const smsResult = await base44.functions.invoke('sendSMS', {
+                        to: formData.phone,
+                        message: customerMessage,
+                        orderId: newOrder.id
+                    });
+                    console.log('Customer SMS result:', smsResult);
+                }
             } catch (smsError) {
-                console.error('Customer SMS failed:', smsError);
-                // SMS failed but order still placed - don't block user
+                console.error('Customer SMS check failed:', smsError);
+                // SMS check failed but order still placed - don't block user
             }
 
             // Notify restaurant of new order
