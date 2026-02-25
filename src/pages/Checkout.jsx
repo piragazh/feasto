@@ -1607,15 +1607,28 @@ export default function Checkout() {
                                         <span>£{subtotal.toFixed(2)}</span>
                                     </div>
                                     {orderType === 'delivery' && (
-                                           <div className="flex justify-between text-gray-600">
+                                        <>
+                                            <div className="flex justify-between text-gray-600">
                                                 <span>
                                                     Delivery Fee
-                                                    {zoneAvailable && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal >= tiered.lower_minimum && subtotal < (zoneMinimum || standardMin) && (
-                                                        <span className="text-xs text-amber-600 ml-1">(tiered rate)</span>
+                                                    {zoneAvailable && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal >= tiered.lower_minimum && subtotal < zoneMinimum && (
+                                                        <span className="text-xs text-amber-600 ml-1">(reduced rate)</span>
                                                     )}
                                                 </span>
-                                                <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
+                                                <span>
+                                                    {!zoneCheckComplete
+                                                        ? '...'
+                                                        : deliveryFee === 0
+                                                            ? 'FREE'
+                                                            : `£${deliveryFee.toFixed(2)}`}
+                                                </span>
                                             </div>
+                                            {zoneAvailable && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal >= tiered.lower_minimum && subtotal < zoneMinimum && (
+                                                <div className="text-xs text-amber-600 bg-amber-50 rounded p-2">
+                                                    Add £{(zoneMinimum - subtotal).toFixed(2)} more for free delivery (zone rate: £{Number(deliveryZoneInfo.deliveryFee || 0).toFixed(2)})
+                                                </div>
+                                            )}
+                                        </>
                                         )}
                                     {orderType === 'collection' && (
                                         <div className="flex justify-between text-green-600 font-semibold">
