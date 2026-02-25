@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { ScheduleSection, AllergensSection, NutritionSection, SubcategorySection, MenuItemBadges } from './MenuItemAdvancedFields';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
 import CustomOptionTemplates from './CustomOptionTemplates';
