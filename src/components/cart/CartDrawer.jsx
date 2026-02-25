@@ -40,10 +40,17 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
     let minimumOrder = orderType === 'delivery' ? standardMinimum : 0;
     let activeTierLabel = null;
 
-    // Tiered pricing only applies when there IS a delivery zone (zone check happens at checkout)
-    // In the cart drawer we don't have zone info, so tiered only applies if restaurant has no zones configured
-    // For simplicity in cart: show tiered hints based on restaurant settings only
-    // The actual enforcement happens at Checkout with real zone data
+    if (orderType === 'delivery' && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+        const lowerMin = tiered.lower_minimum;
+        const lowerFee = tiered.lower_minimum_fee ?? 0;
+        if (subtotal < lowerMin) {
+            minimumOrder = lowerMin;
+        } else if (subtotal < standardMinimum) {
+            deliveryFee = lowerFee;
+            minimumOrder = standardMinimum;
+            activeTierLabel = `£${lowerFee.toFixed(2)} delivery fee`;
+        }
+    }
 
     const total = subtotal + deliveryFee;
 
