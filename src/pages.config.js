@@ -51,6 +51,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminRestaurants from './pages/AdminRestaurants';
 import Checkout from './pages/Checkout';
 import CookiesPolicy from './pages/CookiesPolicy';
+import CustomerDisplay from './pages/CustomerDisplay';
 import CustomerProfile from './pages/CustomerProfile';
 import DriverApp from './pages/DriverApp';
 import DriverDashboard from './pages/DriverDashboard';
@@ -81,7 +82,6 @@ import TableOrder from './pages/TableOrder';
 import TabletDashboard from './pages/TabletDashboard';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
-import CustomerDisplay from './pages/CustomerDisplay';
 import __Layout from './Layout.jsx';
 
 
@@ -90,6 +90,7 @@ export const PAGES = {
     "AdminRestaurants": AdminRestaurants,
     "Checkout": Checkout,
     "CookiesPolicy": CookiesPolicy,
+    "CustomerDisplay": CustomerDisplay,
     "CustomerProfile": CustomerProfile,
     "DriverApp": DriverApp,
     "DriverDashboard": DriverDashboard,
@@ -120,7 +121,6 @@ export const PAGES = {
     "TabletDashboard": TabletDashboard,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
-    "CustomerDisplay": CustomerDisplay,
 }
 
 export const pagesConfig = {
