@@ -17,6 +17,7 @@ import POSMenuGrid from './POSMenuGrid';
 import POSCart from './POSCart';
 import POSTablesGrid from './POSTablesGrid';
 import HeldOrdersDrawer from './HeldOrdersDrawer';
+import PhoneOrderPanel from './PhoneOrderPanel';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', discount, onApplyDiscount, onRemoveDiscount }) {
