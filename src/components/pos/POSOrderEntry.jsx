@@ -313,6 +313,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     isAddingToTable={isAddingToTable}
                     discount={discount}
                 />
+                </div>
             </div>
 
             {/* Bottom Quick Actions */}

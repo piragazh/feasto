@@ -65,6 +65,21 @@ export default function POSConfigurations({ restaurantId }) {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
+                        <Layout className="h-5 w-5" />
+                        POS Screen Layout
+                    </CardTitle>
+                    <CardDescription>
+                        Choose how the POS order entry screen is arranged for your staff.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <POSLayoutSelector restaurantId={restaurantId} />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
                         <LayoutGrid className="h-5 w-5" />
                         Table Layout Designer
                     </CardTitle>
