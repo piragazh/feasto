@@ -217,7 +217,15 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <button
-                                                onClick={() => removeFromCart(item.menu_item_id)}
+                                                onClick={() => {
+                                                    const customizationKey = item.customizations || item.itemQuantities 
+                                                        ? JSON.stringify({
+                                                            customizations: item.customizations || {},
+                                                            itemQuantities: item.itemQuantities || {}
+                                                        })
+                                                        : null;
+                                                    removeFromCart(item.menu_item_id, customizationKey);
+                                                }}
                                                 className="text-gray-400 hover:text-red-500 transition-colors"
                                             >
                                                 <Trash2 className="h-4 w-4" />
