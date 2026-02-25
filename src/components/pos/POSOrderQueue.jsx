@@ -82,7 +82,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                 <Button
                     onClick={() => setSearchResults(null)}
                     variant="outline"
-                    className="mb-4 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                    className={`mb-4 border ${t.clearBtn}`}
                 >
                     Clear Search
                 </Button>
@@ -90,34 +90,34 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
             <div className={`grid gap-4 ${searchResults !== null ? 'grid-cols-1' : 'grid-cols-4'}`}>
                 {Object.entries(displayOrders).map(([status, statusOrders]) => (
-                <div key={status} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                    <h3 className="text-white font-bold mb-4 capitalize text-center p-2 bg-gray-700 rounded">
+                <div key={status} className={`${t.bg} rounded-xl border ${t.border} p-4`}>
+                    <h3 className={`${t.text} font-bold mb-4 capitalize text-center p-2 ${t.colHeader} rounded-lg text-sm`}>
                         {status.replace('_', ' ')} ({statusOrders.length})
                     </h3>
                     <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
                         {statusOrders.length === 0 ? (
-                            <p className="text-gray-400 text-center text-sm py-4">No orders</p>
+                            <p className={`${t.emptyText} text-center text-sm py-4`}>No orders</p>
                         ) : (
                             statusOrders.map(order => (
-                                <Card key={order.id} className="bg-gray-700 border-gray-600">
+                                <Card key={order.id} className={`${t.card} border`}>
                                     <CardContent className="p-3">
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
-                                                <p className="text-white font-bold">#{order.id.slice(0, 8)}</p>
-                                                <p className="text-gray-400 text-xs">{new Date(order.created_date).toLocaleTimeString()}</p>
+                                                <p className={`${t.text} font-bold`}>#{order.id.slice(0, 8)}</p>
+                                                <p className={`${t.textMuted} text-xs`}>{new Date(order.created_date).toLocaleTimeString()}</p>
                                             </div>
                                             <StatusBadge status={order.status} />
                                         </div>
                                         
-                                        <div className="mb-3 border-t border-gray-600 pt-2">
+                                        <div className={`mb-3 border-t ${isDark ? 'border-white/[0.06]' : 'border-gray-100'} pt-2`}>
                                             {order.items.map((item, idx) => (
-                                                <p key={idx} className="text-gray-300 text-sm">
+                                                <p key={idx} className={`${t.textSub} text-sm`}>
                                                     {item.quantity}x {item.name}
                                                 </p>
                                             ))}
                                         </div>
 
-                                        <p className="text-orange-400 font-bold mb-3">£{order.total.toFixed(2)}</p>
+                                        <p className="text-orange-500 font-bold mb-3">£{order.total.toFixed(2)}</p>
 
                                         <div className="space-y-2 flex flex-col gap-1 mb-3">
                                             <div className="grid grid-cols-3 gap-1">
