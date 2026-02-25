@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Scissors, Users, PlusCircle } from 'lucide-react';
+import { Scissors, Users, PlusCircle, PauseCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import POSItemCustomization from './POSItemCustomization';
