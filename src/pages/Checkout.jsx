@@ -369,26 +369,31 @@ export default function Checkout() {
     const zoneMinimum = zoneAvailable ? (deliveryZoneInfo.minimumOrder || 0) : 0;
     const zoneFee = zoneAvailable && deliveryZoneInfo.deliveryFee != null ? deliveryZoneInfo.deliveryFee : null;
 
-    // Base delivery fee from zone (if available) or restaurant default
+    // Base delivery fee and minimum — zone always wins
     let deliveryFee = orderType === 'collection' ? 0 : (zoneFee ?? standardFee);
-
-    // Tiered pricing always applies (zone or not): if cart is between lower_minimum and the effective minimum, charge the lower tier fee
-    const effectiveMinimum = zoneMinimum > 0 ? zoneMinimum : standardMin;
-    if (orderType === 'delivery' && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
-        const lowerMin = tiered.lower_minimum;
-        const lowerFee = tiered.lower_minimum_fee ?? 0;
-        if (subtotal >= lowerMin && subtotal < effectiveMinimum) {
-            deliveryFee = lowerFee;
-        }
-    }
-
-    // Minimum order: if below tiered lower_minimum, block with lower_minimum; otherwise use effective minimum
     let minimumOrder = 0;
+
     if (orderType === 'delivery') {
-        if (tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal < tiered.lower_minimum) {
-            minimumOrder = tiered.lower_minimum;
+        if (zoneAvailable) {
+            // Zone found: apply tiered pricing on top of zone minimum
+            const effectiveMinimum = zoneMinimum;
+            if (tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+                const lowerMin = tiered.lower_minimum;
+                const lowerFee = tiered.lower_minimum_fee ?? 0;
+                if (subtotal < lowerMin) {
+                    minimumOrder = lowerMin;
+                } else if (subtotal < effectiveMinimum) {
+                    deliveryFee = lowerFee;
+                    minimumOrder = effectiveMinimum;
+                } else {
+                    minimumOrder = effectiveMinimum;
+                }
+            } else {
+                minimumOrder = effectiveMinimum;
+            }
         } else {
-            minimumOrder = effectiveMinimum;
+            // No zone (or outside zone) — no tiered pricing, use standard minimum
+            minimumOrder = standardMin;
         }
     }
     const smallOrderSurcharge = 0;
