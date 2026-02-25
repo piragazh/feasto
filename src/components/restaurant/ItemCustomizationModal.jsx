@@ -177,6 +177,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">{item.name}</DialogTitle>
+                    <div className="sr-only">Customize {item.name} and add to cart</div>
                 </DialogHeader>
 
                 {item.image_url && (
@@ -207,7 +208,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                 {option.type === 'meal_upgrade' ? (
                                     <>
                                         <RadioGroup
-                                            value={customizations[option.name]}
+                                            value={customizations[option.name] || ''}
                                             onValueChange={(value) => handleSingleChoice(option.name, value)}
                                             name={`meal-upgrade-${idx}`}
                                         >
@@ -247,7 +248,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                         
                                                         {mealOpt.type === 'single' ? (
                                                             <RadioGroup
-                                                                value={customizations[`${option.name}_meal_customizations`]?.[mealOpt.name]}
+                                                                value={customizations[`${option.name}_meal_customizations`]?.[mealOpt.name] || ''}
                                                                 onValueChange={(value) => {
                                                                     setCustomizations(prev => ({
                                                                         ...prev,
@@ -440,7 +441,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                     </>
                                 ) : option.type === 'single' ? (
                                     <RadioGroup
-                                        value={customizations[option.name]}
+                                        value={customizations[option.name] || ''}
                                         onValueChange={(value) => handleSingleChoice(option.name, value)}
                                         name={`option-${idx}`}
                                     >
