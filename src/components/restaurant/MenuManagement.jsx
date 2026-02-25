@@ -1596,8 +1596,18 @@ CRITICAL REQUIREMENTS:
                                 )}
                             </div>
                             <MenuItemBadges item={item} />
+                            {item.availability_channel && item.availability_channel !== 'both' && (
+                                <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 mb-1 ${item.availability_channel === 'online_only' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                    {item.availability_channel === 'online_only' ? '🌐 Online Only' : '🏪 In-Store Only'}
+                                </span>
+                            )}
                             <p className="text-sm text-gray-600 mb-2 line-clamp-2 mt-1">{item.description}</p>
-                            <p className="text-lg font-bold text-orange-600 mb-3">£{item.price.toFixed(2)}</p>
+                            <div className="flex items-baseline gap-2 mb-3">
+                                <p className="text-lg font-bold text-orange-600">£{item.price.toFixed(2)}</p>
+                                {item.pos_price != null && item.pos_price !== item.price && (
+                                    <p className="text-sm text-purple-600 font-medium">POS: £{item.pos_price.toFixed(2)}</p>
+                                )}
+                            </div>
                             {item.customization_options?.length > 0 && (
                                 <p className="text-xs text-gray-500 mb-3">
                                     {item.customization_options.length} customization{item.customization_options.length > 1 ? 's' : ''}
