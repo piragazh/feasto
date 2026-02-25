@@ -37,7 +37,12 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                         </div>
                         <div className="p-2.5 flex flex-col flex-1 min-h-0">
                             <h3 className={`font-semibold text-xs line-clamp-2 leading-snug mb-1 transition-colors ${t.itemName}`}>{item.name}</h3>
-                            <p className="text-orange-500 font-bold text-sm mt-auto">£{item.price.toFixed(2)}</p>
+                            <p className="text-orange-500 font-bold text-sm mt-auto">
+                                £{(item.pos_price != null ? item.pos_price : item.price).toFixed(2)}
+                                {item.pos_price != null && item.pos_price !== item.price && (
+                                    <span className={`text-[10px] line-through ml-1.5 ${t.textMuted}`}>£{item.price.toFixed(2)}</span>
+                                )}
+                            </p>
                         </div>
                     </button>
                 ))}
