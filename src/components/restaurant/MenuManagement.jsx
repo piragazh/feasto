@@ -1561,11 +1561,12 @@ CRITICAL REQUIREMENTS:
                                 {item.is_available === false && (
                                     <Badge variant="destructive" className="text-xs">
                                         <EyeOff className="h-3 w-3 mr-1" />
-                                        Unavailable
+                                         Unavailable
                                     </Badge>
                                 )}
                             </div>
-                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
+                            <MenuItemBadges item={item} />
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2 mt-1">{item.description}</p>
                             <p className="text-lg font-bold text-orange-600 mb-3">£{item.price.toFixed(2)}</p>
                             {item.customization_options?.length > 0 && (
                                 <p className="text-xs text-gray-500 mb-3">
