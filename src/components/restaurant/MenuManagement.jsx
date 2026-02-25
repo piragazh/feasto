@@ -523,6 +523,8 @@ CRITICAL REQUIREMENTS:
             name: '',
             description: '',
             price: '',
+            pos_price: '',
+            availability_channel: 'both',
             category: '',
             subcategory: '',
             image_url: '',
