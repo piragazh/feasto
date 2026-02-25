@@ -17,6 +17,8 @@ import {
 export default function OrderEditDialog({ order, open, onClose, onUpdate, restaurantId }) {
     const [items, setItems] = useState(order?.items || []);
     const [discount, setDiscount] = useState(order?.discount || 0);
+    const [confirmSave, setConfirmSave] = useState(false);
+    const [pendingRemoveIdx, setPendingRemoveIdx] = useState(null);
 
     const { data: menuItems = [] } = useQuery({
         queryKey: ['menu-items', restaurantId],
