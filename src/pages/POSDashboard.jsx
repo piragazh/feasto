@@ -198,6 +198,22 @@ export default function POSDashboard() {
 
     const posName = maxPos > 1 ? `${restaurant.name} · Terminal ${posNumber}` : restaurant.name;
 
+    // Staff login screen
+    if (showStaffLogin) {
+        return (
+            <POSStaffLogin
+                staffList={staffList}
+                restaurant={restaurant}
+                isDark={isDark}
+                onLogin={(staffMember) => {
+                    setActiveStaffMember(staffMember);
+                    setShowStaffLogin(false);
+                }}
+                onSkip={() => setShowStaffLogin(false)}
+            />
+        );
+    }
+
     return (
         <div className={`min-h-screen ${t.bg} flex flex-col`} style={{ fontFamily: "'Inter', sans-serif" }}>
             {/* ── Header ── */}
