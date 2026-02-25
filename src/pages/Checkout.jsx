@@ -1110,7 +1110,6 @@ export default function Checkout() {
                                                             notes: address.instructions || ''
                                                         }));
                                                         setIsExistingAddress(true);
-                                                        setZoneCheckComplete(false);
 
                                                         let coords = address.coordinates;
 
@@ -1132,22 +1131,10 @@ export default function Checkout() {
                                                             }
                                                         }
 
-                                                        // Set coordinates
+                                                        // Setting coordinates triggers the zone-check useEffect
                                                         if (coords && coords.lat && coords.lng) {
                                                             setDeliveryCoordinates(coords);
-
-                                                            // Check delivery zone
-                                                            if (restaurantId) {
-                                                                try {
-                                                                    const zoneInfo = await calculateDeliveryDetails(restaurantId, coords);
-                                                                    setDeliveryZoneInfo(zoneInfo);
-                                                                } catch (error) {
-                                                                    console.error('Zone check failed:', error);
-                                                                }
-                                                            }
                                                         }
-
-                                                        setZoneCheckComplete(true);
                                                     }}
                                                 />
                                                 {/* Hidden fields to hold selected address values for form validation */}
