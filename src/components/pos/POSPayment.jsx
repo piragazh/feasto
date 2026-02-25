@@ -81,6 +81,17 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const createOrder = async (paymentSummary) => {
         if (!restaurantId) return;
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
+        const phoneDetails = window.__phoneOrderDetails || {};
+        const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
+        const splitNotes = paymentSummary.length > 1
+            ? paymentSummary.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
+            : undefined;
+        const orderNotes = [
+            isPhoneOrder && phoneDetails.notes ? phoneDetails.notes : null,
+            isPhoneOrder && phoneDetails.collectionTime && orderType === 'phone_collection' ? `Ready in: ${phoneDetails.collectionTime}` : null,
+            splitNotes,
+        ].filter(Boolean).join(' | ') || undefined;
+
         const orderData = {
             restaurant_id: restaurantId,
             restaurant_name: restaurantName || 'POS Order',
@@ -96,11 +107,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             discount: discount?.amount || 0,
             total: effectiveTotal,
             status: 'confirmed',
-            order_type: orderType || 'collection',
+            order_type: isPhoneOrder ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection'),
             payment_method: dominantMethod,
-            notes: paymentSummary.length > 1
-                ? paymentSummary.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
-                : undefined,
+            notes: orderNotes,
+            ...(isPhoneOrder && phoneDetails.phone ? { phone: phoneDetails.phone } : {}),
+            ...(isPhoneOrder && phoneDetails.name ? { guest_name: phoneDetails.name } : {}),
+            ...(isPhoneOrder && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}),
         };
 
         if (!navigator.onLine) {
