@@ -457,29 +457,25 @@ export default function Layout({ children, currentPageName }) {
                                 >
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
+                            ) : customDomainRestaurant ? (
+                                <Link to={homeUrl} className="flex items-center gap-2">
+                                    <img 
+                                        src={customDomainRestaurant.logo_url || customDomainRestaurant.image_url} 
+                                        alt={customDomainRestaurant.name || "Restaurant Logo"} 
+                                        className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
+                                    />
+                                    <span className="font-bold text-lg md:text-xl text-gray-900 dark:text-white hidden sm:block">{customDomainRestaurant.name}</span>
+                                </Link>
                             ) : (
                                 <Link to={homeUrl} className="flex items-center gap-2">
-                                {customDomainRestaurant ? (
-                                    <>
-                                        <img 
-                                            src={customDomainRestaurant.logo_url || customDomainRestaurant.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1770322839/final_logo_icon_only_rgoqoy.png'} 
-                                            alt={customDomainRestaurant.name || "Restaurant Logo"} 
-                                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
-                                        />
-                                        <span className="font-bold text-lg md:text-xl text-gray-900 dark:text-white hidden sm:block">{customDomainRestaurant.name}</span>
-                                        </>
-                                        ) : (
-                                        <>
-                                        <img 
-                                            src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1770322839/final_logo_icon_only_rgoqoy.png" 
-                                            alt="MealDrop Logo" 
-                                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
-                                        />
-                                        <span className="font-bold text-lg md:text-xl text-gray-900 dark:text-white hidden sm:block">MealDrop</span>
-                                        </>
-                                        )}
-                                        </Link>
-                                        )}
+                                    <img 
+                                        src="https://res.cloudinary.com/dbbjc1cre/image/upload/v1770322839/final_logo_icon_only_rgoqoy.png" 
+                                        alt="MealDrop Logo" 
+                                        className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-cover"
+                                    />
+                                    <span className="font-bold text-lg md:text-xl text-gray-900 dark:text-white hidden sm:block">MealDrop</span>
+                                </Link>
+                            )}
 
 
 
