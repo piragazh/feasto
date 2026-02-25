@@ -357,6 +357,27 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 )}
             </div>
 
+            {/* Cash under-amount confirm dialog */}
+            <AlertDialog open={showCashUnderConfirm} onOpenChange={setShowCashUnderConfirm}>
+                <AlertDialogContent className={`${t.dialog} border`}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
+                            <AlertCircle className="h-5 w-5 text-orange-400" />
+                            Cash Under Total
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className={t.dialogDesc}>
+                            You entered £{numericInput.toFixed(2)} but £{remaining.toFixed(2)} is still owed. Accept as partial payment?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => { setShowCashUnderConfirm(false); addPayment('cash', numericInput); }} className="bg-orange-500 hover:bg-orange-600 text-white">
+                            Accept Partial
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Card Confirm Dialog */}
             <AlertDialog open={showCardConfirm} onOpenChange={setShowCardConfirm}>
                 <AlertDialogContent className={`${t.dialog} border`}>
