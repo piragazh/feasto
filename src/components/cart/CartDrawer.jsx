@@ -45,14 +45,14 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
         const lowerFee = tiered.lower_minimum_fee ?? 0;
 
         if (subtotal < lowerMin) {
-            // Below even the lower minimum — block checkout with lower_minimum as the minimum
+            // Below lower minimum — block checkout, show lower_minimum as the bar to reach
             minimumOrder = lowerMin;
         } else if (subtotal < standardMinimum) {
-            // Between lower and standard minimum — apply the lower tier fee
+            // Between lower and standard minimum — apply tiered fee
             deliveryFee = lowerFee;
-            activeTierLabel = `lower-tier: £${lowerFee.toFixed(2)} delivery`;
+            activeTierLabel = `£${lowerFee.toFixed(2)} delivery fee`;
         }
-        // At or above standard minimum — standard fee applies (already set above)
+        // At or above standard minimum — standard fee already set
     }
 
     const total = subtotal + deliveryFee;
