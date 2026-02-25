@@ -38,6 +38,9 @@ export default function POSDashboard() {
     const [accessDenied, setAccessDenied] = useState(false);
     const { isOnline, pendingCount, isSyncing } = useOfflineSyncState();
     const [posTheme, setPosTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
+    const [activeStaffMember, setActiveStaffMember] = useState(null);
+    const [staffList, setStaffList] = useState([]);
+    const [showStaffLogin, setShowStaffLogin] = useState(false);
     const time = useTime();
 
     const toggleTheme = () => {
