@@ -359,6 +359,32 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 )}
             </div>
 
+            {/* Cash confirm dialog */}
+            <AlertDialog open={showCashConfirm} onOpenChange={setShowCashConfirm}>
+                <AlertDialogContent className={`${t.dialog} border`}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
+                            <AlertCircle className="h-5 w-5 text-green-500" />
+                            Confirm Cash Payment
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className={t.dialogDesc}>
+                            Process cash payment of £{numericInput.toFixed(2)}?
+                            {numericInput > remaining + 0.001 && (
+                                <span className="block mt-1 font-semibold text-orange-400">
+                                    Change due: £{(numericInput - remaining).toFixed(2)}
+                                </span>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => { setShowCashConfirm(false); addPayment('cash', numericInput); }} className="bg-green-600 hover:bg-green-700 text-white">
+                            Process £{numericInput.toFixed(2)}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Cash under-amount confirm dialog */}
             <AlertDialog open={showCashUnderConfirm} onOpenChange={setShowCashUnderConfirm}>
                 <AlertDialogContent className={`${t.dialog} border`}>
