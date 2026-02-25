@@ -177,10 +177,18 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         addPayment('cash', Math.min(amount, remaining === 0 ? amount : amount));
     };
 
+    // Cash confirmation state
+    const [showCashUnderConfirm, setShowCashUnderConfirm] = useState(false);
+
     // Cash keypad confirm
     const handleCashConfirm = () => {
         if (numericInput <= 0) {
             toast.error('Enter an amount');
+            return;
+        }
+        // Warn if cash given is less than amount owed
+        if (numericInput < remaining - 0.001) {
+            setShowCashUnderConfirm(true);
             return;
         }
         addPayment('cash', numericInput);
