@@ -44,9 +44,6 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         cardBtn:  'bg-blue-600 hover:bg-blue-500 text-white',
         cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
     };
-    // Push state to customer display whenever cart/payment changes
-    const restaurantLogoUrl = null; // passed via prop if needed
-
     // Local discount state — initialised from prop (set in cart), can be changed on payment screen too
     const [discount, setDiscount] = useState(initialDiscount || null);
     const handleApplyDiscount = (d) => { setDiscount(d); if (onApplyDiscount) onApplyDiscount(d); };
