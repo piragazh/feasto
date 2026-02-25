@@ -309,6 +309,24 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 <button onClick={() => setCustomItemOpen(true)} className={`h-12 px-4 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                     <PlusCircle className="h-4 w-4" /> Custom Item
                 </button>
+                <button
+                    onClick={holdOrder}
+                    disabled={optimisticCart.length === 0}
+                    className={`h-12 px-4 ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
+                >
+                    <PauseCircle className="h-4 w-4" /> Hold
+                </button>
+                <button
+                    onClick={() => setHeldDrawerOpen(true)}
+                    className={`h-12 px-4 relative ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
+                >
+                    <PauseCircle className="h-4 w-4" /> Held Orders
+                    {heldOrders.length > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {heldOrders.length}
+                        </span>
+                    )}
+                </button>
             </div>
 
             {selectedItem && (
