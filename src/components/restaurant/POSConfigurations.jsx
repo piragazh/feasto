@@ -7,6 +7,7 @@ import BluetoothPrinterManager from './BluetoothPrinterManager';
 import CustomItemsManager from './CustomItemsManager';
 import TableManagement from './TableManagement';
 import POSLayoutSelector from '../pos/POSLayoutSelector';
+import PhoneOrderSettings from '../pos/PhoneOrderSettings';
 
 export default function POSConfigurations({ restaurantId }) {
     return (
