@@ -47,8 +47,8 @@ function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }
     };
 
     const save = async () => {
-        if (!form.full_name.trim() || !form.email.trim() || !form.role) {
-            toast.error('Name, email and role are required');
+        if (!form.full_name.trim() || !form.role) {
+            toast.error('Name and role are required');
             return;
         }
         if (form.pin && !/^\d{4}$/.test(form.pin)) {
