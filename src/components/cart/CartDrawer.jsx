@@ -9,7 +9,7 @@ import CartPromotions from './CartPromotions';
 import CartQuickAddContainer from './CartQuickAddContainer';
 
 export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null, onAddItem = null }) {
-    // Compute tiered delivery fee based on cart subtotal and restaurant config
+
     const [optimisticCart, setOptimisticCart] = React.useState(cart);
 
     React.useEffect(() => {
