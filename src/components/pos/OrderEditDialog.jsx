@@ -81,6 +81,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
     };
 
     return (
+    <>
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="bg-gray-800 border-gray-700 max-w-2xl max-h-screen overflow-y-auto">
                 <DialogHeader>
