@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trash2, Plus, Minus, ShoppingCart, X, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle } from 'lucide-react';
 
 export default function POSCart({
     t, isDark, optimisticCart, cartTotal, orderType,
