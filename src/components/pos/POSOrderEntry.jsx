@@ -176,6 +176,40 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         } catch { toast.error('Failed to complete payment'); }
     };
 
+    // ── Hold / Recall ──────────────────────────────────────────────────────────
+    const holdOrder = () => {
+        if (optimisticCart.length === 0) { toast.error('Cart is empty'); return; }
+        const held = {
+            id: Date.now().toString(),
+            heldAt: new Date().toISOString(),
+            items: optimisticCart,
+            total: cartTotal,
+            label: orderType === 'dine_in' && selectedTable ? selectedTable.table_number : `${orderType.charAt(0).toUpperCase() + orderType.slice(1)} Order`,
+            orderType,
+            tableId: selectedTable?.id || null,
+        };
+        const updated = [...heldOrders, held];
+        setHeldOrders(updated);
+        localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+        onClearCart();
+        toast.success('Order held — tap "Held Orders" to recall');
+    };
+
+    const recallOrder = (held) => {
+        if (optimisticCart.length > 0) {
+            holdOrder(); // auto-hold current cart before recalling
+        }
+        held.items.forEach(item => onAddItem({ ...item }));
+        deleteHeldOrder(held.id);
+        toast.success('Order recalled');
+    };
+
+    const deleteHeldOrder = (id) => {
+        const updated = heldOrders.filter(h => h.id !== id);
+        setHeldOrders(updated);
+        localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+    };
+
     // ── Views ──────────────────────────────────────────────────────────────────
     if (showPayment) {
         // Takeaway
