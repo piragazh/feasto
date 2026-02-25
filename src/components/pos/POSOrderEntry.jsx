@@ -141,8 +141,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     // ── Handlers ───────────────────────────────────────────────────────────────
     const handleItemClick = (item) => {
-        if (item.customization_options?.length > 0) { setSelectedItem(item); setCustomizationOpen(true); }
-        else onAddItem({ ...item, quantity: 1, customizations: {} });
+        // Use POS-specific price if set
+        const posItem = item.pos_price != null ? { ...item, price: item.pos_price } : item;
+        if (posItem.customization_options?.length > 0) { setSelectedItem(posItem); setCustomizationOpen(true); }
+        else onAddItem({ ...posItem, quantity: 1, customizations: {} });
     };
 
     const handleCustomizationConfirm = (item) => { onAddItem(item); setCustomizationOpen(false); setSelectedItem(null); };
