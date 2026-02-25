@@ -84,7 +84,7 @@ export default function POSCart({
                                     <p className="text-orange-500 text-xs mt-1 font-bold">£{(item.price * item.quantity).toFixed(2)}</p>
                                 </div>
                                 <button
-                                    onClick={() => onRemoveItem(item.id)}
+                                    onClick={() => handleRemove(item.id, item.name)}
                                     className="w-6 h-6 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-colors flex-shrink-0"
                                 >
                                     <X className="h-3 w-3" />
