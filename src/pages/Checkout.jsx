@@ -365,10 +365,17 @@ export default function Checkout() {
     const standardFee = restaurant?.delivery_fee ?? 0;
     const standardMin = restaurant?.minimum_order ?? 0;
 
-    let deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? standardFee);
+    // Zone is considered "resolved" if we have a zone result (available true or false)
+    const zoneResolved = deliveryZoneInfo != null;
+    const zoneAvailable = deliveryZoneInfo?.available === true;
 
-    // Only apply tiered logic if no zone-specific fee was returned
-    if (orderType === 'delivery' && !deliveryZoneInfo?.deliveryFee && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+    // Zone fee: use zone value when available (even if it's 0), otherwise fall back to restaurant default
+    const zoneFee = zoneAvailable && deliveryZoneInfo.deliveryFee != null ? deliveryZoneInfo.deliveryFee : null;
+    let deliveryFee = orderType === 'collection' ? 0 : (zoneFee ?? standardFee);
+
+    // Apply tiered logic ONLY when no delivery zone is configured for this restaurant
+    // (i.e. zone check completed but returned no zone at all — not just "not available")
+    if (orderType === 'delivery' && !zoneResolved && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
         const lowerMin = tiered.lower_minimum;
         const lowerFee = tiered.lower_minimum_fee ?? 0;
         if (subtotal >= lowerMin && subtotal < standardMin) {
@@ -376,12 +383,12 @@ export default function Checkout() {
         }
     }
 
-    // Minimum order: zone-based takes priority, then tiered, then restaurant default
+    // Minimum order: zone minimum takes priority, then tiered (only if no zone), then 0
     let minimumOrder = 0;
     if (orderType === 'delivery') {
-        if (deliveryZoneInfo?.available) {
-            minimumOrder = deliveryZoneInfo?.minimumOrder || 0;
-        } else if (tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal < tiered.lower_minimum) {
+        if (zoneAvailable) {
+            minimumOrder = deliveryZoneInfo.minimumOrder || 0;
+        } else if (!zoneResolved && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal < tiered.lower_minimum) {
             minimumOrder = tiered.lower_minimum;
         }
     }
