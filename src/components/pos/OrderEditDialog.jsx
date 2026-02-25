@@ -175,9 +175,46 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
 
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} className="bg-gray-700 border-gray-600 text-white">Cancel</Button>
-                    <Button onClick={handleSave} className="bg-orange-500 hover:bg-orange-600">Save Changes</Button>
+                    <Button onClick={() => setConfirmSave(true)} className="bg-orange-500 hover:bg-orange-600">Save Changes</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Confirm save changes */}
+        <AlertDialog open={confirmSave} onOpenChange={setConfirmSave}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-orange-400" /> Save Order Changes?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will update the live order. New total: £{total.toFixed(2)}. Are you sure?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSaveConfirmed} className="bg-orange-500 hover:bg-orange-600 text-white">Save Changes</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Confirm remove item */}
+        <AlertDialog open={pendingRemoveIdx !== null} onOpenChange={() => setPendingRemoveIdx(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <Trash2 className="h-5 w-5 text-red-400" /> Remove Item?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Remove "{pendingRemoveIdx !== null ? items[pendingRemoveIdx]?.name : ''}" from this order?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmRemoveItem} className="bg-red-500 hover:bg-red-600 text-white">Remove</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </>
     );
 }
