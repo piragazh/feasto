@@ -23,6 +23,7 @@ const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
 const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
 const RestaurantInfoDialog = lazy(() => import('@/components/restaurant/RestaurantInfoDialog'));
 const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
+const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
 const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
 const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
@@ -1048,6 +1049,9 @@ export default function Restaurant() {
                             <SpecialOffers offers={restaurant.special_offers} />
                         </div>
                     )}
+
+                    {/* Info Section */}
+                    <InfoSection infoSection={restaurant.info_section} />
 
                     {/* Active Promotions */}
                     <ActivePromotionsBanner restaurantId={restaurantId} />
