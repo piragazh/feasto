@@ -35,6 +35,7 @@ export default function RestaurantSettings({ restaurantId }) {
         alert_phone: '',
         delivery_fee: '',
         minimum_order: '',
+        tiered_delivery: { enabled: false, lower_minimum: '', lower_minimum_fee: '' },
         collection_enabled: false,
         accepts_cash_on_delivery: true,
         logo_url: '',
@@ -104,6 +105,11 @@ export default function RestaurantSettings({ restaurantId }) {
                 alert_phone: restaurant.alert_phone || '',
                 delivery_fee: restaurant.delivery_fee || '',
                 minimum_order: restaurant.minimum_order || '',
+                tiered_delivery: {
+                    enabled: restaurant.tiered_delivery?.enabled || false,
+                    lower_minimum: restaurant.tiered_delivery?.lower_minimum || '',
+                    lower_minimum_fee: restaurant.tiered_delivery?.lower_minimum_fee || ''
+                },
                 collection_enabled: restaurant.collection_enabled || false,
                 accepts_cash_on_delivery: restaurant.accepts_cash_on_delivery !== false,
                 logo_url: restaurant.logo_url || '',
@@ -200,6 +206,11 @@ export default function RestaurantSettings({ restaurantId }) {
             alert_phone: formData.alert_phone,
             delivery_fee: parseFloat(formData.delivery_fee) || 0,
             minimum_order: parseFloat(formData.minimum_order) || 0,
+            tiered_delivery: {
+                enabled: formData.tiered_delivery.enabled,
+                lower_minimum: parseFloat(formData.tiered_delivery.lower_minimum) || 0,
+                lower_minimum_fee: parseFloat(formData.tiered_delivery.lower_minimum_fee) || 0
+            },
             collection_enabled: formData.collection_enabled,
             accepts_cash_on_delivery: formData.accepts_cash_on_delivery,
             logo_url: formData.logo_url,
@@ -429,7 +440,7 @@ export default function RestaurantSettings({ restaurantId }) {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label>Delivery Fee (£)</Label>
+                                <Label>Delivery Fee (£) — for orders above minimum</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -438,7 +449,7 @@ export default function RestaurantSettings({ restaurantId }) {
                                 />
                             </div>
                             <div>
-                                <Label>Minimum Order (£)</Label>
+                                <Label>Minimum Order (£) — for free/standard delivery</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -446,6 +457,64 @@ export default function RestaurantSettings({ restaurantId }) {
                                     onChange={(e) => setFormData({ ...formData, minimum_order: e.target.value })}
                                 />
                             </div>
+                        </div>
+
+                        {/* Tiered Delivery */}
+                        <div className="border rounded-lg p-4 space-y-4 bg-amber-50 border-amber-200">
+                            <div className="flex items-center gap-3">
+                                <Switch
+                                    checked={formData.tiered_delivery.enabled}
+                                    onCheckedChange={(checked) => setFormData({
+                                        ...formData,
+                                        tiered_delivery: { ...formData.tiered_delivery, enabled: checked }
+                                    })}
+                                />
+                                <div>
+                                    <Label className="text-sm font-semibold">Enable Tiered Delivery Pricing</Label>
+                                    <p className="text-xs text-gray-600 mt-0.5">
+                                        Allow orders below your standard minimum with a small delivery charge
+                                    </p>
+                                </div>
+                            </div>
+                            {formData.tiered_delivery.enabled && (
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div>
+                                        <Label>Lower Minimum Order (£)</Label>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="e.g. 10.00"
+                                            value={formData.tiered_delivery.lower_minimum}
+                                            onChange={(e) => setFormData({
+                                                ...formData,
+                                                tiered_delivery: { ...formData.tiered_delivery, lower_minimum: e.target.value }
+                                            })}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Minimum for the lower tier</p>
+                                    </div>
+                                    <div>
+                                        <Label>Delivery Fee for Lower Tier (£)</Label>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="e.g. 1.00"
+                                            value={formData.tiered_delivery.lower_minimum_fee}
+                                            onChange={(e) => setFormData({
+                                                ...formData,
+                                                tiered_delivery: { ...formData.tiered_delivery, lower_minimum_fee: e.target.value }
+                                            })}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Fee charged between lower and standard minimum</p>
+                                    </div>
+                                    {formData.tiered_delivery.lower_minimum && formData.minimum_order && (
+                                        <div className="col-span-2 text-xs bg-white border border-amber-200 rounded-lg p-3 text-gray-700">
+                                            <strong>Preview:</strong><br/>
+                                            • Orders £{parseFloat(formData.tiered_delivery.lower_minimum).toFixed(2)}–£{(parseFloat(formData.minimum_order) - 0.01).toFixed(2)} → £{parseFloat(formData.tiered_delivery.lower_minimum_fee || 0).toFixed(2)} delivery fee<br/>
+                                            • Orders £{parseFloat(formData.minimum_order).toFixed(2)}+ → £{parseFloat(formData.delivery_fee || 0).toFixed(2)} delivery fee
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-3">
                             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
