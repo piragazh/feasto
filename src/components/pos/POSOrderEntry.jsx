@@ -292,27 +292,27 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
                 {layoutCols.showCat && (
-                    <div className={layoutCols.cat}>
+                    <div className={`${layoutCols.cat} overflow-hidden`}>
                         <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
                     </div>
                 )}
-                <div className={layoutCols.menu}>
+                <div className={`${layoutCols.menu} overflow-hidden`}>
                     <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
                 </div>
-                <div className={layoutCols.cart}>
-                <POSCart
-                    t={t} isDark={isDark}
-                    optimisticCart={optimisticCart} cartTotal={cartTotal} orderType={orderType}
-                    selectedTable={selectedTable} tables={tables}
-                    onRemoveItem={onRemoveItem}
-                    onUpdateQuantity={handleQuantityChange}
-                    onClearCart={onClearCart}
-                    onSelectTable={(table) => table === null ? setSelectedTable(null) : setTableSelectionOpen(true)}
-                    onAddToTable={() => handleAddToTable(selectedTable)}
-                    onCharge={() => setShowPayment(true)}
-                    isAddingToTable={isAddingToTable}
-                    discount={discount}
-                />
+                <div className={`${layoutCols.cart} overflow-hidden`}>
+                    <POSCart
+                        t={t} isDark={isDark}
+                        optimisticCart={optimisticCart} cartTotal={cartTotal} orderType={orderType}
+                        selectedTable={selectedTable} tables={tables}
+                        onRemoveItem={onRemoveItem}
+                        onUpdateQuantity={handleQuantityChange}
+                        onClearCart={onClearCart}
+                        onSelectTable={(table) => table === null ? setSelectedTable(null) : setTableSelectionOpen(true)}
+                        onAddToTable={() => handleAddToTable(selectedTable)}
+                        onCharge={() => setShowPayment(true)}
+                        isAddingToTable={isAddingToTable}
+                        discount={discount}
+                    />
                 </div>
             </div>
 
