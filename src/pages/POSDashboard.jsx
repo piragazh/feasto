@@ -134,7 +134,7 @@ export default function POSDashboard() {
 
     const ORDER_TYPES = [
         { id: 'takeaway', label: 'Takeaway' },
-        { id: 'collection', label: 'Collection' },
+        { id: 'phone_collection', label: 'Phone Order' },
         { id: 'dine_in', label: 'Dine In' },
     ];
 
