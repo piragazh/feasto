@@ -155,16 +155,16 @@ export default function POSCart({
                             </>
                         )}
                         <button
-                            onClick={onClearCart}
-                            disabled={optimisticCart.length === 0}
-                            className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Clear
-                        </button>
-                    </>
-                ) : (
-                    <>
+                                    onClick={handleClear}
+                                    disabled={optimisticCart.length === 0}
+                                    className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Clear
+                                </button>
+                        </>
+                        ) : (
+                        <>
                         <button
                             onClick={onCharge}
                             disabled={optimisticCart.length === 0}
@@ -174,15 +174,15 @@ export default function POSCart({
                             Charge · £{discountedTotal.toFixed(2)}
                         </button>
                         <button
-                            onClick={onClearCart}
+                            onClick={handleClear}
                             disabled={optimisticCart.length === 0}
                             className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                             Clear Cart
                         </button>
-                    </>
-                )}
+                        </>
+                        )}
             </div>
         </div>
     );
