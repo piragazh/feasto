@@ -43,6 +43,8 @@ export default function MenuManagement({ restaurantId }) {
         name: '',
         description: '',
         price: '',
+        pos_price: '',
+        availability_channel: 'both',
         category: '',
         subcategory: '',
         image_url: '',
