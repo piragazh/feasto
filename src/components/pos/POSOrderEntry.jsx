@@ -85,12 +85,18 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     });
 
     const { data: menuItems = [] } = useQuery({
-        queryKey: ['pos-menu-items', restaurantId],
-        queryFn: async () => {
-            try { const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true }); if (items?.length) cacheMenuItems(restaurantId, items); return items; }
-            catch { return getCachedMenuItems(restaurantId); }
-        },
-        enabled: !!restaurantId,
+    queryKey: ['pos-menu-items', restaurantId],
+    queryFn: async () => {
+        try {
+            const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true });
+            // Filter out online-only items for POS
+            const posItems = items.filter(i => !i.availability_channel || i.availability_channel !== 'online_only');
+            if (posItems?.length) cacheMenuItems(restaurantId, posItems);
+            return posItems;
+        }
+        catch { return getCachedMenuItems(restaurantId); }
+    },
+    enabled: !!restaurantId,
     });
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
