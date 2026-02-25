@@ -82,9 +82,10 @@ function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                     {[
-                        { key: 'full_name', label: 'Full Name', placeholder: 'Jane Smith' },
-                        { key: 'email',     label: 'Email',     placeholder: 'jane@restaurant.com', type: 'email' },
-                        { key: 'pin',       label: 'PIN (4 digits, optional)', placeholder: '1234', maxLength: 4 },
+                        { key: 'full_name',    label: 'Full Name',                   placeholder: 'Jane Smith' },
+                        { key: 'staff_number', label: 'Staff Number (e.g. S001)',    placeholder: 'S001' },
+                        { key: 'email',        label: 'Email (optional)',             placeholder: 'jane@restaurant.com', type: 'email' },
+                        { key: 'pin',          label: 'PIN (4 digits, optional)',     placeholder: '1234', maxLength: 4 },
                     ].map(({ key, label, placeholder, type, maxLength }) => (
                         <div key={key}>
                             <label className={`${t.label} text-xs font-medium block mb-1`}>{label}</label>
