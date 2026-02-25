@@ -1,6 +1,28 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle } from 'lucide-react';
 
+// Inline mini confirm dialog
+function ConfirmPopup({ message, onConfirm, onCancel, isDark }) {
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+            <div className={`${isDark ? 'bg-[#1a1d27] border-white/[0.1] text-white' : 'bg-white border-gray-200 text-gray-900'} border rounded-2xl p-5 w-72 shadow-2xl`}>
+                <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="h-5 w-5 text-orange-400 flex-shrink-0" />
+                    <p className="text-sm font-semibold">{message}</p>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={onCancel} className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${isDark ? 'border-white/[0.1] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                        Cancel
+                    </button>
+                    <button onClick={onConfirm} className="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function POSCart({
     t, isDark, optimisticCart, cartTotal, orderType,
     selectedTable, tables,
@@ -9,6 +31,21 @@ export default function POSCart({
     isAddingToTable,
     discount,
 }) {
+    const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
+
+    const ask = (message, onConfirm) => setConfirmAction({ message, onConfirm });
+    const dismiss = () => setConfirmAction(null);
+
+    const handleRemove = (id, name) => ask(`Remove "${name}" from order?`, () => { onRemoveItem(id); dismiss(); });
+    const handleClear = () => ask(`Clear entire order? This cannot be undone.`, () => { onClearCart(); dismiss(); });
+    const handleDecrement = (item) => {
+        if (item.quantity === 1) {
+            ask(`Remove "${item.name}" from order?`, () => { onUpdateQuantity(item.id, 0); dismiss(); });
+        } else {
+            onUpdateQuantity(item.id, item.quantity - 1);
+        }
+    };
+
     const cartSubtotal = optimisticCart.reduce((s, i) => s + i.price * i.quantity, 0);
     const discountedTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
     return (
