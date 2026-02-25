@@ -985,17 +985,20 @@ export default function Checkout() {
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => {
-                            if (restaurantId) {
-                                navigate(createPageUrl('Restaurant') + `?id=${restaurantId}`);
-                            } else {
-                                navigate(createPageUrl('Home'));
-                            }
-                        }}>
-                            <Button size="icon" variant="ghost" className="rounded-full">
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                        </button>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="rounded-full"
+                            onClick={() => {
+                                if (restaurantId) {
+                                    navigate(createPageUrl('Restaurant') + `?id=${restaurantId}`);
+                                } else {
+                                    navigate(createPageUrl('Home'));
+                                }
+                            }}
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
                         <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
