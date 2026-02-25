@@ -78,6 +78,8 @@ export default function POSConfigurations({ restaurantId }) {
                 </CardContent>
             </Card>
 
+            <PhoneOrderSettings restaurantId={restaurantId} />
+
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
