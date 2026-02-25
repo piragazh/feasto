@@ -63,7 +63,8 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const total = Math.max(0, subtotal - discount);
 
-    const handleSave = async () => {
+    const handleSaveConfirmed = async () => {
+        setConfirmSave(false);
         try {
             await base44.entities.Order.update(order.id, {
                 items,
