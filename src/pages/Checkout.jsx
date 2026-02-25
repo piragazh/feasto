@@ -365,31 +365,30 @@ export default function Checkout() {
     const standardFee = restaurant?.delivery_fee ?? 0;
     const standardMin = restaurant?.minimum_order ?? 0;
 
-    // Zone is considered "resolved" if we have a zone result (available true or false)
-    const zoneResolved = deliveryZoneInfo != null;
     const zoneAvailable = deliveryZoneInfo?.available === true;
-
-    // Zone fee: use zone value when available (even if it's 0), otherwise fall back to restaurant default
+    const zoneMinimum = zoneAvailable ? (deliveryZoneInfo.minimumOrder || 0) : 0;
     const zoneFee = zoneAvailable && deliveryZoneInfo.deliveryFee != null ? deliveryZoneInfo.deliveryFee : null;
+
+    // Base delivery fee from zone (if available) or restaurant default
     let deliveryFee = orderType === 'collection' ? 0 : (zoneFee ?? standardFee);
 
-    // Apply tiered logic ONLY when no delivery zone is configured for this restaurant
-    // (i.e. zone check completed but returned no zone at all — not just "not available")
-    if (orderType === 'delivery' && !zoneResolved && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+    // Tiered pricing always applies (zone or not): if cart is between lower_minimum and the effective minimum, charge the lower tier fee
+    const effectiveMinimum = zoneMinimum > 0 ? zoneMinimum : standardMin;
+    if (orderType === 'delivery' && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
         const lowerMin = tiered.lower_minimum;
         const lowerFee = tiered.lower_minimum_fee ?? 0;
-        if (subtotal >= lowerMin && subtotal < standardMin) {
+        if (subtotal >= lowerMin && subtotal < effectiveMinimum) {
             deliveryFee = lowerFee;
         }
     }
 
-    // Minimum order: zone minimum takes priority, then tiered (only if no zone), then 0
+    // Minimum order: if below tiered lower_minimum, block with lower_minimum; otherwise use effective minimum
     let minimumOrder = 0;
     if (orderType === 'delivery') {
-        if (zoneAvailable) {
-            minimumOrder = deliveryZoneInfo.minimumOrder || 0;
-        } else if (!zoneResolved && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal < tiered.lower_minimum) {
+        if (tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal < tiered.lower_minimum) {
             minimumOrder = tiered.lower_minimum;
+        } else {
+            minimumOrder = effectiveMinimum;
         }
     }
     const smallOrderSurcharge = 0;
