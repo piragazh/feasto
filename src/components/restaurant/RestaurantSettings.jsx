@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 import BluetoothPrinterManager from './BluetoothPrinterManager';
 import { printerService } from './PrinterService';
+import InfoSectionSettings from './InfoSectionSettings';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
