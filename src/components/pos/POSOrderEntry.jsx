@@ -335,6 +335,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             <TableSelectionDialog open={tableSelectionOpen} onClose={() => setTableSelectionOpen(false)} tables={tables} selectedTable={selectedTable} onSelectTable={(table) => setSelectedTable(table)} />
             <CustomItemDialog open={customItemOpen} onClose={() => setCustomItemOpen(false)} onAdd={(item) => onAddItem(item)} restaurantId={restaurantId} posTheme={posTheme} />
+            <HeldOrdersDrawer
+                open={heldDrawerOpen}
+                onClose={() => setHeldDrawerOpen(false)}
+                heldOrders={heldOrders}
+                onRecall={recallOrder}
+                onDelete={deleteHeldOrder}
+                isDark={isDark}
+                t={t}
+            />
 
             {showKeyboard && (
                 <OnScreenKeyboard onKeyPress={(key) => setSearchQuery(p => p + key)} onBackspace={() => setSearchQuery(p => p.slice(0, -1))} onSpace={() => setSearchQuery(p => p + ' ')} onClose={() => setShowKeyboard(false)} />
