@@ -33,25 +33,29 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
 
     // Tiered delivery logic
     const tiered = restaurant?.tiered_delivery;
-    let deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 0);
-    let minimumOrder = orderType === 'delivery' ? (restaurant?.minimum_order || 0) : 0;
+    const standardFee = restaurant?.delivery_fee ?? 0;
+    const standardMinimum = restaurant?.minimum_order ?? 0;
+
+    let deliveryFee = orderType === 'collection' ? 0 : standardFee;
+    let minimumOrder = orderType === 'delivery' ? standardMinimum : 0;
     let activeTierLabel = null;
 
-    if (orderType === 'delivery' && tiered?.enabled && tiered.lower_minimum > 0) {
-        if (subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity)) {
-            deliveryFee = tiered.lower_minimum_fee ?? 0;
-            activeTierLabel = `£${(tiered.lower_minimum_fee ?? 0).toFixed(2)} delivery (under £${(restaurant?.minimum_order || 0).toFixed(2)} order)`;
+    if (orderType === 'delivery' && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+        const lowerMin = tiered.lower_minimum;
+        const lowerFee = tiered.lower_minimum_fee ?? 0;
+
+        if (subtotal < lowerMin) {
+            // Below even the lower minimum — block checkout with lower_minimum as the minimum
+            minimumOrder = lowerMin;
+        } else if (subtotal < standardMinimum) {
+            // Between lower and standard minimum — apply the lower tier fee
+            deliveryFee = lowerFee;
+            activeTierLabel = `lower-tier: £${lowerFee.toFixed(2)} delivery`;
         }
-        // if below lower_minimum, keep standard fee but show the lower_minimum as the effective minimum
-        if (subtotal < tiered.lower_minimum) {
-            minimumOrder = tiered.lower_minimum;
-        }
+        // At or above standard minimum — standard fee applies (already set above)
     }
 
-    // Calculate small order surcharge (only for delivery orders below the effective minimum)
-    const smallOrderSurcharge = 0; // No surcharge — we use delivery fee tiers instead
-    
-    const total = subtotal + deliveryFee + smallOrderSurcharge;
+    const total = subtotal + deliveryFee;
 
     const handleClearCart = () => {
         if (confirm('Clear all items from cart?')) {
@@ -249,7 +253,10 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                             </div>
                             {orderType === 'delivery' && (
                                 <div className="flex justify-between text-gray-600">
-                                    <span>Delivery Fee{activeTierLabel ? <span className="text-xs text-amber-600 ml-1">({activeTierLabel})</span> : null}</span>
+                                    <span>
+                                        Delivery Fee
+                                        {activeTierLabel && <span className="text-xs text-amber-600 ml-1">({activeTierLabel})</span>}
+                                    </span>
                                     <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
                                 </div>
                             )}

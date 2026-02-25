@@ -360,21 +360,31 @@ export default function Checkout() {
     // Calculate subtotal: sum of all item prices × quantities
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Tiered delivery: if no delivery zone info, apply restaurant's tiered delivery config
+    // Tiered delivery logic (only applied when no delivery zone override)
     const tiered = restaurant?.tiered_delivery;
-    let deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? restaurant?.delivery_fee ?? 0);
-    if (orderType === 'delivery' && !deliveryZoneInfo?.deliveryFee && tiered?.enabled && tiered.lower_minimum > 0) {
-        if (subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity)) {
-            deliveryFee = tiered.lower_minimum_fee ?? 0;
+    const standardFee = restaurant?.delivery_fee ?? 0;
+    const standardMin = restaurant?.minimum_order ?? 0;
+
+    let deliveryFee = orderType === 'collection' ? 0 : (deliveryZoneInfo?.deliveryFee ?? standardFee);
+
+    // Only apply tiered logic if no zone-specific fee was returned
+    if (orderType === 'delivery' && !deliveryZoneInfo?.deliveryFee && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+        const lowerMin = tiered.lower_minimum;
+        const lowerFee = tiered.lower_minimum_fee ?? 0;
+        if (subtotal >= lowerMin && subtotal < standardMin) {
+            deliveryFee = lowerFee;
         }
     }
 
-    // Minimum order: use zone-based if available, otherwise restaurant setting
-    const minimumOrder = orderType === 'delivery' && deliveryZoneInfo?.available
-        ? (deliveryZoneInfo?.minimumOrder || 0)
-        : (orderType === 'delivery' && tiered?.enabled && subtotal < (tiered.lower_minimum || 0))
-            ? (tiered.lower_minimum || 0)
-            : 0;
+    // Minimum order: zone-based takes priority, then tiered, then restaurant default
+    let minimumOrder = 0;
+    if (orderType === 'delivery') {
+        if (deliveryZoneInfo?.available) {
+            minimumOrder = deliveryZoneInfo?.minimumOrder || 0;
+        } else if (tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal < tiered.lower_minimum) {
+            minimumOrder = tiered.lower_minimum;
+        }
+    }
     const smallOrderSurcharge = 0;
 
     // Discount from applied coupons and promotions
