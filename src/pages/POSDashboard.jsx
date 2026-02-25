@@ -138,6 +138,7 @@ export default function POSDashboard() {
         { id: 'kitchen', label: 'Kitchen', icon: Monitor },
         { id: 'history', label: 'History', icon: ClipboardList },
         { id: 'reports', label: 'Reports', icon: BarChart3 },
+        { id: 'staff', label: 'Staff', icon: UserCog },
     ];
 
     if (accessDenied) return (
