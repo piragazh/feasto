@@ -1616,8 +1616,8 @@ export default function Checkout() {
                                                     )}
                                                 </span>
                                                 <span>
-                                                    {!zoneCheckComplete
-                                                        ? '...'
+                                                    {deliveryCoordinates && !zoneCheckComplete
+                                                        ? 'Checking...'
                                                         : deliveryFee === 0
                                                             ? 'FREE'
                                                             : `£${deliveryFee.toFixed(2)}`}
@@ -1625,7 +1625,7 @@ export default function Checkout() {
                                             </div>
                                             {zoneAvailable && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal >= tiered.lower_minimum && subtotal < zoneMinimum && (
                                                 <div className="text-xs text-amber-600 bg-amber-50 rounded p-2">
-                                                    Add £{(zoneMinimum - subtotal).toFixed(2)} more for free delivery (zone rate: £{Number(deliveryZoneInfo.deliveryFee || 0).toFixed(2)})
+                                                    Add £{(zoneMinimum - subtotal).toFixed(2)} more to reach the zone minimum (zone delivery: £{Number(deliveryZoneInfo.deliveryFee || 0).toFixed(2)})
                                                 </div>
                                             )}
                                         </>
