@@ -11,7 +11,20 @@ import OrderEditDialog from './OrderEditDialog';
 import BillSplitDialog from './BillSplitDialog';
 import ApplyPromotionDialog from './ApplyPromotionDialog';
 
-export default function POSOrderQueue({ restaurantId }) {
+export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
+    const t = {
+        bg:         isDark ? 'bg-[#151720]'               : 'bg-white',
+        border:     isDark ? 'border-gray-700'             : 'border-gray-200',
+        colHeader:  isDark ? 'bg-gray-700/50'              : 'bg-gray-100',
+        card:       isDark ? 'bg-[#1a1d27] border-white/[0.06]' : 'bg-white border-gray-200',
+        text:       isDark ? 'text-white'                  : 'text-gray-900',
+        textMuted:  isDark ? 'text-gray-400'               : 'text-gray-500',
+        textSub:    isDark ? 'text-gray-300'               : 'text-gray-600',
+        emptyText:  isDark ? 'text-gray-400'               : 'text-gray-400',
+        clearBtn:   isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200',
+    };
+
     const [searchResults, setSearchResults] = useState(null);
     const [editingOrder, setEditingOrder] = useState(null);
     const [splittingOrder, setSplittingOrder] = useState(null);
