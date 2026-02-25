@@ -185,5 +185,6 @@ export default function POSCart({
                         )}
             </div>
         </div>
+        </>
     );
 }
