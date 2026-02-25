@@ -541,7 +541,6 @@ CRITICAL REQUIREMENTS:
 
     const handleEdit = (item) => {
         setEditingItem(item);
-        // Ensure meal_customizations are properly loaded
         const customizations = (item.customization_options || []).map(opt => ({
             ...opt,
             meal_customizations: opt.meal_customizations || []
@@ -551,6 +550,7 @@ CRITICAL REQUIREMENTS:
             description: item.description || '',
             price: item.price.toString(),
             category: item.category || '',
+            subcategory: item.subcategory || '',
             image_url: item.image_url || '',
             ai_generated_image: item.ai_generated_image || false,
             is_popular: item.is_popular || false,
@@ -558,7 +558,10 @@ CRITICAL REQUIREMENTS:
             is_spicy: item.is_spicy || false,
             is_available: item.is_available !== false,
             show_in_cart_quick_add: item.show_in_cart_quick_add || false,
-            customization_options: customizations
+            customization_options: customizations,
+            availability_schedule: item.availability_schedule || { enabled: false, days: ['mon','tue','wed','thu','fri','sat','sun'], time_from: '', time_until: '', label: '' },
+            allergens: item.allergens || [],
+            nutrition: item.nutrition || {}
         });
         setDialogOpen(true);
     };
