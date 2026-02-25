@@ -576,7 +576,8 @@ CRITICAL REQUIREMENTS:
         e.preventDefault();
         const data = {
             ...formData,
-            price: parseFloat(formData.price)
+            price: parseFloat(formData.price),
+            pos_price: formData.pos_price !== '' ? parseFloat(formData.pos_price) : null,
         };
 
         if (editingItem) {
