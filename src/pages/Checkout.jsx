@@ -1203,17 +1203,10 @@ export default function Checkout() {
                                                     <Label htmlFor="address">Street Address *</Label>
                                                     <LocationPicker
                                                         value={formData.delivery_address}
-                                                        onLocationSelect={async (locationData) => {
+                                                        onLocationSelect={(locationData) => {
                                                             setFormData({ ...formData, delivery_address: locationData.address });
                                                             setDeliveryCoordinates(locationData.coordinates);
                                                             setIsExistingAddress(false);
-
-                                                            if (locationData.coordinates && restaurantId) {
-                                                                setZoneCheckComplete(false);
-                                                                const zoneInfo = await calculateDeliveryDetails(restaurantId, locationData.coordinates);
-                                                                setDeliveryZoneInfo(zoneInfo);
-                                                                setZoneCheckComplete(true);
-                                                            }
                                                         }}
                                                         className="[&>div]:h-12"
                                                     />
