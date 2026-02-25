@@ -353,6 +353,25 @@ export default function Checkout() {
         }
     };
 
+    // Re-run zone check whenever restaurantId or deliveryCoordinates change (catches saved address auto-select race)
+    useEffect(() => {
+        if (!restaurantId || !deliveryCoordinates?.lat || !deliveryCoordinates?.lng || orderType !== 'delivery') return;
+        if (zoneCheckComplete) return; // Already done
+
+        const runZoneCheck = async () => {
+            try {
+                const zoneInfo = await calculateDeliveryDetails(restaurantId, deliveryCoordinates);
+                setDeliveryZoneInfo(zoneInfo);
+            } catch (error) {
+                console.error('Zone check failed:', error);
+            } finally {
+                setZoneCheckComplete(true);
+            }
+        };
+
+        runZoneCheck();
+    }, [restaurantId, deliveryCoordinates, orderType]);
+
     // ============================================
     // PRICE CALCULATIONS
     // ============================================
