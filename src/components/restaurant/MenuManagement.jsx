@@ -747,7 +747,7 @@ CRITICAL REQUIREMENTS:
                                     </div>
                                 </div>
                                 <div>
-                                    <Label>Price (£) *</Label>
+                                    <Label>Online Price (£) *</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -755,6 +755,29 @@ CRITICAL REQUIREMENTS:
                                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                         required
                                     />
+                                </div>
+                                <div>
+                                    <Label>POS / In-Store Price (£)</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="Same as online if empty"
+                                        value={formData.pos_price}
+                                        onChange={(e) => setFormData({ ...formData, pos_price: e.target.value })}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Leave empty to use the online price in POS</p>
+                                </div>
+                                <div className="col-span-2">
+                                    <Label>Availability Channel</Label>
+                                    <select
+                                        value={formData.availability_channel}
+                                        onChange={(e) => setFormData({ ...formData, availability_channel: e.target.value })}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="both">Both (Online & In-Store POS)</option>
+                                        <option value="online_only">Online Only</option>
+                                        <option value="pos_only">In-Store POS Only</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <Label>Category</Label>
