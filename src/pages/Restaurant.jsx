@@ -132,11 +132,13 @@ export default function Restaurant() {
     });
 
     const { data: menuItems = [], isLoading: menuLoading } = useQuery({
-        queryKey: ['menuItems', restaurantId],
-        queryFn: async () => {
-            const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
-            return Array.isArray(items) ? items.filter(item => item.is_available !== false) : [];
-        },
+    queryKey: ['menuItems', restaurantId],
+    queryFn: async () => {
+        const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
+        return Array.isArray(items) ? items.filter(item => 
+            item.is_available !== false && item.availability_channel !== 'pos_only'
+        ) : [];
+    },
         enabled: !!restaurantId,
         staleTime: 10 * 60 * 1000,
         gcTime: 15 * 60 * 1000,
