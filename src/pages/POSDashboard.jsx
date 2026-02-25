@@ -96,6 +96,11 @@ export default function POSDashboard() {
                 const maxPos = r.max_pos_count || 1;
                 if (urlPosNum && urlPosNum >= 1 && urlPosNum <= maxPos) setPosNumber(urlPosNum);
                 else if (maxPos === 1) setPosNumber(1);
+
+                // Load staff for login
+                const staff = await base44.entities.StaffMember.filter({ restaurant_id: r.id, is_active: true });
+                setStaffList(staff || []);
+                if (staff && staff.length > 0) setShowStaffLogin(true);
             } else {
                 toast.error('No restaurants available');
             }
