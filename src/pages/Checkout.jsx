@@ -732,8 +732,10 @@ export default function Checkout() {
                     : 'Address not provided')
                 : restaurant?.address || 'Collection';
             
-            const fullAddress = orderType === 'delivery' 
-                ? `${formData.door_number}, ${deliveryAddressString}`
+            const fullAddress = orderType === 'delivery'
+                ? (isExistingAddress
+                    ? deliveryAddressString  // saved address already includes door number
+                    : `${formData.door_number ? formData.door_number + ', ' : ''}${deliveryAddressString}`)
                 : deliveryAddressString;
             
             // Generate order number for collection orders
