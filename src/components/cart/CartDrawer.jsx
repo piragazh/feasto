@@ -37,7 +37,9 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
     const standardMinimum = restaurant?.minimum_order ?? 0;
 
     let deliveryFee = orderType === 'collection' ? 0 : standardFee;
-    let minimumOrder = orderType === 'delivery' ? standardMinimum : 0;
+    // Only enforce minimum in cart drawer when tiered pricing is active.
+    // When tiered is off, the real minimum comes from the delivery zone (checked at checkout).
+    let minimumOrder = 0;
     let activeTierLabel = null;
 
     if (orderType === 'delivery' && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
