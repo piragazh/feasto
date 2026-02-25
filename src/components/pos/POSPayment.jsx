@@ -179,6 +179,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     // Cash confirmation state
     const [showCashUnderConfirm, setShowCashUnderConfirm] = useState(false);
+    const [showCashConfirm, setShowCashConfirm] = useState(false);
 
     // Cash keypad confirm
     const handleCashConfirm = () => {
@@ -191,7 +192,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             setShowCashUnderConfirm(true);
             return;
         }
-        addPayment('cash', numericInput);
+        // Confirm full/over cash payment
+        setShowCashConfirm(true);
     };
 
     // Card confirm
