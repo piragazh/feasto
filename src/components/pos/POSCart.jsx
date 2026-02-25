@@ -92,7 +92,7 @@ export default function POSCart({
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <button
-                                    onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                                    onClick={() => handleDecrement(item)}
                                     className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.qtyMinus}`}
                                 >
                                     <Minus className="h-3 w-3" />
