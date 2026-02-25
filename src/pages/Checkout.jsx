@@ -1607,11 +1607,16 @@ export default function Checkout() {
                                         <span>£{subtotal.toFixed(2)}</span>
                                     </div>
                                     {orderType === 'delivery' && (
-                                        <div className="flex justify-between text-gray-600">
-                                            <span>Delivery Fee</span>
-                                            <span>£{deliveryFee.toFixed(2)}</span>
-                                        </div>
-                                    )}
+                                           <div className="flex justify-between text-gray-600">
+                                                <span>
+                                                    Delivery Fee
+                                                    {zoneAvailable && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal >= tiered.lower_minimum && subtotal < (zoneMinimum || standardMin) && (
+                                                        <span className="text-xs text-amber-600 ml-1">(tiered rate)</span>
+                                                    )}
+                                                </span>
+                                                <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
+                                            </div>
+                                        )}
                                     {orderType === 'collection' && (
                                         <div className="flex justify-between text-green-600 font-semibold">
                                             <span>🏪 Collection Discount</span>
