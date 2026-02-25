@@ -307,6 +307,19 @@ export default function POSDashboard() {
                             <ExternalLink className="h-4 w-4" />
                         </button>
 
+                        {activeStaffMember && (
+                            <button onClick={() => setShowStaffLogin(true)}
+                                title="Switch staff member"
+                                className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${t.iconBtn}`}>
+                                <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
+                                    {activeStaffMember.full_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                                </div>
+                                <span className={`text-xs font-semibold ${t.textMuted} hidden sm:block`}>
+                                    {activeStaffMember.full_name.split(' ')[0]}
+                                </span>
+                            </button>
+                        )}
+
                         <button onClick={() => base44.auth.logout()}
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             <LogOut className="h-4 w-4" />
