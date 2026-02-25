@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Monitor, Printer, PlusCircle, LayoutGrid } from 'lucide-react';
+import { Monitor, Printer, PlusCircle, LayoutGrid, Layout } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from '@/utils';
 import BluetoothPrinterManager from './BluetoothPrinterManager';
 import CustomItemsManager from './CustomItemsManager';
 import TableManagement from './TableManagement';
+import POSLayoutSelector from '../pos/POSLayoutSelector';
 
 export default function POSConfigurations({ restaurantId }) {
     return (

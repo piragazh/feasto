@@ -276,14 +276,30 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         );
     }
 
+    // ── Layout configs ─────────────────────────────────────────────────────────
+    const posLayout = restaurant?.pos_layout || 'standard';
+    const layoutCols = {
+        standard:   { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true },
+        compact:    { cat: 'md:col-span-1', menu: 'md:col-span-8', cart: 'md:col-span-3', showCat: true },
+        menu_focus: { cat: '',              menu: 'md:col-span-9', cart: 'md:col-span-3', showCat: false },
+        cart_focus: { cat: 'md:col-span-2', menu: 'md:col-span-5', cart: 'md:col-span-5', showCat: true },
+    }[posLayout] || { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true };
+
     // Main entry view
     return (
         <div className={`flex flex-col h-[calc(100vh-130px)] ${t.bg}`}>
             <POSOfflineSyncBanner restaurantId={restaurantId} />
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
-                <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
-                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                {layoutCols.showCat && (
+                    <div className={layoutCols.cat}>
+                        <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
+                    </div>
+                )}
+                <div className={layoutCols.menu}>
+                    <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                </div>
+                <div className={layoutCols.cart}>
                 <POSCart
                     t={t} isDark={isDark}
                     optimisticCart={optimisticCart} cartTotal={cartTotal} orderType={orderType}
