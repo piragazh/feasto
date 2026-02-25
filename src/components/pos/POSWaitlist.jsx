@@ -6,7 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Clock, Users, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function POSWaitlist() {
+export default function POSWaitlist({ posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
+    const t = {
+        panel:      isDark ? 'bg-[#151720] border-gray-700'   : 'bg-white border-gray-200',
+        card:       isDark ? 'bg-[#1a1d27] border-white/[0.06] hover:border-yellow-500/50' : 'bg-white border-gray-200 hover:border-yellow-400',
+        cardSeated: isDark ? 'bg-green-900/30 border-green-700/50'                         : 'bg-green-50 border-green-200',
+        text:       isDark ? 'text-white'                      : 'text-gray-900',
+        textMuted:  isDark ? 'text-gray-400'                   : 'text-gray-500',
+        textSeated: isDark ? 'text-green-200'                  : 'text-green-700',
+        label:      isDark ? 'text-gray-400'                   : 'text-gray-600',
+        input:      isDark ? 'bg-[#0f1117] border-white/[0.08] text-white'                 : 'bg-gray-50 border-gray-200 text-gray-900',
+        summary:    isDark ? 'bg-white/[0.04]'                 : 'bg-gray-50',
+        emptyText:  isDark ? 'text-gray-400'                   : 'text-gray-400',
+    };
     const [waitlist, setWaitlist] = useState([]);
     const [guestName, setGuestName] = useState('');
     const [partySize, setPartySize] = useState('2');
