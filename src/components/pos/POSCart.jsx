@@ -51,7 +51,7 @@ export default function POSCart({
     return (
         <>
         {confirmAction && <ConfirmPopup message={confirmAction.message} onConfirm={confirmAction.onConfirm} onCancel={dismiss} isDark={isDark} />}
-        <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
+        <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col relative`}>
             <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0 flex items-center justify-between`}>
                 <h2 className={`${t.text} font-bold text-base`}>Order</h2>
                 {orderType === 'dine_in' && selectedTable && (
