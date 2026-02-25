@@ -44,6 +44,7 @@ export default function MenuManagement({ restaurantId }) {
         description: '',
         price: '',
         category: '',
+        subcategory: '',
         image_url: '',
         ai_generated_image: false,
         is_popular: false,
@@ -51,7 +52,10 @@ export default function MenuManagement({ restaurantId }) {
         is_spicy: false,
         is_available: true,
         show_in_cart_quick_add: false,
-        customization_options: []
+        customization_options: [],
+        availability_schedule: { enabled: false, days: ['mon','tue','wed','thu','fri','sat','sun'], time_from: '', time_until: '', label: '' },
+        allergens: [],
+        nutrition: {}
     });
 
     const queryClient = useQueryClient();
