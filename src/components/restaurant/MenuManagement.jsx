@@ -766,6 +766,31 @@ CRITICAL REQUIREMENTS:
                                     )}
                                 </div>
                                 <div className="col-span-2">
+                                    <SubcategorySection
+                                        value={formData.subcategory}
+                                        onChange={(v) => setFormData({ ...formData, subcategory: v })}
+                                        suggestions={[...new Set(menuItems.filter(i => i.subcategory).map(i => i.subcategory))]}
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <ScheduleSection
+                                        value={formData.availability_schedule}
+                                        onChange={(v) => setFormData({ ...formData, availability_schedule: v })}
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <AllergensSection
+                                        value={formData.allergens}
+                                        onChange={(v) => setFormData({ ...formData, allergens: v })}
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <NutritionSection
+                                        value={formData.nutrition}
+                                        onChange={(v) => setFormData({ ...formData, nutrition: v })}
+                                    />
+                                </div>
+                                <div className="col-span-2">
                                     <div className="flex items-center justify-between mb-2">
                                         <Label>Image</Label>
                                         <div className="flex gap-2 flex-wrap">
