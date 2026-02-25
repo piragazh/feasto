@@ -9,6 +9,7 @@ import CartPromotions from './CartPromotions';
 import CartQuickAddContainer from './CartQuickAddContainer';
 
 export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null, onAddItem = null }) {
+    // Compute tiered delivery fee based on cart subtotal and restaurant config
     const [optimisticCart, setOptimisticCart] = React.useState(cart);
 
     React.useEffect(() => {
@@ -29,13 +30,26 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
     };
 
     const subtotal = optimisticCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 2.99);
-    
-    // Calculate small order surcharge (only for delivery orders)
-    const minimumOrder = orderType === 'delivery' ? (restaurant?.minimum_order || 0) : 0;
-    const smallOrderSurcharge = orderType === 'delivery' && minimumOrder > 0 && subtotal < minimumOrder 
-        ? (minimumOrder - subtotal) 
-        : 0;
+
+    // Tiered delivery logic
+    const tiered = restaurant?.tiered_delivery;
+    let deliveryFee = orderType === 'collection' ? 0 : (restaurant?.delivery_fee ?? 0);
+    let minimumOrder = orderType === 'delivery' ? (restaurant?.minimum_order || 0) : 0;
+    let activeTierLabel = null;
+
+    if (orderType === 'delivery' && tiered?.enabled && tiered.lower_minimum > 0) {
+        if (subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity)) {
+            deliveryFee = tiered.lower_minimum_fee ?? 0;
+            activeTierLabel = `£${(tiered.lower_minimum_fee ?? 0).toFixed(2)} delivery (under £${(restaurant?.minimum_order || 0).toFixed(2)} order)`;
+        }
+        // if below lower_minimum, keep standard fee but show the lower_minimum as the effective minimum
+        if (subtotal < tiered.lower_minimum) {
+            minimumOrder = tiered.lower_minimum;
+        }
+    }
+
+    // Calculate small order surcharge (only for delivery orders below the effective minimum)
+    const smallOrderSurcharge = 0; // No surcharge — we use delivery fee tiers instead
     
     const total = subtotal + deliveryFee + smallOrderSurcharge;
 
@@ -235,8 +249,8 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                             </div>
                             {orderType === 'delivery' && (
                                 <div className="flex justify-between text-gray-600">
-                                    <span>Delivery Fee</span>
-                                    <span>£{deliveryFee.toFixed(2)}</span>
+                                    <span>Delivery Fee{activeTierLabel ? <span className="text-xs text-amber-600 ml-1">({activeTierLabel})</span> : null}</span>
+                                    <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
                                 </div>
                             )}
                             {orderType === 'collection' && (
@@ -245,18 +259,23 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                     <span>FREE</span>
                                 </div>
                             )}
-                            {smallOrderSurcharge > 0 && (
-                                <div className="flex justify-between text-orange-600">
-                                    <span>Small Order Fee</span>
-                                    <span>£{smallOrderSurcharge.toFixed(2)}</span>
+                            {/* Tiered delivery hint */}
+                            {orderType === 'delivery' && tiered?.enabled && subtotal < tiered.lower_minimum && (
+                                <div className="text-xs text-amber-600 bg-amber-50 rounded p-2">
+                                    Add £{(tiered.lower_minimum - subtotal).toFixed(2)} more to qualify for £{(tiered.lower_minimum_fee ?? 0).toFixed(2)} delivery fee
+                                </div>
+                            )}
+                            {orderType === 'delivery' && tiered?.enabled && subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity) && (
+                                <div className="text-xs text-green-600 bg-green-50 rounded p-2">
+                                    Add £{((restaurant?.minimum_order || 0) - subtotal).toFixed(2)} more for free delivery
                                 </div>
                             )}
                             <div className="flex justify-between font-semibold text-lg pt-3 border-t">
                                 <span>Total</span>
                                 <span>£{total.toFixed(2)}</span>
                             </div>
-                            {smallOrderSurcharge > 0 && (
-                                <div className="text-xs text-gray-500 pt-1">
+                            {minimumOrder > 0 && subtotal < minimumOrder && (
+                                <div className="text-xs text-red-500 pt-1">
                                     * Minimum order: £{minimumOrder.toFixed(2)}
                                 </div>
                             )}
@@ -267,7 +286,8 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                     onProceedToCheckout();
                                 }
                             }}
-                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                            disabled={subtotal < minimumOrder}
+                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50"
                         >
                             {orderType === 'collection' ? 'Schedule Collection' : 'Go to Checkout'}
                         </Button>
