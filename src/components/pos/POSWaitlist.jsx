@@ -68,29 +68,29 @@ export default function POSWaitlist({ posTheme = 'dark' }) {
     return (
         <div className="grid grid-cols-3 gap-4 h-[calc(100vh-200px)]">
             {/* Add Guest Form */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 h-fit">
-                <h2 className="text-white font-bold text-lg mb-4">Add Guest</h2>
+            <div className={`${t.panel} rounded-xl border p-4 h-fit`}>
+                <h2 className={`${t.text} font-bold text-lg mb-4`}>Add Guest</h2>
                 <div className="space-y-3">
                     <div>
-                        <label className="text-gray-400 text-sm block mb-1">Guest Name</label>
+                        <label className={`${t.label} text-sm block mb-1`}>Guest Name</label>
                         <Input
                             type="text"
                             placeholder="John Smith"
                             value={guestName}
                             onChange={(e) => setGuestName(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && addToWaitlist()}
-                            className="bg-gray-700 border-gray-600 text-white"
+                            className={`${t.input} border`}
                         />
                     </div>
                     <div>
-                        <label className="text-gray-400 text-sm block mb-1">Party Size</label>
+                        <label className={`${t.label} text-sm block mb-1`}>Party Size</label>
                         <Input
                             type="number"
                             min="1"
                             max="20"
                             value={partySize}
                             onChange={(e) => setPartySize(e.target.value)}
-                            className="bg-gray-700 border-gray-600 text-white"
+                            className={`${t.input} border`}
                         />
                     </div>
                     <Button
@@ -102,41 +102,41 @@ export default function POSWaitlist({ posTheme = 'dark' }) {
                 </div>
 
                 {/* Summary */}
-                <div className="mt-6 space-y-2 bg-gray-700 p-3 rounded">
+                <div className={`mt-6 space-y-2 ${t.summary} p-3 rounded-xl`}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-yellow-400" />
-                            <span className="text-gray-300">Waiting</span>
+                            <span className={t.textMuted}>Waiting</span>
                         </div>
-                        <span className="text-white font-bold text-lg">{waitingGuests.length}</span>
+                        <span className={`${t.text} font-bold text-lg`}>{waitingGuests.length}</span>
                     </div>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Check className="h-4 w-4 text-green-400" />
-                            <span className="text-gray-300">Seated</span>
+                            <span className={t.textMuted}>Seated</span>
                         </div>
-                        <span className="text-white font-bold text-lg">{seatedGuests.length}</span>
+                        <span className={`${t.text} font-bold text-lg`}>{seatedGuests.length}</span>
                     </div>
                 </div>
             </div>
 
             {/* Waiting Guests */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-hidden flex flex-col">
-                <h2 className="text-white font-bold text-lg mb-4">Waiting ({waitingGuests.length})</h2>
+            <div className={`${t.panel} rounded-xl border p-4 overflow-hidden flex flex-col`}>
+                <h2 className={`${t.text} font-bold text-lg mb-4`}>Waiting ({waitingGuests.length})</h2>
                 <div className="flex-1 overflow-y-auto space-y-2">
                     {waitingGuests.length === 0 ? (
-                        <p className="text-gray-400 text-center py-8">No guests waiting</p>
+                        <p className={`${t.emptyText} text-center py-8`}>No guests waiting</p>
                     ) : (
                         waitingGuests.map((guest, index) => (
-                            <Card key={guest.id} className="bg-gray-700 border-gray-600 hover:border-yellow-500">
+                            <Card key={guest.id} className={`${t.card} border transition-colors`}>
                                 <CardContent className="p-3">
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <Badge className="bg-yellow-600">{index + 1}</Badge>
-                                                <p className="text-white font-bold">{guest.name}</p>
+                                                <Badge className="bg-yellow-500 text-white">{index + 1}</Badge>
+                                                <p className={`${t.text} font-bold`}>{guest.name}</p>
                                             </div>
-                                            <p className="text-gray-400 text-xs mt-1 flex items-center gap-1">
+                                            <p className={`${t.textMuted} text-xs mt-1 flex items-center gap-1`}>
                                                 <Users className="h-3 w-3" /> {guest.partySize} guests
                                             </p>
                                         </div>
@@ -172,29 +172,29 @@ export default function POSWaitlist({ posTheme = 'dark' }) {
             </div>
 
             {/* Seated Guests */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-hidden flex flex-col">
-                <h2 className="text-white font-bold text-lg mb-4">Seated ({seatedGuests.length})</h2>
+            <div className={`${t.panel} rounded-xl border p-4 overflow-hidden flex flex-col`}>
+                <h2 className={`${t.text} font-bold text-lg mb-4`}>Seated ({seatedGuests.length})</h2>
                 <div className="flex-1 overflow-y-auto space-y-2">
                     {seatedGuests.length === 0 ? (
-                        <p className="text-gray-400 text-center py-8">No seated guests</p>
+                        <p className={`${t.emptyText} text-center py-8`}>No seated guests</p>
                     ) : (
                         seatedGuests.map((guest) => (
-                            <Card key={guest.id} className="bg-green-700 border-green-600">
+                            <Card key={guest.id} className={`${t.cardSeated} border`}>
                                 <CardContent className="p-3">
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
-                                            <p className="text-white font-bold">{guest.name}</p>
-                                            <p className="text-green-200 text-xs mt-1 flex items-center gap-1">
+                                            <p className={`${t.text} font-bold`}>{guest.name}</p>
+                                            <p className={`${t.textSeated} text-xs mt-1 flex items-center gap-1`}>
                                                 <Users className="h-3 w-3" /> {guest.partySize} guests
                                             </p>
                                         </div>
-                                        <Check className="h-5 w-5 text-green-300" />
+                                        <Check className="h-5 w-5 text-green-400" />
                                     </div>
                                     <Button
                                         onClick={() => removeFromWaitlist(guest.id)}
                                         variant="ghost"
                                         size="sm"
-                                        className="w-full text-xs h-8 text-gray-300 hover:text-white"
+                                        className={`w-full text-xs h-8 ${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'}`}
                                     >
                                         Remove
                                     </Button>
