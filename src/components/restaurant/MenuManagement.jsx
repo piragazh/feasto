@@ -553,6 +553,8 @@ CRITICAL REQUIREMENTS:
             name: item.name,
             description: item.description || '',
             price: item.price.toString(),
+            pos_price: item.pos_price != null ? item.pos_price.toString() : '',
+            availability_channel: item.availability_channel || 'both',
             category: item.category || '',
             subcategory: item.subcategory || '',
             image_url: item.image_url || '',
