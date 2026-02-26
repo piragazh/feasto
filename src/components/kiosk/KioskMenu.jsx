@@ -38,7 +38,7 @@ export default function KioskMenu({
     const orderTypeLabel = orderType === 'dine_in' ? 'Eat In' : 'Takeaway';
 
     return (
-        <div className="min-h-screen bg-gray-950 flex flex-col">
+        <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="bg-gray-900 border-b border-white/[0.06] px-6 py-4 flex items-center gap-4 sticky top-0 z-20">
                 <button onClick={onBack} className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors">
