@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2, RefreshCw, Copy, Clipboard } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScheduleSection, AllergensSection, NutritionSection, SubcategorySection, MenuItemBadges } from './MenuItemAdvancedFields';
 import ImportFromJustEat from './ImportFromJustEat';
@@ -39,6 +39,7 @@ export default function MenuManagement({ restaurantId }) {
     const [bgThemeColor, setBgThemeColor] = useState('');
     const [bgStyle, setBgStyle] = useState('solid');
     const [bgCustomInput, setBgCustomInput] = useState('');
+    const [copiedCustomizations, setCopiedCustomizations] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -973,35 +974,64 @@ CRITICAL REQUIREMENTS:
                                     {formData.customization_options.map((custom, idx) => (
                                     <Card key={idx} className="p-3 relative">
                                         <div className="absolute top-2 right-2 flex gap-1 bg-white rounded shadow-sm p-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (idx === 0) return;
-                                                    const newCustoms = [...formData.customization_options];
-                                                    [newCustoms[idx], newCustoms[idx - 1]] = [newCustoms[idx - 1], newCustoms[idx]];
-                                                    setFormData({ ...formData, customization_options: newCustoms });
-                                                }}
-                                                disabled={idx === 0}
-                                                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title="Move up"
-                                            >
-                                                <ChevronLeft className="h-3 w-3 rotate-90 text-gray-600" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (idx === formData.customization_options.length - 1) return;
-                                                    const newCustoms = [...formData.customization_options];
-                                                    [newCustoms[idx], newCustoms[idx + 1]] = [newCustoms[idx + 1], newCustoms[idx]];
-                                                    setFormData({ ...formData, customization_options: newCustoms });
-                                                }}
-                                                disabled={idx === formData.customization_options.length - 1}
-                                                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title="Move down"
-                                            >
-                                                <ChevronRight className="h-3 w-3 rotate-90 text-gray-600" />
-                                            </button>
-                                        </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCopiedCustomizations(custom);
+                                                        toast.success('Customization copied!');
+                                                    }}
+                                                    className="p-1 rounded hover:bg-gray-100 transition-colors"
+                                                    title="Copy customization"
+                                                >
+                                                    <Copy className="h-3 w-3 text-blue-600" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!copiedCustomizations) {
+                                                            toast.error('No customization copied yet');
+                                                            return;
+                                                        }
+                                                        const newCustoms = [...formData.customization_options];
+                                                        newCustoms[idx] = JSON.parse(JSON.stringify(copiedCustomizations));
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                        toast.success('Customization pasted!');
+                                                    }}
+                                                    disabled={!copiedCustomizations}
+                                                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    title="Paste customization"
+                                                >
+                                                    <Clipboard className="h-3 w-3 text-green-600" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (idx === 0) return;
+                                                        const newCustoms = [...formData.customization_options];
+                                                        [newCustoms[idx], newCustoms[idx - 1]] = [newCustoms[idx - 1], newCustoms[idx]];
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                    disabled={idx === 0}
+                                                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title="Move up"
+                                                >
+                                                    <ChevronLeft className="h-3 w-3 rotate-90 text-gray-600" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (idx === formData.customization_options.length - 1) return;
+                                                        const newCustoms = [...formData.customization_options];
+                                                        [newCustoms[idx], newCustoms[idx + 1]] = [newCustoms[idx + 1], newCustoms[idx]];
+                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                    }}
+                                                    disabled={idx === formData.customization_options.length - 1}
+                                                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title="Move down"
+                                                >
+                                                    <ChevronRight className="h-3 w-3 rotate-90 text-gray-600" />
+                                                </button>
+                                            </div>
                                         <div className="space-y-2">
                                             <div className="flex gap-2">
                                                 <Input
