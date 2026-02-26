@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Scissors, Users, PlusCircle, PauseCircle } from 'lucide-react';
+import { Scissors, Users, PlusCircle, PauseCircle, Phone, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 import POSItemCustomization from './POSItemCustomization';
@@ -17,7 +17,7 @@ import POSMenuGrid from './POSMenuGrid';
 import POSCart from './POSCart';
 import POSTablesGrid from './POSTablesGrid';
 import HeldOrdersDrawer from './HeldOrdersDrawer';
-import PhoneOrderPanel from './PhoneOrderPanel';
+import PhoneOrderDialog from './PhoneOrderDialog';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', discount, onApplyDiscount, onRemoveDiscount }) {
