@@ -130,7 +130,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                 )}
                             </div>
 
-                            {opt.type === 'single' || opt.type === 'meal_upgrade' ? (
+                            {opt.type === 'single' ? (
                                 <div className="grid grid-cols-2 gap-2">
                                     {opt.options?.map((choice, ci) => (
                                         <button
@@ -150,6 +150,98 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                             )}
                                         </button>
                                     ))}
+                                </div>
+                            ) : opt.type === 'meal_upgrade' ? (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {opt.options?.map((choice, ci) => (
+                                            <button
+                                                key={ci}
+                                                onClick={() => handleSingle(opt.name, choice.label)}
+                                                className={`p-4 rounded-2xl border text-left transition-all ${
+                                                    customizations[opt.name] === choice.label
+                                                        ? 'bg-orange-500 border-orange-500 text-white'
+                                                        : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+                                                }`}
+                                            >
+                                                <p className="font-semibold text-sm">{choice.label}</p>
+                                                {choice.price > 0 && (
+                                                    <p className={`text-sm mt-0.5 ${customizations[opt.name] === choice.label ? 'text-white/70' : 'text-orange-400'}`}>
+                                                        +£{choice.price.toFixed(2)}
+                                                    </p>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {/* Show meal_customizations for the selected upgrade option */}
+                                    {customizations[opt.name] && (() => {
+                                        const selectedOption = opt.options?.find(o => o.label === customizations[opt.name]);
+                                        return selectedOption?.meal_customizations?.map((mealOpt, mi) => (
+                                            <div key={mi} className="mt-4 pl-3 border-l-2 border-orange-500/40">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h4 className="text-white font-semibold text-sm">{mealOpt.name}</h4>
+                                                    {mealOpt.required && (
+                                                        <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-xs px-2 py-0.5 rounded-full">Required</span>
+                                                    )}
+                                                </div>
+                                                {mealOpt.type === 'single' ? (
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {mealOpt.options?.map((mc, mci) => {
+                                                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
+                                                            return (
+                                                                <button
+                                                                    key={mci}
+                                                                    onClick={() => setCustomizations(p => ({ ...p, [mealCustomKey]: mc.label }))}
+                                                                    className={`p-3 rounded-xl border text-left transition-all ${
+                                                                        customizations[mealCustomKey] === mc.label
+                                                                            ? 'bg-orange-500 border-orange-500 text-white'
+                                                                            : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+                                                                    }`}
+                                                                >
+                                                                    <p className="font-semibold text-xs">{mc.label}</p>
+                                                                    {mc.price > 0 && (
+                                                                        <p className={`text-xs mt-0.5 ${customizations[mealCustomKey] === mc.label ? 'text-white/70' : 'text-orange-400'}`}>
+                                                                            +£{mc.price.toFixed(2)}
+                                                                        </p>
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {mealOpt.options?.map((mc, mci) => {
+                                                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
+                                                            const mealSelected = (customizations[mealCustomKey] || []).includes(mc.label);
+                                                            return (
+                                                                <button
+                                                                    key={mci}
+                                                                    onClick={() => {
+                                                                        const cur = customizations[mealCustomKey] || [];
+                                                                        setCustomizations(p => ({
+                                                                            ...p,
+                                                                            [mealCustomKey]: mealSelected ? cur.filter(c => c !== mc.label) : [...cur, mc.label]
+                                                                        }));
+                                                                    }}
+                                                                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                                                        mealSelected ? 'bg-orange-500/10 border-orange-500/40' : 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${mealSelected ? 'bg-orange-500 border-orange-500' : 'border-gray-600'}`}>
+                                                                            {mealSelected && <span className="text-white text-xs font-black">✓</span>}
+                                                                        </div>
+                                                                        <span className={`font-semibold text-xs ${mealSelected ? 'text-white' : 'text-gray-300'}`}>{mc.label}</span>
+                                                                    </div>
+                                                                    {mc.price > 0 && <span className="text-orange-400 text-xs font-semibold">+£{mc.price.toFixed(2)}</span>}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ));
+                                    })()}
                                 </div>
                             ) : (
                                 <div className="space-y-2">
