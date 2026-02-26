@@ -1,99 +1,83 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClient } from 'npm:@base44/sdk@0.8.6';
+
+// Initialize with service role (no user auth needed for webhook)
+const base44 = createClient({
+    appId: Deno.env.get('BASE44_APP_ID'),
+    serviceRoleKey: Deno.env.get('BASE44_SERVICE_ROLE_KEY'),
+});
 
 Deno.serve(async (req) => {
-    // Uber Eats sends POST requests
     if (req.method !== 'POST') {
         return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
 
-    const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
+    let body;
+    try {
+        body = await req.json();
+    } catch {
+        return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
 
-    // Verify webhook authenticity - Uber Eats sends the client secret in Authorization or x-uber-signature
+    console.log('Uber Eats webhook received:', JSON.stringify(body).slice(0, 500));
+
+    // Verify client secret if Uber Eats sends it
+    const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
     const authHeader = req.headers.get('Authorization') || '';
     const uberSig = req.headers.get('x-uber-signature') || '';
     const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
 
-    // Log auth info for debugging; Uber Eats will pass the client secret in their own way
-    console.log('Uber Eats webhook auth check - header present:', !!authHeader, 'sig present:', !!uberSig);
-
-    const body = await req.json();
-    console.log('Uber Eats webhook received:', JSON.stringify(body));
-
-    // Uber Eats webhook event types we care about
-    const eventType = body.event_type || body.type || '';
-
-    // Only process new/updated orders
-    const orderEvents = [
-        'orders.notification',
-        'order.placed',
-        'orders.placed',
-        'eats.order'
-    ];
-
-    if (!orderEvents.some(e => eventType.toLowerCase().includes(e.toLowerCase().split('.')[1] || e.toLowerCase()))) {
-        // Still acknowledge non-order events
-        console.log('Non-order event received:', eventType);
-        return Response.json({ received: true });
+    if (clientSecret && (authHeader || uberSig)) {
+        if (providedSecret !== clientSecret && uberSig !== clientSecret) {
+            console.error('Uber Eats webhook: invalid signature');
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
     }
 
     try {
-        const base44 = createClientFromRequest(req);
-
-        // Extract order data from Uber Eats payload
-        // Uber Eats wraps order in meta.resource_href or directly in order field
-        const uberOrder = body.order || body.meta || body;
+        const uberOrder = body.order || body;
         const uberOrderId = uberOrder.id || uberOrder.order_id || body.resource_id || `UE-${Date.now()}`;
 
-        // Check if order already exists to avoid duplicates
-        const existing = await base44.asServiceRole.entities.Order.filter({
-            third_party_order_id: uberOrderId
-        });
-
+        // Deduplicate
+        const existing = await base44.entities.Order.filter({ third_party_order_id: uberOrderId });
         if (existing && existing.length > 0) {
-            console.log('Order already exists, skipping:', uberOrderId);
+            console.log('Duplicate order, skipping:', uberOrderId);
             return Response.json({ received: true, duplicate: true });
         }
 
-        // Map Uber Eats items to MealDrop format
+        // Map items
         const items = (uberOrder.cart?.items || uberOrder.items || []).map(item => ({
-            menu_item_id: item.id || item.external_data || '',
+            menu_item_id: item.id || '',
             name: item.title || item.name || 'Item',
-            price: (item.price?.unit_price?.amount || item.price || 0) / 100,
+            price: parseFloat(((item.price?.unit_price?.amount || item.base_price || 0) / 100).toFixed(2)),
             quantity: item.quantity || 1,
-            customizations: item.selected_modifier_groups
-                ? Object.fromEntries(
-                    (item.selected_modifier_groups || []).map(g => [
-                        g.title || g.id,
-                        (g.selected_items || []).map(i => i.title || i.name).join(', ')
-                    ])
-                )
-                : {}
+            customizations: (item.selected_modifier_groups || []).reduce((acc, g) => {
+                acc[g.title || g.id] = (g.selected_items || []).map(i => i.title || i.name).join(', ');
+                return acc;
+            }, {})
         }));
 
         const subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const deliveryFee = (uberOrder.payment?.charges?.delivery_fee?.amount || 0) / 100;
-        const total = (uberOrder.payment?.charges?.total_food_and_beverage?.amount || uberOrder.total || subtotal * 100) / 100;
+        const total = parseFloat(((uberOrder.payment?.charges?.total_food_and_beverage?.amount || subtotal * 100) / 100).toFixed(2));
+        const deliveryFee = parseFloat(((uberOrder.payment?.charges?.delivery_fee?.amount || 0) / 100).toFixed(2));
 
-        // Find restaurant by uber_eats store ID stored in integrations
-        let restaurantId = null;
-        const storeId = uberOrder.restaurant?.id || uberOrder.store_id || body.resource_id;
-
+        // Match restaurant by store_id
+        let restaurantId = '';
+        const storeId = uberOrder.restaurant?.id || uberOrder.store_id || body.resource_id || '';
         if (storeId) {
-            const allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
+            const allRestaurants = await base44.entities.Restaurant.list();
             const matched = allRestaurants.find(r =>
-                r.third_party_integrations?.uber_eats?.store_id === storeId ||
-                r.third_party_integrations?.uber_eats?.enabled
+                r.third_party_integrations?.uber_eats?.store_id === storeId
             );
             if (matched) restaurantId = matched.id;
         }
 
         const mealDropOrder = {
-            restaurant_id: restaurantId || 'unknown',
+            restaurant_id: restaurantId || 'uber_eats_unassigned',
             items,
             subtotal: parseFloat(subtotal.toFixed(2)),
-            delivery_fee: parseFloat(deliveryFee.toFixed(2)),
+            delivery_fee: deliveryFee,
             discount: 0,
-            total: parseFloat(total.toFixed(2)),
+            total,
             payment_method: 'card',
             order_type: 'delivery',
             status: 'pending',
@@ -101,24 +85,24 @@ Deno.serve(async (req) => {
                 uberOrder.delivery_address?.street_address,
                 uberOrder.delivery_address?.city,
                 uberOrder.delivery_address?.postal_code
-            ].filter(Boolean).join(', ') || '',
+            ].filter(Boolean).join(', '),
             phone: uberOrder.eater?.phone_number || '',
             notes: uberOrder.special_instructions || '',
+            guest_name: uberOrder.eater
+                ? `${uberOrder.eater.first_name || ''} ${uberOrder.eater.last_name || ''}`.trim()
+                : 'Uber Eats Customer',
             third_party_platform: 'uber_eats',
             third_party_order_id: uberOrderId,
-            order_number: `UE-${uberOrderId.toString().slice(-6).toUpperCase()}`,
-            guest_name: uberOrder.eater?.first_name
-                ? `${uberOrder.eater.first_name} ${uberOrder.eater.last_name || ''}`.trim()
-                : 'Uber Eats Customer',
+            order_number: `UE-${String(uberOrderId).slice(-6).toUpperCase()}`,
         };
 
-        const created = await base44.asServiceRole.entities.Order.create(mealDropOrder);
-        console.log('Order created in MealDrop:', created.id);
+        const created = await base44.entities.Order.create(mealDropOrder);
+        console.log('MealDrop order created:', created.id, 'from Uber Eats order:', uberOrderId);
 
         return Response.json({ received: true, order_id: created.id });
     } catch (error) {
         console.error('Error processing Uber Eats webhook:', error.message);
-        // Always return 200 to Uber Eats so they don't retry endlessly
-        return Response.json({ received: true, error: error.message });
+        // Always 200 so Uber Eats doesn't retry
+        return Response.json({ received: true, processing_error: error.message });
     }
 });
