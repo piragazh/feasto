@@ -248,15 +248,21 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                                     <div className="space-y-2">
                                                         {mealOpt.options?.map((mc, mci) => {
                                                             const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
-                                                            const mealSelected = (customizations[mealCustomKey] || []).includes(mc.label);
+                                                            const curArr = customizations[mealCustomKey] || [];
+                                                            const mealSelected = curArr.includes(mc.label);
+                                                            const maxQty = mealOpt.max_quantity || 99;
+                                                            const atMax = curArr.length >= maxQty;
                                                             return (
                                                                 <button
                                                                     key={mci}
                                                                     onClick={() => {
-                                                                        const cur = customizations[mealCustomKey] || [];
+                                                                        if (!mealSelected && atMax) {
+                                                                            setError(`Max ${maxQty} selection${maxQty > 1 ? 's' : ''} for ${mealOpt.name}`);
+                                                                            return;
+                                                                        }
                                                                         setCustomizations(p => ({
                                                                             ...p,
-                                                                            [mealCustomKey]: mealSelected ? cur.filter(c => c !== mc.label) : [...cur, mc.label]
+                                                                            [mealCustomKey]: mealSelected ? curArr.filter(c => c !== mc.label) : [...curArr, mc.label]
                                                                         }));
                                                                     }}
                                                                     className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
