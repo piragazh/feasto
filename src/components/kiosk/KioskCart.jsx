@@ -120,6 +120,20 @@ export default function KioskCart({
                 )}
             </div>
 
+            {editingItem && (
+                <KioskItemModal
+                    item={editingItem}
+                    initialCustomizations={editingItem.customizations}
+                    initialItemQuantities={editingItem.itemQuantities}
+                    initialQuantity={editingItem.quantity}
+                    onClose={() => setEditingItem(null)}
+                    onAdd={(updated) => {
+                        onEditItem(editingItem.cartId, updated);
+                        setEditingItem(null);
+                    }}
+                />
+            )}
+
             {/* Footer */}
             {cart.length > 0 && (
                 <div className="bg-gray-900 border-t border-white/[0.06] px-6 py-5 max-w-2xl mx-auto w-full">
