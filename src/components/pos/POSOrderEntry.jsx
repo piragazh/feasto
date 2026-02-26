@@ -77,14 +77,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     };
 
     // ── Data fetching ──────────────────────────────────────────────────────────
-    const { data: restaurant } = useQuery({
+    const { data: restaurantFetched } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
             try { const r = (await base44.entities.Restaurant.filter({ id: restaurantId }))[0]; if (r) cacheRestaurant(r); return r; }
             catch { return getCachedRestaurant(restaurantId); }
         },
-        enabled: !!restaurantId,
+        enabled: !!restaurantId && !restaurantProp,
     });
+    const restaurant = restaurantProp || restaurantFetched;
 
     const { data: menuItems = [] } = useQuery({
     queryKey: ['pos-menu-items', restaurantId],
