@@ -114,7 +114,6 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                         opt.options?.forEach(o => { initialQty[`${opt.name}_${o.label}`] = 0; });
                     } else if (opt.type === 'meal_upgrade' && opt.options?.length > 0) {
                         defaults[opt.name] = opt.options[0].label;
-                        defaults[`${opt.name}_meal_customizations`] = {};
                     }
                 });
                 setCustomizations(defaults);
@@ -141,6 +140,24 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                 } else if (opt.type === 'meal_upgrade' && customizations[opt.name]) {
                     const sel = opt.options?.find(o => o.label === customizations[opt.name]);
                     if (sel?.price) total += sel.price;
+                    // Add sub-customization prices
+                    const mealCustomizations = opt.meal_customizations ||
+                        sel?.meal_customizations;
+                    if (mealCustomizations) {
+                        mealCustomizations.forEach(mealOpt => {
+                            const key = `${opt.name}_meal_${mealOpt.name}`;
+                            const val = customizations[key];
+                            if (mealOpt.type === 'single' && val) {
+                                const mc = mealOpt.options?.find(o => o.label === val);
+                                if (mc?.price) total += mc.price;
+                            } else if (mealOpt.type === 'multiple' && Array.isArray(val)) {
+                                val.forEach(chosen => {
+                                    const mc = mealOpt.options?.find(o => o.label === chosen);
+                                    if (mc?.price) total += mc.price;
+                                });
+                            }
+                        });
+                    }
                 }
             });
         }
