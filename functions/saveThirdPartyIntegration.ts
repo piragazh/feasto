@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { restaurantId, platform, email, password, api_key, enabled } = await req.json();
+        const { restaurantId, platform, email, password, store_id, api_key, enabled } = await req.json();
 
         // Get current integrations
         const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
