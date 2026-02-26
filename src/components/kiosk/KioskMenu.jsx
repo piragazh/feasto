@@ -49,23 +49,6 @@ export default function KioskMenu({
                     <span className="text-xs text-orange-400 font-medium">{orderTypeLabel}</span>
                 </div>
 
-                {/* Search */}
-                <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                    <input
-                        type="text"
-                        placeholder="Search menu..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 pr-10 py-3 text-sm focus:outline-none focus:border-orange-500/50"
-                    />
-                    {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                            <X className="h-4 w-4 text-gray-500" />
-                        </button>
-                    )}
-                </div>
-
                 {/* Cart Button */}
                 {cartCount > 0 && (
                     <button
