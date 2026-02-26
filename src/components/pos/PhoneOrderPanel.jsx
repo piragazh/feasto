@@ -571,13 +571,17 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                         </div>
                     </div>
 
-                    {/* Add new customer button */}
+                    {/* Add new customer CTA — shown after a failed phone search */}
                     {!foundCustomer && !showNewCustomerForm && customerPhone && (
                         <button
                             onClick={() => setShowNewCustomerForm(true)}
-                            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${isDark ? 'text-orange-400 hover:text-orange-300' : 'text-orange-500 hover:text-orange-600'}`}
+                            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors ${
+                                isDark
+                                    ? 'border-orange-500/30 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/50'
+                                    : 'border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400'
+                            }`}
                         >
-                            <UserPlus className="h-3.5 w-3.5" /> Add as new customer
+                            <UserPlus className="h-4 w-4" /> Add as New Customer
                         </button>
                     )}
 
