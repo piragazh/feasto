@@ -327,6 +327,14 @@ export default function RestaurantDashboard() {
                             Analytics
                         </Button>
                         <Button
+                            variant={activeSection === 'payouts' ? 'default' : 'ghost'}
+                            onClick={() => setActiveSection('payouts')}
+                            className="whitespace-nowrap"
+                        >
+                            <Award className="h-4 w-4 mr-2" />
+                            Payouts
+                        </Button>
+                        <Button
                             variant={activeSection === 'operations' ? 'default' : 'ghost'}
                             onClick={() => setActiveSection('operations')}
                             className="whitespace-nowrap"
