@@ -438,18 +438,67 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <AlertDialogHeader>
                         <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
                             <AlertCircle className="h-5 w-5 text-blue-500" />
-                            Confirm Card Payment
+                            {hasConfiguredTerminal ? 'Send to Card Terminal?' : 'Confirm Card Payment'}
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc}>
-                            Process card payment for £{(numericInput > 0 ? numericInput : remaining).toFixed(2)}?
+                            {hasConfiguredTerminal ? (
+                                <>
+                                    Send <strong>£{(numericInput > 0 ? numericInput : remaining).toFixed(2)}</strong> to terminal <strong>{cardTerminal.reader_label || cardTerminal.reader_id}</strong>? The customer will tap/insert their card on the terminal.
+                                </>
+                            ) : (
+                                <>Process card payment for £{(numericInput > 0 ? numericInput : remaining).toFixed(2)}?</>
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={processCard} disabled={isProcessing}
                             className="bg-blue-600 hover:bg-blue-700 text-white">
-                            {isProcessing ? 'Processing...' : 'Confirm'}
+                            {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Terminal waiting screen */}
+            <AlertDialog open={terminalStep === 'waiting'}>
+                <AlertDialogContent className={`${t.dialog} border`}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
+                            <Monitor className="h-5 w-5 text-blue-400" />
+                            Waiting for Card Terminal
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className={t.dialogDesc} asChild>
+                            <div className="space-y-4">
+                                <div className="flex flex-col items-center py-6 gap-4">
+                                    <div className="relative">
+                                        <div className="w-20 h-20 rounded-full bg-blue-500/10 border-2 border-blue-500/30 flex items-center justify-center">
+                                            <CreditCard className="h-9 w-9 text-blue-400" />
+                                        </div>
+                                        <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className={`text-2xl font-bold ${t.text}`}>£{terminalAmount.toFixed(2)}</p>
+                                        <p className={`${t.subtext} text-sm mt-1`}>
+                                            Ask customer to tap/insert card on <strong>{cardTerminal?.reader_label || 'the terminal'}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className={`${t.subtext} text-xs text-center`}>
+                                    Confirm payment once the terminal shows approved, or cancel if declined.
+                                </p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <Button onClick={handleTerminalFailure} variant="outline" className={`flex-1 ${t.cancelDlg}`}>
+                            <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                            Declined / Cancel
+                        </Button>
+                        <Button onClick={handleTerminalSuccess} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Payment Approved
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
