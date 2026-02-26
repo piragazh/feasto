@@ -291,11 +291,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     // ── Layout configs ─────────────────────────────────────────────────────────
     const posLayout = restaurant?.pos_layout || 'standard';
     const layoutCols = {
-        standard:   { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true },
-        compact:    { cat: 'md:col-span-1', menu: 'md:col-span-8', cart: 'md:col-span-3', showCat: true },
-        menu_focus: { cat: '',              menu: 'md:col-span-9', cart: 'md:col-span-3', showCat: false },
-        cart_focus: { cat: 'md:col-span-2', menu: 'md:col-span-5', cart: 'md:col-span-5', showCat: true },
-    }[posLayout] || { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true };
+        standard:   { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true, quickActions: false },
+        compact:    { cat: 'md:col-span-1', menu: 'md:col-span-8', cart: 'md:col-span-3', showCat: true, quickActions: false },
+        menu_focus: { cat: '',              menu: 'md:col-span-9', cart: 'md:col-span-3', showCat: false, quickActions: false },
+        cart_focus: { cat: 'md:col-span-2', menu: 'md:col-span-5', cart: 'md:col-span-5', showCat: true, quickActions: false },
+        retail:     { cat: '',              menu: 'md:col-span-9', cart: 'md:col-span-2', showCat: false, quickActions: true },
+    }[posLayout] || { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true, quickActions: false };
 
     // Main entry view
     return (
