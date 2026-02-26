@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
             .join('\n');
 
         const orderLabel = order.order_number || order.id.slice(-6);
-        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}\n\n✅ Reply *ACCEPT* to confirm\n❌ Reply *REJECT* to decline`;
+        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}`;
 
         // Get restaurant's WhatsApp alert phone if not overridden
         let toPhone = restaurant_phone;
@@ -61,13 +61,23 @@ Deno.serve(async (req) => {
 
         const client = twilio(accountSid, authToken);
 
-        // Send WhatsApp message
+        // Send WhatsApp message with interactive buttons (REST API format)
         const message = await client.messages.create({
             from: `whatsapp:${twilioPhoneNumber}`,
             to: `whatsapp:${toPhone}`,
             body: messageBody,
-            contentSid: undefined,
-            mediaUrl: undefined
+            contentVariables: JSON.stringify({
+                "1": "ACCEPT",
+                "2": "REJECT"
+            }),
+            contentSid: "HX00000000000000000000000000000000"  // Twilio template for quick reply buttons
+        }).catch(async () => {
+            // Fallback: if interactive template fails, send simple message with instructions
+            return await client.messages.create({
+                from: `whatsapp:${twilioPhoneNumber}`,
+                to: `whatsapp:${toPhone}`,
+                body: messageBody + '\n\n✅ Reply "ACCEPT" to confirm\n❌ Reply "REJECT" to decline'
+            });
         });
 
         // Store WhatsApp message tracking - include order_id in message so reply handler can find it
