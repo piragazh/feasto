@@ -246,11 +246,11 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         toast.success('New customer saved');
     };
 
-    const selectFromPostcodeSearch = (order) => {
-        setCustomerName(order.guest_name || '');
-        setCustomerPhone(order.phone || '');
-        setDeliveryAddress(order.delivery_address || '');
-        setFoundCustomer({ name: order.guest_name || '', address: order.delivery_address || '', orderCount: 1 });
+    const selectFromPostcodeSearch = (customer) => {
+        setCustomerName(customer.full_name || '');
+        setCustomerPhone(customer.phone_number || '');
+        setDeliveryAddress(customer.delivery_address || '');
+        setFoundCustomer({ id: customer.id, name: customer.full_name || '', address: customer.delivery_address || '', orderCount: customer.total_orders || 0 });
         setPostcodeResults([]);
         setSearchMode('phone');
         toast.success('Customer loaded from postcode search');
