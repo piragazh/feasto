@@ -493,7 +493,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { setShowCashConfirm(false); addPayment('cash', numericInput); }} className="bg-green-600 hover:bg-green-700 text-white">
+                        <AlertDialogAction onClick={() => { setShowCashConfirm(false); addPayment('cash', numericInput); }} style={{ backgroundColor: primaryColor }} className="hover:opacity-90 text-white">
                             Process £{numericInput.toFixed(2)}
                         </AlertDialogAction>
                     </AlertDialogFooter>
