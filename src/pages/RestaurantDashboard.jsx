@@ -55,6 +55,7 @@ import BrandingManager from '@/components/restaurant/BrandingManager';
 import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
 import POSConfigurations from '@/components/restaurant/POSConfigurations';
 import StaffManagement from '@/components/restaurant/StaffManagement';
+import KioskSettings from '@/components/kiosk/KioskSettings';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
 import { toast } from 'sonner';
