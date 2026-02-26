@@ -159,6 +159,7 @@ export default function KioskDashboard() {
                     selectedTable={selectedTable}
                     onUpdateQuantity={updateQuantity}
                     onRemoveItem={removeItem}
+                    onEditItem={editItem}
                     onBack={() => setScreen('menu')}
                     onCheckout={() => setScreen('payment')}
                     onClearCart={() => setCart([])}
