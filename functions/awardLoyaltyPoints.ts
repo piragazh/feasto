@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
                 }
 
                 // Get or create loyalty points record
-                let loyaltyPoints = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: userEmail });
-                
+                const loyaltyPoints = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: userEmail });
+
                 if (!loyaltyPoints || loyaltyPoints.length === 0) {
                     // Create new loyalty record
                     await base44.asServiceRole.entities.LoyaltyPoints.create({
