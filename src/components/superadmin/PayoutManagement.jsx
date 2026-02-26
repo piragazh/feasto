@@ -118,7 +118,7 @@ export default function PayoutManagement() {
                 }
             });
 
-            // Commission calculated on total earnings
+            // Commission calculated on total sales (card + cash)
             let platformCommission = 0;
             if (restaurant.commission_type === 'fixed') {
                 platformCommission = restaurant.fixed_commission_amount || 0;
@@ -127,8 +127,8 @@ export default function PayoutManagement() {
                 platformCommission = grossEarnings * (rate / 100);
             }
 
-            // Payout = card payment amount - commission (cash goes directly to restaurant)
-            let netPayout = cardPaymentAmount - platformCommission + cashPaymentAmount;
+            // Payout = card amount - commission
+            let netPayout = cardPaymentAmount - platformCommission;
 
             const refundedOrders = orders.filter(order => {
                 const orderDate = new Date(order.created_date);
