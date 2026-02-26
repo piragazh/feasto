@@ -21,7 +21,8 @@ import {
     Tag,
     MapPin,
     Award,
-    Monitor
+    Monitor,
+    TabletSmartphone
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
 import OrderQueue from '@/components/restaurant/OrderQueue';
