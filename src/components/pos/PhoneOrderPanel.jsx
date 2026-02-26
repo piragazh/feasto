@@ -118,20 +118,20 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         if (!phone || phone.length < 5) return;
         setSearching(true);
         try {
-            const orders = await base44.entities.Order.filter({ phone });
-            if (orders.length > 0) {
-                const latest = orders.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))[0];
-                const customer = {
-                    name: latest.guest_name || '',
-                    address: latest.delivery_address || '',
-                    orderCount: orders.length,
-                    previousOrders: orders.slice(0, 5),
-                };
-                setFoundCustomer(customer);
+            // Search Customer entity first
+            const customers = await base44.entities.Customer.filter({ phone_number: phone, restaurant_id: restaurantId });
+            if (customers.length > 0) {
+                const customer = customers[0];
+                setFoundCustomer({
+                    id: customer.id,
+                    name: customer.full_name,
+                    address: customer.delivery_address || '',
+                    orderCount: customer.total_orders || 0,
+                });
                 setShowNewCustomerForm(false);
-                if (latest.guest_name) setCustomerName(latest.guest_name);
-                if (latest.delivery_address) setDeliveryAddress(latest.delivery_address);
-                toast.success(`Found customer — ${orders.length} previous order${orders.length > 1 ? 's' : ''}`);
+                setCustomerName(customer.full_name);
+                if (customer.delivery_address) setDeliveryAddress(customer.delivery_address);
+                toast.success(`Found customer — ${customer.total_orders || 0} previous order${customer.total_orders !== 1 ? 's' : ''}`);
             } else {
                 setFoundCustomer(null);
                 setShowNewCustomerForm(true);
