@@ -62,11 +62,14 @@ export default function KioskCart({
                                     </div>
                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                         <div className="mt-1 space-y-0.5">
-                                            {Object.entries(item.customizations).map(([key, val]) => (
-                                                <p key={key} className="text-gray-500 text-xs truncate">
-                                                    {key}: {Array.isArray(val) ? val.join(', ') : val}
-                                                </p>
-                                            ))}
+                                            {Object.entries(item.customizations)
+                                                .filter(([, val]) => val && !(Array.isArray(val) && val.length === 0))
+                                                .map(([key, val]) => (
+                                                    <p key={key} className="text-gray-500 text-xs truncate">
+                                                        <span className="text-gray-600">{key.replace(/_meal_/g, ' › ').replace(/_/g, ' ')}:</span>{' '}
+                                                        {Array.isArray(val) ? val.join(', ') : val}
+                                                    </p>
+                                                ))}
                                         </div>
                                     )}
                                     {item.customization_options?.length > 0 && (
