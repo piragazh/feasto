@@ -13,6 +13,7 @@ import CustomItemDialog from './CustomItemDialog';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import POSOfflineSyncBanner from './POSOfflineSyncBanner';
 import POSCategoryPanel from './POSCategoryPanel';
+import POSCategoryGrid from './POSCategoryGrid';
 import POSMenuGrid from './POSMenuGrid';
 import POSCart from './POSCart';
 import POSTablesGrid from './POSTablesGrid';
