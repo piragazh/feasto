@@ -276,7 +276,8 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                                     </div>
                                                 )}
                                             </div>
-                                        ));
+                                            );
+                                        });
                                     })()}
                                 </div>
                             ) : (
