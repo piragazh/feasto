@@ -516,6 +516,11 @@ export default function RestaurantDashboard() {
                     </Tabs>
                 )}
 
+                {/* PAYOUTS SECTION */}
+                {activeSection === 'payouts' && (
+                    <RestaurantPayoutHistory restaurantId={restaurant.id} />
+                )}
+
                 {/* OPERATIONS SECTION */}
                 {activeSection === 'operations' && (
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
