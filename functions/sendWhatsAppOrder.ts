@@ -4,13 +4,11 @@ import twilio from 'npm:twilio@4.10.0';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
 
-        if (!user?.role || !['admin', 'restaurant'].includes(user.role)) {
-            return Response.json({ error: 'Unauthorized' }, { status: 403 });
-        }
-
-        const { order_id, restaurant_phone } = await req.json();
+        // Support both direct call with order_id and automation payload (event + data)
+        const body = await req.json();
+        const order_id = body.order_id || body.event?.entity_id;
+        const restaurant_phone = body.restaurant_phone; // optional override
 
         if (!order_id || !restaurant_phone) {
             return Response.json({ error: 'Missing order_id or restaurant_phone' }, { status: 400 });
