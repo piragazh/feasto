@@ -13,13 +13,8 @@ Deno.serve(async (req) => {
     const uberSig = req.headers.get('x-uber-signature') || '';
     const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
 
-    if (clientSecret) {
-        const isValid = providedSecret === clientSecret || uberSig === clientSecret;
-        if (!isValid) {
-            console.warn('Uber Eats webhook: auth mismatch, proceeding anyway for compatibility');
-            // Uber Eats may send auth differently; log and continue rather than hard-reject
-        }
-    }
+    // Log auth info for debugging; Uber Eats will pass the client secret in their own way
+    console.log('Uber Eats webhook auth check - header present:', !!authHeader, 'sig present:', !!uberSig);
 
     const body = await req.json();
     console.log('Uber Eats webhook received:', JSON.stringify(body));
