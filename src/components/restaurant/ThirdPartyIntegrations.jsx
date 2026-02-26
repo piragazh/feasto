@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AlertCircle, Check, X, Settings, RefreshCw, LogIn, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Check, X, Settings, RefreshCw, LogIn, Eye, EyeOff, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
