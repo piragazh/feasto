@@ -82,9 +82,9 @@ export default function KioskMenu({
                 </div>
             </div>
 
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1" style={{ overflow: 'hidden', minHeight: 0 }}>
                 {/* Category Sidebar */}
-                <div className="w-52 bg-gray-900 border-r border-white/[0.06] overflow-y-auto flex-shrink-0">
+                <div className="w-52 bg-gray-900 border-r border-white/[0.06] flex-shrink-0" style={{ overflowY: 'auto', height: '100%' }}>
                     <div className="p-3 space-y-1">
                         <button
                             onClick={() => setSelectedCategory('')}
