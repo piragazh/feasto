@@ -1,29 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 
-export default function KioskItemModal({ item, onClose, onAdd }) {
-    const [quantity, setQuantity] = useState(1);
+export default function KioskItemModal({ item, onClose, onAdd, initialCustomizations, initialItemQuantities, initialQuantity }) {
+    const [quantity, setQuantity] = useState(initialQuantity || 1);
     const [customizations, setCustomizations] = useState({});
     const [itemQuantities, setItemQuantities] = useState({});
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (item?.customization_options) {
-            const defaults = {};
-            const initialQty = {};
-            item.customization_options.forEach(opt => {
-                if (opt.type === 'single' && opt.options?.length > 0) {
-                    defaults[opt.name] = opt.options[0].label;
-                } else if (opt.type === 'multiple') {
-                    defaults[opt.name] = [];
-                    opt.options?.forEach(o => { initialQty[`${opt.name}_${o.label}`] = 0; });
-                } else if (opt.type === 'meal_upgrade' && opt.options?.length > 0) {
-                    defaults[opt.name] = opt.options[0].label;
-                    defaults[`${opt.name}_meal_customizations`] = {};
-                }
-            });
-            setCustomizations(defaults);
-            setItemQuantities(initialQty);
+            // If editing, pre-fill with existing selections; otherwise use defaults
+            if (initialCustomizations && Object.keys(initialCustomizations).length > 0) {
+                setCustomizations(initialCustomizations);
+                setItemQuantities(initialItemQuantities || {});
+            } else {
+                const defaults = {};
+                const initialQty = {};
+                item.customization_options.forEach(opt => {
+                    if (opt.type === 'single' && opt.options?.length > 0) {
+                        defaults[opt.name] = opt.options[0].label;
+                    } else if (opt.type === 'multiple') {
+                        defaults[opt.name] = [];
+                        opt.options?.forEach(o => { initialQty[`${opt.name}_${o.label}`] = 0; });
+                    } else if (opt.type === 'meal_upgrade' && opt.options?.length > 0) {
+                        defaults[opt.name] = opt.options[0].label;
+                        defaults[`${opt.name}_meal_customizations`] = {};
+                    }
+                });
+                setCustomizations(defaults);
+                setItemQuantities(initialQty);
+            }
         }
     }, [item]);
 
