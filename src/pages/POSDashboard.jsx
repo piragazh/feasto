@@ -376,7 +376,7 @@ export default function POSDashboard() {
                 {activeTab === 'payment' && (
                     <POSPayment cart={cart} cartTotal={cartTotal} onPaymentComplete={clearCart}
                         restaurantId={restaurant.id} restaurantName={restaurant.name} orderType={orderType} posTheme={posTheme}
-                        discount={discount} />
+                        discount={discount} restaurant={restaurant} />
                 )}
                 {activeTab === 'kitchen' && <KitchenDisplaySystem restaurant={restaurant} />}
                 {activeTab === 'history' && <POSOrderHistory restaurantId={restaurant.id} posTheme={posTheme} />}
