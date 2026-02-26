@@ -70,12 +70,12 @@ Deno.serve(async (req) => {
             mediaUrl: undefined
         });
 
-        // Store WhatsApp message tracking
+        // Store WhatsApp message tracking - include order_id in message so reply handler can find it
         await base44.asServiceRole.entities.Message.create({
             order_id: order_id,
             restaurant_id: order.restaurant_id,
             sender_type: 'restaurant',
-            message: `WhatsApp order sent - SID: ${message.sid}`,
+            message: `WhatsApp order sent - SID: ${message.sid} - ORDER_ID: ${order_id}`,
             is_read: false
         });
 
