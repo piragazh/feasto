@@ -254,7 +254,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <button onClick={() => { setShowPayment(false); setViewMode('tables'); }} className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>← Back</button>
                     </div>
                 </div>
-                <POSPayment cart={ordersForTable.flatMap(o => o.items)} cartTotal={total} onPaymentComplete={handlePaymentComplete} onBackToCart={() => { setShowPayment(false); setViewMode('tables'); }} />
+                <POSPayment cart={ordersForTable.flatMap(o => o.items)} cartTotal={total} onPaymentComplete={handlePaymentComplete} onBackToCart={() => { setShowPayment(false); setViewMode('tables'); }} posTheme={posTheme} restaurant={restaurant} />
                 {splitBillOpen && <SplitBillDialog open={splitBillOpen} onClose={() => setSplitBillOpen(false)} orders={ordersForTable} table={viewingTable} onPaymentComplete={() => { setSplitBillOpen(false); handlePaymentComplete(); }} />}
             </div>
         );
