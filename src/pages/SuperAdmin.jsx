@@ -28,6 +28,7 @@ import { createPageUrl } from '@/utils';
 
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const { data: user, isLoading } = useQuery({
         queryKey: ['current-user'],
@@ -46,6 +47,55 @@ export default function SuperAdmin() {
         },
     });
 
+    const menuGroups = [
+        {
+            title: 'Core Management',
+            items: [
+                { id: 'overview', label: 'Dashboard', icon: Activity },
+                { id: 'orders', label: 'Order History', icon: Store },
+                { id: 'restaurants', label: 'Restaurants', icon: Store },
+                { id: 'messages', label: 'Messages', icon: MessageSquare },
+            ]
+        },
+        {
+            title: 'Financial',
+            items: [
+                { id: 'commission', label: 'Commission', icon: DollarSign },
+                { id: 'payouts', label: 'Payouts', icon: CreditCard },
+                { id: 'payout-history', label: 'Payout History', icon: DollarSign },
+                { id: 'refunds', label: 'Refunds', icon: Shield },
+                { id: 'analytics', label: 'Analytics', icon: LayoutDashboard },
+            ]
+        },
+        {
+            title: 'Operations',
+            items: [
+                { id: 'drivers', label: 'Driver Management', icon: Truck },
+                { id: 'monitoring', label: 'Monitoring', icon: Activity },
+                { id: 'screens', label: 'Screen Health', icon: Monitor },
+            ]
+        },
+        {
+            title: 'Configuration',
+            items: [
+                { id: 'cuisine', label: 'Cuisine Types', icon: ChefHat },
+                { id: 'domains', label: 'Domains', icon: Globe },
+                { id: 'managers', label: 'Managers', icon: Users },
+                { id: 'admin-restaurants', label: 'Admin Panel', icon: Settings },
+            ]
+        },
+        {
+            title: 'Marketing',
+            items: [
+                { id: 'reviews', label: 'Reviews', icon: Star },
+                { id: 'promotions', label: 'Promotions', icon: Tag },
+                { id: 'loyalty', label: 'Loyalty Program', icon: Award },
+                { id: 'tier-benefits', label: 'Tier Benefits', icon: Gift },
+                { id: 'files', label: 'Files', icon: Upload },
+            ]
+        }
+    ];
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -62,194 +112,90 @@ export default function SuperAdmin() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header with Top Navigation */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-700 text-white sticky top-0 z-50 shadow-lg">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Shield className="h-8 w-8" />
-                        <div>
-                            <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-                            <p className="text-slate-300 text-sm">System Management & Monitoring</p>
+        <div className="min-h-screen bg-gray-100 flex">
+            {/* Sidebar */}
+            <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 fixed h-screen overflow-y-auto shadow-lg z-40`}>
+                {/* Logo */}
+                <div className="sticky top-0 bg-slate-950 p-4 border-b border-slate-700 flex items-center justify-between">
+                    <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
+                        <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Shield className="h-6 w-6" />
                         </div>
-                    </div>
-                    
-                    {/* Top Menu Navigation */}
-                    <div className="flex flex-wrap gap-2">
-                        <Button
-                            variant={activeTab === 'overview' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('overview')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Activity className="h-4 w-4" />
-                            Overview
-                        </Button>
-                        <Button
-                            variant={activeTab === 'orders' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('orders')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Store className="h-4 w-4" />
-                            Order History
-                        </Button>
-                        <Button
-                            variant={activeTab === 'restaurants' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('restaurants')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Settings className="h-4 w-4" />
-                            Restaurants
-                        </Button>
-                        <Button
-                            variant={activeTab === 'messages' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('messages')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <MessageSquare className="h-4 w-4" />
-                            Messages
-                        </Button>
-                        <Button
-                            variant={activeTab === 'commission' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('commission')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <DollarSign className="h-4 w-4" />
-                            Commission
-                        </Button>
-                        <Button
-                            variant={activeTab === 'monitoring' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('monitoring')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Activity className="h-4 w-4" />
-                            Monitoring
-                        </Button>
-                        <Button
-                            variant={activeTab === 'cuisine' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('cuisine')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <ChefHat className="h-4 w-4" />
-                            Cuisine Types
-                        </Button>
-                        <Button
-                            variant={activeTab === 'domains' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('domains')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Globe className="h-4 w-4" />
-                            Domains
-                        </Button>
-                        <Button
-                            variant={activeTab === 'managers' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('managers')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Users className="h-4 w-4" />
-                            Managers
-                        </Button>
-                        <Button
-                            variant={activeTab === 'drivers' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('drivers')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Truck className="h-4 w-4" />
-                            Driver Management
-                        </Button>
-                        <Button
-                            variant={activeTab === 'analytics' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('analytics')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <LayoutDashboard className="h-4 w-4" />
-                            Accounting & Analytics
-                        </Button>
-                        <Button
-                            variant={activeTab === 'refunds' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('refunds')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Shield className="h-4 w-4" />
-                            Refunds
-                        </Button>
-                        <Button
-                            variant={activeTab === 'payouts' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('payouts')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <CreditCard className="h-4 w-4" />
-                            Payouts
-                        </Button>
-                        <Button
-                            variant={activeTab === 'payout-history' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('payout-history')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <DollarSign className="h-4 w-4" />
-                            Payout History
-                        </Button>
-                        <Button
-                            variant={activeTab === 'admin-restaurants' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('admin-restaurants')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Store className="h-4 w-4" />
-                            Admin Panel
-                        </Button>
-                        <Button
-                            variant={activeTab === 'reviews' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('reviews')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Star className="h-4 w-4" />
-                            Reviews
-                        </Button>
-                        <Button
-                            variant={activeTab === 'promotions' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('promotions')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Tag className="h-4 w-4" />
-                            Promotions
-                        </Button>
-                        <Button
-                            variant={activeTab === 'loyalty' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('loyalty')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Award className="h-4 w-4" />
-                            Loyalty Program
-                        </Button>
-                        <Button
-                            variant={activeTab === 'tier-benefits' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('tier-benefits')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Gift className="h-4 w-4" />
-                            Tier Benefits
-                        </Button>
-                        <Button
-                            variant={activeTab === 'files' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('files')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Upload className="h-4 w-4" />
-                            Files
-                        </Button>
-                        <Button
-                            variant={activeTab === 'screens' ? 'secondary' : 'ghost'}
-                            onClick={() => setActiveTab('screens')}
-                            className="flex items-center gap-2 text-white hover:bg-white/10"
-                        >
-                            <Monitor className="h-4 w-4" />
-                            Screen Health
-                        </Button>
+                        {sidebarOpen && <span className="font-bold text-lg truncate">Admin</span>}
                     </div>
                 </div>
+
+                {/* Menu Groups */}
+                <nav className="p-4 space-y-6">
+                    {menuGroups.map((group) => (
+                        <div key={group.title}>
+                            {sidebarOpen && (
+                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
+                                    {group.title}
+                                </p>
+                            )}
+                            <div className="space-y-1">
+                                {group.items.map((item) => {
+                                    const IconComponent = item.icon;
+                                    const isActive = activeTab === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setActiveTab(item.id)}
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                                                isActive
+                                                    ? 'bg-orange-500 text-white shadow-lg'
+                                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                            } ${!sidebarOpen && 'justify-center'}`}
+                                            title={!sidebarOpen ? item.label : ''}
+                                        >
+                                            <IconComponent className="h-5 w-5 flex-shrink-0" />
+                                            {sidebarOpen && <span className="text-sm font-medium truncate">{item.label}</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </nav>
+
+                {/* User Info */}
+                {sidebarOpen && (
+                    <div className="absolute bottom-0 w-full p-4 border-t border-slate-700 bg-slate-950">
+                        <div className="text-xs text-slate-400">
+                            <p className="truncate font-semibold">{user?.full_name}</p>
+                            <p className="truncate text-slate-500">{user?.email}</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Content */}
-            <div className="max-w-7xl mx-auto px-4 py-8">
+            {/* Main Content */}
+            <div className={`${sidebarOpen ? 'ml-64' : 'ml-20'} flex-1 transition-all duration-300`}>
+                {/* Top Header */}
+                <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+                    <div className="px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <Shield className="h-5 w-5 text-gray-600" />
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
+                                <p className="text-sm text-gray-500">System Management & Control</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                            <p className="text-xs text-gray-500">Administrator</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Page Content */}
+                <div className="p-6">
                 {activeTab === 'overview' && <SystemOverview />}
                 {activeTab === 'orders' && <OrderHistoryManagement />}
                 {activeTab === 'restaurants' && <RestaurantManagement />}
