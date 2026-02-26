@@ -330,14 +330,37 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </button>
                     </div>
                 )}
-                {layoutCols.showCat && (
-                    <div className={`${layoutCols.cat} overflow-hidden`}>
-                        <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
+                {layoutCols.isCategoryGrid && !selectedCategory ? (
+                    <div className={`${layoutCols.menu} overflow-hidden`}>
+                        <POSCategoryGrid categories={categories} onSelectCategory={setSelectedCategory} t={t} isDark={isDark} />
                     </div>
+                ) : (
+                    <>
+                        {layoutCols.showCat && (
+                            <div className={`${layoutCols.cat} overflow-hidden`}>
+                                <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
+                            </div>
+                        )}
+                        <div className={`${layoutCols.menu} overflow-hidden`}>
+                            {layoutCols.isCategoryGrid && selectedCategory && (
+                                <div className="h-full flex flex-col">
+                                    <button
+                                        onClick={() => setSelectedCategory('')}
+                                        className={`flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-lg transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                    >
+                                        ← Back to Categories
+                                    </button>
+                                    <div className="flex-1 overflow-auto">
+                                        <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                                    </div>
+                                </div>
+                            )}
+                            {!layoutCols.isCategoryGrid && (
+                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                            )}
+                        </div>
+                    </>
                 )}
-                <div className={`${layoutCols.menu} overflow-hidden`}>
-                    <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
-                </div>
                 <div className={`${layoutCols.cart} overflow-hidden flex flex-col gap-2`}>
                     {(orderType === 'phone_collection' || orderType === 'phone_delivery') && (
                         <button
