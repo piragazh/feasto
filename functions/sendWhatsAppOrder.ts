@@ -30,15 +30,20 @@ Deno.serve(async (req) => {
         const orderLabel = order.order_number || order.id.slice(-6);
         const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}`;
 
-        // Get restaurant's WhatsApp alert phone if not overridden
-        let toPhone = restaurant_phone;
-        if (!toPhone && order.restaurant_id) {
+        // Get restaurant details
+        let restaurant_data = null;
+        if (order.restaurant_id) {
             const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: order.restaurant_id });
-            if (restaurants.length > 0 && restaurants[0].alert_phone) {
-                toPhone = restaurants[0].alert_phone;
-            }
+            restaurant_data = restaurants.length > 0 ? restaurants[0] : null;
         }
 
+        // Check if WhatsApp alerts are enabled for this restaurant
+        if (!restaurant_data?.whatsapp_alerts_enabled) {
+            return Response.json({ success: false, message: 'WhatsApp alerts not enabled for this restaurant' });
+        }
+
+        // Get phone number for WhatsApp
+        let toPhone = restaurant_phone || restaurant_data?.alert_phone;
         if (!toPhone) {
             return Response.json({ success: false, message: 'No WhatsApp phone configured for this restaurant' });
         }
