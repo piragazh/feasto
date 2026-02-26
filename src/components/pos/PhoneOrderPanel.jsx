@@ -227,13 +227,23 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         }
     };
 
-    const saveNewCustomer = () => {
+    const saveNewCustomer = async () => {
         const fullAddress = newAddressLine ? `${newAddressLine}, ${newPostcode}` : newPostcode;
-        setCustomerName(customerName);
         setDeliveryAddress(fullAddress);
-        setFoundCustomer({ name: customerName, address: fullAddress, orderCount: 0, isNew: true });
+        try {
+            const newCustomer = await base44.entities.Customer.create({
+                phone_number: customerPhone,
+                full_name: customerName,
+                delivery_address: fullAddress,
+                restaurant_id: restaurantId,
+                total_orders: 0,
+            });
+            setFoundCustomer({ id: newCustomer.id, name: customerName, address: fullAddress, orderCount: 0, isNew: true });
+        } catch {
+            setFoundCustomer({ name: customerName, address: fullAddress, orderCount: 0, isNew: true });
+        }
         setShowNewCustomerForm(false);
-        toast.success('New customer details saved');
+        toast.success('New customer saved');
     };
 
     const selectFromPostcodeSearch = (order) => {
