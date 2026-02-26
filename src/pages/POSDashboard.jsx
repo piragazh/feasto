@@ -17,6 +17,7 @@ import POSOrderHistory from '@/components/pos/POSOrderHistory.jsx';
 import POSTablesView from '@/components/pos/POSTablesView.jsx';
 import POSStaffManager from '@/components/pos/POSStaffManager.jsx';
 import POSStaffLogin from '@/components/pos/POSStaffLogin.jsx';
+import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
 import { toast } from 'sonner';
 
 function useTime() {
