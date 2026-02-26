@@ -364,6 +364,7 @@ export default function POSDashboard() {
                         onUpdateQuantity={updateQuantity} onClearCart={clearCart}
                         cartTotal={cartTotal} orderType={orderType} setOrderType={setOrderType}
                         posTheme={posTheme}
+                        restaurant={restaurant}
                         discount={discount}
                         onApplyDiscount={setDiscount}
                         onRemoveDiscount={() => setDiscount(null)}
