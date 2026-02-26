@@ -16,6 +16,7 @@ import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
 import CustomOptionTemplates from './CustomOptionTemplates';
 import AIMenuPerformanceAnalytics from './AIMenuPerformanceAnalytics';
+import MenuItemsGrid from './MenuItemsGrid';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -1570,6 +1571,32 @@ CRITICAL REQUIREMENTS:
             </Card>
 
             <div className="space-y-6">
+                {/* Items without category */}
+                <MenuItemsGrid
+                    items={filteredMenuItems.filter(item => !item.category)}
+                    selectedItems={selectedItems}
+                    copiedCustomizations={copiedCustomizations}
+                    onToggleSelect={toggleSelectItem}
+                    onToggleAvailability={toggleAvailability}
+                    onEdit={handleEdit}
+                    onDelete={(id) => deleteMutation.mutate(id)}
+                    onCopyCustomizations={(item) => {
+                        setCopiedCustomizations(item.customization_options);
+                        toast.success('All customizations copied!');
+                    }}
+                    onPasteCustomizations={(item) => {
+                        handleEdit(item);
+                        setTimeout(() => {
+                            setFormData(prev => ({
+                                ...prev,
+                                customization_options: JSON.parse(JSON.stringify(copiedCustomizations))
+                            }));
+                            toast.success('Customizations pasted! Click Create to save.');
+                        }, 100);
+                    }}
+                    title="Uncategorized Items"
+                />
+
                 {categories.map((category) => {
                     const categoryItems = getOrderedItems(category).filter(item => 
                         (filterCategory === 'all' || item.category === filterCategory) &&
@@ -1582,152 +1609,31 @@ CRITICAL REQUIREMENTS:
                     
                     return (
                         <div key={category}>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3 capitalize">{category}</h3>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {categoryItems.map((item, index) => (
-                                    <div key={item.id} className="relative">
-                                        <Card className={`${item.is_available === false ? 'opacity-60' : ''} ${selectedItems.includes(item.id) ? 'ring-2 ring-orange-500' : ''}`}>
-                        <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-2">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedItems.includes(item.id)}
-                                    onChange={() => toggleSelectItem(item.id)}
-                                    className="h-4 w-4 rounded border-gray-300 mt-1"
-                                />
-                            </div>
-                            <div className="relative">
-                                {item.image_url ? (
-                                    <img
-                                        src={item.image_url}
-                                        alt={item.name}
-                                        className="w-full h-32 object-cover rounded-lg mb-3"
-                                        loading="lazy"
-                                    />
-                                ) : (
-                                    <div className="w-full h-32 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg mb-3 flex items-center justify-center">
-                                        <ImageIcon className="h-12 w-12 text-orange-300" />
-                                    </div>
-                                )}
-                                {item.ai_generated_image && (
-                                    <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                                        <Sparkles className="h-3 w-3" />
-                                        AI
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex items-start justify-between mb-2">
-                                <h3 className="font-semibold">{item.name}</h3>
-                                {item.is_available === false && (
-                                    <Badge variant="destructive" className="text-xs">
-                                        <EyeOff className="h-3 w-3 mr-1" />
-                                         Unavailable
-                                    </Badge>
-                                )}
-                            </div>
-                            <MenuItemBadges item={item} />
-                            {item.availability_channel && item.availability_channel !== 'both' && (
-                                <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 mb-1 ${item.availability_channel === 'online_only' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                                    {item.availability_channel === 'online_only' ? '🌐 Online Only' : '🏪 In-Store Only'}
-                                </span>
-                            )}
-                            <p className="text-sm text-gray-600 mb-2 line-clamp-2 mt-1">{item.description}</p>
-                            <div className="flex items-baseline gap-2 mb-3">
-                                <p className="text-lg font-bold text-orange-600">£{item.price.toFixed(2)}</p>
-                                {item.pos_price != null && item.pos_price !== item.price && (
-                                    <p className="text-sm text-purple-600 font-medium">POS: £{item.pos_price.toFixed(2)}</p>
-                                )}
-                            </div>
-                            {item.customization_options?.length > 0 && (
-                                <p className="text-xs text-gray-500 mb-3">
-                                    {item.customization_options.length} customization{item.customization_options.length > 1 ? 's' : ''}
-                                </p>
-                            )}
-                            <div className="flex gap-2 flex-wrap">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => toggleAvailability(item)}
-                                    className="flex-1"
-                                >
-                                    {item.is_available === false ? 'Mark Available' : 'Mark Unavailable'}
-                                </Button>
-                                {item.customization_options?.length > 0 && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                            setCopiedCustomizations(item.customization_options);
-                                            toast.success('All customizations copied!');
-                                        }}
-                                        title="Copy all customizations from this item"
-                                    >
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
-                                )}
-                                {copiedCustomizations && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                            handleEdit(item);
-                                            setTimeout(() => {
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    customization_options: JSON.parse(JSON.stringify(copiedCustomizations))
-                                                }));
-                                                toast.success('Customizations pasted! Click Create to save.');
-                                            }, 100);
-                                        }}
-                                        title="Paste copied customizations to this item"
-                                    >
-                                        <Clipboard className="h-4 w-4" />
-                                    </Button>
-                                )}
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleEdit(item)}
-                                >
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                        if (confirm('Delete this item?')) {
-                                            deleteMutation.mutate(item.id);
-                                        }
-                                    }}
-                                    className="text-red-600"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                        </Card>
-                        {/* Item reorder buttons */}
-                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 hover:opacity-100 transition-opacity bg-white rounded-lg shadow p-1">
-                            <button
-                                onClick={() => moveItem(category, item.id, 'left')}
-                                disabled={categoryItems.indexOf(item) === 0}
-                                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Move left"
-                            >
-                                <ChevronLeft className="h-3.5 w-3.5 text-gray-600" />
-                            </button>
-                            <button
-                                onClick={() => moveItem(category, item.id, 'right')}
-                                disabled={categoryItems.indexOf(item) === categoryItems.length - 1}
-                                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Move right"
-                            >
-                                <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
-                            </button>
-                        </div>
-                    </div>
-                                ))}
-                            </div>
+                            <MenuItemsGrid
+                                items={categoryItems}
+                                selectedItems={selectedItems}
+                                copiedCustomizations={copiedCustomizations}
+                                onToggleSelect={toggleSelectItem}
+                                onToggleAvailability={toggleAvailability}
+                                onEdit={handleEdit}
+                                onDelete={(id) => deleteMutation.mutate(id)}
+                                onCopyCustomizations={(item) => {
+                                    setCopiedCustomizations(item.customization_options);
+                                    toast.success('All customizations copied!');
+                                }}
+                                onPasteCustomizations={(item) => {
+                                    handleEdit(item);
+                                    setTimeout(() => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            customization_options: JSON.parse(JSON.stringify(copiedCustomizations))
+                                        }));
+                                        toast.success('Customizations pasted! Click Create to save.');
+                                    }, 100);
+                                }}
+                                title={category}
+                            />
+                            {/* Item reorder buttons - handled per item in grid component */}
                         </div>
                     );
                 })}
