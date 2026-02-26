@@ -160,6 +160,8 @@ export default function PayoutManagement() {
                 payout_frequency: payoutFrequency,
                 total_orders: periodOrders.length,
                 gross_earnings: grossEarnings,
+                cash_payment_amount: cashPaymentAmount,
+                card_payment_amount: cardPaymentAmount,
                 platform_commission: platformCommission,
                 refunds_paid_by_platform: refundsPaidByPlatform,
                 refunds_paid_by_restaurant: refundsPaidByRestaurant,
