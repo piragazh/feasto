@@ -124,11 +124,26 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                 </Button>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-700">
-                    Connect your Uber Eats, Deliveroo, and Just Eat accounts using your restaurant login credentials to automatically pull orders into your MealDrop queue.
-                </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <div className="flex gap-3">
+                    <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-700">
+                        Connect your Uber Eats account via webhook. Orders placed on Uber Eats will automatically appear in your MealDrop queue in real-time.
+                    </p>
+                </div>
+                <div className="bg-white border border-blue-200 rounded p-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-1">📌 Uber Eats Webhook URL (paste this in your Uber Eats developer portal):</p>
+                    <div className="flex items-center gap-2">
+                        <code className="text-xs bg-gray-100 rounded px-2 py-1 flex-1 truncate">{WEBHOOK_URL}</code>
+                        <button
+                            onClick={() => { navigator.clipboard.writeText(WEBHOOK_URL); }}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Copy"
+                        >
+                            <Copy className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
