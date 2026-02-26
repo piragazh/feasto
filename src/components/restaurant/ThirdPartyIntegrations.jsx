@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AlertCircle, Check, X, Settings, RefreshCw, LogIn, Eye, EyeOff, Copy } from 'lucide-react';
+import { AlertCircle, Check, X, Settings, RefreshCw, LogIn, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
@@ -38,13 +38,11 @@ const PLATFORMS = [
 
 export default function ThirdPartyIntegrations({ restaurantId }) {
     const [editingPlatform, setEditingPlatform] = useState(null);
-    const [credentials, setCredentials] = useState({ email: '', password: '', store_id: '' });
+    const [credentials, setCredentials] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
     const [syncing, setSyncing] = useState(false);
-
-    const WEBHOOK_URL = `${window.location.origin}/api/v1/functions/uberEatsWebhook`;
 
     const { data: savedIntegrations = {}, isLoading, refetch } = useQuery({
         queryKey: ['third-party-integrations', restaurantId],
@@ -60,7 +58,7 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
     });
 
     const openConnect = (platformId) => {
-        setCredentials({ email: '', password: '', store_id: '' });
+        setCredentials({ email: '', password: '' });
         setShowPassword(false);
         setEditingPlatform(platformId);
     };
@@ -77,7 +75,6 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                 platform: editingPlatform,
                 email: credentials.email,
                 password: credentials.password,
-                store_id: credentials.store_id,
                 enabled: true,
             });
             toast.success(`${PLATFORMS.find(p => p.id === editingPlatform)?.name} connected`);
@@ -125,26 +122,11 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                 </Button>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <div className="flex gap-3">
-                    <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-blue-700">
-                        Connect your Uber Eats account via webhook. Orders placed on Uber Eats will automatically appear in your MealDrop queue in real-time.
-                    </p>
-                </div>
-                <div className="bg-white border border-blue-200 rounded p-3">
-                    <p className="text-xs font-semibold text-gray-700 mb-1">📌 Uber Eats Webhook URL (paste this in your Uber Eats developer portal):</p>
-                    <div className="flex items-center gap-2">
-                        <code className="text-xs bg-gray-100 rounded px-2 py-1 flex-1 truncate">{WEBHOOK_URL}</code>
-                        <button
-                            onClick={() => { navigator.clipboard.writeText(WEBHOOK_URL); }}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Copy"
-                        >
-                            <Copy className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-700">
+                    Connect your Uber Eats, Deliveroo, and Just Eat accounts using your restaurant login credentials to automatically pull orders into your MealDrop queue.
+                </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -262,20 +244,6 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
-                                        {editingPlatform === 'uber_eats' && (
-                                            <div>
-                                                <Label htmlFor="tp-store">Store ID <span className="text-gray-400 font-normal">(from Uber Eats portal)</span></Label>
-                                                <Input
-                                                    id="tp-store"
-                                                    type="text"
-                                                    placeholder="e.g. abc123xyz"
-                                                    value={credentials.store_id}
-                                                    onChange={e => setCredentials(prev => ({ ...prev, store_id: e.target.value }))}
-                                                    className="mt-1"
-                                                />
-                                            </div>
-                                        )}
                                     </div>
                                     <p className="text-xs text-gray-400">
                                         Your credentials are stored securely and only used to sync orders on your behalf.{' '}
