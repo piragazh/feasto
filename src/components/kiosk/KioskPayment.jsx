@@ -34,6 +34,7 @@ export default function KioskPayment({
                     price: item.price,
                     quantity: item.quantity,
                     customizations: item.customizations || {},
+                    itemQuantities: item.itemQuantities || {},
                 })),
                 subtotal: cartTotal,
                 delivery_fee: 0,
@@ -41,7 +42,7 @@ export default function KioskPayment({
                 total: cartTotal,
                 payment_method: paymentMethod,
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                status: 'confirmed',
+                status: paymentMethod === 'cash' ? 'pending' : 'confirmed',
                 notes: 'Kiosk order',
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
