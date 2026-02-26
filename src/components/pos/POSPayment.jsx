@@ -308,6 +308,39 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     ))}
                 </div>
 
+                {/* Reprint button — only show if printer configured */}
+                {restaurant?.printer_config?.bluetooth_printer?.id && (
+                    <div className="mb-2">
+                        <Button
+                            size="sm"
+                            onClick={async () => {
+                                const config = restaurant.printer_config;
+                                const orderData = {
+                                    id: Date.now().toString(),
+                                    created_date: new Date().toISOString(),
+                                    items: cart,
+                                    subtotal: cartSubtotal,
+                                    delivery_fee: 0,
+                                    discount: discount?.amount || 0,
+                                    total: effectiveTotal,
+                                    payment_method: payments.length === 1 ? payments[0].method : 'cash',
+                                    order_type: orderType || 'takeaway',
+                                    notes: payments.length > 1 ? payments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : undefined,
+                                };
+                                try {
+                                    await printerService.printReceipt(orderData, restaurant, config);
+                                    toast.success('Receipt printed');
+                                } catch (e) {
+                                    toast.error('Print failed: ' + e.message);
+                                }
+                            }}
+                            className={`w-full h-9 text-xs font-semibold ${t.inactBtn}`}
+                        >
+                            <FileText className="h-3.5 w-3.5 mr-1.5" /> Print Receipt
+                        </Button>
+                    </div>
+                )}
+
                 {/* Totals */}
                 <div className={`border-t ${t.divider} pt-3 space-y-2`}>
                     <POSDiscountPanel
