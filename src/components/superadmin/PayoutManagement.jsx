@@ -469,24 +469,28 @@ export default function PayoutManagement() {
                                             </Badge>
                                         </div>
 
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                                            <div className="bg-gray-50 p-2 rounded">
-                                                <p className="text-xs text-gray-600">Orders</p>
-                                                <p className="font-semibold">{payout.total_orders}</p>
-                                            </div>
-                                            <div className="bg-gray-50 p-2 rounded">
-                                                <p className="text-xs text-gray-600">Gross Earnings</p>
-                                                <p className="font-semibold">£{payout.gross_earnings?.toFixed(2)}</p>
-                                            </div>
-                                            <div className="bg-gray-50 p-2 rounded">
-                                                <p className="text-xs text-gray-600">Commission</p>
-                                                <p className="font-semibold text-orange-600">-£{payout.platform_commission?.toFixed(2)}</p>
-                                            </div>
-                                            <div className="bg-green-50 p-2 rounded border border-green-200">
-                                                <p className="text-xs text-green-700">Net Payout</p>
-                                                <p className="font-bold text-green-700">£{payout.net_payout?.toFixed(2)}</p>
-                                            </div>
-                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                                             <div className="bg-gray-50 p-2 rounded">
+                                                 <p className="text-xs text-gray-600">Gross</p>
+                                                 <p className="font-semibold">£{payout.gross_earnings?.toFixed(2)}</p>
+                                             </div>
+                                             <div className="bg-gray-50 p-2 rounded">
+                                                 <p className="text-xs text-gray-600">Cash</p>
+                                                 <p className="font-semibold">£{payout.cash_payment_amount?.toFixed(2)}</p>
+                                             </div>
+                                             <div className="bg-gray-50 p-2 rounded">
+                                                 <p className="text-xs text-gray-600">Card</p>
+                                                 <p className="font-semibold">£{payout.card_payment_amount?.toFixed(2)}</p>
+                                             </div>
+                                             <div className="bg-gray-50 p-2 rounded">
+                                                 <p className="text-xs text-gray-600">Commission</p>
+                                                 <p className="font-semibold text-orange-600">-£{payout.platform_commission?.toFixed(2)}</p>
+                                             </div>
+                                             <div className="bg-green-50 p-2 rounded border border-green-200">
+                                                 <p className="text-xs text-green-700">Payout</p>
+                                                 <p className="font-bold text-green-700">£{payout.net_payout?.toFixed(2)}</p>
+                                             </div>
+                                         </div>
 
                                         {(payout.refunds_paid_by_restaurant > 0 || payout.refunds_paid_by_platform > 0) && (
                                             <div className="text-xs text-gray-600 mb-3 space-y-1">
