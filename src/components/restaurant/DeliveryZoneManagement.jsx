@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import { MapPin, Trash2, Edit, Plus, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import 'leaflet/dist/leaflet.css';
 
 function GeomanControl({ onDrawn, editingZone, mapKey }) {
