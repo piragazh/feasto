@@ -310,13 +310,23 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </div>
                 <div className={`${layoutCols.cart} overflow-hidden flex flex-col gap-2`}>
                     {(orderType === 'phone_collection' || orderType === 'phone_delivery') && (
-                        <PhoneOrderPanel
-                            orderType={orderType}
-                            onOrderTypeChange={setOrderType}
-                            isDark={isDark}
-                            t={t}
-                            restaurantId={restaurantId}
-                        />
+                        <button
+                            onClick={() => setPhoneDialogOpen(true)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border font-semibold text-sm transition-colors ${
+                                window.__phoneOrderDetails?.name
+                                    ? isDark ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700'
+                                    : isDark ? 'bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20' : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4" />
+                                {window.__phoneOrderDetails?.name
+                                    ? <span>{window.__phoneOrderDetails.name}</span>
+                                    : <span>Enter Customer Details</span>
+                                }
+                            </div>
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
                     )}
                     <POSCart
                         t={t} isDark={isDark}
