@@ -73,6 +73,13 @@ export default function KioskDashboard() {
 
     const removeItem = (cartId) => setCart(prev => prev.filter(i => i.cartId !== cartId));
 
+    const editItem = (cartId, updated) => {
+        setCart(prev => prev.map(i => i.cartId === cartId
+            ? { ...i, price: updated.price, quantity: updated.quantity, customizations: updated.customizations, itemQuantities: updated.itemQuantities }
+            : i
+        ));
+    };
+
     const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
