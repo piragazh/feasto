@@ -307,6 +307,14 @@ export default function POSDashboard() {
                             <ExternalLink className="h-4 w-4" />
                         </button>
 
+                        {/* Kiosk button */}
+                        <button
+                            title="Open Self-Order Kiosk"
+                            onClick={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            <TabletSmartphone className="h-4 w-4" />
+                        </button>
+
                         {activeStaffMember && (
                             <button onClick={() => setShowStaffLogin(true)}
                                 title="Switch staff member"
