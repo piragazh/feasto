@@ -30,18 +30,26 @@ export default function KioskDashboard() {
         else setLoading(false);
     }, [restaurantId]);
 
-    // Auto-reset to welcome after inactivity
+    // Auto-reset to welcome after inactivity (reset timer on any interaction)
     useEffect(() => {
-        if (screen === 'welcome') return;
-        let timer = setTimeout(() => {
-            if (screen !== 'confirmation') {
+        if (screen === 'welcome' || screen === 'confirmation') return;
+        const reset = () => {
+            clearTimeout(window.__kioskInactivityTimer);
+            window.__kioskInactivityTimer = setTimeout(() => {
                 setScreen('welcome');
                 setCart([]);
                 setOrderType('takeaway');
                 setSelectedTable(null);
-            }
-        }, 120000); // 2 min inactivity reset
-        return () => clearTimeout(timer);
+            }, 120000); // 2 min
+        };
+        reset();
+        window.addEventListener('touchstart', reset);
+        window.addEventListener('click', reset);
+        return () => {
+            clearTimeout(window.__kioskInactivityTimer);
+            window.removeEventListener('touchstart', reset);
+            window.removeEventListener('click', reset);
+        };
     }, [screen]);
 
     const loadRestaurant = async () => {
