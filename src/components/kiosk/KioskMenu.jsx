@@ -63,6 +63,25 @@ export default function KioskMenu({
                 )}
             </div>
 
+            {/* Search Bar - Sticky below header */}
+            <div className="bg-gray-900 border-b border-white/[0.06] px-6 py-3 sticky top-[73px] z-10">
+                <div className="relative max-w-xl">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <input
+                        type="text"
+                        placeholder="Search menu..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 pr-10 py-3 text-sm focus:outline-none focus:border-orange-500/50"
+                    />
+                    {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <X className="h-4 w-4 text-gray-500" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
             <div className="flex flex-1 overflow-hidden">
                 {/* Category Sidebar */}
                 <div className="w-52 bg-gray-900 border-r border-white/[0.06] overflow-y-auto flex-shrink-0">
