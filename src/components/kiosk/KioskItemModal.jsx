@@ -66,6 +66,31 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                     setError(`Please select ${opt.name}`);
                     return;
                 }
+                // Validate meal_upgrade sub-customizations
+                if (opt.type === 'meal_upgrade' && customizations[opt.name]) {
+                    const mealCustomizations = opt.meal_customizations ||
+                        opt.options?.find(o => o.label === customizations[opt.name])?.meal_customizations;
+                    if (mealCustomizations) {
+                        for (const mealOpt of mealCustomizations) {
+                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
+                            const selected = customizations[mealCustomKey];
+                            if (mealOpt.required) {
+                                if (mealOpt.type === 'single' && !selected) {
+                                    setError(`Please select ${mealOpt.name}`);
+                                    return;
+                                }
+                                if (mealOpt.type === 'multiple') {
+                                    const selectedArr = Array.isArray(selected) ? selected : [];
+                                    const required = mealOpt.max_quantity || 1;
+                                    if (selectedArr.length < required) {
+                                        setError(`Please select ${required} option${required > 1 ? 's' : ''} for ${mealOpt.name}`);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         onAdd({
