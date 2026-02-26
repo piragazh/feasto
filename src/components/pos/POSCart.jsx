@@ -4,7 +4,7 @@ import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle } from 'luci
 // Inline mini confirm dialog
 function ConfirmPopup({ message, onConfirm, onCancel, isDark }) {
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center ${isDark ? 'bg-black/50' : 'bg-black/30'}`}>
             <div className={`${isDark ? 'bg-[#1a1d27] border-white/[0.1] text-white' : 'bg-white border-gray-200 text-gray-900'} border rounded-2xl p-5 w-72 shadow-2xl`}>
                 <div className="flex items-center gap-2 mb-3">
                     <AlertTriangle className="h-5 w-5 text-orange-400 flex-shrink-0" />
