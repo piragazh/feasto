@@ -12,11 +12,12 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization') || '';
     const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
 
-    if (clientSecret && providedSecret !== clientSecret) {
-        // Also check x-uber-signature header as fallback
+    if (clientSecret) {
+        // Check Authorization header (Bearer or Basic)
         const uberSig = req.headers.get('x-uber-signature') || '';
-        if (uberSig !== clientSecret) {
-            console.error('Invalid Uber Eats webhook signature');
+        const isValid = providedSecret === clientSecret || uberSig === clientSecret;
+        if (!isValid) {
+            console.error('Invalid Uber Eats webhook signature. Provided:', providedSecret?.slice(0,10));
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
     }
