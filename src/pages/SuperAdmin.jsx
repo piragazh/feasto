@@ -195,7 +195,7 @@ export default function SuperAdmin() {
                 </div>
 
                 {/* Page Content */}
-                <div className="max-w-7xl">
+                <div className="max-w-7xl mx-auto">
                     {activeTab === 'overview' && <SystemOverview />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
                     {activeTab === 'restaurants' && <RestaurantManagement />}
