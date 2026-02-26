@@ -404,14 +404,14 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                             </div>
                             {postcodeResults.length > 0 && (
                                 <div className={`mt-2 rounded-xl border overflow-hidden ${isDark ? 'border-white/[0.08]' : 'border-gray-200'}`}>
-                                    {postcodeResults.map((order, i) => (
+                                    {postcodeResults.map((customer, i) => (
                                         <button
                                             key={i}
-                                            onClick={() => selectFromPostcodeSearch(order)}
+                                            onClick={() => selectFromPostcodeSearch(customer)}
                                             className={`w-full text-left px-3 py-2 text-xs border-b last:border-0 transition-colors ${isDark ? 'border-white/[0.05] hover:bg-white/5 text-gray-300' : 'border-gray-100 hover:bg-orange-50 text-gray-700'}`}
                                         >
-                                            <p className="font-semibold">{order.guest_name || 'Unknown'} · {order.phone}</p>
-                                            <p className={`truncate ${t.textMuted}`}>{order.delivery_address}</p>
+                                            <p className="font-semibold">{customer.full_name || 'Unknown'} · {customer.phone_number}</p>
+                                            <p className={`truncate ${t.textMuted}`}>{customer.delivery_address}</p>
                                         </button>
                                     ))}
                                 </div>
