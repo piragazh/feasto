@@ -382,6 +382,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
             <TableSelectionDialog open={tableSelectionOpen} onClose={() => setTableSelectionOpen(false)} tables={tables} selectedTable={selectedTable} onSelectTable={(table) => setSelectedTable(table)} />
             <CustomItemDialog open={customItemOpen} onClose={() => setCustomItemOpen(false)} onAdd={(item) => onAddItem(item)} restaurantId={restaurantId} posTheme={posTheme} />
+            <PhoneOrderDialog
+                open={phoneDialogOpen}
+                onClose={() => { setPhoneDialogOpen(false); setPhoneDetails(window.__phoneOrderDetails || {}); }}
+                orderType={orderType}
+                onOrderTypeChange={setOrderType}
+                isDark={isDark}
+                restaurantId={restaurantId}
+            />
             <HeldOrdersDrawer
                 open={heldDrawerOpen}
                 onClose={() => setHeldDrawerOpen(false)}
