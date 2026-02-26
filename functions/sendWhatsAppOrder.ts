@@ -61,18 +61,14 @@ Deno.serve(async (req) => {
 
         const client = twilio(accountSid, authToken);
 
-        // Send WhatsApp message with interactive buttons (REST API format)
+        // Send WhatsApp message with quick reply buttons
         const message = await client.messages.create({
             from: `whatsapp:${twilioPhoneNumber}`,
             to: `whatsapp:${toPhone}`,
             body: messageBody,
-            contentVariables: JSON.stringify({
-                "1": "ACCEPT",
-                "2": "REJECT"
-            }),
-            contentSid: "HX00000000000000000000000000000000"  // Twilio template for quick reply buttons
+            persistentAction: ['CALL 1', 'OPEN_BROWSER_ACTION']  // Quick actions
         }).catch(async () => {
-            // Fallback: if interactive template fails, send simple message with instructions
+            // Fallback: send message with text instructions
             return await client.messages.create({
                 from: `whatsapp:${twilioPhoneNumber}`,
                 to: `whatsapp:${toPhone}`,
