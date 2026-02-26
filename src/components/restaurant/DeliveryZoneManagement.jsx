@@ -26,11 +26,9 @@ function GeomanControl({ onDrawn, editingZone, mapKey }) {
 
         let cleanup;
 
-        // Import geoman dynamically
+        // Initialize geoman controls if available
         const initGeoman = async () => {
             try {
-                await import('@geoman-io/leaflet-geoman-free');
-                
                 if (!map.pm) return;
 
                 // Remove existing controls first
