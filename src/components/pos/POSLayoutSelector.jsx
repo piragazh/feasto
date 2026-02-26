@@ -52,6 +52,18 @@ const LAYOUTS = [
             </div>
         ),
     },
+    {
+        id: 'retail',
+        name: 'Retail',
+        description: 'Quick actions left · Full-width menu · Cart right',
+        preview: (
+            <div className="grid grid-cols-12 gap-1 h-16 w-full">
+                <div className="col-span-1 bg-purple-400/60 rounded" />
+                <div className="col-span-9 bg-blue-400/60 rounded" />
+                <div className="col-span-2 bg-green-400/60 rounded" />
+            </div>
+        ),
+    },
 ];
 
 export default function POSLayoutSelector({ restaurantId }) {
