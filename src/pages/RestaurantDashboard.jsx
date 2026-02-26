@@ -58,6 +58,7 @@ import StaffManagement from '@/components/restaurant/StaffManagement';
 import KioskSettings from '@/components/kiosk/KioskSettings';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
+import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
