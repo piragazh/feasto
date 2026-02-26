@@ -38,7 +38,7 @@ const PLATFORMS = [
 
 export default function ThirdPartyIntegrations({ restaurantId }) {
     const [editingPlatform, setEditingPlatform] = useState(null);
-    const [credentials, setCredentials] = useState({ email: '', password: '' });
+    const [credentials, setCredentials] = useState({ email: '', password: '', store_id: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
