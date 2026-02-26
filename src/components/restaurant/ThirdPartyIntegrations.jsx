@@ -44,6 +44,8 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
     const [syncing, setSyncing] = useState(false);
 
+    const WEBHOOK_URL = `${window.location.origin}/api/v1/functions/uberEatsWebhook`;
+
     const { data: savedIntegrations = {}, isLoading, refetch } = useQuery({
         queryKey: ['third-party-integrations', restaurantId],
         queryFn: async () => {
