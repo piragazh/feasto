@@ -235,6 +235,8 @@ export default function Layout({ children, currentPageName }) {
         return () => clearInterval(interval);
     }, []);
 
+    // Remove trackDashboardActivity calls that cause 404 errors
+
     // Track page views with GTM
     useEffect(() => {
         if (window.__gtmId && window.__gtmId !== 'undefined' && window.gtag && window.dataLayer) {
