@@ -383,6 +383,7 @@ export default function POSDashboard() {
                 {activeTab === 'kitchen' && <KitchenDisplaySystem restaurant={restaurant} />}
                 {activeTab === 'history' && <POSOrderHistory restaurantId={restaurant.id} posTheme={posTheme} />}
                 {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} posTheme={posTheme} />}
+                {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
                 {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
             </main>
         </div>
