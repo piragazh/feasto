@@ -584,6 +584,9 @@ export default function RestaurantDashboard() {
                         <TabsContent value="pos">
                             <POSConfigurations restaurantId={restaurant.id} />
                         </TabsContent>
+                        <TabsContent value="kiosk">
+                            <KioskSettings restaurantId={restaurant.id} />
+                        </TabsContent>
                         <TabsContent value="sms">
                             <SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} />
                         </TabsContent>
