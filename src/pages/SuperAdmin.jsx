@@ -195,40 +195,41 @@ export default function SuperAdmin() {
                 </div>
 
                 {/* Page Content */}
-                <div className="p-6">
-                {activeTab === 'overview' && <SystemOverview />}
-                {activeTab === 'orders' && <OrderHistoryManagement />}
-                {activeTab === 'restaurants' && <RestaurantManagement />}
-                {activeTab === 'messages' && <MessagingCenter />}
-                {activeTab === 'commission' && <CommissionManagement />}
-                {activeTab === 'monitoring' && <SystemMonitoring />}
-                {activeTab === 'cuisine' && <CuisineTypeManagement />}
-                {activeTab === 'domains' && <DomainManagement />}
-                {activeTab === 'analytics' && <EnhancedAnalytics />}
-                {activeTab === 'drivers' && <EnhancedDriverManagement />}
-                {activeTab === 'refunds' && <PlatformRefundOversight />}
-                {activeTab === 'payouts' && <PayoutManagement />}
-                {activeTab === 'payout-history' && <PayoutHistory />}
-                {activeTab === 'reviews' && <ReviewModerationSuper />}
-                {activeTab === 'promotions' && <PromotionOversight />}
-                {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
-                {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
-                {activeTab === 'files' && <PublicFilesManagement />}
-                {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
-                {activeTab === 'managers' && (
-                    <iframe 
-                        src={createPageUrl('ManageRestaurantManagers')} 
-                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
-                        title="Restaurant Managers"
-                    />
-                )}
-                {activeTab === 'admin-restaurants' && (
-                    <iframe 
-                        src={createPageUrl('AdminRestaurants')} 
-                        className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
-                        title="Admin Restaurants"
-                    />
-                )}
+                <div className="max-w-7xl">
+                    {activeTab === 'overview' && <SystemOverview />}
+                    {activeTab === 'orders' && <OrderHistoryManagement />}
+                    {activeTab === 'restaurants' && <RestaurantManagement />}
+                    {activeTab === 'messages' && <MessagingCenter />}
+                    {activeTab === 'commission' && <CommissionManagement />}
+                    {activeTab === 'monitoring' && <SystemMonitoring />}
+                    {activeTab === 'cuisine' && <CuisineTypeManagement />}
+                    {activeTab === 'domains' && <DomainManagement />}
+                    {activeTab === 'analytics' && <EnhancedAnalytics />}
+                    {activeTab === 'drivers' && <EnhancedDriverManagement />}
+                    {activeTab === 'refunds' && <PlatformRefundOversight />}
+                    {activeTab === 'payouts' && <PayoutManagement />}
+                    {activeTab === 'payout-history' && <PayoutHistory />}
+                    {activeTab === 'reviews' && <ReviewModerationSuper />}
+                    {activeTab === 'promotions' && <PromotionOversight />}
+                    {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
+                    {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
+                    {activeTab === 'files' && <PublicFilesManagement />}
+                    {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
+                    {activeTab === 'managers' && (
+                        <iframe 
+                            src={createPageUrl('ManageRestaurantManagers')} 
+                            className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
+                            title="Restaurant Managers"
+                        />
+                    )}
+                    {activeTab === 'admin-restaurants' && (
+                        <iframe 
+                            src={createPageUrl('AdminRestaurants')} 
+                            className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
+                            title="Admin Restaurants"
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );
