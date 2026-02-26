@@ -26,20 +26,18 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Restaurant ID mismatch' }, { status: 400 });
         }
 
-        // Get restaurant alert phone from restaurant settings
-        let alertPhone = null;
+        // Get restaurant settings from restaurant
+        let restaurant = null;
         if (restaurantId) {
             try {
                 const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId });
-                if (restaurants.length > 0 && restaurants[0].alert_phone) {
-                    alertPhone = restaurants[0].alert_phone;
-                }
+                restaurant = restaurants.length > 0 ? restaurants[0] : null;
             } catch (error) {
-                console.error('Failed to fetch restaurant phone:', error);
+                console.error('Failed to fetch restaurant:', error);
             }
         }
 
-        if (!alertPhone) {
+        if (!restaurant || !restaurant.alert_phone) {
             console.log(`Restaurant alert would be sent for order ${orderId} at ${restaurantName} (phone not configured)`);
             return Response.json({ 
                 success: true, 
@@ -47,6 +45,18 @@ Deno.serve(async (req) => {
                 simulated: true 
             });
         }
+
+        // Check if SMS alerts are enabled
+        if (!restaurant.sms_alerts_enabled) {
+            console.log(`SMS alerts disabled for order ${orderId} at ${restaurantName}`);
+            return Response.json({ 
+                success: true, 
+                message: 'SMS alerts disabled for this restaurant',
+                simulated: true 
+            });
+        }
+
+        const alertPhone = restaurant.alert_phone;
 
         // Order already fetched above for validation
 
