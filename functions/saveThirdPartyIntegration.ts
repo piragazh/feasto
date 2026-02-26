@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { restaurantId, platform, api_key, enabled } = await req.json();
+        const { restaurantId, platform, email, password, api_key, enabled } = await req.json();
 
         // Get current integrations
         const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
@@ -19,10 +19,10 @@ Deno.serve(async (req) => {
 
         const currentIntegrations = restaurants[0].third_party_integrations || {};
 
-        // Update specific platform
+        // Update specific platform - support both credential-based and legacy api_key approach
         currentIntegrations[platform] = {
-            api_key: api_key,
-            enabled: enabled,
+            ...(email ? { email, password } : { api_key }),
+            enabled: enabled !== undefined ? enabled : true,
             last_sync: new Date().toISOString()
         };
 
