@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, User, MapPin, Clock, StickyNote, Search, ChevronRight, CheckCircle2, Trash2, UserPlus, X, Loader2, Wifi, WifiOff, AlertCircle, Home } from 'lucide-react';
+import { Phone, User, MapPin, Clock, StickyNote, Search, ChevronRight, CheckCircle2, Trash2, UserPlus, X, Loader2, Wifi, ExternalLink, Star } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import CustomerProfileModal from './CustomerProfileModal';
 
 const COLLECTION_TIMES = ['ASAP', '10 min', '15 min', '20 min', '25 min', '30 min', '45 min', '1 hour'];
 
@@ -11,7 +12,7 @@ async function lookupPostcode(postcode) {
     const res = await fetch(`https://api.postcodes.io/postcodes/${clean}`);
     if (!res.ok) throw new Error('Postcode not found');
     const data = await res.json();
-    return data.result; // { postcode, admin_district, parish, ... }
+    return data.result;
 }
 
 async function autocompletePostcode(partial) {
@@ -24,7 +25,6 @@ async function autocompletePostcode(partial) {
 }
 
 export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, t, restaurantId }) {
-    // Core state
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -34,18 +34,16 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
     const [searching, setSearching] = useState(false);
     const [foundCustomer, setFoundCustomer] = useState(null);
     const [expanded, setExpanded] = useState(true);
-    const [searchMode, setSearchMode] = useState('phone'); // 'phone' | 'postcode'
+    const [searchMode, setSearchMode] = useState('phone');
     const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
     const [postcodeResults, setPostcodeResults] = useState([]);
     const [postcodeSearching, setPostcodeSearching] = useState(false);
     const [postcodeAutocomplete, setPostcodeAutocomplete] = useState([]);
     const [showPostcodeDropdown, setShowPostcodeDropdown] = useState(false);
-    const [cidStatus, setCidStatus] = useState(null); // null | 'connected' | 'disconnected'
+    const [cidStatus, setCidStatus] = useState(null);
     const [incomingCall, setIncomingCall] = useState(null);
+    const [showProfileModal, setShowProfileModal] = useState(false);
 
-    const postcodeRef = useRef(null);
-
-    // Load POS phone settings
     const [posPhoneSettings, setPosPhoneSettings] = useState(null);
     useEffect(() => {
         const stored = localStorage.getItem(`pos_phone_settings_${restaurantId}`);
@@ -54,45 +52,35 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         }
     }, [restaurantId]);
 
-    // CID / VoIP integration - listen for incoming call events
+    // CID / VoIP integration
     useEffect(() => {
         if (!posPhoneSettings?.cid_enabled) return;
-
-        // Web Serial API for USB CID devices
         const handleSerialCID = async () => {
             if (!('serial' in navigator)) return;
             try {
-                // Listen on already-opened port if available
                 const ports = await navigator.serial.getPorts();
                 if (ports.length === 0) return;
                 setCidStatus('connected');
-
                 const port = ports[0];
                 if (!port.readable) await port.open({ baudRate: posPhoneSettings?.cid_baud || 9600 });
-
                 const reader = port.readable.getReader();
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
                     const text = new TextDecoder().decode(value);
-                    // Standard CID format: NMBR = 07xxxxxxxxx
                     const match = text.match(/NMBR\s*=\s*([\d+\s]+)/);
                     if (match) {
                         const phone = match[1].trim();
                         setIncomingCall(phone);
                         setCustomerPhone(phone);
                         toast.success(`📞 Incoming call from ${phone}`, { duration: 8000 });
-                        // Auto-search
                         doPhoneSearch(phone);
                     }
                 }
                 reader.releaseLock();
             } catch {}
         };
-
         handleSerialCID();
-
-        // VoIP Webhook: poll for incoming calls if webhook URL configured
         let pollInterval;
         if (posPhoneSettings?.voip_webhook_url) {
             pollInterval = setInterval(async () => {
@@ -110,7 +98,6 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                 } catch {}
             }, 3000);
         }
-
         return () => { if (pollInterval) clearInterval(pollInterval); };
     }, [posPhoneSettings]);
 
@@ -118,19 +105,22 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         if (!phone || phone.length < 5) return;
         setSearching(true);
         try {
-            // Search Customer entity first
             const customers = await base44.entities.Customer.filter({ phone_number: phone, restaurant_id: restaurantId });
             if (customers.length > 0) {
                 const customer = customers[0];
+                // Use default saved address if available
+                const defaultAddr = customer.saved_addresses?.find(a => a.is_default)?.address || customer.delivery_address || '';
                 setFoundCustomer({
                     id: customer.id,
                     name: customer.full_name,
-                    address: customer.delivery_address || '',
+                    address: defaultAddr,
                     orderCount: customer.total_orders || 0,
+                    savedAddresses: customer.saved_addresses || [],
+                    raw: customer,
                 });
                 setShowNewCustomerForm(false);
                 setCustomerName(customer.full_name);
-                if (customer.delivery_address) setDeliveryAddress(customer.delivery_address);
+                if (defaultAddr) setDeliveryAddress(defaultAddr);
                 toast.success(`Found customer — ${customer.total_orders || 0} previous order${customer.total_orders !== 1 ? 's' : ''}`);
             } else {
                 setFoundCustomer(null);
@@ -152,6 +142,7 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
             const matches = customers.filter(c =>
                 c.delivery_address?.toLowerCase().includes(postcode.toLowerCase().replace(/\s/g, ''))
                 || c.delivery_address?.toLowerCase().includes(postcode.toLowerCase())
+                || c.saved_addresses?.some(a => a.address?.toLowerCase().includes(postcode.toLowerCase()))
             );
             if (matches.length > 0) {
                 setPostcodeResults(matches.slice(0, 10));
@@ -166,7 +157,6 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         }
     };
 
-    // UK Postcode autocomplete for address entry
     const handlePostcodeInputChange = async (val) => {
         setPostcode(val);
         if (val.length >= 3) {
@@ -185,14 +175,12 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         try {
             const info = await lookupPostcode(pc);
             setDeliveryAddress(prev => {
-                // Append/set postcode into address
                 const withoutPostcode = prev.replace(/[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}/gi, '').trim();
                 return withoutPostcode ? `${withoutPostcode}, ${info.postcode}` : info.postcode;
             });
         } catch {}
     };
 
-    // Address postcode lookup in new customer form
     const [newAddressLine, setNewAddressLine] = useState('');
     const [newPostcode, setNewPostcode] = useState('');
     const [newPostcodeAuto, setNewPostcodeAuto] = useState([]);
@@ -218,10 +206,7 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         try {
             const info = await lookupPostcode(pc);
             setPostcodeInfo(info);
-            // Auto-fill address with postcode + district
-            if (!newAddressLine) {
-                setNewAddressLine(`${info.admin_district || ''}`);
-            }
+            if (!newAddressLine) setNewAddressLine(`${info.admin_district || ''}`);
         } catch {
             toast.error('Invalid postcode');
         }
@@ -237,20 +222,22 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                 delivery_address: fullAddress,
                 restaurant_id: restaurantId,
                 total_orders: 0,
+                saved_addresses: fullAddress ? [{ label: 'Default', address: fullAddress, is_default: true }] : [],
             });
-            setFoundCustomer({ id: newCustomer.id, name: customerName, address: fullAddress, orderCount: 0, isNew: true });
+            setFoundCustomer({ id: newCustomer.id, name: customerName, address: fullAddress, orderCount: 0, isNew: true, savedAddresses: newCustomer.saved_addresses || [], raw: newCustomer });
         } catch {
-            setFoundCustomer({ name: customerName, address: fullAddress, orderCount: 0, isNew: true });
+            setFoundCustomer({ name: customerName, address: fullAddress, orderCount: 0, isNew: true, savedAddresses: [] });
         }
         setShowNewCustomerForm(false);
         toast.success('New customer saved');
     };
 
     const selectFromPostcodeSearch = (customer) => {
+        const defaultAddr = customer.saved_addresses?.find(a => a.is_default)?.address || customer.delivery_address || '';
         setCustomerName(customer.full_name || '');
         setCustomerPhone(customer.phone_number || '');
-        setDeliveryAddress(customer.delivery_address || '');
-        setFoundCustomer({ id: customer.id, name: customer.full_name || '', address: customer.delivery_address || '', orderCount: customer.total_orders || 0 });
+        setDeliveryAddress(defaultAddr);
+        setFoundCustomer({ id: customer.id, name: customer.full_name || '', address: defaultAddr, orderCount: customer.total_orders || 0, savedAddresses: customer.saved_addresses || [], raw: customer });
         setPostcodeResults([]);
         setSearchMode('phone');
         toast.success('Customer loaded from postcode search');
@@ -258,13 +245,7 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
 
     // Expose to window for POS to read
     useEffect(() => {
-        window.__phoneOrderDetails = {
-            phone: customerPhone,
-            name: customerName,
-            address: deliveryAddress,
-            collectionTime,
-            notes,
-        };
+        window.__phoneOrderDetails = { phone: customerPhone, name: customerName, address: deliveryAddress, collectionTime, notes };
         return () => { delete window.__phoneOrderDetails; };
     }, [customerPhone, customerName, deliveryAddress, collectionTime, notes]);
 
@@ -372,9 +353,19 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                                 </button>
                             </div>
                             {foundCustomer && (
-                                <div className={`mt-1.5 flex items-center gap-1.5 text-xs ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    {foundCustomer.isNew ? 'New customer' : `Returning · ${foundCustomer.orderCount} order${foundCustomer.orderCount !== 1 ? 's' : ''}`}
+                                <div className={`mt-1.5 flex items-center justify-between text-xs`}>
+                                    <div className={`flex items-center gap-1.5 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        {foundCustomer.isNew ? 'New customer' : `Returning · ${foundCustomer.orderCount} order${foundCustomer.orderCount !== 1 ? 's' : ''}`}
+                                    </div>
+                                    {foundCustomer.id && (
+                                        <button
+                                            onClick={() => setShowProfileModal(true)}
+                                            className={`flex items-center gap-1 text-xs transition-colors ${isDark ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-500'}`}
+                                        >
+                                            <ExternalLink className="h-3 w-3" /> Profile
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -485,10 +476,29 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                         </div>
                     )}
 
-                    {/* Delivery address with UK postcode autocomplete */}
+                    {/* Delivery address with saved addresses dropdown */}
                     {orderType === 'phone_delivery' && !showNewCustomerForm && (
                         <div>
                             <label className={labelCls}>Delivery Address</label>
+                            {/* Saved addresses quick-select */}
+                            {foundCustomer?.savedAddresses?.length > 0 && (
+                                <div className="flex gap-1.5 flex-wrap mb-2">
+                                    {foundCustomer.savedAddresses.map((addr, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setDeliveryAddress(addr.address)}
+                                            className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                                                deliveryAddress === addr.address
+                                                    ? 'bg-orange-500 text-white border-orange-500'
+                                                    : isDark ? 'border-white/[0.08] text-gray-400 hover:border-orange-500/30 hover:text-orange-400' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'
+                                            }`}
+                                        >
+                                            {addr.is_default && <Star className="h-2.5 w-2.5" />}
+                                            {addr.label || `Address ${i + 1}`}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                             <div className="relative">
                                 <MapPin className={`absolute left-3 top-3 h-3.5 w-3.5 ${t.textMuted}`} />
                                 <textarea
@@ -561,7 +571,7 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                         </div>
                     </div>
 
-                    {/* Add new customer button (if no customer found and not in new form) */}
+                    {/* Add new customer button */}
                     {!foundCustomer && !showNewCustomerForm && customerPhone && (
                         <button
                             onClick={() => setShowNewCustomerForm(true)}
@@ -581,6 +591,20 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
                         </button>
                     )}
                 </div>
+            )}
+
+            {/* Customer Profile Modal */}
+            {showProfileModal && foundCustomer?.raw && (
+                <CustomerProfileModal
+                    customer={foundCustomer.raw}
+                    onClose={() => setShowProfileModal(false)}
+                    onUpdated={(updated) => {
+                        setFoundCustomer(f => ({ ...f, name: updated.full_name, raw: updated }));
+                        setCustomerName(updated.full_name);
+                    }}
+                    isDark={isDark}
+                    restaurantId={restaurantId}
+                />
             )}
         </div>
     );
