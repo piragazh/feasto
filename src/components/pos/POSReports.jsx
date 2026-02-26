@@ -234,8 +234,8 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                 await printerService.sendText('ORDER TYPES\n');
                 await printerService.sendCommand(cmd.boldOff);
                 await printerService.sendText(`${dashes}\n`);
-                for (const t of orderTypeData) {
-                    await printerService.sendText(pad(t.name.replace('_', ' ').toUpperCase() + ':', `${t.value}`) + '\n');
+                for (const ot of orderTypeData) {
+                    await printerService.sendText(pad(ot.name.replace('_', ' ').toUpperCase() + ':', `${ot.value}`) + '\n');
                 }
             }
 

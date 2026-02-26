@@ -192,7 +192,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
 
     const filtered = staffList.filter(s => {
         if (roleFilter !== 'all' && s.role !== roleFilter) return false;
-        if (search && !s.full_name.toLowerCase().includes(search.toLowerCase()) && !s.email.toLowerCase().includes(search.toLowerCase())) return false;
+        if (search && !s.full_name.toLowerCase().includes(search.toLowerCase()) && !(s.email || '').toLowerCase().includes(search.toLowerCase())) return false;
         return true;
     });
 

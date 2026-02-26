@@ -174,7 +174,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     // Cash quick button: use remaining if amount > remaining
     const handleQuickCash = (amount) => {
-        addPayment('cash', Math.min(amount, remaining === 0 ? amount : amount));
+        addPayment('cash', amount);
     };
 
     // Cash confirmation state
