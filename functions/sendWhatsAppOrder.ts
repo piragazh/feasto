@@ -27,7 +27,8 @@ Deno.serve(async (req) => {
             .map(item => `• ${item.quantity}x ${item.name} - £${(item.price * item.quantity).toFixed(2)}`)
             .join('\n');
 
-        const messageBody = `🍽️ *New Order #${order.order_number || order.id}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${order.subtotal.toFixed(2)}\n*Delivery:* £${order.delivery_fee.toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nDelivery Type: ${order.order_type}\nPayment: ${order.payment_method}`;
+        const orderLabel = order.order_number || order.id.slice(-6);
+        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}\n\n✅ Reply *ACCEPT* to confirm\n❌ Reply *REJECT* to decline`;
 
         // Get restaurant's WhatsApp alert phone if not overridden
         let toPhone = restaurant_phone;
