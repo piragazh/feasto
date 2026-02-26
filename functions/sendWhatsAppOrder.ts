@@ -29,6 +29,26 @@ Deno.serve(async (req) => {
 
         const messageBody = `🍽️ *New Order #${order.order_number || order.id}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${order.subtotal.toFixed(2)}\n*Delivery:* £${order.delivery_fee.toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nDelivery Type: ${order.order_type}\nPayment: ${order.payment_method}`;
 
+        // Get restaurant's WhatsApp alert phone if not overridden
+        let toPhone = restaurant_phone;
+        if (!toPhone && order.restaurant_id) {
+            const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: order.restaurant_id });
+            if (restaurants.length > 0 && restaurants[0].alert_phone) {
+                toPhone = restaurants[0].alert_phone;
+            }
+        }
+
+        if (!toPhone) {
+            return Response.json({ success: false, message: 'No WhatsApp phone configured for this restaurant' });
+        }
+
+        // Normalize phone number (ensure it starts with country code)
+        if (toPhone.startsWith('07')) {
+            toPhone = '+44' + toPhone.slice(1);
+        } else if (!toPhone.startsWith('+')) {
+            toPhone = '+' + toPhone;
+        }
+
         // Initialize Twilio client
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -40,10 +60,10 @@ Deno.serve(async (req) => {
 
         const client = twilio(accountSid, authToken);
 
-        // Send WhatsApp message with interactive buttons
+        // Send WhatsApp message
         const message = await client.messages.create({
             from: `whatsapp:${twilioPhoneNumber}`,
-            to: `whatsapp:${restaurant_phone}`,
+            to: `whatsapp:${toPhone}`,
             body: messageBody,
             contentSid: undefined,
             mediaUrl: undefined
