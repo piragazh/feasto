@@ -52,12 +52,20 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const cartSubtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     const effectiveTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartTotal;
 
+    // Card terminal config from restaurant
+    const cardTerminal = restaurant?.printer_config?.card_terminal;
+    const hasConfiguredTerminal = !!(cardTerminal?.reader_label || cardTerminal?.reader_id);
+
     // Split payment: array of { method, amount }
     const [payments, setPayments] = useState([]);
     const [activeMethod, setActiveMethod] = useState(null); // 'cash' | 'card' | null
     const [rawValue, setRawValue] = useState('');
     const [showCardConfirm, setShowCardConfirm] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Terminal payment flow
+    const [terminalStep, setTerminalStep] = useState(null); // null | 'waiting' | 'success' | 'failed'
+    const [terminalAmount, setTerminalAmount] = useState(0);
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
     const remaining = Math.max(0, effectiveTotal - totalPaid);
