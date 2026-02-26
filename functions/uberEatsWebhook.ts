@@ -1,10 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.6';
-
-// Initialize with service role (no user auth needed for webhook)
-const base44 = createClient({
-    appId: Deno.env.get('BASE44_APP_ID'),
-    serviceRoleKey: Deno.env.get('BASE44_SERVICE_ROLE_KEY'),
-});
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -20,7 +14,7 @@ Deno.serve(async (req) => {
 
     console.log('Uber Eats webhook received:', JSON.stringify(body).slice(0, 500));
 
-    // Verify client secret if Uber Eats sends it
+    // Verify client secret if provided by Uber Eats
     const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
     const authHeader = req.headers.get('Authorization') || '';
     const uberSig = req.headers.get('x-uber-signature') || '';
@@ -34,11 +28,13 @@ Deno.serve(async (req) => {
     }
 
     try {
+        const base44 = createClientFromRequest(req);
+
         const uberOrder = body.order || body;
         const uberOrderId = uberOrder.id || uberOrder.order_id || body.resource_id || `UE-${Date.now()}`;
 
         // Deduplicate
-        const existing = await base44.entities.Order.filter({ third_party_order_id: uberOrderId });
+        const existing = await base44.asServiceRole.entities.Order.filter({ third_party_order_id: uberOrderId });
         if (existing && existing.length > 0) {
             console.log('Duplicate order, skipping:', uberOrderId);
             return Response.json({ received: true, duplicate: true });
@@ -60,11 +56,11 @@ Deno.serve(async (req) => {
         const total = parseFloat(((uberOrder.payment?.charges?.total_food_and_beverage?.amount || subtotal * 100) / 100).toFixed(2));
         const deliveryFee = parseFloat(((uberOrder.payment?.charges?.delivery_fee?.amount || 0) / 100).toFixed(2));
 
-        // Match restaurant by store_id
-        let restaurantId = '';
+        // Match restaurant by store_id saved during setup
+        let restaurantId = 'uber_eats_unassigned';
         const storeId = uberOrder.restaurant?.id || uberOrder.store_id || body.resource_id || '';
         if (storeId) {
-            const allRestaurants = await base44.entities.Restaurant.list();
+            const allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
             const matched = allRestaurants.find(r =>
                 r.third_party_integrations?.uber_eats?.store_id === storeId
             );
@@ -72,7 +68,7 @@ Deno.serve(async (req) => {
         }
 
         const mealDropOrder = {
-            restaurant_id: restaurantId || 'uber_eats_unassigned',
+            restaurant_id: restaurantId,
             items,
             subtotal: parseFloat(subtotal.toFixed(2)),
             delivery_fee: deliveryFee,
@@ -96,13 +92,13 @@ Deno.serve(async (req) => {
             order_number: `UE-${String(uberOrderId).slice(-6).toUpperCase()}`,
         };
 
-        const created = await base44.entities.Order.create(mealDropOrder);
-        console.log('MealDrop order created:', created.id, 'from Uber Eats order:', uberOrderId);
+        const created = await base44.asServiceRole.entities.Order.create(mealDropOrder);
+        console.log('MealDrop order created:', created.id, 'from Uber Eats:', uberOrderId);
 
         return Response.json({ received: true, order_id: created.id });
     } catch (error) {
-        console.error('Error processing Uber Eats webhook:', error.message);
-        // Always 200 so Uber Eats doesn't retry
+        console.error('Error processing webhook:', error.message);
+        // Always return 200 so Uber Eats doesn't retry indefinitely
         return Response.json({ received: true, processing_error: error.message });
     }
 });
