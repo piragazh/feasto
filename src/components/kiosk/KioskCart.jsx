@@ -69,6 +69,15 @@ export default function KioskCart({
                                             ))}
                                         </div>
                                     )}
+                                    {item.customization_options?.length > 0 && (
+                                        <button
+                                            onClick={() => setEditingItem(item)}
+                                            className="mt-2 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                                        >
+                                            <Pencil className="h-3 w-3" />
+                                            Edit customizations
+                                        </button>
+                                    )}
                                     <div className="flex items-center justify-between mt-3">
                                         <span className="text-orange-400 font-bold text-base">£{(item.price * item.quantity).toFixed(2)}</span>
                                         <div className="flex items-center gap-2 bg-gray-800 rounded-xl p-1">
