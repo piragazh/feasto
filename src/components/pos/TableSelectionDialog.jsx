@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from 'react';
@@ -16,6 +16,7 @@ export default function TableSelectionDialog({ open, onClose, tables, onSelectTa
             <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-white">Select a Table</DialogTitle>
+                    <DialogDescription>Choose a table to add items to</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">

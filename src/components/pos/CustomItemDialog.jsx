@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +70,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
             <DialogContent className={`${dlg} max-w-md max-h-[85vh] overflow-y-auto ${showKeyboard ? 'pb-80' : ''}`}>
                 <DialogHeader>
                     <DialogTitle className={`${labelCls} text-xl`}>Add Custom Item</DialogTitle>
+                    <DialogDescription>Enter the item name and price to add to the cart</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
