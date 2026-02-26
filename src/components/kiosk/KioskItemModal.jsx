@@ -198,17 +198,26 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                             </button>
                                         ))}
                                     </div>
-                                    {/* Show meal_customizations for the selected upgrade option */}
+                                    {/* Show meal_customizations only when an upgrade option is selected */}
                                     {customizations[opt.name] && (() => {
-                                        // meal_customizations lives on the opt group itself, not on individual options
-                                        const mealCustomizations = opt.meal_customizations || 
+                                        const mealCustomizations = opt.meal_customizations ||
                                             opt.options?.find(o => o.label === customizations[opt.name])?.meal_customizations;
-                                        return mealCustomizations?.map((mealOpt, mi) => (
+                                        if (!mealCustomizations?.length) return null;
+                                        return mealCustomizations.map((mealOpt, mi) => {
+                                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
+                                            const selectedArr = Array.isArray(customizations[mealCustomKey]) ? customizations[mealCustomKey] : [];
+                                            const requiredCount = mealOpt.type === 'multiple' ? (mealOpt.max_quantity || 1) : null;
+                                            return (
                                             <div key={mi} className="mt-4 pl-3 border-l-2 border-orange-500/40">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <h4 className="text-white font-semibold text-sm">{mealOpt.name}</h4>
                                                     {mealOpt.required && (
                                                         <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-xs px-2 py-0.5 rounded-full">Required</span>
+                                                    )}
+                                                    {requiredCount && (
+                                                        <span className="bg-gray-700 text-gray-400 text-xs px-2 py-0.5 rounded-full">
+                                                            {selectedArr.length}/{requiredCount} selected
+                                                        </span>
                                                     )}
                                                 </div>
                                                 {mealOpt.type === 'single' ? (
