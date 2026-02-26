@@ -82,6 +82,7 @@ import TableOrder from './pages/TableOrder';
 import TabletDashboard from './pages/TabletDashboard';
 import TermsOfService from './pages/TermsOfService';
 import TrackOrder from './pages/TrackOrder';
+import KioskDashboard from './pages/KioskDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -121,6 +122,7 @@ export const PAGES = {
     "TabletDashboard": TabletDashboard,
     "TermsOfService": TermsOfService,
     "TrackOrder": TrackOrder,
+    "KioskDashboard": KioskDashboard,
 }
 
 export const pagesConfig = {
