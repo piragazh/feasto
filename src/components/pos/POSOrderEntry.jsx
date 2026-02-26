@@ -66,6 +66,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         try { return JSON.parse(localStorage.getItem('pos_held_orders') || '[]'); } catch { return []; }
     });
     const [heldDrawerOpen, setHeldDrawerOpen] = useState(false);
+    const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+    const [phoneDetails, setPhoneDetails] = useState({});
 
     React.useEffect(() => { setOptimisticCart(cart); }, [cart]);
 
