@@ -134,9 +134,55 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         return { offline: false };
     };
 
+    const printReceiptAfterPayment = async (orderData, finalPayments) => {
+        const config = restaurant?.printer_config;
+        if (!config?.auto_print && !config?.bluetooth_printer?.id) return; // silent skip if not configured
+        if (!config?.bluetooth_printer?.id) return;
+        try {
+            const dominantMethod = finalPayments.length === 1 ? finalPayments[0].method : 'cash';
+            const hasCash = finalPayments.find(p => p.method === 'cash');
+            const changeAmt = Math.max(0, finalPayments.reduce((s, p) => s + p.amount, 0) - effectiveTotal);
+            const fakeOrder = {
+                ...orderData,
+                id: Date.now().toString(),
+                created_date: new Date().toISOString(),
+                payment_method: dominantMethod,
+                notes: hasCash && changeAmt > 0 ? `Change: £${changeAmt.toFixed(2)}` : orderData.notes,
+            };
+            await printerService.printReceipt(fakeOrder, restaurant, config);
+        } catch (e) {
+            // silently fail — don't block payment completion
+            console.warn('Auto-print failed:', e.message);
+        }
+    };
+
     const completePayment = async (finalPayments) => {
         setIsProcessing(true);
         try {
+            const orderData = {
+                restaurant_id: restaurantId,
+                restaurant_name: restaurantName || 'POS Order',
+                items: cart.map(item => ({
+                    menu_item_id: item.menu_item_id || item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    customizations: item.customizations || {}
+                })),
+                subtotal: cartSubtotal,
+                delivery_fee: 0,
+                discount: discount?.amount || 0,
+                total: effectiveTotal,
+                status: 'confirmed',
+                order_type: (() => {
+                    const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
+                    return isPhoneOrder ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection');
+                })(),
+                payment_method: finalPayments.length === 1 ? finalPayments[0].method : 'cash',
+                notes: finalPayments.length > 1
+                    ? finalPayments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
+                    : undefined,
+            };
             const result = await createOrder(finalPayments);
             const hasCash = finalPayments.find(p => p.method === 'cash');
             if (result?.offline) {
@@ -154,6 +200,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 restaurantName,
                 change: Math.max(0, change),
             });
+            // Auto-print receipt
+            await printReceiptAfterPayment(orderData, finalPayments);
             onPaymentComplete();
         } catch (e) {
             toast.error('Payment failed');
