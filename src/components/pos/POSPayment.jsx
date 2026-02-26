@@ -204,11 +204,29 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setShowCashConfirm(true);
     };
 
-    // Card confirm
+    // Card confirm — route through terminal if configured
     const processCard = async () => {
         const amount = numericInput > 0 ? numericInput : remaining;
-        addPayment('card', amount);
         setShowCardConfirm(false);
+
+        if (hasConfiguredTerminal) {
+            // Terminal flow: show waiting screen
+            setTerminalAmount(amount);
+            setTerminalStep('waiting');
+        } else {
+            // No terminal configured: fallback — record card payment immediately
+            addPayment('card', amount);
+        }
+    };
+
+    const handleTerminalSuccess = () => {
+        setTerminalStep(null);
+        addPayment('card', terminalAmount);
+    };
+
+    const handleTerminalFailure = () => {
+        setTerminalStep(null);
+        toast.error('Card payment declined or cancelled. Please try again.');
     };
 
     if (cart.length === 0) {
