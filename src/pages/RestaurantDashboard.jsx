@@ -553,12 +553,13 @@ export default function RestaurantDashboard() {
                 {/* SETTINGS SECTION */}
                 {activeSection === 'settings' && (
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4">
+                        <TabsList className="mb-4 flex-wrap">
                             <TabsTrigger value="settings">Restaurant Settings</TabsTrigger>
                             <TabsTrigger value="branding">Branding</TabsTrigger>
                             <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
                             <TabsTrigger value="integrations">Third-Party Orders</TabsTrigger>
                             <TabsTrigger value="pos">POS Configurations</TabsTrigger>
+                            <TabsTrigger value="kiosk">Kiosk</TabsTrigger>
                             <TabsTrigger value="sms">SMS Notifications</TabsTrigger>
                             <TabsTrigger value="staff">Staff</TabsTrigger>
                         </TabsList>
