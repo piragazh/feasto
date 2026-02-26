@@ -199,92 +199,13 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                         ))}
                                     </div>
                                     {/* Show meal_customizations only when an upgrade option is selected */}
-                                    {customizations[opt.name] && (() => {
-                                        const mealCustomizations = opt.meal_customizations ||
-                                            opt.options?.find(o => o.label === customizations[opt.name])?.meal_customizations;
-                                        if (!mealCustomizations?.length) return null;
-                                        return mealCustomizations.map((mealOpt, mi) => {
-                                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
-                                            const selectedArr = Array.isArray(customizations[mealCustomKey]) ? customizations[mealCustomKey] : [];
-                                            const requiredCount = mealOpt.type === 'multiple' ? (mealOpt.max_quantity || 1) : null;
-                                            return (
-                                            <div key={mi} className="mt-4 pl-3 border-l-2 border-orange-500/40">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h4 className="text-white font-semibold text-sm">{mealOpt.name}</h4>
-                                                    {mealOpt.required && (
-                                                        <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-xs px-2 py-0.5 rounded-full">Required</span>
-                                                    )}
-                                                    {requiredCount && (
-                                                        <span className="bg-gray-700 text-gray-400 text-xs px-2 py-0.5 rounded-full">
-                                                            {selectedArr.length}/{requiredCount} selected
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {mealOpt.type === 'single' ? (
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {mealOpt.options?.map((mc, mci) => {
-                                                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
-                                                            return (
-                                                                <button
-                                                                    key={mci}
-                                                                    onClick={() => setCustomizations(p => ({ ...p, [mealCustomKey]: mc.label }))}
-                                                                    className={`p-3 rounded-xl border text-left transition-all ${
-                                                                        customizations[mealCustomKey] === mc.label
-                                                                            ? 'bg-orange-500 border-orange-500 text-white'
-                                                                            : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
-                                                                    }`}
-                                                                >
-                                                                    <p className="font-semibold text-xs">{mc.label}</p>
-                                                                    {mc.price > 0 && (
-                                                                        <p className={`text-xs mt-0.5 ${customizations[mealCustomKey] === mc.label ? 'text-white/70' : 'text-orange-400'}`}>
-                                                                            +£{mc.price.toFixed(2)}
-                                                                        </p>
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-2">
-                                                        {mealOpt.options?.map((mc, mci) => {
-                                                            const mealCustomKey = `${opt.name}_meal_${mealOpt.name}`;
-                                                            const curArr = customizations[mealCustomKey] || [];
-                                                            const mealSelected = curArr.includes(mc.label);
-                                                            const maxQty = mealOpt.max_quantity || 99;
-                                                            const atMax = curArr.length >= maxQty;
-                                                            return (
-                                                                <button
-                                                                    key={mci}
-                                                                    onClick={() => {
-                                                                        if (!mealSelected && atMax) {
-                                                                            setError(`Max ${maxQty} selection${maxQty > 1 ? 's' : ''} for ${mealOpt.name}`);
-                                                                            return;
-                                                                        }
-                                                                        setCustomizations(p => ({
-                                                                            ...p,
-                                                                            [mealCustomKey]: mealSelected ? curArr.filter(c => c !== mc.label) : [...curArr, mc.label]
-                                                                        }));
-                                                                    }}
-                                                                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                                                        mealSelected ? 'bg-orange-500/10 border-orange-500/40' : 'bg-gray-800 border-gray-700 hover:border-gray-500'
-                                                                    }`}
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${mealSelected ? 'bg-orange-500 border-orange-500' : 'border-gray-600'}`}>
-                                                                            {mealSelected && <span className="text-white text-xs font-black">✓</span>}
-                                                                        </div>
-                                                                        <span className={`font-semibold text-xs ${mealSelected ? 'text-white' : 'text-gray-300'}`}>{mc.label}</span>
-                                                                    </div>
-                                                                    {mc.price > 0 && <span className="text-orange-400 text-xs font-semibold">+£{mc.price.toFixed(2)}</span>}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            );
-                                        });
-                                    })()}
+                                    <MealSubCustomizations
+                                        opt={opt}
+                                        selectedUpgrade={customizations[opt.name]}
+                                        customizations={customizations}
+                                        setCustomizations={setCustomizations}
+                                        setError={setError}
+                                    />
                                 </div>
                             ) : (
                                 <div className="space-y-2">
