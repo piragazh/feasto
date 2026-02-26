@@ -13,11 +13,15 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Twilio not configured' }, { status: 500 });
         }
 
-        // Verify Twilio signature
+        // Verify Twilio signature (must be before creating base44 client)
         const isValidRequest = twilio.validateRequest(authToken, signature, url, body);
         if (!isValidRequest) {
-            return Response.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+            console.warn('Invalid Twilio signature attempt');
+            return new Response('Unauthorized', { status: 403 });
         }
+
+        // Initialize base44 client after signature validation
+        const base44 = createClientFromRequest(req);
 
         const params = new URLSearchParams(body);
         let incomingMessage = params.get('Body')?.trim().toLowerCase() || '';
@@ -47,33 +51,43 @@ Deno.serve(async (req) => {
             return new Response('OK', { status: 200 });
         }
 
-        // Normalize the sender's phone number to find the matching restaurant
-        const base44 = createClientFromRequest(req);
-
         // Strip "whatsapp:" prefix and normalize
         let senderPhone = fromPhone.replace('whatsapp:', '');
         // Convert +447... to 07... for matching against alert_phone
         const senderPhoneUK = senderPhone.startsWith('+44') ? '0' + senderPhone.slice(3) : senderPhone;
 
         // Find the restaurant whose alert_phone matches sender
-        const allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
+        let allRestaurants = [];
+        try {
+            allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
+        } catch (error) {
+            console.error('Failed to fetch restaurants:', error);
+            return new Response('OK', { status: 200 });
+        }
+
         const restaurant = allRestaurants.find(r =>
-            r.alert_phone &&
+            r.alert_phone && r.whatsapp_alerts_enabled && // Check WhatsApp is enabled
             (r.alert_phone === senderPhoneUK || r.alert_phone === senderPhone || r.alert_phone.replace(/\s/g, '') === senderPhoneUK.replace(/\s/g, ''))
         );
 
         if (!restaurant) {
-            console.log('No restaurant found for phone:', senderPhone);
+            console.log('No restaurant found or WhatsApp disabled for phone:', senderPhone);
             return new Response('OK', { status: 200 });
         }
 
         // Find the most recent pending order for this restaurant
-        const pendingOrders = await base44.asServiceRole.entities.Order.filter({
-            restaurant_id: restaurant.id,
-            status: 'pending'
-        });
+        let pendingOrders = [];
+        try {
+            pendingOrders = await base44.asServiceRole.entities.Order.filter({
+                restaurant_id: restaurant.id,
+                status: 'pending'
+            });
+        } catch (error) {
+            console.error('Failed to fetch pending orders:', error);
+            return new Response('OK', { status: 200 });
+        }
 
-        if (!pendingOrders || pendingOrders.length === 0) {
+        if (!pendingOrders?.length) {
             // No pending orders
             const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
             const authToken2 = Deno.env.get('TWILIO_AUTH_TOKEN');

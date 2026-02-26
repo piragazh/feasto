@@ -6,13 +6,13 @@ Deno.serve(async (req) => {
 
         const { orderId, restaurantId, restaurantName } = await req.json();
 
-        if (!orderId || !restaurantName) {
+        if (!orderId || !restaurantName || !restaurantId) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         // SECURITY: Verify order exists and was created recently (within last 5 minutes)
         const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
-        if (orders.length === 0) {
+        if (!orders?.length) {
             return Response.json({ error: 'Order not found' }, { status: 404 });
         }
         
@@ -52,11 +52,20 @@ Deno.serve(async (req) => {
             return Response.json({ 
                 success: true, 
                 message: 'SMS alerts disabled for this restaurant',
-                simulated: true 
+                disabled: true 
             });
         }
 
         const alertPhone = restaurant.alert_phone;
+        
+        // Validate phone number format
+        if (!alertPhone.match(/^(\+44|0)[0-9\s]{9,}$/)) {
+            console.error(`Invalid phone format for restaurant: ${restaurantId}`);
+            return Response.json({ 
+                success: false,
+                message: 'Invalid phone number format'
+            }, { status: 400 });
+        }
 
         // Order already fetched above for validation
 

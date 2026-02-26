@@ -16,11 +16,16 @@ Deno.serve(async (req) => {
 
         // Fetch order details
         const orders = await base44.asServiceRole.entities.Order.filter({ id: order_id });
-        if (!orders || orders.length === 0) {
+        if (!orders?.length) {
             return Response.json({ error: 'Order not found' }, { status: 404 });
         }
 
         const order = orders[0];
+
+        // Validate order has required fields
+        if (!order.total || !order.items?.length || !order.guest_name) {
+            return Response.json({ error: 'Order missing required fields' }, { status: 400 });
+        }
 
         // Format order details for WhatsApp message
         const itemsList = order.items
