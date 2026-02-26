@@ -287,7 +287,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     }
 
     return (
-        <div className="grid grid-cols-2 gap-4 h-full">
+        <div className={`grid grid-cols-2 gap-4 h-full ${t.bg}`}>
             {/* LEFT: Summary */}
             <div className={`${t.panel} rounded-lg border p-4 flex flex-col`}>
                 <div className="flex justify-between items-center mb-3">
