@@ -175,8 +175,10 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                     </div>
                                     {/* Show meal_customizations for the selected upgrade option */}
                                     {customizations[opt.name] && (() => {
-                                        const selectedOption = opt.options?.find(o => o.label === customizations[opt.name]);
-                                        return selectedOption?.meal_customizations?.map((mealOpt, mi) => (
+                                        // meal_customizations lives on the opt group itself, not on individual options
+                                        const mealCustomizations = opt.meal_customizations || 
+                                            opt.options?.find(o => o.label === customizations[opt.name])?.meal_customizations;
+                                        return mealCustomizations?.map((mealOpt, mi) => (
                                             <div key={mi} className="mt-4 pl-3 border-l-2 border-orange-500/40">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <h4 className="text-white font-semibold text-sm">{mealOpt.name}</h4>
