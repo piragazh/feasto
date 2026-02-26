@@ -66,19 +66,11 @@ Deno.serve(async (req) => {
 
         const client = twilio(accountSid, authToken);
 
-        // Send WhatsApp message with quick reply buttons
+        // Send WhatsApp message with text instructions for reply
         const message = await client.messages.create({
             from: `whatsapp:${twilioPhoneNumber}`,
             to: `whatsapp:${toPhone}`,
-            body: messageBody,
-            persistentAction: ['CALL 1', 'OPEN_BROWSER_ACTION']  // Quick actions
-        }).catch(async () => {
-            // Fallback: send message with text instructions
-            return await client.messages.create({
-                from: `whatsapp:${twilioPhoneNumber}`,
-                to: `whatsapp:${toPhone}`,
-                body: messageBody + '\n\n✅ Reply "ACCEPT" to confirm\n❌ Reply "REJECT" to decline'
-            });
+            body: messageBody + '\n\n✅ Reply "ACCEPT" to confirm\n❌ Reply "REJECT" to decline'
         });
 
         // Store WhatsApp message tracking - include order_id in message so reply handler can find it
