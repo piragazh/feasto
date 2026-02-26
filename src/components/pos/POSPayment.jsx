@@ -542,7 +542,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={processCard} disabled={isProcessing}
-                            className="bg-blue-600 hover:bg-blue-700 text-white">
+                            style={{ backgroundColor: primaryColor }}
+                            className="hover:opacity-90 text-white">
                             {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
