@@ -424,7 +424,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </Button>
 
                         <Button onClick={() => { setActiveMethod('card'); }}
-                            className={`w-full h-10 text-sm font-bold ${t.cardBtn}`}>
+                            style={{ backgroundColor: primaryColor }}
+                            className={`w-full h-10 text-sm font-bold ${cardBtnStyle}`}>
                             Charge £{remaining.toFixed(2)} to Card
                         </Button>
                     </>
