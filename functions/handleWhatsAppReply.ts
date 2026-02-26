@@ -20,8 +20,14 @@ Deno.serve(async (req) => {
         }
 
         const params = new URLSearchParams(body);
-        const incomingMessage = params.get('Body')?.trim().toLowerCase() || '';
+        let incomingMessage = params.get('Body')?.trim().toLowerCase() || '';
+        const buttonPayload = params.get('ButtonPayload')?.trim().toLowerCase() || ''; // For interactive buttons
         const fromPhone = params.get('From') || ''; // e.g. "whatsapp:+447..."
+
+        // Use button payload if available (from interactive message), otherwise use text body
+        if (buttonPayload) {
+            incomingMessage = buttonPayload;
+        }
 
         // Parse the action from the message
         let action = null;
