@@ -263,6 +263,18 @@ export default function RestaurantDashboard() {
                                     <span className="sm:hidden">{pendingOrders.length}</span>
                                 </Badge>
                             )}
+                            {restaurant?.pos_enabled && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
+                                    className="hidden sm:flex items-center gap-2"
+                                    title="Open Self-Order Kiosk"
+                                >
+                                    <TabletSmartphone className="h-4 w-4" />
+                                    Kiosk
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"
