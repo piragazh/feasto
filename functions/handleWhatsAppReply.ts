@@ -20,69 +20,116 @@ Deno.serve(async (req) => {
         }
 
         const params = new URLSearchParams(body);
-        const incomingMessage = params.get('Body')?.toLowerCase() || '';
-        const fromPhone = params.get('From') || '';
-        const messageSid = params.get('MessageSid') || '';
+        const incomingMessage = params.get('Body')?.trim().toLowerCase() || '';
+        const fromPhone = params.get('From') || ''; // e.g. "whatsapp:+447..."
 
         // Parse the action from the message
         let action = null;
-        if (incomingMessage.includes('accept') || incomingMessage.includes('yes') || incomingMessage === '1') {
+        if (incomingMessage === 'accept' || incomingMessage.startsWith('accept') || incomingMessage === 'yes' || incomingMessage === '1') {
             action = 'confirmed';
-        } else if (incomingMessage.includes('reject') || incomingMessage.includes('no') || incomingMessage === '2') {
+        } else if (incomingMessage === 'reject' || incomingMessage.startsWith('reject') || incomingMessage === 'no' || incomingMessage === '2') {
             action = 'cancelled';
         }
 
         if (!action) {
+            // Unrecognised reply - send help message
+            const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+            const authToken2 = Deno.env.get('TWILIO_AUTH_TOKEN');
+            const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+            if (accountSid && authToken2 && twilioPhoneNumber) {
+                const client2 = twilio(accountSid, authToken2);
+                await client2.messages.create({
+                    from: `whatsapp:${twilioPhoneNumber}`,
+                    to: fromPhone,
+                    body: `Reply *ACCEPT* to confirm an order or *REJECT* to decline it.`
+                });
+            }
             return new Response('OK', { status: 200 });
         }
 
-        // Find the order by WhatsApp message reference
+        // Normalize the sender's phone number to find the matching restaurant
         const base44 = createClientFromRequest(req);
-        const messages = await base44.asServiceRole.entities.Message.filter({
-            message: { $regex: messageSid }
+
+        // Strip "whatsapp:" prefix and normalize
+        let senderPhone = fromPhone.replace('whatsapp:', '');
+        // Convert +447... to 07... for matching against alert_phone
+        const senderPhoneUK = senderPhone.startsWith('+44') ? '0' + senderPhone.slice(3) : senderPhone;
+
+        // Find the restaurant whose alert_phone matches sender
+        const allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
+        const restaurant = allRestaurants.find(r =>
+            r.alert_phone &&
+            (r.alert_phone === senderPhoneUK || r.alert_phone === senderPhone || r.alert_phone.replace(/\s/g, '') === senderPhoneUK.replace(/\s/g, ''))
+        );
+
+        if (!restaurant) {
+            console.log('No restaurant found for phone:', senderPhone);
+            return new Response('OK', { status: 200 });
+        }
+
+        // Find the most recent pending order for this restaurant
+        const pendingOrders = await base44.asServiceRole.entities.Order.filter({
+            restaurant_id: restaurant.id,
+            status: 'pending'
         });
 
-        if (messages && messages.length > 0) {
-            const orderMsg = messages[0];
-            const order = (await base44.asServiceRole.entities.Order.filter({ id: orderMsg.order_id }))[0];
-
-            if (order && order.status === 'pending') {
-                // Update order status based on action
-                await base44.asServiceRole.entities.Order.update(order.id, {
-                    status: action,
-                    rejection_reason: action === 'cancelled' ? 'Rejected via WhatsApp' : null,
-                    status_history: [
-                        ...(order.status_history || []),
-                        {
-                            status: action,
-                            timestamp: new Date().toISOString(),
-                            note: `Order ${action} via WhatsApp by restaurant`
-                        }
-                    ]
+        if (!pendingOrders || pendingOrders.length === 0) {
+            // No pending orders
+            const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+            const authToken2 = Deno.env.get('TWILIO_AUTH_TOKEN');
+            const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+            if (accountSid && authToken2 && twilioPhoneNumber) {
+                const client2 = twilio(accountSid, authToken2);
+                await client2.messages.create({
+                    from: `whatsapp:${twilioPhoneNumber}`,
+                    to: fromPhone,
+                    body: `No pending orders found to ${action === 'confirmed' ? 'accept' : 'reject'}.`
                 });
-
-                // Store the reply message
-                await base44.asServiceRole.entities.Message.create({
-                    order_id: orderMsg.order_id,
-                    restaurant_id: order.restaurant_id,
-                    sender_type: 'restaurant',
-                    message: `Restaurant replied: ${action.toUpperCase()} via WhatsApp`,
-                    is_read: false
-                });
-
-                // Send confirmation back to restaurant
-                const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-                const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
-
-                if (accountSid && twilioPhoneNumber) {
-                    const client = twilio(accountSid, Deno.env.get('TWILIO_AUTH_TOKEN'));
-                    await client.messages.create({
-                        from: `whatsapp:${twilioPhoneNumber}`,
-                        to: fromPhone,
-                        body: `✅ Order #${order.order_number || order.id} has been ${action === 'confirmed' ? 'accepted' : 'rejected'}.`
-                    });
-                }
             }
+            return new Response('OK', { status: 200 });
+        }
+
+        // Sort by created_date descending - take the most recent pending order
+        pendingOrders.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+        const order = pendingOrders[0];
+
+        // Update the order status
+        await base44.asServiceRole.entities.Order.update(order.id, {
+            status: action,
+            rejection_reason: action === 'cancelled' ? 'Rejected via WhatsApp' : undefined,
+            status_history: [
+                ...(order.status_history || []),
+                {
+                    status: action,
+                    timestamp: new Date().toISOString(),
+                    note: `Order ${action} via WhatsApp by restaurant`
+                }
+            ]
+        });
+
+        // Store the reply for the message log
+        await base44.asServiceRole.entities.Message.create({
+            order_id: order.id,
+            restaurant_id: order.restaurant_id,
+            sender_type: 'restaurant',
+            message: `Restaurant ${action === 'confirmed' ? 'ACCEPTED' : 'REJECTED'} order via WhatsApp`,
+            is_read: false
+        });
+
+        // Send confirmation back to the restaurant
+        const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+        const authToken3 = Deno.env.get('TWILIO_AUTH_TOKEN');
+        const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+
+        if (accountSid && authToken3 && twilioPhoneNumber) {
+            const client = twilio(accountSid, authToken3);
+            const orderLabel = order.order_number || order.id.slice(-6);
+            const emoji = action === 'confirmed' ? '✅' : '❌';
+            await client.messages.create({
+                from: `whatsapp:${twilioPhoneNumber}`,
+                to: fromPhone,
+                body: `${emoji} Order #${orderLabel} has been ${action === 'confirmed' ? 'ACCEPTED' : 'REJECTED'} successfully.`
+            });
         }
 
         return new Response('OK', { status: 200 });
