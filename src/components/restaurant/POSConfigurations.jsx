@@ -1,13 +1,14 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Monitor, Printer, PlusCircle, LayoutGrid, Layout } from 'lucide-react';
+import { Monitor, PlusCircle, LayoutGrid, Layout } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from '@/utils';
-import BluetoothPrinterManager from './BluetoothPrinterManager';
 import CustomItemsManager from './CustomItemsManager';
 import TableManagement from './TableManagement';
 import POSLayoutSelector from '../pos/POSLayoutSelector';
 import PhoneOrderSettings from '../pos/PhoneOrderSettings';
+import POSPrinterSettings from '../pos/POSPrinterSettings';
+import POSCardTerminalSettings from '../pos/POSCardTerminalSettings';
 
 export default function POSConfigurations({ restaurantId }) {
     return (
@@ -22,8 +23,8 @@ export default function POSConfigurations({ restaurantId }) {
                         Access and configure your restaurant's POS terminal
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <Button 
+                <CardContent>
+                    <Button
                         onClick={() => window.location.href = createPageUrl('POSDashboard') + `?restaurantId=${restaurantId}`}
                         className="w-full bg-orange-500 hover:bg-orange-600"
                     >
@@ -33,20 +34,9 @@ export default function POSConfigurations({ restaurantId }) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Printer className="h-5 w-5" />
-                        Receipt Printer
-                    </CardTitle>
-                    <CardDescription>
-                        Configure Bluetooth receipt printer and settings
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <BluetoothPrinterManager restaurantId={restaurantId} />
-                </CardContent>
-            </Card>
+            <POSPrinterSettings restaurantId={restaurantId} />
+
+            <POSCardTerminalSettings restaurantId={restaurantId} />
 
             <Card>
                 <CardHeader>
@@ -94,6 +84,6 @@ export default function POSConfigurations({ restaurantId }) {
                     <TableManagement restaurantId={restaurantId} />
                 </CardContent>
             </Card>
-            </div>
-            );
-            }
+        </div>
+    );
+}
