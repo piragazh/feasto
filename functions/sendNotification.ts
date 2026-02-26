@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
                         is_read: false
                     });
 
-                    console.log(`✅ Notification sent for order ${orderId}: ${notification.title}`);
+                    console.log(`Notification created for order ${orderId}: ${notification.title}`);
                 }
             }
 
