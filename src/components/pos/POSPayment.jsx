@@ -18,7 +18,6 @@ const QUICK_AMOUNTS = [5, 10, 20, 50];
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant }) {
     const isDark = posTheme === 'dark';
-    const primaryColor = restaurant?.theme_primary_color || '#f97316'; // fallback to orange
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
         right:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -42,11 +41,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         changeBox:isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200',
         changeTxt:isDark ? 'text-green-300' : 'text-green-600',
         changeAmt:isDark ? 'text-white' : 'text-green-900',
+        cashBtn:  'bg-green-600 hover:bg-green-500 text-white',
+        cardBtn:  'bg-blue-600 hover:bg-blue-500 text-white',
+        cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
     };
-    
-    const cashBtnStyle = `hover:opacity-90 text-white`;
-    const cardBtnStyle = `hover:opacity-90 text-white`;
-    const cardBtn2Style = isDark ? 'hover:opacity-75 border' : 'hover:opacity-75 border';
     // Local discount state — initialised from prop (set in cart), can be changed on payment screen too
     const [discount, setDiscount] = useState(initialDiscount || null);
     const handleApplyDiscount = (d) => { setDiscount(d); if (onApplyDiscount) onApplyDiscount(d); };
@@ -395,13 +393,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <>
                         <div className="grid grid-cols-2 gap-3 mb-4">
                             <Button onClick={() => setActiveMethod('cash')}
-                                style={{ backgroundColor: primaryColor }}
-                                className={`h-14 text-lg font-bold ${cashBtnStyle}`}>
+                                className={`h-14 text-lg font-bold ${t.cashBtn}`}>
                                 <DollarSign className="h-5 w-5 mr-1" /> Cash
                             </Button>
                             <Button onClick={() => setActiveMethod('card')}
-                                style={{ backgroundColor: primaryColor }}
-                                className={`h-14 text-lg font-bold ${cardBtnStyle}`}>
+                                className={`h-14 text-lg font-bold ${t.cardBtn}`}>
                                 <CreditCard className="h-5 w-5 mr-1" /> Card
                             </Button>
                         </div>
@@ -424,8 +420,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </Button>
 
                         <Button onClick={() => { setActiveMethod('card'); }}
-                            style={{ backgroundColor: primaryColor }}
-                            className={`w-full h-10 text-sm font-bold ${cardBtnStyle}`}>
+                            className={`w-full h-10 text-sm font-bold ${t.cardBtn}`}>
                             Charge £{remaining.toFixed(2)} to Card
                         </Button>
                     </>
@@ -456,13 +451,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <p className="text-blue-500 text-sm font-semibold">Card payment</p>
                         <div className="grid grid-cols-2 gap-3">
                             <Button onClick={() => { setRawValue(String(Math.round(remaining * 100))); setShowCardConfirm(true); }}
-                                style={{ backgroundColor: primaryColor }}
-                                className={`h-14 text-sm font-bold ${cardBtnStyle}`}>
+                                className={`h-14 text-sm font-bold ${t.cardBtn}`}>
                                 Full remaining<br/>£{remaining.toFixed(2)}
                             </Button>
                             <Button onClick={() => setShowCardConfirm(true)} disabled={numericInput <= 0}
-                                style={{ borderColor: primaryColor, color: isDark ? primaryColor : primaryColor }}
-                                className={`h-14 text-sm font-bold ${cardBtn2Style}`}>
+                                className={`h-14 text-sm font-bold ${t.cardBtn2}`}>
                                 Custom amount<br/>{numericInput > 0 ? `£${numericInput.toFixed(2)}` : '(enter below)'}
                             </Button>
                         </div>
@@ -493,7 +486,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { setShowCashConfirm(false); addPayment('cash', numericInput); }} style={{ backgroundColor: primaryColor }} className="hover:opacity-90 text-white">
+                        <AlertDialogAction onClick={() => { setShowCashConfirm(false); addPayment('cash', numericInput); }} className="bg-green-600 hover:bg-green-700 text-white">
                             Process £{numericInput.toFixed(2)}
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -514,7 +507,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { setShowCashUnderConfirm(false); addPayment('cash', numericInput); }} style={{ backgroundColor: primaryColor }} className="hover:opacity-90 text-white">
+                        <AlertDialogAction onClick={() => { setShowCashUnderConfirm(false); addPayment('cash', numericInput); }} className="bg-orange-500 hover:bg-orange-600 text-white">
                             Accept Partial
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -542,8 +535,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={processCard} disabled={isProcessing}
-                            style={{ backgroundColor: primaryColor }}
-                            className="hover:opacity-90 text-white">
+                            className="bg-blue-600 hover:bg-blue-700 text-white">
                             {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
