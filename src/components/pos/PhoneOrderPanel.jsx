@@ -148,10 +148,10 @@ export default function PhoneOrderPanel({ orderType, onOrderTypeChange, isDark, 
         if (!postcode || postcode.length < 3) return;
         setPostcodeSearching(true);
         try {
-            const orders = await base44.entities.Order.list();
-            const matches = orders.filter(o =>
-                o.delivery_address?.toLowerCase().includes(postcode.toLowerCase().replace(/\s/g, ''))
-                || o.delivery_address?.toLowerCase().includes(postcode.toLowerCase())
+            const customers = await base44.entities.Customer.filter({ restaurant_id: restaurantId });
+            const matches = customers.filter(c =>
+                c.delivery_address?.toLowerCase().includes(postcode.toLowerCase().replace(/\s/g, ''))
+                || c.delivery_address?.toLowerCase().includes(postcode.toLowerCase())
             );
             if (matches.length > 0) {
                 setPostcodeResults(matches.slice(0, 10));
