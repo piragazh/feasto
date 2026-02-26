@@ -10,12 +10,12 @@ Deno.serve(async (req) => {
         const order_id = body.order_id || body.event?.entity_id;
         const restaurant_phone = body.restaurant_phone; // optional override
 
-        if (!order_id || !restaurant_phone) {
-            return Response.json({ error: 'Missing order_id or restaurant_phone' }, { status: 400 });
+        if (!order_id) {
+            return Response.json({ error: 'Missing order_id' }, { status: 400 });
         }
 
         // Fetch order details
-        const orders = await base44.entities.Order.filter({ id: order_id });
+        const orders = await base44.asServiceRole.entities.Order.filter({ id: order_id });
         if (!orders || orders.length === 0) {
             return Response.json({ error: 'Order not found' }, { status: 404 });
         }
