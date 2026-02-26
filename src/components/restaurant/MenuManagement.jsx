@@ -1643,7 +1643,7 @@ CRITICAL REQUIREMENTS:
                                     {item.customization_options.length} customization{item.customization_options.length > 1 ? 's' : ''}
                                 </p>
                             )}
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                                 <Button
                                     size="sm"
                                     variant="outline"
@@ -1652,6 +1652,38 @@ CRITICAL REQUIREMENTS:
                                 >
                                     {item.is_available === false ? 'Mark Available' : 'Mark Unavailable'}
                                 </Button>
+                                {item.customization_options?.length > 0 && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setCopiedCustomizations(item.customization_options);
+                                            toast.success('All customizations copied!');
+                                        }}
+                                        title="Copy all customizations from this item"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                )}
+                                {copiedCustomizations && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            handleEdit(item);
+                                            setTimeout(() => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    customization_options: JSON.parse(JSON.stringify(copiedCustomizations))
+                                                }));
+                                                toast.success('Customizations pasted! Click Create to save.');
+                                            }, 100);
+                                        }}
+                                        title="Paste copied customizations to this item"
+                                    >
+                                        <Clipboard className="h-4 w-4" />
+                                    </Button>
+                                )}
                                 <Button
                                     size="sm"
                                     variant="outline"
