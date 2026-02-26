@@ -231,7 +231,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)} className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>← Back</button>
                     </div>
-                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); onClearCart(); }} onBackToCart={() => setShowPayment(false)} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} />
+                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); onClearCart(); }} onBackToCart={() => setShowPayment(false)} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} />
                 </div>
             );
         }
