@@ -304,6 +304,29 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             <POSOfflineSyncBanner restaurantId={restaurantId} />
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
+                {layoutCols.quickActions && (
+                    <div className="md:col-span-1 overflow-hidden flex flex-col gap-2">
+                        <button onClick={() => setViewMode('tables')} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
+                            <Users className="h-4 w-4 mb-1" />
+                            Tables
+                        </button>
+                        <button onClick={() => setCustomItemOpen(true)} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
+                            <PlusCircle className="h-4 w-4 mb-1" />
+                            Custom
+                        </button>
+                        <button onClick={holdOrder} disabled={optimisticCart.length === 0} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold border text-center transition-colors ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'}`}>
+                            <PauseCircle className="h-4 w-4 mb-1" />
+                            Hold
+                        </button>
+                        <button onClick={() => setHeldDrawerOpen(true)} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors relative`}>
+                            <PauseCircle className="h-4 w-4 mb-1" />
+                            Held
+                            {heldOrders.length > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{heldOrders.length}</span>
+                            )}
+                        </button>
+                    </div>
+                )}
                 {layoutCols.showCat && (
                     <div className={`${layoutCols.cat} overflow-hidden`}>
                         <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
