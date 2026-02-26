@@ -77,6 +77,7 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                 platform: editingPlatform,
                 email: credentials.email,
                 password: credentials.password,
+                store_id: credentials.store_id,
                 enabled: true,
             });
             toast.success(`${PLATFORMS.find(p => p.id === editingPlatform)?.name} connected`);
