@@ -102,25 +102,33 @@ export default function PayoutManagement() {
 
             // Calculate totals from period orders
             let grossEarnings = 0;
-            let platformCommission = 0;
-            let netPayout = 0;
+            let cashPaymentAmount = 0;
+            let cardPaymentAmount = 0;
 
             periodOrders.forEach(order => {
                 const orderTotal = order.total || 0;
                 grossEarnings += orderTotal;
                 
-                // Calculate commission per order
-                let commission = 0;
-                if (restaurant.commission_type === 'fixed') {
-                    commission = restaurant.fixed_commission_amount || 0;
+                // Split by payment method
+                if (order.payment_method === 'cash') {
+                    cashPaymentAmount += orderTotal;
                 } else {
-                    const rate = restaurant.commission_rate || 15;
-                    commission = orderTotal * (rate / 100);
+                    // card, apple_pay, google_pay
+                    cardPaymentAmount += orderTotal;
                 }
-                
-                platformCommission += commission;
-                netPayout += (orderTotal - commission);
             });
+
+            // Commission calculated on total earnings
+            let platformCommission = 0;
+            if (restaurant.commission_type === 'fixed') {
+                platformCommission = restaurant.fixed_commission_amount || 0;
+            } else {
+                const rate = restaurant.commission_rate || 15;
+                platformCommission = grossEarnings * (rate / 100);
+            }
+
+            // Payout = card payment amount - commission (cash goes directly to restaurant)
+            let netPayout = cardPaymentAmount - platformCommission + cashPaymentAmount;
 
             const refundedOrders = orders.filter(order => {
                 const orderDate = new Date(order.created_date);
