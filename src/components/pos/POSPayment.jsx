@@ -18,6 +18,7 @@ const QUICK_AMOUNTS = [5, 10, 20, 50];
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant }) {
     const isDark = posTheme === 'dark';
+    const primaryColor = restaurant?.theme_primary_color || '#f97316'; // fallback to orange
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
         right:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -41,10 +42,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         changeBox:isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200',
         changeTxt:isDark ? 'text-green-300' : 'text-green-600',
         changeAmt:isDark ? 'text-white' : 'text-green-900',
-        cashBtn:  'bg-green-600 hover:bg-green-500 text-white',
-        cardBtn:  'bg-blue-600 hover:bg-blue-500 text-white',
-        cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
     };
+    
+    const cashBtnStyle = `hover:opacity-90 text-white`;
+    const cardBtnStyle = `hover:opacity-90 text-white`;
+    const cardBtn2Style = isDark ? 'hover:opacity-75 border' : 'hover:opacity-75 border';
     // Local discount state — initialised from prop (set in cart), can be changed on payment screen too
     const [discount, setDiscount] = useState(initialDiscount || null);
     const handleApplyDiscount = (d) => { setDiscount(d); if (onApplyDiscount) onApplyDiscount(d); };
