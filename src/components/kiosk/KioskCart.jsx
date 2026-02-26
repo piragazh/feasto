@@ -1,10 +1,13 @@
-import React from 'react';
-import { ArrowLeft, Trash2, Plus, Minus, ShoppingCart, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Trash2, Plus, Minus, ShoppingCart, X, Pencil } from 'lucide-react';
+import KioskItemModal from './KioskItemModal';
 
 export default function KioskCart({
     cart, cartTotal, orderType, restaurant,
-    onUpdateQuantity, onRemoveItem, onBack, onCheckout, onClearCart
+    onUpdateQuantity, onRemoveItem, onBack, onCheckout, onClearCart,
+    onEditItem
 }) {
+    const [editingItem, setEditingItem] = useState(null);
     const orderTypeLabel = orderType === 'dine_in' ? 'Eat In' : 'Takeaway';
 
     return (
