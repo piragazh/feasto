@@ -100,15 +100,7 @@ export default function PayoutManagement() {
             
             console.log('Filtered period orders:', periodOrders.length);
 
-            // Get previous paid payouts for this restaurant to calculate already paid amount
-            const previousPayouts = await base44.entities.Payout.filter({
-                restaurant_id: restaurantId,
-                status: 'paid'
-            });
-
-            const totalAlreadyPaid = previousPayouts.reduce((sum, p) => sum + (p.net_payout || 0), 0);
-
-            // Calculate totals from net pay
+            // Calculate totals from period orders
             let grossEarnings = 0;
             let platformCommission = 0;
             let netPayout = 0;
@@ -148,8 +140,8 @@ export default function PayoutManagement() {
 
             netPayout -= refundsPaidByRestaurant;
 
-            // Deduct already paid amount from net payout
-            const finalNetPayout = Math.max(0, netPayout - totalAlreadyPaid);
+            // Each payout period stands alone - no deduction of previous payouts
+            const finalNetPayout = Math.max(0, netPayout);
 
             // Create payout record
             return base44.entities.Payout.create({
