@@ -60,7 +60,7 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
     });
 
     const openConnect = (platformId) => {
-        setCredentials({ email: '', password: '' });
+        setCredentials({ email: '', password: '', store_id: '' });
         setShowPassword(false);
         setEditingPlatform(platformId);
     };
