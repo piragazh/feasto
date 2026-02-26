@@ -34,6 +34,9 @@ export default function RestaurantSettings({ restaurantId }) {
         address: '',
         phone: '',
         alert_phone: '',
+        whatsapp_alerts_enabled: false,
+        sms_alerts_enabled: false,
+        order_alert_channel: 'sms',
         delivery_fee: '',
         minimum_order: '',
         tiered_delivery: { enabled: false, lower_minimum: '', lower_minimum_fee: '' },
@@ -104,6 +107,9 @@ export default function RestaurantSettings({ restaurantId }) {
                 address: restaurant.address || '',
                 phone: restaurant.phone || '',
                 alert_phone: restaurant.alert_phone || '',
+                whatsapp_alerts_enabled: restaurant.whatsapp_alerts_enabled || false,
+                sms_alerts_enabled: restaurant.sms_alerts_enabled || false,
+                order_alert_channel: restaurant.order_alert_channel || 'sms',
                 delivery_fee: restaurant.delivery_fee || '',
                 minimum_order: restaurant.minimum_order || '',
                 tiered_delivery: {
@@ -205,6 +211,9 @@ export default function RestaurantSettings({ restaurantId }) {
             address: formData.address,
             phone: formData.phone,
             alert_phone: formData.alert_phone,
+            whatsapp_alerts_enabled: formData.whatsapp_alerts_enabled,
+            sms_alerts_enabled: formData.sms_alerts_enabled,
+            order_alert_channel: formData.order_alert_channel,
             delivery_fee: parseFloat(formData.delivery_fee) || 0,
             minimum_order: parseFloat(formData.minimum_order) || 0,
             tiered_delivery: {
@@ -439,16 +448,69 @@ export default function RestaurantSettings({ restaurantId }) {
                                 placeholder="07XXX XXXXXX"
                             />
                         </div>
-                        <div>
-                            <Label>SMS Alert Phone (For New Orders) 📱</Label>
-                            <Input
-                                value={formData.alert_phone}
-                                onChange={(e) => setFormData({ ...formData, alert_phone: e.target.value })}
-                                placeholder="07XXX XXXXXX"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Receive SMS alerts for new orders on this number
-                            </p>
+                        <div className="border rounded-lg p-4 space-y-4 bg-orange-50 border-orange-200">
+                            <h3 className="font-semibold text-lg">Order Alerts</h3>
+                            <p className="text-sm text-gray-600">Choose how you want to receive notifications for new orders</p>
+                            
+                            <div>
+                                <Label>Alert Phone Number 📱</Label>
+                                <Input
+                                    value={formData.alert_phone}
+                                    onChange={(e) => setFormData({ ...formData, alert_phone: e.target.value })}
+                                    placeholder="07XXX XXXXXX"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    UK mobile number for WhatsApp or SMS alerts
+                                </p>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                                    <div>
+                                        <p className="font-medium text-sm">WhatsApp Alerts</p>
+                                        <p className="text-xs text-gray-600">Receive order notifications via WhatsApp with quick action buttons</p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.whatsapp_alerts_enabled}
+                                        onCheckedChange={(checked) => {
+                                            setFormData({ 
+                                                ...formData, 
+                                                whatsapp_alerts_enabled: checked,
+                                                order_alert_channel: checked ? 'whatsapp' : formData.sms_alerts_enabled ? 'sms' : formData.order_alert_channel
+                                            });
+                                        }}
+                                    />
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                                    <div>
+                                        <p className="font-medium text-sm">SMS Alerts</p>
+                                        <p className="text-xs text-gray-600">Receive order notifications via text message</p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.sms_alerts_enabled}
+                                        onCheckedChange={(checked) => {
+                                            setFormData({ 
+                                                ...formData, 
+                                                sms_alerts_enabled: checked,
+                                                order_alert_channel: checked ? 'sms' : formData.whatsapp_alerts_enabled ? 'whatsapp' : formData.order_alert_channel
+                                            });
+                                        }}
+                                    />
+                                </div>
+
+                                {!formData.whatsapp_alerts_enabled && !formData.sms_alerts_enabled && (
+                                    <div className="text-xs text-amber-700 bg-amber-100 border border-amber-200 p-3 rounded-lg">
+                                        ⚠️ No order alerts enabled. You won't receive notifications for new orders.
+                                    </div>
+                                )}
+
+                                {formData.whatsapp_alerts_enabled && formData.sms_alerts_enabled && (
+                                    <div className="text-xs text-blue-700 bg-blue-100 border border-blue-200 p-3 rounded-lg">
+                                        ℹ️ Both enabled. We'll use <strong>{formData.order_alert_channel === 'whatsapp' ? 'WhatsApp' : 'SMS'}</strong> as primary.
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
