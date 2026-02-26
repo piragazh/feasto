@@ -263,6 +263,20 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                                             </div>
                                         </div>
                                     </div>
+                                        {editingPlatform === 'uber_eats' && (
+                                            <div>
+                                                <Label htmlFor="tp-store">Store ID <span className="text-gray-400 font-normal">(from Uber Eats portal)</span></Label>
+                                                <Input
+                                                    id="tp-store"
+                                                    type="text"
+                                                    placeholder="e.g. abc123xyz"
+                                                    value={credentials.store_id}
+                                                    onChange={e => setCredentials(prev => ({ ...prev, store_id: e.target.value }))}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-400">
                                         Your credentials are stored securely and only used to sync orders on your behalf.{' '}
                                         <a href={activePlatform.loginUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
