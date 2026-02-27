@@ -1218,14 +1218,15 @@ CRITICAL REQUIREMENTS:
                                             <div className="space-y-2">
                                                 {custom.type === 'meal_upgrade' ? (
                                                     <>
-                                                        <div className="grid grid-cols-[1fr_100px_100px] gap-2 mb-1">
+                                                        <div className="grid grid-cols-[1fr_100px_100px_auto] gap-2 mb-1">
                                                              <span className="text-xs text-gray-400 font-medium">Option</span>
                                                              <span className="text-xs text-gray-400 font-medium">Online £</span>
                                                              <span className="text-xs text-purple-500 font-medium">POS £</span>
+                                                             <span />
                                                          </div>
                                                          <Label className="text-sm font-medium">Meal Pricing</Label>
                                                          {custom.options.map((opt, optIdx) => (
-                                                             <div key={optIdx} className="grid grid-cols-[1fr_100px_100px] gap-2 items-center">
+                                                             <div key={optIdx} className="grid grid-cols-[1fr_100px_100px_auto] gap-2 items-center">
                                                                  <Input
                                                                      value={opt.label}
                                                                      onChange={(e) => {
@@ -1258,6 +1259,19 @@ CRITICAL REQUIREMENTS:
                                                                      }}
                                                                      className="border-purple-200 focus:border-purple-400"
                                                                  />
+                                                                 <Button
+                                                                     type="button"
+                                                                     size="icon"
+                                                                     variant="ghost"
+                                                                     onClick={() => {
+                                                                         const newCustoms = [...formData.customization_options];
+                                                                         newCustoms[idx].options = newCustoms[idx].options.filter((_, i) => i !== optIdx);
+                                                                         setFormData({ ...formData, customization_options: newCustoms });
+                                                                     }}
+                                                                     className="h-9 w-9"
+                                                                 >
+                                                                     <Trash2 className="h-4 w-4" />
+                                                                 </Button>
                                                              </div>
                                                          ))}
                                                         
