@@ -31,7 +31,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
 
      // Calculate total price including customizations
      const calculatePrice = () => {
-         let total = item?.price || 0;
+         let total = (item?.pos_price != null ? item.pos_price : item?.price) || 0;
          
          // Add customization prices
          item?.customization_options?.forEach(option => {
