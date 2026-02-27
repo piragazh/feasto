@@ -1612,6 +1612,7 @@ CRITICAL REQUIREMENTS:
                             toast.success('Customizations pasted! Click Create to save.');
                         }, 100);
                     }}
+                    onMoveItem={(itemId, direction) => moveItem('', itemId, direction)}
                     title="Uncategorized Items"
                 />
 
