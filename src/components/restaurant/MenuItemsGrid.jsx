@@ -29,13 +29,33 @@ export default function MenuItemsGrid({
                     <div key={item.id} className="relative">
                         <Card className={`${item.is_available === false ? 'opacity-60' : ''} ${selectedItems.includes(item.id) ? 'ring-2 ring-orange-500' : ''}`}>
                             <CardContent className="p-4">
-                                <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center justify-between mb-2">
                                     <input
                                         type="checkbox"
                                         checked={selectedItems.includes(item.id)}
                                         onChange={() => onToggleSelect(item.id)}
                                         className="h-4 w-4 rounded border-gray-300 mt-1"
                                     />
+                                    {onMoveItem && (
+                                        <div className="flex gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => onMoveItem(item.id, 'left')}
+                                                className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                                                title="Move left"
+                                            >
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => onMoveItem(item.id, 'right')}
+                                                className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                                                title="Move right"
+                                            >
+                                                <ChevronRight className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="relative">
                                     {item.image_url ? (
