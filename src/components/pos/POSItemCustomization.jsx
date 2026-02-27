@@ -71,7 +71,22 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
 
      const currentPrice = calculatePrice();
 
+    const getMissingRequired = () => {
+        const missing = [];
+        item?.customization_options?.forEach(option => {
+            if (!option.required) return;
+            if (option.type === 'single' && !customizations[option.name]) missing.push(option.name);
+            if (option.type === 'multiple' && (!customizations[option.name] || customizations[option.name].length === 0)) missing.push(option.name);
+        });
+        return missing;
+    };
+
     const handleConfirm = () => {
+        const missing = getMissingRequired();
+        if (missing.length > 0) {
+            import('sonner').then(({ toast }) => toast.error(`Please select: ${missing.join(', ')}`));
+            return;
+        }
         const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
         onConfirm({ 
             ...item, 
@@ -80,10 +95,6 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
             specialInstructions: specialInstructions.trim(),
             isMeal
         });
-        setCustomizations({});
-        setMealCustomizations({});
-        setSpecialInstructions('');
-        setIsMeal(false);
     };
 
     const handleSingleSelect = (optionName, selectedValue) => {
