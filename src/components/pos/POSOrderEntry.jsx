@@ -226,28 +226,32 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     };
 
     const recallOrder = (held) => {
+        // Build updated list: remove the recalled order, optionally add current cart as new held
+        const withoutRecalled = heldOrders.filter(h => h.id !== held.id);
+        let finalHeld = withoutRecalled;
+
         if (optimisticCart.length > 0) {
-            // Silently hold current cart first (suppress the "Cart is empty" guard)
+            // Silently hold current cart before recalling
             const heldCurrent = {
                 id: Date.now().toString(),
                 heldAt: new Date().toISOString(),
                 items: optimisticCart,
                 total: cartTotal,
-                label: orderType === 'dine_in' && selectedTable ? selectedTable.table_number : `${orderType.charAt(0).toUpperCase() + orderType.slice(1)} Order`,
+                label: orderType === 'dine_in' && selectedTable
+                    ? selectedTable.table_number
+                    : `${orderType.charAt(0).toUpperCase() + orderType.slice(1)} Order`,
                 orderType,
                 tableId: selectedTable?.id || null,
             };
-            const updated = [...heldOrders.filter(h => h.id !== held.id), heldCurrent];
-            setHeldOrders(updated);
-            localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+            finalHeld = [...withoutRecalled, heldCurrent];
             onClearCart();
         }
-        // Restore the recalled order
+
+        setHeldOrders(finalHeld);
+        localStorage.setItem('pos_held_orders', JSON.stringify(finalHeld));
+
+        // Restore the recalled order items
         held.items.forEach(item => onAddItem({ ...item }));
-        // held.id was already excluded from `updated` above — just persist
-        const final = heldOrders.filter(h => h.id !== held.id);
-        setHeldOrders(final);
-        localStorage.setItem('pos_held_orders', JSON.stringify(final));
         setHeldDrawerOpen(false);
         toast.success('Order recalled');
     };
