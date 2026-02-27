@@ -234,7 +234,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                 <RadioGroup 
                                     value={customizations[option.name] || ''}
                                     onValueChange={(value) => handleSingleSelect(option.name, value)}
-                                    className={`space-y-${columns > 2 ? '1' : '2'}`}
+                                    className={columns > 2 ? 'space-y-1' : 'space-y-2'}
                                 >
                                     {option.options?.map(opt => (
                                         <div 
