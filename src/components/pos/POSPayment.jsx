@@ -241,10 +241,6 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setShowCashConfirm(true);
     };
 
-    // Cash confirmation state
-    const [showCashUnderConfirm, setShowCashUnderConfirm] = useState(false);
-    const [showCashConfirm, setShowCashConfirm] = useState(false);
-
     // Cash keypad confirm
     const handleCashConfirm = () => {
         if (numericInput <= 0) {
