@@ -38,57 +38,74 @@ export default function CustomerDisplay() {
     // Active order
     const { items = [], subtotal = 0, discount, total = 0, remaining, paymentMethod, restaurantName, logoUrl } = state;
     const effectiveTotal = total;
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const t = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(t);
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col font-sans">
-            {/* Header */}
-            <header className="bg-gray-900/80 backdrop-blur border-b border-white/[0.06] px-8 py-4 flex items-center justify-between">
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col font-sans overflow-hidden">
+            {/* Slim top bar */}
+            <div className="bg-gray-900/80 backdrop-blur border-b border-white/[0.06] px-8 py-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                     {logoUrl ? (
-                        <img src={logoUrl} alt={restaurantName} className="w-10 h-10 rounded-xl object-cover" />
+                        <img src={logoUrl} alt={restaurantName} className="w-8 h-8 rounded-lg object-cover" />
                     ) : (
-                        <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                            <ShoppingBag className="h-5 w-5 text-white" />
+                        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                            <ShoppingBag className="h-4 w-4 text-white" />
                         </div>
                     )}
-                    <span className="text-white font-bold text-xl">{restaurantName || 'Order Summary'}</span>
+                    <span className="text-white font-bold text-base">{restaurantName || 'Order Summary'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
-                    <Clock className="h-4 w-4" />
-                    {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                <div className="flex items-center gap-2 text-gray-500 text-xs font-mono">
+                    <Clock className="h-3.5 w-3.5" />
+                    {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </div>
-            </header>
+            </div>
 
-            <div className="flex-1 flex gap-0 overflow-hidden">
+            <div className="flex-1 flex overflow-hidden">
                 {/* Items list */}
-                <div className="flex-1 p-8 overflow-y-auto">
-                    <h2 className="text-gray-400 text-sm font-semibold uppercase tracking-widest mb-4">Your Order</h2>
-                    <div className="space-y-3">
-                        {items.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between bg-white/[0.04] border border-white/[0.06] rounded-2xl px-5 py-4">
-                                <div className="flex items-center gap-4">
-                                    <span className="w-8 h-8 bg-orange-500/20 text-orange-400 rounded-lg flex items-center justify-center text-sm font-bold">
-                                        {item.quantity}
-                                    </span>
-                                    <div>
-                                        <p className="text-white font-semibold text-lg">{item.name}</p>
-                                        {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                            <p className="text-gray-500 text-xs mt-0.5">
-                                                {Object.values(item.customizations).flat().filter(Boolean).join(', ')}
-                                            </p>
-                                        )}
+                <div className="flex-1 p-6 overflow-y-auto scrollbar-hide">
+                    <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-4">Your Order</p>
+                    <div className="space-y-2">
+                        <AnimatePresence initial={false}>
+                            {items.map((item, i) => (
+                                <motion.div
+                                    key={`${item.name}-${i}`}
+                                    initial={{ opacity: 0, x: -24 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 24 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="flex items-center justify-between bg-white/[0.04] border border-white/[0.06] rounded-2xl px-5 py-4"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <span className="w-9 h-9 bg-orange-500/20 text-orange-400 rounded-xl flex items-center justify-center text-sm font-black">
+                                            {item.quantity}
+                                        </span>
+                                        <div>
+                                            <p className="text-white font-semibold text-lg leading-tight">{item.name}</p>
+                                            {item.customizations && Object.keys(item.customizations).length > 0 && (
+                                                <p className="text-gray-500 text-xs mt-0.5">
+                                                    {Object.values(item.customizations).flat().filter(Boolean).join(', ')}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                                <span className="text-white font-bold text-xl">£{(item.price * item.quantity).toFixed(2)}</span>
-                            </div>
-                        ))}
+                                    <span className="text-white font-bold text-xl">£{(item.price * item.quantity).toFixed(2)}</span>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                        {items.length === 0 && (
+                            <p className="text-gray-600 text-center py-16">No items yet</p>
+                        )}
                     </div>
                 </div>
 
                 {/* Totals panel */}
-                <div className="w-80 bg-gray-900/60 border-l border-white/[0.06] p-8 flex flex-col justify-between">
+                <div className="w-80 bg-gray-900/60 border-l border-white/[0.06] p-6 flex flex-col justify-between flex-shrink-0">
                     <div className="space-y-4">
-                        <h2 className="text-gray-400 text-sm font-semibold uppercase tracking-widest">Total</h2>
+                        <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest">Summary</p>
 
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between text-gray-300">
@@ -104,10 +121,16 @@ export default function CustomerDisplay() {
                         </div>
 
                         <div className="border-t border-white/[0.08] pt-4">
-                            <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 text-center">
+                            <motion.div
+                                key={effectiveTotal}
+                                initial={{ scale: 1.04 }}
+                                animate={{ scale: 1 }}
+                                transition={{ duration: 0.25 }}
+                                className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 text-center"
+                            >
                                 <p className="text-orange-300 text-xs font-semibold uppercase tracking-widest mb-1">Total</p>
                                 <p className="text-white text-5xl font-black">£{effectiveTotal.toFixed(2)}</p>
-                            </div>
+                            </motion.div>
                         </div>
 
                         {remaining !== undefined && remaining > 0 && (
@@ -125,7 +148,7 @@ export default function CustomerDisplay() {
                         )}
                     </div>
 
-                    <p className="text-center text-gray-600 text-xs mt-8">Thank you for your order</p>
+                    <p className="text-center text-gray-600 text-xs">Thank you for your order</p>
                 </div>
             </div>
         </div>
