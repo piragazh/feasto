@@ -159,7 +159,31 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const completePayment = async (finalPayments) => {
         setIsProcessing(true);
         try {
-            const orderData = {
+            const result = await createOrder(finalPayments);
+            const hasCash = finalPayments.find(p => p.method === 'cash');
+            const totalPaidNow = finalPayments.reduce((s, p) => s + p.amount, 0);
+            const changeNow = Math.max(0, totalPaidNow - effectiveTotal);
+
+            if (result?.offline) {
+                toast.success(
+                    `Order saved offline. Will sync when connection restores.`,
+                    { icon: <WifiOff className="h-4 w-4 text-yellow-400" />, duration: 4000 }
+                );
+            } else if (hasCash && changeNow > 0.005) {
+                toast.success(`Payment complete. Change: £${changeNow.toFixed(2)}`);
+            } else {
+                toast.success('Payment complete');
+            }
+            publishCustomerDisplay({
+                status: 'paid',
+                restaurantName,
+                change: changeNow,
+            });
+
+            // Build order data for receipt printing (same shape as createOrder)
+            const phoneDetails = window.__phoneOrderDetails || {};
+            const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
+            const orderDataForPrint = {
                 restaurant_id: restaurantId,
                 restaurant_name: restaurantName || 'POS Order',
                 items: cart.map(item => ({
@@ -174,37 +198,25 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 discount: discount?.amount || 0,
                 total: effectiveTotal,
                 status: 'confirmed',
-                order_type: (() => {
-                    const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
-                    return isPhoneOrder ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection');
-                })(),
+                order_type: isPhoneOrder ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection'),
                 payment_method: finalPayments.length === 1 ? finalPayments[0].method : 'cash',
-                notes: finalPayments.length > 1
-                    ? finalPayments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
-                    : undefined,
+                notes: (() => {
+                    const splitNotes = finalPayments.length > 1 ? finalPayments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : null;
+                    return [
+                        isPhoneOrder && phoneDetails.notes ? phoneDetails.notes : null,
+                        isPhoneOrder && phoneDetails.collectionTime && orderType === 'phone_collection' ? `Ready in: ${phoneDetails.collectionTime}` : null,
+                        splitNotes,
+                    ].filter(Boolean).join(' | ') || undefined;
+                })(),
+                ...(isPhoneOrder && phoneDetails.phone ? { phone: phoneDetails.phone } : {}),
+                ...(isPhoneOrder && phoneDetails.name ? { guest_name: phoneDetails.name } : {}),
+                ...(isPhoneOrder && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}),
             };
-            const result = await createOrder(finalPayments);
-            const hasCash = finalPayments.find(p => p.method === 'cash');
-            if (result?.offline) {
-                toast.success(
-                    `Order saved offline. Will sync when connection restores.`,
-                    { icon: <WifiOff className="h-4 w-4 text-yellow-400" />, duration: 4000 }
-                );
-            } else if (hasCash) {
-                toast.success(`Payment complete. Change: £${change.toFixed(2)}`);
-            } else {
-                toast.success('Payment complete');
-            }
-            publishCustomerDisplay({
-                status: 'paid',
-                restaurantName,
-                change: Math.max(0, change),
-            });
-            // Auto-print receipt
-            await printReceiptAfterPayment(orderData, finalPayments);
+
+            await printReceiptAfterPayment(orderDataForPrint, finalPayments);
             onPaymentComplete();
         } catch (e) {
-            toast.error('Payment failed');
+            toast.error('Payment failed: ' + (e?.message || 'Unknown error'));
         } finally {
             setIsProcessing(false);
         }
