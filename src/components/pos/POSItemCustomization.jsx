@@ -368,9 +368,12 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     >
                                                         {opt.label}
                                                     </Label>
-                                                    {opt.price > 0 && (
-                                                        <span className="font-bold text-orange-400 text-xs">
-                                                            +£{opt.price.toFixed(2)}
+                                                    {(opt.pos_price != null ? opt.pos_price : opt.price) > 0 && (
+                                                        <span className="font-bold text-orange-400 text-xs flex items-center gap-1">
+                                                            {opt.pos_price != null && opt.pos_price !== opt.price && opt.price > 0 && (
+                                                                <span className="line-through text-gray-500 font-normal text-[9px]">£{opt.price.toFixed(2)}</span>
+                                                            )}
+                                                            +£{(opt.pos_price != null ? opt.pos_price : opt.price).toFixed(2)}
                                                         </span>
                                                     )}
                                                 </div>
