@@ -232,15 +232,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setPayments(prev => prev.filter((_, i) => i !== idx));
     };
 
-    // Cash quick button
+    // Cash quick button — always pre-fill keypad and show confirm dialog
     const handleQuickCash = (amount) => {
-        // If exact or over, confirm first
-        if (amount >= remaining - 0.001) {
-            setRawValue(String(Math.round(amount * 100)));
-            setShowCashConfirm(true);
-        } else {
-            addPayment('cash', amount);
-        }
+        setActiveMethod('cash');
+        setRawValue(String(Math.round(amount * 100)));
+        setShowCashConfirm(true);
     };
 
     // Cash confirmation state
