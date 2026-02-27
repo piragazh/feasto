@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Leaf, AlertTriangle, Activity } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Clock, Leaf, AlertTriangle, Activity, Sparkles, Loader2 } from 'lucide-react';
+import { base44 } from "@/api/base44Client";
 
 const DAYS = [
     { id: 'mon', label: 'Mon' },
