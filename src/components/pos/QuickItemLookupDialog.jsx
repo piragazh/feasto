@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Search, Delete } from 'lucide-react';
+import { AlertCircle, Search } from 'lucide-react';
 
 export default function QuickItemLookupDialog({ open, onClose, menuItems, onItemFound, isDark }) {
     const [itemNo, setItemNo] = useState('');
@@ -146,7 +146,6 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                     onClick={() => handleNumpadInput('backspace')}
                                     className={`col-span-3 h-12 ${isDark ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
                                 >
-                                    <Delete className="h-4 w-4 mr-2" />
                                     Clear
                                 </Button>
                             </div>
