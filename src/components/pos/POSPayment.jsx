@@ -241,7 +241,6 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setShowCashConfirm(true);
     };
 
-    // Cash keypad confirm
     const handleCashConfirm = () => {
         if (numericInput <= 0) {
             toast.error('Enter an amount');
