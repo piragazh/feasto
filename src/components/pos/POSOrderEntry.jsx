@@ -226,14 +226,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     };
 
     const recallOrder = (held) => {
-        // Build updated list: remove the recalled order, optionally add current cart as new held
+        // Build updated list: remove the recalled order, optionally park current cart
         const withoutRecalled = heldOrders.filter(h => h.id !== held.id);
         let finalHeld = withoutRecalled;
 
         if (optimisticCart.length > 0) {
-            // Silently hold current cart before recalling
             const heldCurrent = {
-                id: Date.now().toString(),
+                id: (Date.now() + 1).toString(),
                 heldAt: new Date().toISOString(),
                 items: optimisticCart,
                 total: cartTotal,
@@ -244,14 +243,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 tableId: selectedTable?.id || null,
             };
             finalHeld = [...withoutRecalled, heldCurrent];
-            onClearCart();
         }
 
         setHeldOrders(finalHeld);
         localStorage.setItem('pos_held_orders', JSON.stringify(finalHeld));
 
-        // Restore the recalled order items
-        held.items.forEach(item => onAddItem({ ...item }));
+        // Clear current cart first, then restore recalled items one tick later
+        // to avoid addToCart merging with stale existing entries
+        onClearCart();
+        // Restore order type from held order
+        if (held.orderType) setOrderType(held.orderType);
+
+        setTimeout(() => {
+            held.items.forEach(item => onAddItem({ ...item, menu_item_id: item.menu_item_id || item.id }));
+        }, 0);
+
         setHeldDrawerOpen(false);
         toast.success('Order recalled');
     };
