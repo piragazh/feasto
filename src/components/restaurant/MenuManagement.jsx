@@ -1685,14 +1685,25 @@ CRITICAL REQUIREMENTS:
                 })}
             </div>
 
-            <Dialog open={categoryDialogOpen} onOpenChange={(open) => {
-                setCategoryDialogOpen(open);
-                if (!open) {
-                    setNewCategoryName('');
-                    setNewCategoryImage('');
-                    setEditingCategory(null);
-                }
-            }}>
+            <CategoryDialog
+                open={categoryDialogOpen}
+                onOpenChange={(open) => {
+                    setCategoryDialogOpen(open);
+                    if (!open) { setNewCategoryName(''); setEditingCategory(null); }
+                }}
+                editingCategory={editingCategory}
+                restaurant={restaurant}
+                onSave={({ name, imageUrl, oldName }) => {
+                    if (oldName) {
+                        editCategoryMutation.mutate({ oldName, newName: name, imageUrl });
+                    } else {
+                        addCategoryMutation.mutate({ categoryName: name, imageUrl });
+                    }
+                }}
+            />
+
+            {/* Hidden placeholder so nothing breaks - actual dialog is above */}
+            <Dialog open={false} onOpenChange={() => {}}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingCategory ? 'Edit' : 'Add'} Menu Category</DialogTitle>
