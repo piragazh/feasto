@@ -72,7 +72,22 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const [phoneDetails, setPhoneDetails] = useState({});
     const [categoryGridMode, setCategoryGridMode] = useState(false);
 
-    React.useEffect(() => { setOptimisticCart(cart); }, [cart]);
+    useEffect(() => { setOptimisticCart(cart); }, [cart]);
+
+    // Keep customer display in sync when items change in the order entry view (before payment)
+    useEffect(() => {
+        const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        const total = discount ? Math.max(0, subtotal - discount.amount) : subtotal;
+        publishCustomerDisplay({
+            status: cart.length > 0 ? 'order' : 'idle',
+            restaurantName: restaurant?.name,
+            logoUrl: restaurant?.logo_url,
+            items: cart,
+            subtotal,
+            discount,
+            total,
+        });
+    }, [cart, discount, restaurant]);
 
     const handleQuantityChange = (itemId, newQuantity) => {
         setOptimisticCart(prev => prev.map(item => item.id === itemId ? { ...item, quantity: newQuantity } : item));
