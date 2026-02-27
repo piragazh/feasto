@@ -118,10 +118,10 @@ export default function POSDashboard() {
             const hasSpecialInstructions = !!item.specialInstructions;
 
             if (!hasCustomizations && !hasSpecialInstructions) {
-                // Identify the base menu item id (before any cart suffix)
-                const baseId = item.menu_item_id || item.id?.split('_')[0] || item.id;
+                // Identify the base menu item id — strip any cart suffix (e.g. "abc123_1234567890")
+                const baseId = item.menu_item_id || item.id;
                 const existing = prev.find(i => {
-                    const iBaseId = i.menu_item_id || i.id?.split('_')[0] || i.id;
+                    const iBaseId = i.menu_item_id || i.id;
                     return iBaseId === baseId &&
                         (!i.customizations || Object.keys(i.customizations).length === 0) &&
                         !i.specialInstructions;
