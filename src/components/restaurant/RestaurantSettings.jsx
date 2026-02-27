@@ -441,6 +441,33 @@ export default function RestaurantSettings({ restaurantId }) {
                             />
                         </div>
                         <div>
+                            <Label>Cuisine Types *</Label>
+                            <p className="text-xs text-gray-500 mb-2">Select one or more cuisine types</p>
+                            <div className="flex flex-wrap gap-2">
+                                {cuisineTypes.map((cuisine) => {
+                                    const selected = (formData.cuisine_types || []).includes(cuisine.name);
+                                    return (
+                                        <button
+                                            key={cuisine.id}
+                                            type="button"
+                                            onClick={() => toggleCuisineType(cuisine.name)}
+                                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                                                selected
+                                                    ? 'bg-orange-500 text-white border-orange-500'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                                            }`}
+                                        >
+                                            {cuisine.icon && <span className="mr-1">{cuisine.icon}</span>}
+                                            {cuisine.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {(formData.cuisine_types || []).length === 0 && (
+                                <p className="text-xs text-red-500 mt-1">Please select at least one cuisine type</p>
+                            )}
+                        </div>
+                        <div>
                             <Label>Description</Label>
                             <Textarea
                                 value={formData.description}
