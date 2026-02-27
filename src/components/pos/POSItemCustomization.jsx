@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
+import { toast } from 'sonner';
 
 export default function POSItemCustomization({ item, open, onClose, onConfirm, posTheme = 'dark' }) {
     const isDark = posTheme === 'dark';
