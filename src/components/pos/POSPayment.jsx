@@ -138,7 +138,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     const printReceiptAfterPayment = async (orderData, finalPayments) => {
         const config = restaurant?.printer_config;
-        if (!config?.auto_print && !config?.bluetooth_printer?.id) return; // silent skip if not configured
+        // Skip silently if no bluetooth printer configured
         if (!config?.bluetooth_printer?.id) return;
         try {
             const dominantMethod = finalPayments.length === 1 ? finalPayments[0].method : 'cash';
