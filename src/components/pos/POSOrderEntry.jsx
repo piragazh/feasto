@@ -244,7 +244,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         }
         // Restore the recalled order
         held.items.forEach(item => onAddItem({ ...item }));
-        deleteHeldOrder(held.id);
+        // held.id was already excluded from `updated` above — just persist
+        const final = heldOrders.filter(h => h.id !== held.id);
+        setHeldOrders(final);
+        localStorage.setItem('pos_held_orders', JSON.stringify(final));
         setHeldDrawerOpen(false);
         toast.success('Order recalled');
     };
