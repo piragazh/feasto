@@ -117,23 +117,28 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                     </div>
 
                     <div>
-                        <Label>Cuisine Type *</Label>
-                        <Select
-                            value={formData.cuisine_type}
-                            onValueChange={(value) => setFormData({ ...formData, cuisine_type: value })}
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {cuisineTypes.map((cuisine) => (
-                                    <SelectItem key={cuisine.id} value={cuisine.name}>
-                                        {cuisine.icon && <span className="mr-2">{cuisine.icon}</span>}
+                        <Label>Cuisine Types *</Label>
+                        <p className="text-xs text-gray-500 mb-2">Select one or more</p>
+                        <div className="flex flex-wrap gap-2">
+                            {cuisineTypes.map((cuisine) => {
+                                const selected = (formData.cuisine_types || []).includes(cuisine.name);
+                                return (
+                                    <button
+                                        key={cuisine.id}
+                                        type="button"
+                                        onClick={() => toggleCuisineType(cuisine.name)}
+                                        className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                                            selected
+                                                ? 'bg-orange-500 text-white border-orange-500'
+                                                : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                                        }`}
+                                    >
+                                        {cuisine.icon && <span className="mr-1">{cuisine.icon}</span>}
                                         {cuisine.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div>
