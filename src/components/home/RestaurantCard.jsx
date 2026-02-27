@@ -126,10 +126,12 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                                 <span className="text-white font-semibold text-sm md:text-lg">Currently Closed</span>
                             </div>
                         )}
-                        <div className="absolute top-3 left-3">
-                            <Badge className="bg-white/95 backdrop-blur-sm text-gray-900 hover:bg-white font-semibold px-3 py-1.5 text-xs shadow-lg border-0">
-                                {restaurant.cuisine_type}
-                            </Badge>
+                        <div className="absolute top-3 left-3 flex flex-wrap gap-1 max-w-[70%]">
+                            {(restaurant.cuisine_types?.length ? restaurant.cuisine_types : restaurant.cuisine_type ? [restaurant.cuisine_type] : []).slice(0, 2).map((ct) => (
+                                <Badge key={ct} className="bg-white/95 backdrop-blur-sm text-gray-900 hover:bg-white font-semibold px-2 py-1 text-xs shadow-lg border-0">
+                                    {ct}
+                                </Badge>
+                            ))}
                         </div>
                         {promotions.length > 0 && (
                             <div className="absolute top-2 md:top-3 right-2 md:right-3">
