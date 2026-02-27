@@ -1722,10 +1722,11 @@ CRITICAL REQUIREMENTS:
                 setCategoryDialogOpen(open);
                 if (!open) {
                     setNewCategoryName('');
+                    setNewCategoryImage('');
                     setEditingCategory(null);
                 }
             }}>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingCategory ? 'Edit' : 'Add'} Menu Category</DialogTitle>
                     </DialogHeader>
@@ -1738,10 +1739,68 @@ CRITICAL REQUIREMENTS:
                                 onChange={(e) => setNewCategoryName(e.target.value)}
                             />
                         </div>
+
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <Label>Category Icon / Image <span className="text-gray-400 font-normal">(optional)</span></Label>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={generateCategoryIcon}
+                                    disabled={generatingCategoryIcon || !newCategoryName.trim()}
+                                    className="gap-2 text-xs"
+                                >
+                                    <Wand2 className="h-3.5 w-3.5" />
+                                    {generatingCategoryIcon ? 'Generating...' : 'AI Generate Icon'}
+                                </Button>
+                            </div>
+                            <div className="flex gap-3 items-start">
+                                {newCategoryImage ? (
+                                    <div className="relative flex-shrink-0">
+                                        <img src={newCategoryImage} alt="Category icon" className="w-16 h-16 rounded-lg object-cover border" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewCategoryImage('')}
+                                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                                        >×</button>
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center flex-shrink-0">
+                                        <ImageIcon className="h-6 w-6 text-gray-400" />
+                                    </div>
+                                )}
+                                <div className="flex-1 space-y-2">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) handleCategoryImageUpload(file);
+                                        }}
+                                        disabled={uploadingCategoryImage || generatingCategoryIcon}
+                                        className="text-xs"
+                                    />
+                                    <Input
+                                        value={newCategoryImage}
+                                        onChange={(e) => setNewCategoryImage(e.target.value)}
+                                        placeholder="Or paste image URL"
+                                        className="text-xs"
+                                    />
+                                    {(uploadingCategoryImage || generatingCategoryIcon) && (
+                                        <p className="text-xs text-gray-500">
+                                            {uploadingCategoryImage ? 'Uploading...' : 'AI is creating your icon...'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={() => {
                                 setCategoryDialogOpen(false);
                                 setNewCategoryName('');
+                                setNewCategoryImage('');
                                 setEditingCategory(null);
                             }}>
                                 Cancel
@@ -1752,10 +1811,14 @@ CRITICAL REQUIREMENTS:
                                         if (editingCategory) {
                                             editCategoryMutation.mutate({ 
                                                 oldName: editingCategory, 
-                                                newName: newCategoryName.trim() 
+                                                newName: newCategoryName.trim(),
+                                                imageUrl: newCategoryImage || null
                                             });
                                         } else {
-                                            addCategoryMutation.mutate(newCategoryName.trim());
+                                            addCategoryMutation.mutate({ 
+                                                categoryName: newCategoryName.trim(),
+                                                imageUrl: newCategoryImage || null
+                                            });
                                         }
                                     }
                                 }}
