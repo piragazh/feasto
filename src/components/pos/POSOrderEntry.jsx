@@ -74,6 +74,17 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     useEffect(() => { setOptimisticCart(cart); }, [cart]);
 
+    // ── Data fetching ──────────────────────────────────────────────────────────
+    const { data: restaurantFetched } = useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => {
+            try { const r = (await base44.entities.Restaurant.filter({ id: restaurantId }))[0]; if (r) cacheRestaurant(r); return r; }
+            catch { return getCachedRestaurant(restaurantId); }
+        },
+        enabled: !!restaurantId && !restaurantProp,
+    });
+    const restaurant = restaurantProp || restaurantFetched;
+
     // Keep customer display in sync when items change in the order entry view (before payment)
     useEffect(() => {
         const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -93,17 +104,6 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         setOptimisticCart(prev => prev.map(item => item.id === itemId ? { ...item, quantity: newQuantity } : item));
         onUpdateQuantity(itemId, newQuantity);
     };
-
-    // ── Data fetching ──────────────────────────────────────────────────────────
-    const { data: restaurantFetched } = useQuery({
-        queryKey: ['restaurant', restaurantId],
-        queryFn: async () => {
-            try { const r = (await base44.entities.Restaurant.filter({ id: restaurantId }))[0]; if (r) cacheRestaurant(r); return r; }
-            catch { return getCachedRestaurant(restaurantId); }
-        },
-        enabled: !!restaurantId && !restaurantProp,
-    });
-    const restaurant = restaurantProp || restaurantFetched;
 
     const { data: menuItems = [] } = useQuery({
     queryKey: ['pos-menu-items', restaurantId],
