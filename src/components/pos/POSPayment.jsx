@@ -62,6 +62,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const [payments, setPayments] = useState([]);
     const [activeMethod, setActiveMethod] = useState(null); // 'cash' | 'card' | null
     const [rawValue, setRawValue] = useState('');
+    const [showCashConfirm, setShowCashConfirm] = useState(false);
+    const [showCashUnderConfirm, setShowCashUnderConfirm] = useState(false);
     const [showCardConfirm, setShowCardConfirm] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
