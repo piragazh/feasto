@@ -49,7 +49,7 @@ export default function POSCart({
     const cartSubtotal = optimisticCart.reduce((s, i) => s + i.price * i.quantity, 0);
     const discountedTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
     return (
-        <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col relative`}>
+        <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col relative h-full`}>
         {confirmAction && <ConfirmPopup message={confirmAction.message} onConfirm={confirmAction.onConfirm} onCancel={dismiss} isDark={isDark} />}
             <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0 flex items-center justify-between`}>
                 <h2 className={`${t.text} font-bold text-base`}>Order</h2>
