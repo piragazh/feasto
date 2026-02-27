@@ -46,6 +46,7 @@ export default function POSCart({
         }
     };
 
+    const totalUnits = optimisticCart.reduce((s, i) => s + i.quantity, 0);
     const cartSubtotal = optimisticCart.reduce((s, i) => s + i.price * i.quantity, 0);
     const discountedTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
     return (
