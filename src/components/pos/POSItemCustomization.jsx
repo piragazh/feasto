@@ -76,6 +76,17 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
             if (!option.required) return;
             if (option.type === 'single' && !customizations[option.name]) missing.push(option.name);
             if (option.type === 'multiple' && (!customizations[option.name] || customizations[option.name].length === 0)) missing.push(option.name);
+            // Meal upgrade required check
+            if (option.type === 'meal_upgrade') {
+                // Also check required meal sub-options
+                if (isMeal) {
+                    option.meal_customizations?.forEach(mealOpt => {
+                        if (!mealOpt.required) return;
+                        if (mealOpt.type === 'single' && !mealCustomizations[mealOpt.name]) missing.push(mealOpt.name);
+                        if (mealOpt.type === 'multiple' && (!mealCustomizations[mealOpt.name] || mealCustomizations[mealOpt.name].length === 0)) missing.push(mealOpt.name);
+                    });
+                }
+            }
         });
         return missing;
     };
