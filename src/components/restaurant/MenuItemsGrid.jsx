@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, EyeOff, Image as ImageIcon, Sparkles, Copy, Clipboard } from 'lucide-react';
+import { Edit, Trash2, EyeOff, Image as ImageIcon, Sparkles, Copy, Clipboard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { MenuItemBadges } from './MenuItemAdvancedFields';
 
