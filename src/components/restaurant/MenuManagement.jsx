@@ -814,6 +814,8 @@ CRITICAL REQUIREMENTS:
                                     <AllergensSection
                                         value={formData.allergens}
                                         onChange={(v) => setFormData({ ...formData, allergens: v })}
+                                        itemName={formData.name}
+                                        itemDescription={formData.description}
                                     />
                                 </div>
                                 <div className="col-span-2">
