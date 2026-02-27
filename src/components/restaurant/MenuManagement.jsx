@@ -905,6 +905,13 @@ CRITICAL REQUIREMENTS:
                                             placeholder="Or paste image URL"
                                             disabled={generatingImage || replacingBackground || enhancingImage}
                                         />
+                                        <Input
+                                           value={aiImagePrompt}
+                                           onChange={(e) => setAiImagePrompt(e.target.value)}
+                                           placeholder="AI image hints (e.g., on a wooden board, with dipping sauce, rustic style)"
+                                           className="text-xs"
+                                           disabled={generatingImage || replacingBackground || enhancingImage}
+                                        />
                                         {uploadingImage && <p className="text-xs text-gray-500">Uploading and optimizing image...</p>}
                                         {generatingImage && <p className="text-xs text-gray-500">AI is generating your image...</p>}
                                         {enhancingImage && <p className="text-xs text-gray-500">AI is enhancing image quality...</p>}
