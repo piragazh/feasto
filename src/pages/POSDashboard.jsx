@@ -117,10 +117,20 @@ export default function POSDashboard() {
             // Items with customizations should always be separate entries
             const hasCustomizations = item.customizations && Object.keys(item.customizations).length > 0;
             if (!hasCustomizations) {
-                const existing = prev.find(i => i.id === item.id && (!i.customizations || Object.keys(i.customizations).length === 0));
-                if (existing) return prev.map(i => i.id === existing.id ? { ...i, quantity: i.quantity + (item.quantity || 1) } : i);
+                // Only merge with an existing entry that also has NO customizations and same id
+                const existing = prev.find(i =>
+                    i.id === item.id &&
+                    (!i.customizations || Object.keys(i.customizations).length === 0) &&
+                    !i.specialInstructions
+                );
+                if (existing) {
+                    return prev.map(i =>
+                        i === existing ? { ...i, quantity: i.quantity + (item.quantity || 1) } : i
+                    );
+                }
             }
-            return [...prev, { ...item, quantity: item.quantity || 1 }];
+            // Generate a unique cart id so items with the same menu id can coexist
+            return [...prev, { ...item, id: `${item.id}_${Date.now()}`, menu_item_id: item.menu_item_id || item.id, quantity: item.quantity || 1 }];
         });
     };
     const removeFromCart = (itemId) => setCart(prev => prev.filter(i => i.id !== itemId));
