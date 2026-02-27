@@ -680,8 +680,10 @@ CRITICAL REQUIREMENTS:
                         <p className="text-sm text-gray-500">No categories yet. Add your first category to organize your menu.</p>
                     ) : (
                         <div className="flex flex-wrap gap-2">
-                            {categories.map((category, index) => (
-                                <div key={category} className="flex items-center gap-1 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors group">
+                            {categories.map((category, index) => {
+                                const catImage = restaurant?.category_images?.[category];
+                                return (
+                                <div key={category} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors group">
                                     <button
                                         onClick={() => moveCategory(index, 'up')}
                                         disabled={index === 0}
@@ -690,6 +692,14 @@ CRITICAL REQUIREMENTS:
                                     >
                                         <ChevronLeft className="h-3.5 w-3.5 text-gray-600" />
                                     </button>
+
+                                    {catImage ? (
+                                        <img src={catImage} alt={category} className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                                    ) : (
+                                        <div className="w-6 h-6 rounded bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                            <ImageIcon className="h-3 w-3 text-orange-400" />
+                                        </div>
+                                    )}
                                     
                                     <span className="font-medium text-sm text-gray-900 whitespace-nowrap">{category}</span>
                                     
@@ -707,6 +717,7 @@ CRITICAL REQUIREMENTS:
                                             onClick={() => {
                                                 setEditingCategory(category);
                                                 setNewCategoryName(category);
+                                                setNewCategoryImage(restaurant?.category_images?.[category] || '');
                                                 setCategoryDialogOpen(true);
                                             }}
                                             className="p-0.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50"
@@ -727,7 +738,8 @@ CRITICAL REQUIREMENTS:
                                         </button>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>
