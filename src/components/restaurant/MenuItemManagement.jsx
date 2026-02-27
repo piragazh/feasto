@@ -37,7 +37,8 @@ export default function MenuItemManagement({ restaurantId }) {
     const categories = [...new Set(menuItems.map(item => item.category))];
     const filteredItems = menuItems.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+            item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (item.menu_item_no && item.menu_item_no.toLowerCase().includes(searchQuery.toLowerCase()));
         const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
         return matchesSearch && matchesCategory;
     });
@@ -133,9 +134,16 @@ export default function MenuItemManagement({ restaurantId }) {
                                 <div className="flex justify-between items-start gap-2">
                                     <div className="flex-1">
                                         <CardTitle className="text-lg">{item.name}</CardTitle>
-                                        <Badge variant="outline" className="mt-2">
-                                            {item.category}
-                                        </Badge>
+                                        <div className="flex gap-2 mt-2">
+                                            <Badge variant="outline">
+                                                {item.category}
+                                            </Badge>
+                                            {item.menu_item_no && (
+                                                <Badge className="bg-blue-100 text-blue-800">
+                                                    #{item.menu_item_no}
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
                                     {!item.is_available && (
                                         <Badge className="bg-red-500 text-white">Out of Stock</Badge>
@@ -209,6 +217,7 @@ function ItemForm({ restaurantId, initialData, categories, onSubmit, isLoading }
         restaurant_id: restaurantId,
         name: initialData?.name || '',
         description: initialData?.description || '',
+        menu_item_no: initialData?.menu_item_no || '',
         price: initialData?.price || '',
         category: initialData?.category || categories[0] || 'Mains',
         is_available: initialData?.is_available !== false,
@@ -238,6 +247,12 @@ function ItemForm({ restaurantId, initialData, categories, onSubmit, isLoading }
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+            />
+
+            <Input
+                placeholder="Menu Board Item # (e.g., 43, 101, A5)"
+                value={formData.menu_item_no}
+                onChange={(e) => setFormData({ ...formData, menu_item_no: e.target.value })}
             />
 
             <textarea
