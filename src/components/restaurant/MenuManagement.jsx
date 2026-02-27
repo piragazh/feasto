@@ -409,7 +409,10 @@ CRITICAL REQUIREMENTS:
         setGeneratingImage(true);
         try {
             const themeColor = restaurant?.theme_primary_color || '#f97316';
-            const prompt = `Professional food photography of ${formData.name}${formData.category ? ` (${formData.category})` : ''}, ISOLATED item only on a clean solid ${themeColor} background, centered composition, beautifully plated, garnished, studio lighting, high-end presentation, remove any other background elements, ultra detailed, 8k. Include small "AI" text watermark in bottom right corner`;
+            const userHints = aiImagePrompt ? ` Additional details: ${aiImagePrompt}.` : '';
+            const ingredientsHint = aiIngredients ? ` Ingredients visible: ${aiIngredients}.` : '';
+            const dietaryHint = [formData.is_vegetarian && 'vegetarian', formData.is_spicy && 'spicy garnish'].filter(Boolean).join(', ');
+            const prompt = `Professional food photography of ${formData.name}${formData.category ? ` (${formData.category})` : ''}, ISOLATED item only on a clean solid ${themeColor} background, centered composition, beautifully plated, garnished, studio lighting, high-end presentation, remove any other background elements, ultra detailed, 8k.${ingredientsHint}${dietaryHint ? ` Style: ${dietaryHint}.` : ''}${userHints} Include small "AI" text watermark in bottom right corner`;
 
             const result = await base44.integrations.Core.GenerateImage({ prompt });
             setFormData({ ...formData, image_url: result.url, ai_generated_image: true });
