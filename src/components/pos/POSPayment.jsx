@@ -51,7 +51,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const handleRemoveDiscount = () => { setDiscount(null); if (onRemoveDiscount) onRemoveDiscount(); };
 
     const cartSubtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const effectiveTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartTotal;
+    // Recompute effective total from cartSubtotal to avoid stale prop
+    const effectiveTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
 
     // Card terminal config from restaurant
     const cardTerminal = restaurant?.printer_config?.card_terminal;
