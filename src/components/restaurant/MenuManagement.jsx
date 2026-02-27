@@ -1551,8 +1551,8 @@ CRITICAL REQUIREMENTS:
                                 </Button>
                             </div>
                         </form>
-                    </DialogContent>
-                </Dialog>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
 
