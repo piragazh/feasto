@@ -342,7 +342,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     </Label>
                                                     {optPrice(opt) > 0 && (
                                                     <span className="font-bold text-orange-400 text-xs flex items-center gap-1">
-                                                        {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
+                                                        {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && (
                                                             <span className="line-through text-gray-500 font-normal text-[9px]">£{optBasePrice(opt).toFixed(2)}</span>
                                                         )}
                                                         +£{optPrice(opt).toFixed(2)}
@@ -379,7 +379,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     </Label>
                                                     {optPrice(opt) > 0 && (
                                                         <span className="font-bold text-orange-400 text-xs flex items-center gap-1">
-                                                            {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
+                                                            {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && (
                                                                 <span className="line-through text-gray-500 font-normal text-[9px]">£{optBasePrice(opt).toFixed(2)}</span>
                                                             )}
                                                             +£{optPrice(opt).toFixed(2)}
