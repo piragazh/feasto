@@ -17,6 +17,7 @@ import AIMenuInsights from './AIMenuInsights';
 import CustomOptionTemplates from './CustomOptionTemplates';
 import AIMenuPerformanceAnalytics from './AIMenuPerformanceAnalytics';
 import MenuItemsGrid from './MenuItemsGrid';
+import CategoryDialog from './CategoryDialog';
 
 export default function MenuManagement({ restaurantId }) {
     const [dialogOpen, setDialogOpen] = useState(false);
