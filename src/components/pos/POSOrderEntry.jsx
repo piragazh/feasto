@@ -270,6 +270,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         });
     };
 
+    const updateHeldOrder = (updatedHeld) => {
+        setHeldOrders(prev => {
+            const updated = prev.map(h => h.id === updatedHeld.id ? updatedHeld : h);
+            localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     // ── Views ──────────────────────────────────────────────────────────────────
     if (showPayment) {
         // Takeaway
@@ -493,6 +501,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 heldOrders={heldOrders}
                 onRecall={recallOrder}
                 onDelete={deleteHeldOrder}
+                onUpdate={updateHeldOrder}
                 isDark={isDark}
                 t={t}
             />
