@@ -241,9 +241,15 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setPayments(prev => prev.filter((_, i) => i !== idx));
     };
 
-    // Cash quick button: use remaining if amount > remaining
+    // Cash quick button
     const handleQuickCash = (amount) => {
-        addPayment('cash', amount);
+        // If exact or over, confirm first
+        if (amount >= remaining - 0.001) {
+            setRawValue(String(Math.round(amount * 100)));
+            setShowCashConfirm(true);
+        } else {
+            addPayment('cash', amount);
+        }
     };
 
     // Cash confirmation state
