@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Search } from 'lucide-react';
+import NumericKeypad from './NumericKeypad';
 
 export default function QuickItemLookupDialog({ open, onClose, menuItems, onItemFound, isDark }) {
     const [itemNo, setItemNo] = useState('');
@@ -45,6 +46,30 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
         }
     };
 
+    const handleKeypadInput = (value) => {
+        if (value === 'backspace') {
+            setItemNo(itemNo.slice(0, -1));
+        } else if (value === 'clear') {
+            setItemNo('');
+        } else {
+            setItemNo(itemNo + value);
+            setNotFound(false);
+            setSelectedItem(null);
+        }
+    };
+
+    const handleKeypadInput = (value) => {
+        if (value === 'backspace') {
+            setItemNo(itemNo.slice(0, -1));
+        } else if (value === 'clear') {
+            setItemNo('');
+        } else {
+            setItemNo(itemNo + value);
+            setNotFound(false);
+            setSelectedItem(null);
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className={`${isDark ? 'bg-[#1a1d27] border-white/[0.06]' : 'bg-white border-gray-200'} max-w-sm p-0 flex flex-col`}>
@@ -57,35 +82,36 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]">
                     {!selectedItem ? (
                         <>
                             <div>
                                 <label className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'} block mb-2`}>
                                     Enter Menu Item Number
                                 </label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        autoFocus
-                                        type="text"
-                                        value={itemNo}
-                                        onChange={(e) => {
-                                            setItemNo(e.target.value);
-                                            setNotFound(false);
-                                            setSelectedItem(null);
-                                        }}
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="e.g., 43, 101, A5"
-                                        className={`${isDark ? 'bg-[#0f1117] border-white/[0.08]' : 'bg-gray-50 border-gray-200'} text-lg font-bold`}
-                                    />
-                                    <Button
-                                        onClick={handleSearch}
-                                        className="bg-orange-500 hover:bg-orange-600 text-white px-6"
-                                    >
-                                        Find
-                                    </Button>
-                                </div>
+                                <Input
+                                    type="text"
+                                    value={itemNo}
+                                    onChange={(e) => {
+                                        setItemNo(e.target.value);
+                                        setNotFound(false);
+                                        setSelectedItem(null);
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="e.g., 43, 101, A5"
+                                    className={`${isDark ? 'bg-[#0f1117] border-white/[0.08]' : 'bg-gray-50 border-gray-200'} text-lg font-bold text-center`}
+                                    readOnly
+                                />
                             </div>
+
+                            <NumericKeypad 
+                                onInput={handleKeypadInput}
+                                isDark={isDark}
+                                extraButtons={[
+                                    { label: 'Find', onClick: handleSearch, variant: 'default', className: 'col-span-2 bg-orange-500 hover:bg-orange-600' },
+                                    { label: 'Clear', value: 'clear', variant: 'outline', className: 'col-span-2' }
+                                ]}
+                            />
 
                             {notFound && (
                                 <div className={`flex items-start gap-2 p-3 rounded-lg ${isDark ? 'bg-red-500/10 border-red-500/30 border' : 'bg-red-50 border-red-200 border'}`}>
