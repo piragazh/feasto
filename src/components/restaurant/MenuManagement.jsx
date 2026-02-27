@@ -1461,8 +1461,14 @@ CRITICAL REQUIREMENTS:
                                                     </>
                                                 ) : (
                                                     <>
+                                                        <div className="grid grid-cols-[1fr_100px_100px_auto] gap-2 mb-1">
+                                                            <span className="text-xs text-gray-400 font-medium">Option</span>
+                                                            <span className="text-xs text-gray-400 font-medium">Online £</span>
+                                                            <span className="text-xs text-purple-500 font-medium">POS £</span>
+                                                            <span />
+                                                        </div>
                                                         {custom.options.map((opt, optIdx) => (
-                                                            <div key={optIdx} className="flex gap-2">
+                                                            <div key={optIdx} className="grid grid-cols-[1fr_100px_100px_auto] gap-2 items-center">
                                                                 <Input
                                                                     placeholder="Option label"
                                                                     value={opt.label}
@@ -1471,19 +1477,29 @@ CRITICAL REQUIREMENTS:
                                                                         newCustoms[idx].options[optIdx].label = e.target.value;
                                                                         setFormData({ ...formData, customization_options: newCustoms });
                                                                     }}
-                                                                    className="flex-1"
                                                                 />
                                                                 <Input
                                                                     type="number"
                                                                     step="0.01"
-                                                                    placeholder="Extra £"
+                                                                    placeholder="0.00"
                                                                     value={opt.price}
                                                                     onChange={(e) => {
                                                                         const newCustoms = [...formData.customization_options];
                                                                         newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
                                                                         setFormData({ ...formData, customization_options: newCustoms });
                                                                     }}
-                                                                    className="w-28"
+                                                                />
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    placeholder="Same"
+                                                                    value={opt.pos_price ?? ''}
+                                                                    onChange={(e) => {
+                                                                        const newCustoms = [...formData.customization_options];
+                                                                        newCustoms[idx].options[optIdx].pos_price = e.target.value === '' ? undefined : parseFloat(e.target.value) || 0;
+                                                                        setFormData({ ...formData, customization_options: newCustoms });
+                                                                    }}
+                                                                    className="border-purple-200 focus:border-purple-400"
                                                                 />
                                                                 <Button
                                                                     type="button"
