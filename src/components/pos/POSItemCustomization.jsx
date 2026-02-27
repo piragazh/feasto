@@ -51,8 +51,11 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                      const selected = option.options?.find(opt => opt.label === label);
                      total += optPrice(selected);
                  });
-             } else if (option.type === 'meal_upgrade' && isMeal) {
-                 const mealOption = option.options?.find(opt => opt.label.toLowerCase().includes('meal'));
+             } else if (option.type === 'meal_upgrade') {
+                 // Find the selected option: "meal" or "single/own"
+                 const targetLabel = isMeal ? 'meal' : 'own';
+                 const mealOption = option.options?.find(opt => opt.label.toLowerCase().includes(targetLabel))
+                     || (isMeal ? option.options?.[1] : option.options?.[0]);
                  total += optPrice(mealOption);
              }
          });
