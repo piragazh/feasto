@@ -116,16 +116,52 @@ export function ScheduleSection({ value = {}, onChange }) {
 }
 
 // ── Allergens Section ─────────────────────────────────────────────────────────
-export function AllergensSection({ value = [], onChange }) {
+export function AllergensSection({ value = [], onChange, itemName = '', itemDescription = '' }) {
+    const [loading, setLoading] = useState(false);
+
     const toggle = (a) => {
         onChange(value.includes(a) ? value.filter(x => x !== a) : [...value, a]);
     };
 
+    const fillWithAI = async () => {
+        if (!itemName) return;
+        setLoading(true);
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Identify allergens for this menu item based on UK food allergen regulations (14 major allergens).
+Item name: "${itemName}"
+Description: "${itemDescription || 'N/A'}"
+
+Return ONLY the allergens present from this exact list: gluten, crustaceans, eggs, fish, peanuts, soya, milk, nuts, celery, mustard, sesame, sulphites, lupin, molluscs.`,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    allergens: { type: "array", items: { type: "string" } }
+                }
+            }
+        });
+        const detected = (result.allergens || []).filter(a => ALL_ALLERGENS.includes(a));
+        onChange(detected);
+        setLoading(false);
+    };
+
     return (
         <div className="space-y-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
-            <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="font-semibold text-sm text-amber-900">Allergen Information</span>
+            <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <span className="font-semibold text-sm text-amber-900">Allergen Information</span>
+                </div>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={fillWithAI}
+                    disabled={loading || !itemName}
+                    className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+                >
+                    {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                    Fill with AI
+                </Button>
             </div>
             <p className="text-xs text-amber-700">Select all allergens present in this item (14 major UK allergens).</p>
             <div className="flex flex-wrap gap-2">
