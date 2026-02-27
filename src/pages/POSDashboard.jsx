@@ -138,7 +138,12 @@ export default function POSDashboard() {
         if (quantity < 1) { removeFromCart(itemId); return; }
         setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity } : i));
     };
-    const clearCart = () => { setCart([]); setDiscount(null); };
+    const clearCart = () => {
+        setCart([]);
+        setDiscount(null);
+        // Clear phone order details on cart clear
+        window.__phoneOrderDetails = null;
+    };
     const [discount, setDiscount] = useState(null);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const cartTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
