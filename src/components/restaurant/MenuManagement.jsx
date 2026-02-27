@@ -725,7 +725,7 @@ CRITICAL REQUIREMENTS:
                                 Add Menu Item
                             </Button>
                         </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>{editingItem ? 'Edit' : 'Add'} Menu Item</DialogTitle>
                         </DialogHeader>
