@@ -275,9 +275,12 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             >
                                                 {opt.label}
                                             </Label>
-                                            {opt.price > 0 && (
-                                                <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'}`}>
-                                                    +£{opt.price.toFixed(2)}
+                                            {(opt.pos_price != null ? opt.pos_price : opt.price) > 0 && (
+                                                <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
+                                                    {opt.pos_price != null && opt.pos_price !== opt.price && opt.price > 0 && (
+                                                        <span className="line-through text-gray-500 font-normal text-xs">£{opt.price.toFixed(2)}</span>
+                                                    )}
+                                                    +£{(opt.pos_price != null ? opt.pos_price : opt.price).toFixed(2)}
                                                 </span>
                                             )}
                                             </div>
