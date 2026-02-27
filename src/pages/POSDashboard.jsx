@@ -299,7 +299,7 @@ export default function POSDashboard() {
 
                         <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2">
                             <ShoppingCart className="h-4 w-4 text-orange-400" />
-                            <span className="text-orange-500 font-bold text-sm">{cart.length} · £{cartTotal.toFixed(2)}</span>
+                            <span className="text-orange-500 font-bold text-sm">{cart.reduce((s, i) => s + i.quantity, 0)} · £{cartTotal.toFixed(2)}</span>
                         </div>
 
                         {/* Theme toggle */}
