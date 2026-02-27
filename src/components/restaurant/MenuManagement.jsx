@@ -519,7 +519,23 @@ CRITICAL REQUIREMENTS:
         setGeneratingCategoryIcon(true);
         try {
             const cuisineHint = restaurant?.cuisine_type ? ` for a ${restaurant.cuisine_type} restaurant` : '';
-            const prompt = `A clean, minimal, flat icon representing "${newCategoryName}" food category${cuisineHint}. Square format, white icon on a vibrant solid colored background, simple bold design, no text, no shadows, professional restaurant menu icon style.`;
+            
+            const styleDescriptions = {
+                flat: 'clean minimal flat icon, simple bold shapes, no gradients, no shadows',
+                illustrated: 'illustrated icon, slightly detailed, hand-drawn style, friendly and warm',
+                realistic: 'realistic food photography style icon, vibrant colors, photographic quality',
+                emoji: 'emoji-style icon, bold outlines, rounded shapes, playful and colorful',
+            };
+
+            const bgDescriptions = {
+                solid: `solid ${categoryIconBgColor} background`,
+                gradient: `gradient background from ${categoryIconBgColor} to a lighter shade`,
+                rounded: `solid ${categoryIconBgColor} background with rounded square (squircle) frame`,
+                transparent: 'transparent background',
+            };
+
+            const iconColor = categoryIconBgStyle === 'transparent' ? 'colorful' : 'white';
+            const prompt = `A ${styleDescriptions[categoryIconStyle]} representing "${newCategoryName}" food category${cuisineHint}. Square format, ${iconColor} icon on a ${bgDescriptions[categoryIconBgStyle]}, professional restaurant menu icon style, no text.`;
             const result = await base44.integrations.Core.GenerateImage({ prompt });
             setNewCategoryImage(result.url);
             toast.success('Category icon generated!');
