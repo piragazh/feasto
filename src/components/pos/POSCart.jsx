@@ -47,7 +47,7 @@ export default function POSCart({
     };
 
     const totalUnits = optimisticCart.reduce((s, i) => s + i.quantity, 0);
-    const cartSubtotal = optimisticCart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const cartSubtotal = optimisticCart.reduce((s, i) => s + (i.pos_price != null ? i.pos_price : i.price) * i.quantity, 0);
     const discountedTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
     return (
         <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col relative h-full`}>
@@ -91,7 +91,7 @@ export default function POSCart({
                                     {item.specialInstructions && (
                                         <p className={`${t.textSub} text-[9px] italic mt-0.5 truncate`}>"{item.specialInstructions}"</p>
                                     )}
-                                    <p className="text-orange-500 text-xs mt-1 font-bold">£{(item.price * item.quantity).toFixed(2)}</p>
+                                    <p className="text-orange-500 text-xs mt-1 font-bold">£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
                                 </div>
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
