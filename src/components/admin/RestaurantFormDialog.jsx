@@ -35,7 +35,8 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
             if (restaurant) {
                 setFormData({
                     name: restaurant.name || '',
-                    cuisine_type: restaurant.cuisine_type || (cuisineTypes[0]?.name || ''),
+                    cuisine_type: restaurant.cuisine_type || '',
+                    cuisine_types: restaurant.cuisine_types || (restaurant.cuisine_type ? [restaurant.cuisine_type] : []),
                     image_url: restaurant.image_url || '',
                     description: restaurant.description || '',
                     address: restaurant.address || '',
