@@ -822,6 +822,8 @@ CRITICAL REQUIREMENTS:
                                     <NutritionSection
                                         value={formData.nutrition}
                                         onChange={(v) => setFormData({ ...formData, nutrition: v })}
+                                        itemName={formData.name}
+                                        itemDescription={formData.description}
                                     />
                                 </div>
                                 <div className="col-span-2">
