@@ -346,7 +346,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 <div className="h-full flex flex-col">
                                     <button
                                         onClick={() => setSelectedCategory('')}
-                                        className={`flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-lg transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                        className="flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-lg transition-colors bg-orange-500 hover:bg-orange-600 text-white"
                                     >
                                         ← Back to Categories
                                     </button>
