@@ -29,7 +29,10 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
      const optionCount = item?.customization_options?.length || 0;
      const columns = Math.min(Math.max(optionCount, 1), 4);
 
-     // Calculate total price including customizations
+     // Helper: get effective price for a customization option (POS price takes priority)
+     const optPrice = (opt) => opt?.pos_price != null ? opt.pos_price : (opt?.price || 0);
+
+     // Calculate total price including customizations (using POS prices where available)
      const calculatePrice = () => {
          let total = (item?.pos_price != null ? item.pos_price : item?.price) || 0;
          
@@ -37,15 +40,15 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
          item?.customization_options?.forEach(option => {
              if (option.type === 'single' && customizations[option.name]) {
                  const selected = option.options?.find(opt => opt.label === customizations[option.name]);
-                 if (selected?.price) total += selected.price;
+                 total += optPrice(selected);
              } else if (option.type === 'multiple' && customizations[option.name]) {
                  customizations[option.name].forEach(label => {
                      const selected = option.options?.find(opt => opt.label === label);
-                     if (selected?.price) total += selected.price;
+                     total += optPrice(selected);
                  });
              } else if (option.type === 'meal_upgrade' && isMeal) {
                  const mealOption = option.options?.find(opt => opt.label.toLowerCase().includes('meal'));
-                 if (mealOption?.price) total += mealOption.price;
+                 total += optPrice(mealOption);
              }
          });
 
@@ -55,11 +58,11 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
              mealUpgrade?.meal_customizations?.forEach(mealOpt => {
                  if (mealOpt.type === 'single' && mealCustomizations[mealOpt.name]) {
                      const selected = mealOpt.options?.find(opt => opt.label === mealCustomizations[mealOpt.name]);
-                     if (selected?.price) total += selected.price;
+                     total += optPrice(selected);
                  } else if (mealOpt.type === 'multiple' && mealCustomizations[mealOpt.name]) {
                      mealCustomizations[mealOpt.name].forEach(label => {
                          const selected = mealOpt.options?.find(opt => opt.label === label);
-                         if (selected?.price) total += selected.price;
+                         total += optPrice(selected);
                      });
                  }
              });
