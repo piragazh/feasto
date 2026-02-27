@@ -912,6 +912,9 @@ CRITICAL REQUIREMENTS:
                                            className="text-xs"
                                            disabled={generatingImage || replacingBackground || enhancingImage}
                                         />
+                                        <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                                           ⚠️ <strong>AI-generated images</strong> are for illustrative purposes only and may not accurately represent the final dish. Consider adding a disclaimer on your menu.
+                                        </p>
                                         {uploadingImage && <p className="text-xs text-gray-500">Uploading and optimizing image...</p>}
                                         {generatingImage && <p className="text-xs text-gray-500">AI is generating your image...</p>}
                                         {enhancingImage && <p className="text-xs text-gray-500">AI is enhancing image quality...</p>}
