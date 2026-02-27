@@ -16,6 +16,17 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
      const [mealCustomizations, setMealCustomizations] = useState({});
      const [showKeyboard, setShowKeyboard] = useState(false);
 
+     // Reset state whenever a new item is opened
+     React.useEffect(() => {
+         if (open) {
+             setCustomizations({});
+             setMealCustomizations({});
+             setSpecialInstructions('');
+             setIsMeal(false);
+             setShowKeyboard(false);
+         }
+     }, [open, item?.id]);
+
      const optionCount = item?.customization_options?.length || 0;
      const columns = Math.min(Math.max(optionCount, 1), 4);
 
