@@ -108,31 +108,40 @@ export default function MenuManagement({ restaurantId }) {
     });
 
     const addCategoryMutation = useMutation({
-        mutationFn: (categoryName) => {
+        mutationFn: ({ categoryName, imageUrl }) => {
             const currentCategories = restaurant?.menu_categories || [];
-            return base44.entities.Restaurant.update(restaurantId, {
-                menu_categories: [...currentCategories, categoryName]
-            });
+            const currentImages = restaurant?.category_images || {};
+            const updates = { menu_categories: [...currentCategories, categoryName] };
+            if (imageUrl) updates.category_images = { ...currentImages, [categoryName]: imageUrl };
+            return base44.entities.Restaurant.update(restaurantId, updates);
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant']);
             toast.success('Category added');
             setNewCategoryName('');
+            setNewCategoryImage('');
             setEditingCategory(null);
             setCategoryDialogOpen(false);
         },
     });
 
     const editCategoryMutation = useMutation({
-        mutationFn: ({ oldName, newName }) => {
+        mutationFn: ({ oldName, newName, imageUrl }) => {
             const currentCategories = restaurant?.menu_categories || [];
             const updatedCategories = currentCategories.map(c => c === oldName ? newName : c);
+            const currentImages = { ...(restaurant?.category_images || {}) };
+            // Rename image key if category name changed
+            if (oldName !== newName && currentImages[oldName]) {
+                currentImages[newName] = currentImages[oldName];
+                delete currentImages[oldName];
+            }
+            if (imageUrl !== undefined) currentImages[newName] = imageUrl;
             return base44.entities.Restaurant.update(restaurantId, {
-                menu_categories: updatedCategories
+                menu_categories: updatedCategories,
+                category_images: currentImages
             });
         },
         onSuccess: async (_, { oldName, newName }) => {
-            // Update all menu items with the old category
             const itemsToUpdate = menuItems.filter(item => item.category === oldName);
             for (const item of itemsToUpdate) {
                 await base44.entities.MenuItem.update(item.id, { category: newName });
@@ -141,6 +150,7 @@ export default function MenuManagement({ restaurantId }) {
             queryClient.invalidateQueries(['menu-items']);
             toast.success('Category updated');
             setNewCategoryName('');
+            setNewCategoryImage('');
             setEditingCategory(null);
             setCategoryDialogOpen(false);
         },
