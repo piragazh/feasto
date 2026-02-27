@@ -420,12 +420,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             const pence = Math.round(remaining * 100);
                             setRawValue(pence > 0 ? String(pence) : '');
                             setActiveMethod('cash');
+                            setShowCashConfirm(true);
                         }} className={`w-full h-10 text-sm font-bold ${t.inactBtn} mb-3`}>
-                            Exact Amount (£{remaining.toFixed(2)})
+                            Exact Cash (£{remaining.toFixed(2)})
                         </Button>
 
-                        <Button onClick={() => { setActiveMethod('card'); }}
-                            className={`w-full h-10 text-sm font-bold ${t.cardBtn}`}>
+                        <Button onClick={() => {
+                            setRawValue(String(Math.round(remaining * 100)));
+                            setActiveMethod('card');
+                            setShowCardConfirm(true);
+                        }} className={`w-full h-10 text-sm font-bold ${t.cardBtn}`}>
                             Charge £{remaining.toFixed(2)} to Card
                         </Button>
                     </>
