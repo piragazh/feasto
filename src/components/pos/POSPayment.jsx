@@ -261,23 +261,55 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setShowCardConfirm(false);
 
         if (hasConfiguredTerminal) {
-            // Terminal flow: show waiting screen
             setTerminalAmount(amount);
+            const txnRef = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            setTerminalTransactionRef(txnRef);
+            setTerminalError('');
             setTerminalStep('waiting');
+            await sendToTerminal(amount, txnRef);
         } else {
-            // No terminal configured: fallback — record card payment immediately
             addPayment('card', amount);
         }
     };
 
+    const sendToTerminal = async (amount, txnRef) => {
+        try {
+            const response = await base44.functions.invoke('processCardTerminal', {
+                restaurantId,
+                amount,
+                terminalConfig: cardTerminal,
+                transactionRef: txnRef
+            });
+            if (response.data?.success) {
+                handleTerminalSuccess();
+            } else {
+                setTerminalError(response.data?.error || 'Transaction failed');
+                setTerminalStep('failed');
+            }
+        } catch (error) {
+            setTerminalError('Failed to communicate with terminal: ' + (error.message || 'Unknown error'));
+            setTerminalStep('failed');
+        }
+    };
+
     const handleTerminalSuccess = () => {
-        setTerminalStep(null);
-        addPayment('card', terminalAmount);
+        setTerminalStep('success');
+        setTimeout(() => {
+            setTerminalStep(null);
+            addPayment('card', terminalAmount);
+            toast.success(`Card payment approved (Ref: ${terminalTransactionRef})`);
+        }, 1500);
     };
 
     const handleTerminalFailure = () => {
         setTerminalStep(null);
-        toast.error('Card payment declined or cancelled. Please try again.');
+        toast.error(terminalError || 'Card payment declined. Please try again.');
+    };
+
+    const handleTerminalRetry = async () => {
+        setTerminalError('');
+        setTerminalStep('waiting');
+        await sendToTerminal(terminalAmount, terminalTransactionRef);
     };
 
     if (cart.length === 0) {
@@ -554,7 +586,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <AlertDialogHeader>
                         <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
                             <Monitor className="h-5 w-5 text-blue-400" />
-                            Waiting for Card Terminal
+                            Sending to Card Terminal
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc} asChild>
                             <div className="space-y-4">
@@ -568,24 +600,63 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     <div className="text-center">
                                         <p className={`text-2xl font-bold ${t.text}`}>£{terminalAmount.toFixed(2)}</p>
                                         <p className={`${t.subtext} text-sm mt-1`}>
-                                            Ask customer to tap/insert card on <strong>{cardTerminal?.reader_label || 'the terminal'}</strong>
+                                            Processing on <strong>{cardTerminal?.reader_label || 'the terminal'}</strong>
                                         </p>
                                     </div>
                                 </div>
                                 <p className={`${t.subtext} text-xs text-center`}>
-                                    Confirm payment once the terminal shows approved, or cancel if declined.
+                                    Customer should tap or insert their card. Do not cancel.
                                 </p>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="gap-2">
-                        <Button onClick={handleTerminalFailure} variant="outline" className={`flex-1 ${t.cancelDlg}`}>
-                            <XCircle className="h-4 w-4 mr-2 text-red-500" />
-                            Declined / Cancel
-                        </Button>
-                        <Button onClick={handleTerminalSuccess} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
-                            <CheckCircle className="h-4 w-4 mr-2" />
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Terminal success screen */}
+            <AlertDialog open={terminalStep === 'success'}>
+                <AlertDialogContent className={`${isDark ? 'bg-[#151720] border-green-500/30' : 'bg-white border-green-200'} border`}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
+                            <CheckCircle className="h-6 w-6 text-green-500" />
                             Payment Approved
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className={t.dialogDesc} asChild>
+                            <div className="space-y-3">
+                                <div className="text-center py-4">
+                                    <p className={`text-3xl font-bold text-green-500`}>£{terminalAmount.toFixed(2)}</p>
+                                    <p className={`${t.subtext} text-sm mt-2`}>Transaction approved</p>
+                                    <p className={`${t.textSub} text-xs mt-1 font-mono`}>{terminalTransactionRef}</p>
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Terminal failed screen */}
+            <AlertDialog open={terminalStep === 'failed'}>
+                <AlertDialogContent className={`${isDark ? 'bg-[#151720] border-red-500/30' : 'bg-white border-red-200'} border`}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
+                            <XCircle className="h-6 w-6 text-red-500" />
+                            Transaction Failed
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className={t.dialogDesc} asChild>
+                            <div className="space-y-4">
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                                    <p className="text-red-400 text-sm font-medium">{terminalError || 'Card was declined'}</p>
+                                </div>
+                                <p className={`${t.subtext} text-xs`}>Try another payment method or card.</p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <Button onClick={() => { setTerminalStep(null); setActiveMethod(null); }} variant="outline" className={`flex-1 ${t.cancelDlg}`}>
+                            Back to Methods
+                        </Button>
+                        <Button onClick={handleTerminalRetry} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
+                            Retry
                         </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
