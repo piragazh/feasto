@@ -684,7 +684,6 @@ CRITICAL REQUIREMENTS:
                                             onClick={() => {
                                                 setEditingCategory(category);
                                                 setNewCategoryName(category);
-                                                setNewCategoryImage(restaurant?.category_images?.[category] || '');
                                                 setCategoryDialogOpen(true);
                                             }}
                                             className="p-0.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50"
