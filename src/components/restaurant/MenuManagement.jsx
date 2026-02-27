@@ -160,9 +160,12 @@ export default function MenuManagement({ restaurantId }) {
         mutationFn: (categoryName) => {
             const currentCategories = restaurant?.menu_categories || [];
             const currentOrder = restaurant?.category_order || [];
+            const currentImages = { ...(restaurant?.category_images || {}) };
+            delete currentImages[categoryName];
             return base44.entities.Restaurant.update(restaurantId, {
                 menu_categories: currentCategories.filter(c => c !== categoryName),
-                category_order: currentOrder.filter(c => c !== categoryName)
+                category_order: currentOrder.filter(c => c !== categoryName),
+                category_images: currentImages
             });
         },
         onSuccess: () => {
