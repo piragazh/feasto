@@ -202,15 +202,58 @@ const NUTRITION_FIELDS = [
     { key: 'salt_g', label: 'Salt', unit: 'g' },
 ];
 
-export function NutritionSection({ value = {}, onChange }) {
+export function NutritionSection({ value = {}, onChange, itemName = '', itemDescription = '' }) {
+    const [loading, setLoading] = useState(false);
+
     const update = (key, val) => onChange({ ...value, [key]: val === '' ? undefined : parseFloat(val) });
+
+    const fillWithAI = async () => {
+        if (!itemName) return;
+        setLoading(true);
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Estimate the nutritional information per serving for this restaurant menu item.
+Item name: "${itemName}"
+Description: "${itemDescription || 'N/A'}"
+
+Provide realistic estimates typical for a restaurant portion of this dish.`,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    calories: { type: "number" },
+                    protein_g: { type: "number" },
+                    carbs_g: { type: "number" },
+                    sugar_g: { type: "number" },
+                    fat_g: { type: "number" },
+                    saturates_g: { type: "number" },
+                    fibre_g: { type: "number" },
+                    salt_g: { type: "number" },
+                    serving_size: { type: "string" }
+                }
+            }
+        });
+        onChange({ ...value, ...result });
+        setLoading(false);
+    };
 
     return (
         <div className="space-y-3 p-4 bg-green-50 rounded-xl border border-green-100">
-            <div className="flex items-center gap-2 mb-1">
-                <Activity className="h-4 w-4 text-green-700" />
-                <span className="font-semibold text-sm text-green-900">Nutritional Information</span>
-                <span className="text-xs text-green-600">(per serving)</span>
+            <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-green-700" />
+                    <span className="font-semibold text-sm text-green-900">Nutritional Information</span>
+                    <span className="text-xs text-green-600">(per serving)</span>
+                </div>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={fillWithAI}
+                    disabled={loading || !itemName}
+                    className="h-7 text-xs border-green-300 text-green-700 hover:bg-green-100"
+                >
+                    {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                    Fill with AI
+                </Button>
             </div>
 
             <div>
