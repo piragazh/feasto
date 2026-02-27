@@ -62,10 +62,17 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
         }
     }, [restaurant, open]);
 
+    const toggleCuisineType = (name) => {
+        const current = formData.cuisine_types || [];
+        const updated = current.includes(name) ? current.filter(c => c !== name) : [...current, name];
+        setFormData({ ...formData, cuisine_types: updated, cuisine_type: updated[0] || '' });
+    };
+
     const saveMutation = useMutation({
         mutationFn: (data) => {
             const payload = {
                 ...data,
+                cuisine_type: data.cuisine_types?.[0] || data.cuisine_type || '',
                 delivery_fee: parseFloat(data.delivery_fee),
                 minimum_order: parseFloat(data.minimum_order),
                 rating: restaurant?.rating || 4.5,
