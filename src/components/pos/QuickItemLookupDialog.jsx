@@ -58,18 +58,6 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
         }
     };
 
-    const handleKeypadInput = (value) => {
-        if (value === 'backspace') {
-            setItemNo(itemNo.slice(0, -1));
-        } else if (value === 'clear') {
-            setItemNo('');
-        } else {
-            setItemNo(itemNo + value);
-            setNotFound(false);
-            setSelectedItem(null);
-        }
-    };
-
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className={`${isDark ? 'bg-[#1a1d27] border-white/[0.06]' : 'bg-white border-gray-200'} max-w-sm p-0 flex flex-col`}>
