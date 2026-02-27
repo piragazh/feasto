@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 export default function RestaurantFormDialog({ open, onClose, restaurant }) {
     const [formData, setFormData] = useState({
         name: '',
-        cuisine_type: 'Pizza',
+        cuisine_type: '',
+        cuisine_types: [],
         image_url: '',
         description: '',
         address: '',
