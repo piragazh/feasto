@@ -27,6 +27,9 @@ export default function MenuManagement({ restaurantId }) {
     const [newCategoryImage, setNewCategoryImage] = useState('');
     const [generatingCategoryIcon, setGeneratingCategoryIcon] = useState(false);
     const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+    const [categoryIconBgColor, setCategoryIconBgColor] = useState('#f97316');
+    const [categoryIconBgStyle, setCategoryIconBgStyle] = useState('solid');
+    const [categoryIconStyle, setCategoryIconStyle] = useState('flat');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterAvailable, setFilterAvailable] = useState('all');
     const [selectedItems, setSelectedItems] = useState([]);
