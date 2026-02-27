@@ -77,8 +77,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     // Sync to customer display whenever relevant state changes
     React.useEffect(() => {
         publishCustomerDisplay({
-            status: 'order',
+            status: cart.length > 0 ? 'order' : 'idle',
             restaurantName,
+            logoUrl: restaurant?.logo_url,
             items: cart,
             subtotal: cartSubtotal,
             discount,
