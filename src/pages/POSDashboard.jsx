@@ -114,23 +114,25 @@ export default function POSDashboard() {
 
     const addToCart = (item) => {
         setCart(prev => {
-            // Items with customizations should always be separate entries
             const hasCustomizations = item.customizations && Object.keys(item.customizations).length > 0;
-            if (!hasCustomizations) {
-                // Only merge with an existing entry that also has NO customizations and same id
-                const existing = prev.find(i =>
-                    i.id === item.id &&
-                    (!i.customizations || Object.keys(i.customizations).length === 0) &&
-                    !i.specialInstructions
-                );
+            const hasSpecialInstructions = !!item.specialInstructions;
+
+            if (!hasCustomizations && !hasSpecialInstructions) {
+                // Identify the base menu item id (before any cart suffix)
+                const baseId = item.menu_item_id || item.id?.split('_')[0] || item.id;
+                const existing = prev.find(i => {
+                    const iBaseId = i.menu_item_id || i.id?.split('_')[0] || i.id;
+                    return iBaseId === baseId &&
+                        (!i.customizations || Object.keys(i.customizations).length === 0) &&
+                        !i.specialInstructions;
+                });
                 if (existing) {
-                    return prev.map(i =>
-                        i === existing ? { ...i, quantity: i.quantity + (item.quantity || 1) } : i
-                    );
+                    return prev.map(i => i === existing ? { ...i, quantity: i.quantity + (item.quantity || 1) } : i);
                 }
             }
-            // Generate a unique cart id so items with the same menu id can coexist
-            return [...prev, { ...item, id: `${item.id}_${Date.now()}`, menu_item_id: item.menu_item_id || item.id, quantity: item.quantity || 1 }];
+            // Unique cart entry id so customised variants can coexist
+            const uniqueId = `${item.menu_item_id || item.id}_${Date.now()}`;
+            return [...prev, { ...item, id: uniqueId, menu_item_id: item.menu_item_id || item.id, quantity: item.quantity || 1 }];
         });
     };
     const removeFromCart = (itemId) => setCart(prev => prev.filter(i => i.id !== itemId));
