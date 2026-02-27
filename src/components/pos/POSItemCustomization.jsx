@@ -30,7 +30,12 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
      const columns = Math.min(Math.max(optionCount, 1), 4);
 
      // Helper: get effective price for a customization option (POS price takes priority)
-     const optPrice = (opt) => opt?.pos_price != null ? opt.pos_price : (opt?.price || 0);
+     const optPrice = (opt) => {
+         if (!opt) return 0;
+         return opt.pos_price != null ? opt.pos_price : (opt.price || 0);
+     };
+     // Helper: get display price (online/base price, safe)
+     const optBasePrice = (opt) => opt?.price || 0;
 
      // Calculate total price including customizations (using POS prices where available)
      const calculatePrice = () => {
