@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { useQuery } from '@tanstack/react-query';
-import { Scissors, Users, PlusCircle, PauseCircle, Phone, ChevronRight } from 'lucide-react';
+import { Scissors, Users, PlusCircle, PauseCircle, Phone, ChevronRight, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 import POSItemCustomization from './POSItemCustomization';
@@ -20,6 +20,7 @@ import POSCart from './POSCart';
 import POSTablesGrid from './POSTablesGrid';
 import HeldOrdersDrawer from './HeldOrdersDrawer';
 import PhoneOrderDialog from './PhoneOrderDialog';
+import QuickItemLookupDialog from './QuickItemLookupDialog';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
@@ -71,6 +72,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
     const [phoneDetails, setPhoneDetails] = useState({});
     const [categoryGridMode, setCategoryGridMode] = useState(false);
+    const [quickLookupOpen, setQuickLookupOpen] = useState(false);
 
     useEffect(() => { setOptimisticCart(cart); }, [cart]);
 
@@ -163,6 +165,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     // ── Handlers ───────────────────────────────────────────────────────────────
     const handleItemClick = (item) => {
         // Use POS-specific price if set
+        const posItem = item.pos_price != null ? { ...item, price: item.pos_price } : item;
+        if (posItem.customization_options?.length > 0) { setSelectedItem(posItem); setCustomizationOpen(true); }
+        else onAddItem({ ...posItem, quantity: 1, customizations: {} });
+    };
+
+    const handleQuickItemFound = (item) => {
         const posItem = item.pos_price != null ? { ...item, price: item.pos_price } : item;
         if (posItem.customization_options?.length > 0) { setSelectedItem(posItem); setCustomizationOpen(true); }
         else onAddItem({ ...posItem, quantity: 1, customizations: {} });
@@ -458,6 +466,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <Users className="h-4 w-4" /> Tables
                     </button>
                 )}
+                <button onClick={() => setQuickLookupOpen(true)} className={`h-12 px-4 ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                    <Zap className="h-4 w-4" /> Item #
+                </button>
                 <button onClick={() => setCustomItemOpen(true)} className={`h-12 px-4 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                     <PlusCircle className="h-4 w-4" /> Custom Item
                 </button>
@@ -504,6 +515,14 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 onUpdate={updateHeldOrder}
                 isDark={isDark}
                 t={t}
+            />
+
+            <QuickItemLookupDialog
+                open={quickLookupOpen}
+                onClose={() => setQuickLookupOpen(false)}
+                menuItems={menuItems}
+                onItemFound={handleQuickItemFound}
+                isDark={isDark}
             />
 
             {showKeyboard && (
