@@ -387,7 +387,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             ) : (
                                 <div className={`${t.changeBox} p-2.5 rounded-xl`}>
                                     <p className={`${t.changeTxt} text-xs`}>Change</p>
-                                    <p className={`${t.changeAmt} text-2xl font-bold`}>£{change.toFixed(2)}</p>
+                                    <p className={`${t.changeAmt} text-2xl font-bold`}>£{Math.max(0, totalPaid - effectiveTotal).toFixed(2)}</p>
                                 </div>
                             )}
                         </>
