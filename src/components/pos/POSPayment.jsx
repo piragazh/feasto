@@ -50,7 +50,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const handleApplyDiscount = (d) => { setDiscount(d); if (onApplyDiscount) onApplyDiscount(d); };
     const handleRemoveDiscount = () => { setDiscount(null); if (onRemoveDiscount) onRemoveDiscount(); };
 
-    const cartSubtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const cartSubtotal = cart.reduce((s, i) => s + (i.pos_price != null ? i.pos_price : i.price) * i.quantity, 0);
     // Recompute effective total from cartSubtotal to avoid stale prop
     const effectiveTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
 
@@ -305,7 +305,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     {cart.map(item => (
                         <div key={item.id} className={`flex justify-between ${t.subtext} text-sm`}>
                             <span>{item.quantity}x {item.name}</span>
-                            <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                            <span>£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</span>
                         </div>
                     ))}
                 </div>

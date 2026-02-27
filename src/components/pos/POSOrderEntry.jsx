@@ -87,7 +87,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     // Keep customer display in sync when items change in the order entry view (before payment)
     useEffect(() => {
-        const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        const subtotal = cart.reduce((s, i) => s + (i.pos_price != null ? i.pos_price : i.price) * i.quantity, 0);
         const total = discount ? Math.max(0, subtotal - discount.amount) : subtotal;
         publishCustomerDisplay({
             status: cart.length > 0 ? 'order' : 'idle',
