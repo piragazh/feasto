@@ -1,7 +1,32 @@
-import React from 'react';
-import { X, ShoppingCart, RotateCcw, Trash2, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, ShoppingCart, RotateCcw, Trash2, Clock, Search, Edit2 } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import HeldOrderEditDialog from './HeldOrderEditDialog';
 
-export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, onDelete, isDark, t }) {
+export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, onDelete, isDark, t, onUpdate }) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [editingHeld, setEditingHeld] = useState(null);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+    const filteredOrders = useMemo(() => {
+        return heldOrders.filter(order => {
+            const query = searchQuery.toLowerCase();
+            const label = (order.label || `Order #${order.id.slice(-4).toUpperCase()}`).toLowerCase();
+            const itemNames = order.items.map(i => i.name.toLowerCase()).join(' ');
+            return label.includes(query) || itemNames.includes(query);
+        });
+    }, [heldOrders, searchQuery]);
+
+    const handleEdit = (held) => {
+        setEditingHeld(held);
+        setEditDialogOpen(true);
+    };
+
+    const handleSaveEdit = (updatedHeld) => {
+        if (onUpdate) onUpdate(updatedHeld);
+        setEditDialogOpen(false);
+    };
+
     if (!open) return null;
 
     return (
@@ -10,28 +35,48 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
             <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
             {/* Drawer */}
-            <div className={`w-80 ${isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200'} border-l flex flex-col shadow-2xl`}>
+            <div className={`w-96 ${isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200'} border-l flex flex-col shadow-2xl`}>
                 {/* Header */}
                 <div className={`px-4 py-4 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'} flex items-center justify-between flex-shrink-0`}>
                     <div>
                         <h2 className={`${t.text} font-bold text-base`}>Held Orders</h2>
-                        <p className={`${t.textMuted} text-xs mt-0.5`}>{heldOrders.length} order{heldOrders.length !== 1 ? 's' : ''} on hold</p>
+                        <p className={`${t.textMuted} text-xs mt-0.5`}>{filteredOrders.length} of {heldOrders.length} order{heldOrders.length !== 1 ? 's' : ''}</p>
                     </div>
                     <button onClick={onClose} className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'} transition-colors`}>
                         <X className="h-4 w-4" />
                     </button>
                 </div>
 
+                {/* Search bar */}
+                {heldOrders.length > 0 && (
+                    <div className={`px-3 py-2.5 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'}`}>
+                        <div className="relative">
+                            <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 ${t.textSub}`} />
+                            <Input
+                                type="text"
+                                placeholder="Search orders..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className={`${isDark ? 'bg-white/5 border-white/[0.08] text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 placeholder-gray-400'} h-8 pl-8 text-xs`}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 {/* Orders list */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
-                    {heldOrders.length === 0 ? (
+                    {filteredOrders.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-40 text-center">
                             <ShoppingCart className={`h-10 w-10 ${t.emptyIcon} mb-3`} />
-                            <p className={`${t.emptyText} text-sm font-medium`}>No held orders</p>
-                            <p className={`${t.emptySub} text-xs mt-1`}>Hold the current cart to park it here</p>
+                            <p className={`${t.emptyText} text-sm font-medium`}>
+                                {heldOrders.length === 0 ? 'No held orders' : 'No matching orders'}
+                            </p>
+                            <p className={`${t.emptySub} text-xs mt-1`}>
+                                {heldOrders.length === 0 ? 'Hold the current cart to park it here' : 'Try a different search'}
+                            </p>
                         </div>
                     ) : (
-                        heldOrders.map((held) => (
+                        filteredOrders.map((held) => (
                             <div key={held.id} className={`${isDark ? 'bg-[#1a1d27] border-white/[0.06]' : 'bg-gray-50 border-gray-200'} border rounded-xl p-3`}>
                                 {/* Label + time */}
                                 <div className="flex items-start justify-between mb-2">
@@ -71,6 +116,12 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                         Recall
                                     </button>
                                     <button
+                                        onClick={() => handleEdit(held)}
+                                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'} transition-colors`}
+                                    >
+                                        <Edit2 className="h-3 w-3" />
+                                    </button>
+                                    <button
                                         onClick={() => onDelete(held.id)}
                                         className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'} text-red-400 transition-colors`}
                                     >
@@ -81,6 +132,16 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                         ))
                     )}
                 </div>
+
+                {editingHeld && (
+                    <HeldOrderEditDialog
+                        open={editDialogOpen}
+                        onClose={() => setEditDialogOpen(false)}
+                        heldOrder={editingHeld}
+                        onSave={handleSaveEdit}
+                        isDark={isDark}
+                    />
+                )}
             </div>
         </div>
     );
