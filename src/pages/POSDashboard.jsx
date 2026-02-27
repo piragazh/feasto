@@ -143,8 +143,9 @@ export default function POSDashboard() {
     const clearCart = () => {
         setCart([]);
         setDiscount(null);
-        // Clear phone order details on cart clear
         window.__phoneOrderDetails = null;
+        // Switch back to order-entry tab so cashier sees fresh cart immediately
+        setActiveTab('order-entry');
     };
     const [discount, setDiscount] = useState(null);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
