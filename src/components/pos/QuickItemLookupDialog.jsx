@@ -126,26 +126,6 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                     onClick={() => handleNumpadInput('backspace')}
                                     className={`col-span-3 h-12 ${isDark ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
                                 >
-                                    <Backspace className="h-4 w-4 mr-2" />
-                                    Clear
-                                </Button>
-                            </div>
-
-                            {/* Numpad */}
-                            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.06]">
-                                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((btn) => (
-                                    <Button
-                                        key={btn}
-                                        onClick={() => handleNumpadInput(btn)}
-                                        className={`h-12 text-lg font-bold ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
-                                    >
-                                        {btn}
-                                    </Button>
-                                ))}
-                                <Button
-                                    onClick={() => handleNumpadInput('backspace')}
-                                    className={`col-span-3 h-12 ${isDark ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
-                                >
                                     Clear
                                 </Button>
                             </div>
