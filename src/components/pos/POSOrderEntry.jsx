@@ -211,10 +211,25 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     const recallOrder = (held) => {
         if (optimisticCart.length > 0) {
-            holdOrder(); // auto-hold current cart before recalling
+            // Silently hold current cart first (suppress the "Cart is empty" guard)
+            const heldCurrent = {
+                id: Date.now().toString(),
+                heldAt: new Date().toISOString(),
+                items: optimisticCart,
+                total: cartTotal,
+                label: orderType === 'dine_in' && selectedTable ? selectedTable.table_number : `${orderType.charAt(0).toUpperCase() + orderType.slice(1)} Order`,
+                orderType,
+                tableId: selectedTable?.id || null,
+            };
+            const updated = [...heldOrders.filter(h => h.id !== held.id), heldCurrent];
+            setHeldOrders(updated);
+            localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+            onClearCart();
         }
+        // Restore the recalled order
         held.items.forEach(item => onAddItem({ ...item }));
         deleteHeldOrder(held.id);
+        setHeldDrawerOpen(false);
         toast.success('Order recalled');
     };
 
