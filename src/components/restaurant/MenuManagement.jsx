@@ -1650,9 +1650,9 @@ CRITICAL REQUIREMENTS:
                                         toast.success('Customizations pasted! Click Create to save.');
                                     }, 100);
                                 }}
+                                onMoveItem={(itemId, direction) => moveItem(category, itemId, direction)}
                                 title={category}
                             />
-                            {/* Item reorder buttons - handled per item in grid component */}
                         </div>
                     );
                 })}
