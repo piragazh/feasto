@@ -75,10 +75,13 @@ export default function POSCart({
                                     <p className={`${t.text} font-semibold text-xs leading-tight truncate`}>{item.name}</p>
                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                         <div className={`${t.textSub} text-[9px] mt-0.5 space-y-0.5`}>
-                                            {Object.entries(item.customizations).slice(0, 2).map(([key, value]) => (
+                                            {Object.entries(item.customizations).slice(0, 3).map(([key, value]) => (
                                                 <p key={key} className="truncate">{key}: {Array.isArray(value) ? value.join(', ') : value}</p>
                                             ))}
                                         </div>
+                                    )}
+                                    {item.specialInstructions && (
+                                        <p className={`${t.textSub} text-[9px] italic mt-0.5 truncate`}>"{item.specialInstructions}"</p>
                                     )}
                                     <p className="text-orange-500 text-xs mt-1 font-bold">£{(item.price * item.quantity).toFixed(2)}</p>
                                 </div>
