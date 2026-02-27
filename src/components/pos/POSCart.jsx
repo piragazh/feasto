@@ -53,7 +53,14 @@ export default function POSCart({
         <div className={`col-span-1 md:col-span-3 ${t.panel} border rounded-2xl overflow-hidden flex flex-col relative h-full`}>
         {confirmAction && <ConfirmPopup message={confirmAction.message} onConfirm={confirmAction.onConfirm} onCancel={dismiss} isDark={isDark} />}
             <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0 flex items-center justify-between`}>
-                <h2 className={`${t.text} font-bold text-base`}>Order</h2>
+                <div className="flex items-center gap-2">
+                    <h2 className={`${t.text} font-bold text-base`}>Order</h2>
+                    {totalUnits > 0 && (
+                        <span className="text-[10px] bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold flex-shrink-0">
+                            {totalUnits > 9 ? '9+' : totalUnits}
+                        </span>
+                    )}
+                </div>
                 {orderType === 'dine_in' && selectedTable && (
                     <span className="text-xs bg-orange-500/20 text-orange-500 border border-orange-500/30 px-2 py-0.5 rounded-lg font-medium">
                         {selectedTable.table_number}
