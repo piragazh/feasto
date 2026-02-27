@@ -16,6 +16,7 @@ export default function MenuItemsGrid({
     onDelete,
     onCopyCustomizations,
     onPasteCustomizations,
+    onMoveItem,
     title = 'Menu Items'
 }) {
     if (items.length === 0) return null;
