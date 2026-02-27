@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Search } from 'lucide-react';
+import { AlertCircle, Search, Delete } from 'lucide-react';
 
 export default function QuickItemLookupDialog({ open, onClose, menuItems, onItemFound, isDark }) {
     const [itemNo, setItemNo] = useState('');
@@ -42,6 +42,16 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
         if (e.key === 'Enter') {
             if (selectedItem) handleAdd();
             else handleSearch();
+        }
+    };
+
+    const handleNumpadInput = (char) => {
+        if (char === 'backspace') {
+            setItemNo(prev => prev.slice(0, -1));
+        } else {
+            setItemNo(prev => prev + char);
+            setNotFound(false);
+            setSelectedItem(null);
         }
     };
 
@@ -100,6 +110,46 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                     </div>
                                 </div>
                             )}
+
+                            {/* Numpad */}
+                            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.06]">
+                                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((btn) => (
+                                    <Button
+                                        key={btn}
+                                        onClick={() => handleNumpadInput(btn)}
+                                        className={`h-12 text-lg font-bold ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                                    >
+                                        {btn}
+                                    </Button>
+                                ))}
+                                <Button
+                                    onClick={() => handleNumpadInput('backspace')}
+                                    className={`col-span-3 h-12 ${isDark ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
+                                >
+                                    <Backspace className="h-4 w-4 mr-2" />
+                                    Clear
+                                </Button>
+                            </div>
+
+                            {/* Numpad */}
+                            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.06]">
+                                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((btn) => (
+                                    <Button
+                                        key={btn}
+                                        onClick={() => handleNumpadInput(btn)}
+                                        className={`h-12 text-lg font-bold ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                                    >
+                                        {btn}
+                                    </Button>
+                                ))}
+                                <Button
+                                    onClick={() => handleNumpadInput('backspace')}
+                                    className={`col-span-3 h-12 ${isDark ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
+                                >
+                                    <Delete className="h-4 w-4 mr-2" />
+                                    Clear
+                                </Button>
+                            </div>
 
                             <p className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                                 Tip: Ask customer to check the menu board number next to the item
