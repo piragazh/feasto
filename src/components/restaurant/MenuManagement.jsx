@@ -508,6 +508,38 @@ CRITICAL REQUIREMENTS:
         }
     };
 
+    const generateCategoryIcon = async () => {
+        if (!newCategoryName.trim()) {
+            toast.error('Please enter a category name first');
+            return;
+        }
+        setGeneratingCategoryIcon(true);
+        try {
+            const cuisineHint = restaurant?.cuisine_type ? ` for a ${restaurant.cuisine_type} restaurant` : '';
+            const prompt = `A clean, minimal, flat icon representing "${newCategoryName}" food category${cuisineHint}. Square format, white icon on a vibrant solid colored background, simple bold design, no text, no shadows, professional restaurant menu icon style.`;
+            const result = await base44.integrations.Core.GenerateImage({ prompt });
+            setNewCategoryImage(result.url);
+            toast.success('Category icon generated!');
+        } catch (error) {
+            toast.error('Failed to generate icon');
+        } finally {
+            setGeneratingCategoryIcon(false);
+        }
+    };
+
+    const handleCategoryImageUpload = async (file) => {
+        setUploadingCategoryImage(true);
+        try {
+            const result = await base44.integrations.Core.UploadFile({ file });
+            setNewCategoryImage(result.file_url);
+            toast.success('Image uploaded');
+        } catch (error) {
+            toast.error('Failed to upload image');
+        } finally {
+            setUploadingCategoryImage(false);
+        }
+    };
+
     const handleBulkDelete = () => {
         if (confirm(`Delete ${selectedItems.length} selected items?`)) {
             bulkDeleteMutation.mutate(selectedItems);
