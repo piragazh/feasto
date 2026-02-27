@@ -1523,24 +1523,24 @@ CRITICAL REQUIREMENTS:
                                                                 variant="outline"
                                                                 onClick={() => {
                                                                     const newCustoms = [...formData.customization_options];
-                                                                    newCustoms[idx].options.push({ label: '', price: 0 });
+                                                                    newCustoms[idx].options.push({ label: '', price: 0, pos_price: undefined });
                                                                     setFormData({ ...formData, customization_options: newCustoms });
-                                                                }}
-                                                                className="flex-1"
-                                                            >
-                                                                <Plus className="h-4 w-4 mr-1" />
-                                                                Add Option Row
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => {
+                                                                    }}
+                                                                    className="flex-1"
+                                                                    >
+                                                                    <Plus className="h-4 w-4 mr-1" />
+                                                                    Add Option Row
+                                                                    </Button>
+                                                                    <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => {
                                                                     const newCustoms = [...formData.customization_options];
                                                                     newCustoms[idx].options.push(
-                                                                        { label: '', price: 0 },
-                                                                        { label: '', price: 0 },
-                                                                        { label: '', price: 0 }
+                                                                        { label: '', price: 0, pos_price: undefined },
+                                                                        { label: '', price: 0, pos_price: undefined },
+                                                                        { label: '', price: 0, pos_price: undefined }
                                                                     );
                                                                     setFormData({ ...formData, customization_options: newCustoms });
                                                                 }}
