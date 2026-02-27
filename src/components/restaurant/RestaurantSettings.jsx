@@ -28,12 +28,18 @@ export default function RestaurantSettings({ restaurantId }) {
         },
     });
 
+    const { data: cuisineTypes = [] } = useQuery({
+        queryKey: ['cuisine-types'],
+        queryFn: () => base44.entities.CuisineType.filter({ is_active: true }),
+    });
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         address: '',
         phone: '',
         alert_phone: '',
+        cuisine_types: [],
         whatsapp_alerts_enabled: false,
         sms_alerts_enabled: false,
         order_alert_channel: 'sms',
