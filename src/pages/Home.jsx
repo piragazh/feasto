@@ -125,10 +125,11 @@ export default function Home() {
 
     const filteredRestaurants = (restaurants || [])
         .filter(r => {
+            const allCuisines = r.cuisine_types?.length ? r.cuisine_types : r.cuisine_type ? [r.cuisine_type] : [];
             const matchesSearch = !searchQuery || 
                 r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                r.cuisine_type?.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCuisine = !selectedCuisine || r.cuisine_type === selectedCuisine;
+                allCuisines.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
+            const matchesCuisine = !selectedCuisine || allCuisines.includes(selectedCuisine);
             const matchesMenuItem = !menuItemSearch || restaurantsWithMatchingItems.includes(r.id);
             return matchesSearch && matchesCuisine && matchesMenuItem;
         })
