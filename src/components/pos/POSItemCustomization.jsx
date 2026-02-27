@@ -85,7 +85,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
     const handleConfirm = () => {
         const missing = getMissingRequired();
         if (missing.length > 0) {
-            import('sonner').then(({ toast }) => toast.error(`Please select: ${missing.join(', ')}`));
+            toast.error(`Please select: ${missing.join(', ')}`);
             return;
         }
         const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
