@@ -113,6 +113,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 address: restaurant.address || '',
                 phone: restaurant.phone || '',
                 alert_phone: restaurant.alert_phone || '',
+                cuisine_types: restaurant.cuisine_types || (restaurant.cuisine_type ? [restaurant.cuisine_type] : []),
                 whatsapp_alerts_enabled: restaurant.whatsapp_alerts_enabled || false,
                 sms_alerts_enabled: restaurant.sms_alerts_enabled || false,
                 order_alert_channel: restaurant.order_alert_channel || 'sms',
