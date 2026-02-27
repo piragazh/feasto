@@ -211,6 +211,12 @@ export default function RestaurantSettings({ restaurantId }) {
         }
     };
 
+    const toggleCuisineType = (name) => {
+        const current = formData.cuisine_types || [];
+        const updated = current.includes(name) ? current.filter(c => c !== name) : [...current, name];
+        setFormData({ ...formData, cuisine_types: updated });
+    };
+
     const handleSaveGeneral = () => {
         updateMutation.mutate({
             name: formData.name,
@@ -218,6 +224,8 @@ export default function RestaurantSettings({ restaurantId }) {
             address: formData.address,
             phone: formData.phone,
             alert_phone: formData.alert_phone,
+            cuisine_types: formData.cuisine_types,
+            cuisine_type: formData.cuisine_types?.[0] || '',
             whatsapp_alerts_enabled: formData.whatsapp_alerts_enabled,
             sms_alerts_enabled: formData.sms_alerts_enabled,
             order_alert_channel: formData.order_alert_channel,
