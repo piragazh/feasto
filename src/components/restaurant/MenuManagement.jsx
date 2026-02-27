@@ -1704,18 +1704,8 @@ CRITICAL REQUIREMENTS:
 
             {/* Hidden placeholder so nothing breaks - actual dialog is above */}
             <Dialog open={false} onOpenChange={() => {}}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>{editingCategory ? 'Edit' : 'Add'} Menu Category</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label>Category Name</Label>
-                            <Input
-                                placeholder="e.g., Starters, Mains, Desserts, Drinks"
-                                value={newCategoryName}
-                                onChange={(e) => setNewCategoryName(e.target.value)}
-                            />
+                <DialogContent>
+                    <div>
                         </div>
 
                         <div>
