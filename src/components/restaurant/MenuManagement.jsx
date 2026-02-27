@@ -507,54 +507,6 @@ CRITICAL REQUIREMENTS:
         }
     };
 
-    const generateCategoryIcon = async () => {
-        if (!newCategoryName.trim()) {
-            toast.error('Please enter a category name first');
-            return;
-        }
-        setGeneratingCategoryIcon(true);
-        try {
-            const cuisineHint = restaurant?.cuisine_type ? ` for a ${restaurant.cuisine_type} restaurant` : '';
-            
-            const styleDescriptions = {
-                flat: 'clean minimal flat icon, simple bold shapes, no gradients, no shadows',
-                illustrated: 'illustrated icon, slightly detailed, hand-drawn style, friendly and warm',
-                realistic: 'realistic food photography style icon, vibrant colors, photographic quality',
-                emoji: 'emoji-style icon, bold outlines, rounded shapes, playful and colorful',
-            };
-
-            const bgDescriptions = {
-                solid: `solid ${categoryIconBgColor} background`,
-                gradient: `gradient background from ${categoryIconBgColor} to a lighter shade`,
-                rounded: `solid ${categoryIconBgColor} background with rounded square (squircle) frame`,
-                transparent: 'transparent background',
-            };
-
-            const iconColor = categoryIconBgStyle === 'transparent' ? 'colorful' : 'white';
-            const prompt = `A ${styleDescriptions[categoryIconStyle]} representing "${newCategoryName}" food category${cuisineHint}. Square format, ${iconColor} icon on a ${bgDescriptions[categoryIconBgStyle]}, professional restaurant menu icon style, no text.`;
-            const result = await base44.integrations.Core.GenerateImage({ prompt });
-            setNewCategoryImage(result.url);
-            toast.success('Category icon generated!');
-        } catch (error) {
-            toast.error('Failed to generate icon');
-        } finally {
-            setGeneratingCategoryIcon(false);
-        }
-    };
-
-    const handleCategoryImageUpload = async (file) => {
-        setUploadingCategoryImage(true);
-        try {
-            const result = await base44.integrations.Core.UploadFile({ file });
-            setNewCategoryImage(result.file_url);
-            toast.success('Image uploaded');
-        } catch (error) {
-            toast.error('Failed to upload image');
-        } finally {
-            setUploadingCategoryImage(false);
-        }
-    };
-
     const handleBulkDelete = () => {
         if (confirm(`Delete ${selectedItems.length} selected items?`)) {
             bulkDeleteMutation.mutate(selectedItems);
