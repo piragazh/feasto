@@ -1218,33 +1218,48 @@ CRITICAL REQUIREMENTS:
                                             <div className="space-y-2">
                                                 {custom.type === 'meal_upgrade' ? (
                                                     <>
-                                                        <Label className="text-sm font-medium">Meal Pricing</Label>
-                                                        {custom.options.map((opt, optIdx) => (
-                                                            <div key={optIdx} className="flex gap-2 items-center">
-                                                                <Input
-                                                                    value={opt.label}
-                                                                    onChange={(e) => {
-                                                                        const newCustoms = [...formData.customization_options];
-                                                                        newCustoms[idx].options[optIdx].label = e.target.value;
-                                                                        setFormData({ ...formData, customization_options: newCustoms });
-                                                                    }}
-                                                                    className="flex-1"
-                                                                    placeholder={optIdx === 0 ? "On its Own" : "Meal"}
-                                                                />
-                                                                <Input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    placeholder={optIdx === 0 ? "£0.00 (base)" : "Extra £"}
-                                                                    value={opt.price}
-                                                                    onChange={(e) => {
-                                                                        const newCustoms = [...formData.customization_options];
-                                                                        newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
-                                                                        setFormData({ ...formData, customization_options: newCustoms });
-                                                                    }}
-                                                                    className="w-32"
-                                                                />
-                                                            </div>
-                                                        ))}
+                                                        <div className="grid grid-cols-[1fr_100px_100px] gap-2 mb-1">
+                                                             <span className="text-xs text-gray-400 font-medium">Option</span>
+                                                             <span className="text-xs text-gray-400 font-medium">Online £</span>
+                                                             <span className="text-xs text-purple-500 font-medium">POS £</span>
+                                                         </div>
+                                                         <Label className="text-sm font-medium">Meal Pricing</Label>
+                                                         {custom.options.map((opt, optIdx) => (
+                                                             <div key={optIdx} className="grid grid-cols-[1fr_100px_100px] gap-2 items-center">
+                                                                 <Input
+                                                                     value={opt.label}
+                                                                     onChange={(e) => {
+                                                                         const newCustoms = [...formData.customization_options];
+                                                                         newCustoms[idx].options[optIdx].label = e.target.value;
+                                                                         setFormData({ ...formData, customization_options: newCustoms });
+                                                                     }}
+                                                                     placeholder={optIdx === 0 ? "On its Own" : "Meal"}
+                                                                 />
+                                                                 <Input
+                                                                     type="number"
+                                                                     step="0.01"
+                                                                     placeholder={optIdx === 0 ? "0.00" : "Extra"}
+                                                                     value={opt.price}
+                                                                     onChange={(e) => {
+                                                                         const newCustoms = [...formData.customization_options];
+                                                                         newCustoms[idx].options[optIdx].price = parseFloat(e.target.value) || 0;
+                                                                         setFormData({ ...formData, customization_options: newCustoms });
+                                                                     }}
+                                                                 />
+                                                                 <Input
+                                                                     type="number"
+                                                                     step="0.01"
+                                                                     placeholder="Same"
+                                                                     value={opt.pos_price ?? ''}
+                                                                     onChange={(e) => {
+                                                                         const newCustoms = [...formData.customization_options];
+                                                                         newCustoms[idx].options[optIdx].pos_price = e.target.value === '' ? undefined : parseFloat(e.target.value) || 0;
+                                                                         setFormData({ ...formData, customization_options: newCustoms });
+                                                                     }}
+                                                                     className="border-purple-200 focus:border-purple-400"
+                                                                 />
+                                                             </div>
+                                                         ))}
                                                         
                                                         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                                             <Label className="text-sm font-medium mb-2 block">Meal Options (shown when "Meal" is selected)</Label>
