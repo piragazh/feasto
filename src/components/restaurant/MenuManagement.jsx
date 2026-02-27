@@ -41,6 +41,7 @@ export default function MenuManagement({ restaurantId }) {
     const [bgStyle, setBgStyle] = useState('solid');
     const [bgCustomInput, setBgCustomInput] = useState('');
     const [copiedCustomizations, setCopiedCustomizations] = useState(null);
+    const [aiImagePrompt, setAiImagePrompt] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
