@@ -257,9 +257,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     };
 
     const deleteHeldOrder = (id) => {
-        const updated = heldOrders.filter(h => h.id !== id);
-        setHeldOrders(updated);
-        localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+        setHeldOrders(prev => {
+            const updated = prev.filter(h => h.id !== id);
+            localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+            return updated;
+        });
     };
 
     // ── Views ──────────────────────────────────────────────────────────────────
