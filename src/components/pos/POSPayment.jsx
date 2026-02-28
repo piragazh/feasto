@@ -70,6 +70,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     // Terminal payment flow
     const [terminalStep, setTerminalStep] = useState(null); // null | 'waiting' | 'success' | 'failed'
     const [terminalAmount, setTerminalAmount] = useState(0);
+    const [terminalTransactionRef, setTerminalTransactionRef] = useState('');
+    const [terminalError, setTerminalError] = useState('');
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
     const remaining = Math.max(0, effectiveTotal - totalPaid);
