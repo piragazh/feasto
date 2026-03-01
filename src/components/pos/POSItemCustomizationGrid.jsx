@@ -72,8 +72,8 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
     };
 
     const toggleSingle = (name, label, isMealSub = false) => {
-        if (isMealSub) setMealCustomizations(p => ({ ...p, [name]: label }));
-        else setCustomizations(p => ({ ...p, [name]: label }));
+        if (isMealSub) setMealCustomizations(p => ({ ...p, [name]: label === p[name] ? undefined : label }));
+        else setCustomizations(p => ({ ...p, [name]: label === p[name] ? undefined : label }));
     };
 
     const toggleMultiple = (name, label, isMealSub = false) => {
