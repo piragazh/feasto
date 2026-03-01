@@ -379,7 +379,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     // Main entry view
     return (
         <div className={`flex flex-col h-[calc(100vh-130px)] ${t.bg}`}>
-            <POSOfflineSyncBanner restaurantId={restaurantId} />
+            <POSOfflineSyncBanner restaurantId={restaurantId} onForceRefresh={() => { refetchMenuItems(); refetchTables(); }} />
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
                 {layoutCols.quickActions && (
