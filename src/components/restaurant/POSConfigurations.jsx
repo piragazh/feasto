@@ -69,6 +69,21 @@ export default function POSConfigurations({ restaurantId }) {
                 </CardContent>
             </Card>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5" />
+                        Item Customisation Style
+                    </CardTitle>
+                    <CardDescription>
+                        Choose how item customisation options are shown when adding items to the cart.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <POSCustomizationLayoutSelector restaurantId={restaurantId} />
+                </CardContent>
+            </Card>
+
             <PhoneOrderSettings restaurantId={restaurantId} />
 
             <Card>
