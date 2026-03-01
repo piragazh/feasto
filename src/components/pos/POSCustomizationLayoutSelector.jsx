@@ -2,21 +2,33 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { Check, Rows, Grid3x3 } from 'lucide-react';
+import { Check, Rows, Grid3x3, Maximize2, List } from 'lucide-react';
 import { toast } from 'sonner';
 
 const LAYOUTS = [
     {
         id: 'classic',
         label: 'Classic',
-        description: 'All options shown at once in a scrollable multi-column grid. Fast for experienced staff.',
-        icon: Grid3x3,
+        description: 'All options shown at once in a compact scrollable list. Fast for experienced staff.',
+        icon: List,
     },
     {
         id: 'stepped',
-        label: 'Stepped (Touch-Optimised)',
+        label: 'Stepped',
         description: 'One option group per screen with large tap-friendly buttons. Ideal for touch POS terminals.',
         icon: Rows,
+    },
+    {
+        id: 'grid',
+        label: 'Grid Tiles',
+        description: 'Options shown as 2-column tiles on a single scrollable screen. Great balance of speed and touch usability.',
+        icon: Grid3x3,
+    },
+    {
+        id: 'fullscreen',
+        label: 'Fullscreen',
+        description: 'One option fills the entire screen at a time — maximum tap target. Best for kiosk-style touch terminals.',
+        icon: Maximize2,
     },
 ];
 
