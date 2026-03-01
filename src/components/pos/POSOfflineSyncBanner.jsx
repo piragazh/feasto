@@ -36,6 +36,7 @@ export async function triggerSync(restaurantId) {
         let synced = 0;
         let failed = 0;
         try {
+            // 1. Sync pending orders
             const pending = await getAllPendingUnsynced();
             const forRestaurant = restaurantId
                 ? pending.filter(o => o.restaurant_id === restaurantId)
@@ -52,22 +53,34 @@ export async function triggerSync(restaurantId) {
                 }
             }
 
+            // 2. Sync pending status updates
+            const statusUpdates = await getAllPendingStatusUpdates();
+            for (const update of statusUpdates) {
+                try {
+                    await base44.entities.Order.update(update.order_id, { status: update.status });
+                    await markStatusUpdateSynced(update.offline_id);
+                    synced++;
+                } catch {
+                    failed++;
+                }
+            }
+
             if (synced > 0) {
-                toast.success(`${synced} offline order${synced > 1 ? 's' : ''} synced`);
+                toast.success(`${synced} offline change${synced > 1 ? 's' : ''} synced`);
                 updateShared({ lastSynced: new Date() });
             }
             if (failed > 0) {
-                toast.error(`${failed} order${failed > 1 ? 's' : ''} failed to sync`);
+                toast.error(`${failed} update${failed > 1 ? 's' : ''} failed to sync`);
             }
         } catch {
             toast.error('Sync failed — will retry automatically');
         } finally {
-            // Refresh count
             const remaining = await getAllPendingUnsynced();
-            const count = restaurantId
+            const statusRemaining = await getAllPendingStatusUpdates();
+            const orderCount = restaurantId
                 ? remaining.filter(o => o.restaurant_id === restaurantId).length
                 : remaining.length;
-            updateShared({ isSyncing: false, pendingCount: count });
+            updateShared({ isSyncing: false, pendingCount: orderCount + statusRemaining.length });
             syncPromise = null;
         }
     })();
