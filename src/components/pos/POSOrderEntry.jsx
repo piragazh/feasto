@@ -6,6 +6,7 @@ import { Scissors, Users, PlusCircle, PauseCircle, Phone, ChevronRight, Zap } fr
 import { toast } from 'sonner';
 
 import POSItemCustomization from './POSItemCustomization';
+import POSItemCustomizationV2 from './POSItemCustomizationV2';
 import POSPayment from './POSPayment';
 import SplitBillDialog from './SplitBillDialog';
 import FloorPlanView from './FloorPlanView';
