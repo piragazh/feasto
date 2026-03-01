@@ -84,9 +84,9 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
 
     if (!item?.customization_options?.length) return null;
 
-    const allGroups = [...(item.customization_options || [])];
+    const allGroups = [...(item?.customization_options || [])];
     if (isMeal) {
-        const mealUpgrade = item.customization_options.find(o => o.type === 'meal_upgrade');
+        const mealUpgrade = item?.customization_options?.find(o => o.type === 'meal_upgrade');
         if (mealUpgrade?.meal_customizations?.length) allGroups.push(...mealUpgrade.meal_customizations.map(mc => ({ ...mc, _isMealSub: true })));
     }
 
