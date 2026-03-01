@@ -108,19 +108,23 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         onUpdateQuantity(itemId, newQuantity);
     };
 
-    const { data: menuItems = [] } = useQuery({
+    const { data: menuItems = [], refetch: refetchMenuItems } = useQuery({
     queryKey: ['pos-menu-items', restaurantId],
     queryFn: async () => {
         try {
             const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true });
             // Filter out online-only items for POS
             const posItems = items.filter(i => !i.availability_channel || i.availability_channel !== 'online_only');
-            if (posItems?.length) cacheMenuItems(restaurantId, posItems);
+            if (posItems?.length) {
+                cacheMenuItems(restaurantId, posItems);
+                setCacheMeta(restaurantId, 'menu_items', new Date().toISOString());
+            }
             return posItems;
         }
         catch { return getCachedMenuItems(restaurantId); }
     },
     enabled: !!restaurantId,
+    staleTime: 5 * 60 * 1000, // treat as fresh for 5 min
     });
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
