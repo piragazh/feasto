@@ -126,8 +126,34 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
         }
     }, [isOnline, pendingCount, isSyncing, restaurantId]);
 
-    // Nothing to show
-    if (isOnline && pendingCount === 0 && !isSyncing) return null;
+    // Format last cached time
+    const formatCachedAt = (iso) => {
+        if (!iso) return null;
+        const d = new Date(iso);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    // Only show banner if offline, syncing, or there are pending items
+    if (isOnline && pendingCount === 0 && !isSyncing) {
+        // Show a subtle "cached" indicator if we have cached data
+        if (lastCached && !dismissed) {
+            return (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium mb-2 bg-green-500/10 border border-green-500/20 text-green-400">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1">Menu cached locally · {formatCachedAt(lastCached)}</span>
+                    {onForceRefresh && (
+                        <button onClick={onForceRefresh} className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+                            <RefreshCw className="h-3 w-3" /> Refresh
+                        </button>
+                    )}
+                    <button onClick={() => setDismissed(true)} className="opacity-50 hover:opacity-100 transition-opacity ml-1">
+                        <X className="h-3 w-3" />
+                    </button>
+                </div>
+            );
+        }
+        return null;
+    }
     if (dismissed && isOnline && pendingCount === 0) return null;
 
     return (
@@ -148,10 +174,10 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
 
             <span className="flex-1 text-xs leading-tight">
                 {!isOnline
-                    ? `Offline mode — ${pendingCount > 0 ? `${pendingCount} order${pendingCount > 1 ? 's' : ''} queued locally` : 'orders will be saved locally'}`
+                    ? `Offline mode — ${pendingCount > 0 ? `${pendingCount} change${pendingCount > 1 ? 's' : ''} queued` : 'orders will be saved locally'}`
                     : isSyncing
-                        ? 'Syncing offline orders to server...'
-                        : `${pendingCount} offline order${pendingCount > 1 ? 's' : ''} pending sync`
+                        ? 'Syncing offline changes to server...'
+                        : `${pendingCount} offline change${pendingCount > 1 ? 's' : ''} pending sync`
                 }
             </span>
 
