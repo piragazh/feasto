@@ -125,8 +125,9 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
         if (isLastStep) { handleConfirm(); return; }
         // If current step is required and not filled, warn
         if (currentStep?.required) {
-            const isFilledSingle = currentStep.type === 'single' && customizations[currentStep.name];
-            const isFilledMultiple = currentStep.type === 'multiple' && customizations[currentStep.name]?.length > 0;
+            const store = currentStep._isMealSub ? mealCustomizations : customizations;
+            const isFilledSingle = currentStep.type === 'single' && store[currentStep.name];
+            const isFilledMultiple = currentStep.type === 'multiple' && store[currentStep.name]?.length > 0;
             const isMealUpgrade = currentStep.type === 'meal_upgrade';
             if (!isFilledSingle && !isFilledMultiple && !isMealUpgrade) {
                 toast.error(`Please select an option for: ${currentStep.name}`);
