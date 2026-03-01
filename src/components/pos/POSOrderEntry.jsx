@@ -366,7 +366,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     }
 
     // ── Layout configs ─────────────────────────────────────────────────────────
-    const posLayout = restaurant?.pos_layout || 'standard';
+    // Always use freshly fetched restaurant data for layout settings so changes in POS settings take effect without a full reload
+    const posLayout = restaurantFetched?.pos_layout || restaurant?.pos_layout || 'standard';
+    const posCustomizationLayout = restaurantFetched?.pos_customization_layout || restaurant?.pos_customization_layout || 'classic';
     const layoutCols = {
         standard:   { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true, quickActions: false },
         compact:    { cat: 'md:col-span-1', menu: 'md:col-span-8', cart: 'md:col-span-3', showCat: true, quickActions: false },
