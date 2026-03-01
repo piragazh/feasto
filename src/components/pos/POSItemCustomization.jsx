@@ -209,7 +209,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                        >
                                            <RadioGroupItem 
                                                value={opt.label.toLowerCase().includes('meal') ? 'meal' : 'single'}
-                                               id={opt.label}
+                                               id={`${option.name}-meal-${opt.label}`}
                                                className="w-4 h-4"
                                            />
                                            <Label 
