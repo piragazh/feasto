@@ -143,6 +143,10 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
         } else {
             setCustomizations(prev => ({ ...prev, [optionName]: label }));
         }
+        // Auto-advance to next step after a short delay for single-select
+        if (!isLastStep) {
+            setTimeout(() => setStep(s => s + 1), 250);
+        }
     };
 
     const toggleMultiple = (optionName, label, isMealSub = false) => {
