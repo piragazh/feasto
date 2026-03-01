@@ -52,7 +52,11 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
         item?.customization_options?.forEach(option => {
             if (option.type === 'single' && customizations[option.name]) total += optPrice(option.options?.find(o => o.label === customizations[option.name]));
             else if (option.type === 'multiple' && customizations[option.name]) customizations[option.name].forEach(l => { total += optPrice(option.options?.find(o => o.label === l)); });
-            else if (option.type === 'meal_upgrade') total += optPrice(isMeal ? (option.options?.[1] || option.options?.[0]) : option.options?.[0]);
+            else if (option.type === 'meal_upgrade') {
+                const target = isMeal ? 'meal' : 'own';
+                const mealOpt = option.options?.find(o => o.label.toLowerCase().includes(target)) || (isMeal ? option.options?.[1] : option.options?.[0]);
+                total += optPrice(mealOpt);
+            }
         });
         if (isMeal) {
             const mu = item?.customization_options?.find(o => o.type === 'meal_upgrade');
