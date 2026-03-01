@@ -95,10 +95,11 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
 
     const refreshCount = useCallback(async () => {
         const pending = await getAllPendingUnsynced();
-        const count = restaurantId
+        const statusUpdates = await getAllPendingStatusUpdates();
+        const orderCount = restaurantId
             ? pending.filter(o => o.restaurant_id === restaurantId).length
             : pending.length;
-        updateShared({ pendingCount: count });
+        updateShared({ pendingCount: orderCount + statusUpdates.length });
     }, [restaurantId]);
 
     useEffect(() => {
