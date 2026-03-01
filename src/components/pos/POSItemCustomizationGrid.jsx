@@ -59,6 +59,13 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
             if (!option.required) return;
             if (option.type === 'single' && !customizations[option.name]) missing.push(option.name);
             if (option.type === 'multiple' && (!customizations[option.name] || customizations[option.name].length === 0)) missing.push(option.name);
+            if (option.type === 'meal_upgrade' && isMeal) {
+                option.meal_customizations?.forEach(mc => {
+                    if (!mc.required) return;
+                    if (mc.type === 'single' && !mealCustomizations[mc.name]) missing.push(mc.name);
+                    if (mc.type === 'multiple' && (!mealCustomizations[mc.name] || mealCustomizations[mc.name].length === 0)) missing.push(mc.name);
+                });
+            }
         });
         if (missing.length > 0) { toast.error(`Please select: ${missing.join(', ')}`); return; }
         onConfirm({ ...item, price: currentPrice, customizations: isMeal ? { ...customizations, ...mealCustomizations } : customizations, specialInstructions: specialInstructions.trim(), isMeal });
