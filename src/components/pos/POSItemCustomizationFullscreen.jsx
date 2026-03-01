@@ -102,6 +102,12 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
         if (!isLastStep) setTimeout(() => setStep(s => s + 1), 200);
     };
 
+    const toggleMealUpgrade = (isMealOpt) => {
+        setIsMeal(isMealOpt);
+        if (!isMealOpt) setMealCustomizations({});
+        if (!isLastStep) setTimeout(() => setStep(s => s + 1), 200);
+    };
+
     const toggleMultiple = (name, label, isMealSub = false) => {
         const setter = isMealSub ? setMealCustomizations : setCustomizations;
         setter(p => { const c = p[name] || []; return { ...p, [name]: c.includes(label) ? c.filter(v => v !== label) : [...c, label] }; });
