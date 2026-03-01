@@ -137,14 +137,14 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
         setStep(s => s + 1);
     };
 
-    const toggleSingle = (optionName, label, isMealSub = false) => {
+    const toggleSingle = (optionName, label, isMealSub = false, autoAdvance = true) => {
         if (isMealSub) {
             setMealCustomizations(prev => ({ ...prev, [optionName]: label }));
         } else {
             setCustomizations(prev => ({ ...prev, [optionName]: label }));
         }
         // Auto-advance to next step after a short delay for single-select
-        if (!isLastStep) {
+        if (autoAdvance && !isLastStep) {
             setTimeout(() => setStep(s => s + 1), 250);
         }
     };
