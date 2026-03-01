@@ -159,7 +159,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 const isSelected = isMeal === isMealOpt;
                                 return (
                                     <button key={opt.label}
-                                        onClick={() => { setIsMeal(isMealOpt); if (!isMealOpt) setMealCustomizations({}); if (!isLastStep) setTimeout(() => setStep(s => s + 1), 200); }}
+                                        onClick={() => toggleMealUpgrade(isMealOpt)}
                                         className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-orange-500 border-orange-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-orange-500/40' : 'bg-gray-50 border-gray-200 hover:border-orange-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
