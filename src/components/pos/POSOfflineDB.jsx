@@ -37,6 +37,12 @@ function openDB() {
                 const store = db.createObjectStore(STORES.TABLES, { keyPath: 'id' });
                 store.createIndex('restaurant_id', 'restaurant_id', { unique: false });
             }
+            // v3: pending status updates
+            if (!db.objectStoreNames.contains(STORES.PENDING_STATUS_UPDATES)) {
+                const store = db.createObjectStore(STORES.PENDING_STATUS_UPDATES, { keyPath: 'offline_id' });
+                store.createIndex('order_id', 'order_id', { unique: false });
+                store.createIndex('synced', 'synced', { unique: false });
+            }
         };
 
         req.onsuccess = (e) => {
