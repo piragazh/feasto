@@ -509,11 +509,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </button>
             </div>
 
-            {selectedItem && (posCustomizationLayout === 'stepped' ? (
-                <POSItemCustomizationV2 item={selectedItem} open={customizationOpen} onClose={() => { setCustomizationOpen(false); setSelectedItem(null); }} onConfirm={handleCustomizationConfirm} posTheme={posTheme} />
-            ) : (
-                <POSItemCustomization item={selectedItem} open={customizationOpen} onClose={() => { setCustomizationOpen(false); setSelectedItem(null); }} onConfirm={handleCustomizationConfirm} posTheme={posTheme} />
-            ))}
+            {selectedItem && (() => {
+                const props = { item: selectedItem, open: customizationOpen, onClose: () => { setCustomizationOpen(false); setSelectedItem(null); }, onConfirm: handleCustomizationConfirm, posTheme };
+                if (posCustomizationLayout === 'stepped') return <POSItemCustomizationV2 {...props} />;
+                if (posCustomizationLayout === 'grid') return <POSItemCustomizationGrid {...props} />;
+                if (posCustomizationLayout === 'fullscreen') return <POSItemCustomizationFullscreen {...props} />;
+                return <POSItemCustomization {...props} />;
+            })()}
 
             <TableSelectionDialog open={tableSelectionOpen} onClose={() => setTableSelectionOpen(false)} tables={tables} selectedTable={selectedTable} onSelectTable={(table) => setSelectedTable(table)} />
             <CustomItemDialog open={customItemOpen} onClose={() => setCustomItemOpen(false)} onAdd={(item) => onAddItem(item)} restaurantId={restaurantId} posTheme={posTheme} />
