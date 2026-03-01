@@ -9,6 +9,7 @@ import POSLayoutSelector from '../pos/POSLayoutSelector';
 import PhoneOrderSettings from '../pos/PhoneOrderSettings';
 import POSPrinterSettings from '../pos/POSPrinterSettings';
 import POSCardTerminalSettings from '../pos/POSCardTerminalSettings';
+import POSCustomizationLayoutSelector from '../pos/POSCustomizationLayoutSelector';
 
 export default function POSConfigurations({ restaurantId }) {
     return (
