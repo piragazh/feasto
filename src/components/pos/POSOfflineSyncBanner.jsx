@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getAllPendingUnsynced, markOrderSynced } from './POSOfflineDB';
+import { getAllPendingUnsynced, markOrderSynced, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt } from './POSOfflineDB';
 import { WifiOff, RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 
