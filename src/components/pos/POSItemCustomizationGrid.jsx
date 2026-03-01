@@ -37,7 +37,8 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
             } else if (option.type === 'multiple' && customizations[option.name]) {
                 customizations[option.name].forEach(label => { total += optPrice(option.options?.find(o => o.label === label)); });
             } else if (option.type === 'meal_upgrade') {
-                const mealOpt = isMeal ? (option.options?.[1] || option.options?.[0]) : option.options?.[0];
+                const targetLabel = isMeal ? 'meal' : 'own';
+                const mealOpt = option.options?.find(o => o.label.toLowerCase().includes(targetLabel)) || (isMeal ? option.options?.[1] : option.options?.[0]);
                 total += optPrice(mealOpt);
             }
         });
