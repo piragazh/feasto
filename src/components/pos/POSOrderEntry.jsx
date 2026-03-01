@@ -507,7 +507,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </button>
             </div>
 
-            {selectedItem && (restaurant?.pos_customization_layout === 'stepped' ? (
+            {selectedItem && (posCustomizationLayout === 'stepped' ? (
                 <POSItemCustomizationV2 item={selectedItem} open={customizationOpen} onClose={() => { setCustomizationOpen(false); setSelectedItem(null); }} onConfirm={handleCustomizationConfirm} posTheme={posTheme} />
             ) : (
                 <POSItemCustomization item={selectedItem} open={customizationOpen} onClose={() => { setCustomizationOpen(false); setSelectedItem(null); }} onConfirm={handleCustomizationConfirm} posTheme={posTheme} />
