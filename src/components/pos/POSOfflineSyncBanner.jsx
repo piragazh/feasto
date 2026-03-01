@@ -87,10 +87,11 @@ export async function triggerSync(restaurantId) {
     return syncPromise;
 }
 
-export default function POSOfflineSyncBanner({ restaurantId }) {
+export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
     const { isOnline, pendingCount, isSyncing, lastSynced } = useOfflineSyncState();
     const [dismissed, setDismissed] = useState(false);
     const autoSyncRef = useRef(false);
+    const lastCached = getLastCachedAt(restaurantId, 'menu_items');
 
     const refreshCount = useCallback(async () => {
         const pending = await getAllPendingUnsynced();
