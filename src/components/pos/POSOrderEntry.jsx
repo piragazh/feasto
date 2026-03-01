@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 
 import POSItemCustomization from './POSItemCustomization';
 import POSItemCustomizationV2 from './POSItemCustomizationV2';
+import POSItemCustomizationGrid from './POSItemCustomizationGrid';
+import POSItemCustomizationFullscreen from './POSItemCustomizationFullscreen';
 import POSPayment from './POSPayment';
 import SplitBillDialog from './SplitBillDialog';
 import FloorPlanView from './FloorPlanView';
