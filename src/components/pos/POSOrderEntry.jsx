@@ -84,7 +84,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             try { const r = (await base44.entities.Restaurant.filter({ id: restaurantId }))[0]; if (r) cacheRestaurant(r); return r; }
             catch { return getCachedRestaurant(restaurantId); }
         },
-        enabled: !!restaurantId && !restaurantProp,
+        enabled: !!restaurantId,
     });
     const restaurant = restaurantProp || restaurantFetched;
 
