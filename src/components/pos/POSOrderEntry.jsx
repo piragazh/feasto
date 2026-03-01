@@ -493,9 +493,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 </button>
             </div>
 
-            {selectedItem && (
+            {selectedItem && (restaurant?.pos_customization_layout === 'stepped' ? (
+                <POSItemCustomizationV2 item={selectedItem} open={customizationOpen} onClose={() => { setCustomizationOpen(false); setSelectedItem(null); }} onConfirm={handleCustomizationConfirm} posTheme={posTheme} />
+            ) : (
                 <POSItemCustomization item={selectedItem} open={customizationOpen} onClose={() => { setCustomizationOpen(false); setSelectedItem(null); }} onConfirm={handleCustomizationConfirm} posTheme={posTheme} />
-            )}
+            ))}
 
             <TableSelectionDialog open={tableSelectionOpen} onClose={() => setTableSelectionOpen(false)} tables={tables} selectedTable={selectedTable} onSelectTable={(table) => setSelectedTable(table)} />
             <CustomItemDialog open={customItemOpen} onClose={() => setCustomItemOpen(false)} onAdd={(item) => onAddItem(item)} restaurantId={restaurantId} posTheme={posTheme} />
