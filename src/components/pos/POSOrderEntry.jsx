@@ -212,8 +212,16 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const handlePaymentComplete = async () => {
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable?.id);
         try {
-            for (const order of ordersForTable) await base44.entities.Order.update(order.id, { status: 'delivered' });
-            toast.success('Payment completed!');
+            if (!navigator.onLine) {
+                // Queue status updates for later sync
+                for (const order of ordersForTable) {
+                    await savePendingStatusUpdate(order.id, 'delivered');
+                }
+                toast.success('Payment recorded offline — will sync when connected');
+            } else {
+                for (const order of ordersForTable) await base44.entities.Order.update(order.id, { status: 'delivered' });
+                toast.success('Payment completed!');
+            }
             setShowPayment(false); setViewingTable(null); setViewMode('tables');
             refetchTableOrders();
         } catch { toast.error('Failed to complete payment'); }
