@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'pos_offline_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORES = {
     MENU_ITEMS: 'menu_items',
     PENDING_ORDERS: 'pending_orders',
