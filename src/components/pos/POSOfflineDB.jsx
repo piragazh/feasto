@@ -10,6 +10,7 @@ const STORES = {
     PENDING_ORDERS: 'pending_orders',
     RESTAURANTS: 'restaurants',
     TABLES: 'tables',
+    PENDING_STATUS_UPDATES: 'pending_status_updates',
 };
 
 let dbInstance = null;
