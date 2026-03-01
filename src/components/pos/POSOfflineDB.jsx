@@ -175,3 +175,47 @@ export async function getPendingOrderCount(restaurantId) {
     const pending = await getPendingOrders(restaurantId);
     return pending.length;
 }
+
+// ─── Pending Status Updates ──────────────────────────────────────────────────
+
+export async function savePendingStatusUpdate(orderId, status) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_STATUS_UPDATES, 'readwrite');
+    const offline_id = `status_${orderId}_${Date.now()}`;
+    const record = { offline_id, order_id: orderId, status, synced: false, created_at: new Date().toISOString() };
+    await promisify(store.put(record));
+    return record;
+}
+
+export async function getAllPendingStatusUpdates() {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_STATUS_UPDATES);
+    const all = await promisify(store.getAll());
+    return all.filter(r => !r.synced);
+}
+
+export async function markStatusUpdateSynced(offline_id) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_STATUS_UPDATES, 'readwrite');
+    const record = await promisify(store.get(offline_id));
+    if (record) await promisify(store.put({ ...record, synced: true }));
+}
+
+// ─── Cache metadata ──────────────────────────────────────────────────────────
+
+const META_KEY = 'pos_cache_meta';
+
+export function getCacheMeta() {
+    try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; }
+}
+
+export function setCacheMeta(restaurantId, key, value) {
+    const meta = getCacheMeta();
+    if (!meta[restaurantId]) meta[restaurantId] = {};
+    meta[restaurantId][key] = value;
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+}
+
+export function getLastCachedAt(restaurantId, key) {
+    return getCacheMeta()?.[restaurantId]?.[key] || null;
+}
