@@ -22,7 +22,7 @@ import POSTablesGrid from './POSTablesGrid';
 import HeldOrdersDrawer from './HeldOrdersDrawer';
 import PhoneOrderDialog from './PhoneOrderDialog';
 import QuickItemLookupDialog from './QuickItemLookupDialog';
-import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables } from './POSOfflineDB';
+import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta } from './POSOfflineDB';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
