@@ -98,13 +98,14 @@ export default function BulkPriceAdjustment() {
                     itemPriceChanged = newItemPrice !== currentItemPrice;
                     break;
                 }
-                case 'both_to_both':
+                case 'both_to_both': {
                     newItemPrice = adjust(currentItemPrice, numVal);
                     itemPriceChanged = newItemPrice !== currentItemPrice;
                     const sourcePOS = currentPosPrice ?? currentItemPrice;
                     newPosPrice = adjust(sourcePOS, numVal);
                     posPriceChanged = newPosPrice !== currentPosPrice;
                     break;
+                }
             }
 
             const changed = itemPriceChanged || posPriceChanged;
