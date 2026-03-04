@@ -61,26 +61,6 @@ SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
 const SelectContent = React.forwardRef(({ className, children, position = "popper", ...props }, ref) => {
-  const [mounted, setMounted] = React.useState(false);
-  
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <SelectPrimitive.Portal>
-        <SelectPrimitive.Content ref={ref} {...props}>
-          <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
-        </SelectPrimitive.Content>
-      </SelectPrimitive.Portal>
-    );
-  }
-
-  if (isMobile()) {
-    return null; // Mobile uses drawer, handled separately
-  }
-
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
