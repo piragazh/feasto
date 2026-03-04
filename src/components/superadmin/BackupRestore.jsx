@@ -96,7 +96,7 @@ export default function BackupRestore() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                        <DatabaseBackup className="h-5 w-5 text-orange-500" />
+                        <Database className="h-5 w-5 text-orange-500" />
                         Create Snapshot
                     </CardTitle>
                 </CardHeader>
