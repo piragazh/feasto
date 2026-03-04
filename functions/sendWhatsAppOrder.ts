@@ -88,13 +88,16 @@ Deno.serve(async (req) => {
             body: messageBody + '\n\n✅ Reply "ACCEPT" to confirm\n❌ Reply "REJECT" to decline'
         });
 
-        // Store WhatsApp message tracking - include order_id in message so reply handler can find it
-        await base44.asServiceRole.entities.Message.create({
-            order_id: order_id,
+        // Log the WhatsApp message
+        await base44.asServiceRole.entities.SmsLog.create({
             restaurant_id: order.restaurant_id,
-            sender_type: 'restaurant',
-            message: `WhatsApp order sent - SID: ${message.sid} - ORDER_ID: ${order_id}`,
-            is_read: false
+            restaurant_name: restaurant_data?.name || null,
+            to: toPhone,
+            message: messageBody,
+            order_id: order_id,
+            status: 'sent',
+            message_sid: message.sid,
+            type: 'restaurant_alert',
         });
 
         return Response.json({ 
