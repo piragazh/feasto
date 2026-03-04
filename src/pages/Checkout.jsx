@@ -656,6 +656,20 @@ export default function Checkout() {
             return;
         }
         
+        // ---- VALIDATION: Restaurant must be open or order must be scheduled ----
+        if (restaurant && !isScheduled) {
+            const isClosed = checkRestaurantStatus();
+            if (isClosed) {
+                toast.error('This restaurant is currently closed. Please schedule your order for when they open.');
+                const earliest = getEarliestScheduleTime();
+                if (earliest) {
+                    setScheduledFor(earliest);
+                    setIsScheduled(true);
+                }
+                return;
+            }
+        }
+
         console.log('All validations passed, proceeding...');
 
         // For CASH: Show confirmation dialog
