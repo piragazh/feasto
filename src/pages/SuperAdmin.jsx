@@ -24,6 +24,7 @@ import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManageme
 import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
 import GlobalScreenHealthMonitor from '@/components/superadmin/GlobalScreenHealthMonitor';
 import SmsLogViewer from '@/components/superadmin/SmsLogViewer';
+import BulkPriceAdjustment from '@/components/superadmin/BulkPriceAdjustment';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
@@ -75,6 +76,7 @@ export default function SuperAdmin() {
                 { id: 'drivers', label: 'Driver Management', icon: Truck },
                 { id: 'monitoring', label: 'Monitoring', icon: Activity },
                 { id: 'screens', label: 'Screen Health', icon: Monitor },
+                { id: 'bulk-price', label: 'Bulk Price Adjust', icon: DollarSign },
             ]
         },
         {
@@ -218,6 +220,7 @@ export default function SuperAdmin() {
                     {activeTab === 'files' && <PublicFilesManagement />}
                     {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
                     {activeTab === 'sms-log' && <SmsLogViewer />}
+                    {activeTab === 'bulk-price' && <BulkPriceAdjustment />}
                     {activeTab === 'managers' && (
                         <iframe 
                             src={createPageUrl('ManageRestaurantManagers')} 
