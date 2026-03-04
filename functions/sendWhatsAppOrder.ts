@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
         const order = orders[0];
 
         // Validate order has required fields
-        if (!order.total || !order.items?.length || !order.guest_name) {
+        if (!order.total || !order.items?.length) {
             return Response.json({ error: 'Order missing required fields' }, { status: 400 });
         }
 
@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
             .join('\n');
 
         const orderLabel = order.order_number || order.id.slice(-6);
-        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${order.guest_name || 'Guest'}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}`;
+        const customerName = order.guest_name || order.created_by || 'Customer';
+        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${customerName}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}`;
 
         // Get restaurant details
         let restaurant_data = null;
@@ -66,7 +67,16 @@ Deno.serve(async (req) => {
         const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
 
         if (!accountSid || !authToken || !twilioPhoneNumber) {
-            return Response.json({ error: 'Twilio credentials not configured' }, { status: 500 });
+            await base44.asServiceRole.entities.SmsLog.create({
+                restaurant_id: order.restaurant_id,
+                restaurant_name: restaurant_data?.name || null,
+                to: toPhone,
+                message: messageBody,
+                order_id: order_id,
+                status: 'simulated',
+                type: 'restaurant_alert',
+            });
+            return Response.json({ success: true, message: 'Twilio not configured', simulated: true });
         }
 
         const client = twilio(accountSid, authToken);
