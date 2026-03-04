@@ -132,7 +132,7 @@ export default function BackupRestore() {
                         disabled={isCreating}
                         className="bg-orange-500 hover:bg-orange-600"
                     >
-                        {isCreating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <DatabaseBackup className="h-4 w-4 mr-2" />}
+                        {isCreating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
                         {isCreating ? 'Creating Backup...' : 'Create Backup Now'}
                     </Button>
                 </CardContent>
