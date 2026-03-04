@@ -166,8 +166,10 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             
             await base44.functions.invoke('sendSMS', {
                 to: order.phone,
-                message: message,
-                orderId: order.id
+                message,
+                orderId: order.id,
+                restaurantId,
+                smsType: 'customer_notification',
             });
         } catch (error) {
             console.error('SMS notification error:', error);

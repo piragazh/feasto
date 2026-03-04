@@ -112,8 +112,17 @@ Deno.serve(async (req) => {
         if (!response.ok) {
             const error = await response.text();
             console.error('Twilio API error:', error);
-            console.error('Phone number attempted:', formattedPhone);
-            console.error('Message:', message);
+            // Log the failure
+            await base44.asServiceRole.entities.SmsLog.create({
+                restaurant_id: restaurantId || null,
+                restaurant_name: restaurantName || null,
+                to: formattedPhone,
+                message,
+                order_id: orderId || null,
+                status: 'failed',
+                error_details: error,
+                type: smsType || 'customer_notification',
+            });
             return Response.json({ 
                 error: 'Failed to send SMS', 
                 details: error 
