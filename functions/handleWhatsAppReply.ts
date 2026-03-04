@@ -130,6 +130,23 @@ Deno.serve(async (req) => {
             is_read: false
         });
 
+        // Notify customer via SMS about order status change
+        if (order.phone) {
+            try {
+                await base44.asServiceRole.functions.invoke('sendSMS', {
+                    to: order.phone,
+                    message: action === 'confirmed'
+                        ? `✅ Your order #${order.order_number || order.id.slice(-6)} from ${order.restaurant_name} has been CONFIRMED! We're preparing it now.`
+                        : `❌ Unfortunately your order #${order.order_number || order.id.slice(-6)} from ${order.restaurant_name} has been cancelled. Please contact the restaurant for more information.`,
+                    orderId: order.id,
+                    restaurantId: order.restaurant_id,
+                    restaurantName: order.restaurant_name,
+                });
+            } catch (smsError) {
+                console.error('Failed to send customer SMS after WhatsApp reply:', smsError);
+            }
+        }
+
         // Send confirmation back to the restaurant
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const authToken3 = Deno.env.get('TWILIO_AUTH_TOKEN');
