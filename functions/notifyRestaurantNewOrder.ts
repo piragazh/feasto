@@ -76,6 +76,15 @@ Deno.serve(async (req) => {
 
         if (!accountSid || !authToken || !twilioPhone) {
             console.log(`Restaurant alert would be sent to ${alertPhone}`);
+            await base44.asServiceRole.entities.SmsLog.create({
+                restaurant_id: restaurantId,
+                restaurant_name: restaurantName,
+                to: alertPhone,
+                message,
+                order_id: orderId,
+                status: 'simulated',
+                type: 'restaurant_alert',
+            });
             return Response.json({ 
                 success: true, 
                 message: 'Twilio not configured',
@@ -116,6 +125,16 @@ Deno.serve(async (req) => {
         if (!response.ok) {
             const error = await response.text();
             console.error('Twilio error:', error);
+            await base44.asServiceRole.entities.SmsLog.create({
+                restaurant_id: restaurantId,
+                restaurant_name: restaurantName,
+                to: alertPhone,
+                message,
+                order_id: orderId,
+                status: 'failed',
+                error_details: error,
+                type: 'restaurant_alert',
+            });
             return Response.json({ 
                 error: 'Failed to send SMS', 
                 details: error 
