@@ -909,13 +909,19 @@ export default function Checkout() {
                 // SMS check failed but order still placed - don't block user
             }
 
-            // Notify restaurant of new order
+            // Notify restaurant of new order (SMS or WhatsApp based on restaurant preference)
             try {
-                await base44.functions.invoke('notifyRestaurantNewOrder', {
-                    orderId: newOrder.id,
-                    restaurantId: restaurantId,
-                    restaurantName: restaurantName
-                });
+                if (restaurant?.order_alert_channel === 'whatsapp' && restaurant?.whatsapp_alerts_enabled) {
+                    await base44.functions.invoke('sendWhatsAppOrder', {
+                        order_id: newOrder.id,
+                    });
+                } else {
+                    await base44.functions.invoke('notifyRestaurantNewOrder', {
+                        orderId: newOrder.id,
+                        restaurantId: restaurantId,
+                        restaurantName: restaurantName
+                    });
+                }
             } catch (notifyError) {
                 // Notification failed but order still placed
             }
