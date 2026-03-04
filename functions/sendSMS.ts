@@ -23,8 +23,8 @@ Deno.serve(async (req) => {
                         const order = orders[0];
                         const orderAge = Date.now() - new Date(order.created_date).getTime();
                         
-                        // Allow SMS for orders created in last 2 minutes
-                        if (orderAge < 2 * 60 * 1000) {
+                        // Allow SMS for orders created in last 10 minutes
+                        if (orderAge < 10 * 60 * 1000) {
                             isAuthorized = true;
                         }
                     }
