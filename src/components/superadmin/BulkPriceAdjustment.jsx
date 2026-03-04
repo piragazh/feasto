@@ -6,22 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DollarSign, Percent, ArrowRight, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { DollarSign, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+/*
+  Price field modes:
+  - "item_to_item"   : adjust item_price → write to item_price
+  - "pos_to_pos"     : adjust pos_price  → write to pos_price
+  - "item_to_pos"    : adjust item_price → write to pos_price
+  - "pos_to_item"    : adjust pos_price  → write to item_price
+  - "both_to_both"   : adjust both item_price and pos_price independently
+*/
 
 export default function BulkPriceAdjustment() {
     const [selectedRestaurantId, setSelectedRestaurantId] = useState('all');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [adjustmentType, setAdjustmentType] = useState('percentage'); // percentage | fixed
-    const [direction, setDirection] = useState('increase'); // increase | decrease
+    const [direction, setDirection] = useState('increase');
     const [value, setValue] = useState('');
-    const [priceField, setPriceField] = useState('item_price'); // item_price | pos_price | both
-    const [targetField, setTargetField] = useState('same'); // same | item_price | pos_price
+    const [priceMode, setPriceMode] = useState('item_to_item');
     const [preview, setPreview] = useState(null);
     const [isApplying, setIsApplying] = useState(false);
-    const [isPreviewing, setIsPreviewing] = useState(false);
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
@@ -33,30 +38,25 @@ export default function BulkPriceAdjustment() {
         queryFn: () => selectedRestaurantId === 'all'
             ? base44.entities.MenuItem.list()
             : base44.entities.MenuItem.filter({ restaurant_id: selectedRestaurantId }),
-        enabled: true,
     });
 
-    // Get unique categories from loaded items
     const categories = ['all', ...new Set(menuItems.map(i => i.category).filter(Boolean))];
 
-    const filteredItems = menuItems.filter(item => {
-        if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
-        return true;
-    });
+    const filteredItems = menuItems.filter(item =>
+        selectedCategory === 'all' || item.category === selectedCategory
+    );
 
-    const calculateNewPrice = (originalPrice, numVal) => {
-        if (!originalPrice || originalPrice <= 0) return originalPrice;
-        let adjusted;
+    const adjust = (price, numVal) => {
+        if (price == null || price <= 0) return price;
+        let result;
         if (adjustmentType === 'percentage') {
-            adjusted = direction === 'increase'
-                ? originalPrice * (1 + numVal / 100)
-                : originalPrice * (1 - numVal / 100);
+            result = direction === 'increase'
+                ? price * (1 + numVal / 100)
+                : price * (1 - numVal / 100);
         } else {
-            adjusted = direction === 'increase'
-                ? originalPrice + numVal
-                : originalPrice - numVal;
+            result = direction === 'increase' ? price + numVal : price - numVal;
         }
-        return Math.max(0, Math.round(adjusted * 100) / 100);
+        return Math.max(0, Math.round(result * 100) / 100);
     };
 
     const buildPreview = () => {
@@ -66,48 +66,65 @@ export default function BulkPriceAdjustment() {
             return;
         }
 
-        setIsPreviewing(true);
         const changes = filteredItems.map(item => {
-            const sourcePrice = priceField === 'pos_price' ? (item.pos_price || item.price) : item.price;
-            const newPrice = calculateNewPrice(sourcePrice, numVal);
+            const currentItemPrice = item.price;
+            const currentPosPrice = item.pos_price ?? null;
 
-            let newItemPrice = item.price;
-            let newPosPrice = item.pos_price || null;
+            // Determine new values based on mode
+            let newItemPrice = currentItemPrice; // default: unchanged
+            let newPosPrice = currentPosPrice;   // default: unchanged
+            let itemPriceChanged = false;
+            let posPriceChanged = false;
 
-            if (targetField === 'same' || targetField === 'item_price') {
-                if (priceField === 'item_price' || priceField === 'both') {
-                    newItemPrice = calculateNewPrice(item.price, numVal);
+            switch (priceMode) {
+                case 'item_to_item':
+                    newItemPrice = adjust(currentItemPrice, numVal);
+                    itemPriceChanged = newItemPrice !== currentItemPrice;
+                    break;
+                case 'pos_to_pos': {
+                    // If no POS price set, fall back to item price as the source
+                    const source = currentPosPrice ?? currentItemPrice;
+                    newPosPrice = adjust(source, numVal);
+                    posPriceChanged = newPosPrice !== currentPosPrice;
+                    break;
                 }
-            }
-            if (targetField === 'same' || targetField === 'pos_price') {
-                if (priceField === 'pos_price' || priceField === 'both') {
-                    newPosPrice = calculateNewPrice(item.pos_price || item.price, numVal);
+                case 'item_to_pos':
+                    newPosPrice = adjust(currentItemPrice, numVal);
+                    posPriceChanged = newPosPrice !== currentPosPrice;
+                    break;
+                case 'pos_to_item': {
+                    const source = currentPosPrice ?? currentItemPrice;
+                    newItemPrice = adjust(source, numVal);
+                    itemPriceChanged = newItemPrice !== currentItemPrice;
+                    break;
                 }
+                case 'both_to_both':
+                    newItemPrice = adjust(currentItemPrice, numVal);
+                    itemPriceChanged = newItemPrice !== currentItemPrice;
+                    const sourcePOS = currentPosPrice ?? currentItemPrice;
+                    newPosPrice = adjust(sourcePOS, numVal);
+                    posPriceChanged = newPosPrice !== currentPosPrice;
+                    break;
             }
-            if (targetField === 'item_price' && priceField === 'pos_price') {
-                newItemPrice = calculateNewPrice(item.pos_price || item.price, numVal);
-                newPosPrice = item.pos_price || null;
-            }
-            if (targetField === 'pos_price' && priceField === 'item_price') {
-                newPosPrice = calculateNewPrice(item.price, numVal);
-                newItemPrice = item.price;
-            }
+
+            const changed = itemPriceChanged || posPriceChanged;
 
             return {
                 id: item.id,
                 name: item.name,
                 category: item.category,
                 restaurant_id: item.restaurant_id,
-                oldItemPrice: item.price,
-                oldPosPrice: item.pos_price || null,
+                oldItemPrice: currentItemPrice,
+                oldPosPrice: currentPosPrice,
                 newItemPrice,
                 newPosPrice,
-                changed: newItemPrice !== item.price || newPosPrice !== (item.pos_price || null),
+                itemPriceChanged,
+                posPriceChanged,
+                changed,
             };
         }).filter(c => c.changed);
 
         setPreview(changes);
-        setIsPreviewing(false);
     };
 
     const applyChanges = async () => {
@@ -122,10 +139,9 @@ export default function BulkPriceAdjustment() {
 
         for (const change of preview) {
             try {
-                const updateData = { price: change.newItemPrice };
-                if (change.newPosPrice !== null) {
-                    updateData.pos_price = change.newPosPrice;
-                }
+                const updateData = {};
+                if (change.itemPriceChanged) updateData.price = change.newItemPrice;
+                if (change.posPriceChanged) updateData.pos_price = change.newPosPrice;
                 await base44.entities.MenuItem.update(change.id, updateData);
                 successCount++;
             } catch (e) {
@@ -137,13 +153,21 @@ export default function BulkPriceAdjustment() {
         setPreview(null);
 
         if (failCount === 0) {
-            toast.success(`✅ Successfully updated ${successCount} items`);
+            toast.success(`Successfully updated ${successCount} items`);
         } else {
             toast.warning(`Updated ${successCount} items, ${failCount} failed`);
         }
     };
 
     const restaurantName = (id) => restaurants.find(r => r.id === id)?.name || id;
+
+    const priceModeLabels = {
+        item_to_item: 'Item Price → Item Price',
+        pos_to_pos: 'POS Price → POS Price',
+        item_to_pos: 'Item Price → POS Price',
+        pos_to_item: 'POS Price → Item Price',
+        both_to_both: 'Both Item + POS (each adjusted)',
+    };
 
     return (
         <div className="p-6 space-y-6">
@@ -160,14 +184,12 @@ export default function BulkPriceAdjustment() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                    {/* Step 1 - Target */}
+                    {/* Restaurant & Category */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label>Restaurant</Label>
                             <Select value={selectedRestaurantId} onValueChange={(v) => { setSelectedRestaurantId(v); setSelectedCategory('all'); setPreview(null); }}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select restaurant..." />
-                                </SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Select restaurant..." /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Restaurants</SelectItem>
                                     {restaurants.map(r => (
@@ -179,9 +201,7 @@ export default function BulkPriceAdjustment() {
                         <div>
                             <Label>Category</Label>
                             <Select value={selectedCategory} onValueChange={(v) => { setSelectedCategory(v); setPreview(null); }}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select category..." />
-                                </SelectTrigger>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     {categories.map(c => (
                                         <SelectItem key={c} value={c}>{c === 'all' ? 'All Categories' : c}</SelectItem>
@@ -191,35 +211,23 @@ export default function BulkPriceAdjustment() {
                         </div>
                     </div>
 
-                    {/* Step 2 - Price Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Label>Source Price Field</Label>
-                            <Select value={priceField} onValueChange={(v) => { setPriceField(v); setPreview(null); }}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="item_price">Item Price → Item Price</SelectItem>
-                                    <SelectItem value="pos_price">POS Price → POS Price</SelectItem>
-                                    <SelectItem value="both">Both Item + POS Prices</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500 mt-1">Which price field to read the value from</p>
-                        </div>
-                        <div>
-                            <Label>Target Price Field</Label>
-                            <Select value={targetField} onValueChange={(v) => { setTargetField(v); setPreview(null); }}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="same">Same as Source</SelectItem>
-                                    <SelectItem value="item_price">Write to Item Price</SelectItem>
-                                    <SelectItem value="pos_price">Write to POS Price</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500 mt-1">Where to write the adjusted price</p>
-                        </div>
+                    {/* Price Mode */}
+                    <div>
+                        <Label>Price Operation</Label>
+                        <Select value={priceMode} onValueChange={(v) => { setPriceMode(v); setPreview(null); }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(priceModeLabels).map(([k, v]) => (
+                                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Source → Target. e.g. "Item Price → POS Price" reads item price and writes adjusted value to POS price field.
+                        </p>
                     </div>
 
-                    {/* Step 3 - Adjustment */}
+                    {/* Adjustment */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Label>Direction</Label>
@@ -232,7 +240,7 @@ export default function BulkPriceAdjustment() {
                             </Select>
                         </div>
                         <div>
-                            <Label>Adjustment Type</Label>
+                            <Label>Type</Label>
                             <Select value={adjustmentType} onValueChange={(v) => { setAdjustmentType(v); setPreview(null); }}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -254,25 +262,25 @@ export default function BulkPriceAdjustment() {
                         </div>
                     </div>
 
-                    {/* Summary pill */}
+                    {/* Summary */}
                     {value && parseFloat(value) > 0 && (
                         <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
                             <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />
                             <span>
-                                Will <strong>{direction}</strong> prices by <strong>{adjustmentType === 'percentage' ? `${value}%` : `£${value}`}</strong>
-                                {' '}on <strong>{filteredItems.length} items</strong>
+                                Will <strong>{direction}</strong> by <strong>{adjustmentType === 'percentage' ? `${value}%` : `£${value}`}</strong>
+                                {' '}· <strong>{priceModeLabels[priceMode]}</strong>
+                                {' '}· <strong>{filteredItems.length} items</strong>
                                 {selectedRestaurantId !== 'all' && ` from ${restaurantName(selectedRestaurantId)}`}
-                                {selectedCategory !== 'all' && ` in category "${selectedCategory}"`}
+                                {selectedCategory !== 'all' && ` in "${selectedCategory}"`}
                             </span>
                         </div>
                     )}
 
                     <Button
                         onClick={buildPreview}
-                        disabled={!value || parseFloat(value) <= 0 || isPreviewing || itemsLoading}
+                        disabled={!value || parseFloat(value) <= 0 || itemsLoading}
                         className="bg-orange-500 hover:bg-orange-600"
                     >
-                        {isPreviewing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                         Preview Changes ({filteredItems.length} items)
                     </Button>
                 </CardContent>
@@ -282,7 +290,7 @@ export default function BulkPriceAdjustment() {
             {preview && (
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                                 Preview — {preview.length} items will change
@@ -294,7 +302,7 @@ export default function BulkPriceAdjustment() {
                                     disabled={isApplying || preview.length === 0}
                                     className="bg-green-600 hover:bg-green-700 text-white"
                                 >
-                                    {isApplying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                                    {isApplying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                     Apply {preview.length} Changes
                                 </Button>
                             </div>
@@ -308,14 +316,14 @@ export default function BulkPriceAdjustment() {
                                         <th className="pb-2 font-medium">Item</th>
                                         <th className="pb-2 font-medium">Category</th>
                                         {selectedRestaurantId === 'all' && <th className="pb-2 font-medium">Restaurant</th>}
-                                        <th className="pb-2 font-medium text-right">Old Item Price</th>
-                                        <th className="pb-2 font-medium text-right">New Item Price</th>
-                                        <th className="pb-2 font-medium text-right">Old POS Price</th>
-                                        <th className="pb-2 font-medium text-right">New POS Price</th>
+                                        <th className="pb-2 font-medium text-right">Item Price (old)</th>
+                                        <th className="pb-2 font-medium text-right">Item Price (new)</th>
+                                        <th className="pb-2 font-medium text-right">POS Price (old)</th>
+                                        <th className="pb-2 font-medium text-right">POS Price (new)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {preview.slice(0, 100).map(item => (
+                                    {preview.slice(0, 200).map(item => (
                                         <tr key={item.id} className="hover:bg-gray-50">
                                             <td className="py-2 font-medium">{item.name}</td>
                                             <td className="py-2 text-gray-500">{item.category || '—'}</td>
@@ -323,22 +331,22 @@ export default function BulkPriceAdjustment() {
                                                 <td className="py-2 text-gray-500">{restaurantName(item.restaurant_id)}</td>
                                             )}
                                             <td className="py-2 text-right text-gray-500">£{item.oldItemPrice?.toFixed(2)}</td>
-                                            <td className={`py-2 text-right font-semibold ${item.newItemPrice !== item.oldItemPrice ? 'text-orange-600' : 'text-gray-400'}`}>
+                                            <td className={`py-2 text-right font-semibold ${item.itemPriceChanged ? 'text-orange-600' : 'text-gray-400'}`}>
                                                 £{item.newItemPrice?.toFixed(2)}
                                             </td>
                                             <td className="py-2 text-right text-gray-500">
                                                 {item.oldPosPrice != null ? `£${item.oldPosPrice.toFixed(2)}` : '—'}
                                             </td>
-                                            <td className={`py-2 text-right font-semibold ${item.newPosPrice !== item.oldPosPrice ? 'text-orange-600' : 'text-gray-400'}`}>
+                                            <td className={`py-2 text-right font-semibold ${item.posPriceChanged ? 'text-orange-600' : 'text-gray-400'}`}>
                                                 {item.newPosPrice != null ? `£${item.newPosPrice.toFixed(2)}` : '—'}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            {preview.length > 100 && (
+                            {preview.length > 200 && (
                                 <p className="text-center text-sm text-gray-500 mt-3">
-                                    Showing first 100 of {preview.length} items
+                                    Showing first 200 of {preview.length} items
                                 </p>
                             )}
                         </div>
