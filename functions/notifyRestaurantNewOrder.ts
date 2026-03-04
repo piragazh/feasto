@@ -69,6 +69,19 @@ Deno.serve(async (req) => {
 
         // Order already fetched above for validation
 
+        // Build order summary (must be before Twilio check so it's available for logging)
+        const orderLabel = order.order_type === 'collection' && order.order_number 
+            ? order.order_number 
+            : `#${orderId.slice(-6)}`;
+        
+        const itemsList = order.items.slice(0, 3).map(item => 
+            `${item.quantity}x ${item.name}`
+        ).join('\n');
+        
+        const moreItems = order.items.length > 3 ? `\n+${order.items.length - 3} more items` : '';
+
+        const message = `🔔 NEW ORDER - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${order.total.toFixed(2)}\nType: ${order.order_type}\nPayment: ${order.payment_method}\n\nCheck dashboard to accept!`;
+
         // Check if Twilio is configured
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -91,19 +104,6 @@ Deno.serve(async (req) => {
                 simulated: true 
             });
         }
-
-        // Build order summary
-        const orderLabel = order.order_type === 'collection' && order.order_number 
-            ? order.order_number 
-            : `#${orderId.slice(-6)}`;
-        
-        const itemsList = order.items.slice(0, 3).map(item => 
-            `${item.quantity}x ${item.name}`
-        ).join('\n');
-        
-        const moreItems = order.items.length > 3 ? `\n+${order.items.length - 3} more items` : '';
-
-        const message = `🔔 NEW ORDER - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${order.total.toFixed(2)}\nType: ${order.order_type}\nPayment: ${order.payment_method}\n\nCheck dashboard to accept!`;
 
         // Send SMS via Twilio
         const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
