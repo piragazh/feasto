@@ -62,6 +62,7 @@ export default function SuperAdmin() {
             title: 'Financial',
             items: [
                 { id: 'commission', label: 'Commission', icon: DollarSign },
+                { id: 'sms-log', label: 'SMS Log', icon: MessageSquare },
                 { id: 'payouts', label: 'Payouts', icon: CreditCard },
                 { id: 'payout-history', label: 'Payout History', icon: DollarSign },
                 { id: 'refunds', label: 'Refunds', icon: Shield },
