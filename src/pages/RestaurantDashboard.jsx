@@ -13,30 +13,25 @@ import {
     LogOut,
     Bell,
     MessageSquare,
-    Star,
     BarChart3,
-    Navigation,
     Users,
-    AlertCircle,
     Tag,
-    MapPin,
     Award,
     Monitor,
     TabletSmartphone
 } from 'lucide-react';
 import LiveOrders from '@/components/restaurant/LiveOrders';
-import OrderQueue from '@/components/restaurant/OrderQueue';
+
 import MenuManagement from '@/components/restaurant/MenuManagement';
 import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
 import AIMealDealSuggestions from '@/components/restaurant/AIMealDealSuggestions';
 import CouponsManagement from '@/components/restaurant/CouponsManagement';
 import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
-import ReviewsManagement from '@/components/restaurant/ReviewsManagement';
+
 import ReviewManagement from '@/components/restaurant/ReviewManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
-import RestaurantAnalytics from '@/components/restaurant/RestaurantAnalytics';
-import AdvancedAnalytics from '@/components/restaurant/AdvancedAnalytics';
+
 import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
 import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
 import DriverTracking from '@/components/restaurant/DriverTracking';
@@ -68,7 +63,7 @@ export default function RestaurantDashboard() {
     const [activeTab, setActiveTab] = useState('orders');
     const [activeSection, setActiveSection] = useState('main');
     const [newOrdersCount, setNewOrdersCount] = useState(0);
-    const [unreadMessages, setUnreadMessages] = useState(0);
+
     const [showOnboarding, setShowOnboarding] = useState(false);
 
     const { data: pendingOrders = [] } = useQuery({

@@ -328,7 +328,7 @@ Provide only the time range (e.g., "25-30 min").`;
                     <div class="separator"></div>
                     ${config.show_order_number !== false ? `<p><strong>Order:</strong> ${orderLabel}</p>` : ''}
                     <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : 'DELIVERY'}</p>
-                    <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
+                    <p><strong>Time:</strong> ${order.created_date ? format(new Date(order.created_date), 'HH:mm') : '--:--'}</p>
                     <div class="separator"></div>
                     <h3>ITEMS:</h3>
                     ${order.items.map(item => {
@@ -611,7 +611,7 @@ Provide only the time range (e.g., "25-30 min").`;
                                                        </Badge>
                                                    </CardTitle>
                                                    <p className="text-sm text-gray-500 mt-1">
-                                                       {format(new Date(order.created_date), 'MMM d, h:mm a')}
+                                                       {order.created_date ? format(new Date(order.created_date), 'MMM d, h:mm a') : '—'}
                                                    </p>
                                                 </div>
                                             </div>
