@@ -572,8 +572,40 @@ export default function Checkout() {
         }
 
         const [openHour, openMin] = hours.open.split(':').map(Number);
+        const [closeHour, closeMin] = hours.close.split(':').map(Number);
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const openTime = openHour * 60 + openMin;
+        const closeTime = closeHour * 60 + closeMin;
+
         const scheduleTime = new Date(now);
-        scheduleTime.setHours(openHour, openMin, 0, 0);
+        if (currentTime < openTime) {
+            // Before opening today - schedule for today's opening
+            scheduleTime.setHours(openHour, openMin, 0, 0);
+        } else if (currentTime >= closeTime) {
+            // After closing today - find next open day
+            for (let i = 1; i <= 7; i++) {
+                const nextDay = new Date(now);
+                nextDay.setDate(nextDay.getDate() + i);
+                const nextDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDay.getDay()];
+                let nextHours;
+                if (orderType === 'collection' && restaurant.collection_hours) {
+                    nextHours = restaurant.collection_hours[nextDayName];
+                } else if (orderType === 'delivery' && restaurant.delivery_hours) {
+                    nextHours = restaurant.delivery_hours[nextDayName];
+                } else {
+                    nextHours = restaurant.opening_hours?.[nextDayName];
+                }
+                if (nextHours && !nextHours.closed) {
+                    const [h, m] = nextHours.open.split(':').map(Number);
+                    nextDay.setHours(h, m, 0, 0);
+                    return nextDay.toISOString().slice(0, 16);
+                }
+            }
+            return '';
+        } else {
+            // Currently open - no scheduling needed (shouldn't reach here)
+            return '';
+        }
         return scheduleTime.toISOString().slice(0, 16);
     };
 
