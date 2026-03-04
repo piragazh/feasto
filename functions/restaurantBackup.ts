@@ -14,22 +14,24 @@ Deno.serve(async (req) => {
 
         if (action === 'create') {
             // Fetch all data
+            // Use high limit to capture all records (default list() cap is 50)
+            const LIMIT = 5000;
             const [restaurants, menuItems, promotions, coupons, mealDeals] = await Promise.all([
                 restaurant_id
-                    ? base44.asServiceRole.entities.Restaurant.filter({ id: restaurant_id })
-                    : base44.asServiceRole.entities.Restaurant.list(),
+                    ? base44.asServiceRole.entities.Restaurant.filter({ id: restaurant_id }, null, LIMIT)
+                    : base44.asServiceRole.entities.Restaurant.list(null, LIMIT),
                 restaurant_id
-                    ? base44.asServiceRole.entities.MenuItem.filter({ restaurant_id })
-                    : base44.asServiceRole.entities.MenuItem.list(),
+                    ? base44.asServiceRole.entities.MenuItem.filter({ restaurant_id }, null, LIMIT)
+                    : base44.asServiceRole.entities.MenuItem.list(null, LIMIT),
                 restaurant_id
-                    ? base44.asServiceRole.entities.Promotion.filter({ restaurant_id })
-                    : base44.asServiceRole.entities.Promotion.list(),
+                    ? base44.asServiceRole.entities.Promotion.filter({ restaurant_id }, null, LIMIT)
+                    : base44.asServiceRole.entities.Promotion.list(null, LIMIT),
                 restaurant_id
-                    ? base44.asServiceRole.entities.Coupon.filter({ restaurant_id })
-                    : base44.asServiceRole.entities.Coupon.list(),
+                    ? base44.asServiceRole.entities.Coupon.filter({ restaurant_id }, null, LIMIT)
+                    : base44.asServiceRole.entities.Coupon.list(null, LIMIT),
                 restaurant_id
-                    ? base44.asServiceRole.entities.MealDeal.filter({ restaurant_id })
-                    : base44.asServiceRole.entities.MealDeal.list(),
+                    ? base44.asServiceRole.entities.MealDeal.filter({ restaurant_id }, null, LIMIT)
+                    : base44.asServiceRole.entities.MealDeal.list(null, LIMIT),
             ]);
 
             const snapshot = { restaurants, menuItems, promotions, coupons, mealDeals };
