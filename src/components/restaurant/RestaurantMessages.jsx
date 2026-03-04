@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { MessageSquare, Send, Edit2, Trash2, X, Check, Eye, Bell, BellOff, CheckCheck, Volume2 } from 'lucide-react';
+import { MessageSquare, Send, Edit2, Trash2, X, Check, Eye, CheckCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -39,7 +39,7 @@ export default function RestaurantMessages({ restaurantId }) {
 
     const { data: adminMessages = [] } = useQuery({
         queryKey: ['admin-messages', restaurantId],
-        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurantId }, '-created_date'),
+        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurantId }, '-created_date', 100),
         refetchInterval: 5000,
     });
 
@@ -236,7 +236,7 @@ export default function RestaurantMessages({ restaurantId }) {
                                                </div>
                                                <div className="flex items-center gap-2">
                                                    <p className="text-xs text-gray-500">
-                                                       {format(new Date(msg.created_date), 'MMM d, yyyy h:mm a')}
+                                                       {msg.created_date ? format(new Date(msg.created_date), 'MMM d, yyyy h:mm a') : '—'}
                                                    </p>
                                                    {msg.is_read && (
                                                        <CheckCheck className="h-3 w-3 text-green-600" />
@@ -348,7 +348,7 @@ export default function RestaurantMessages({ restaurantId }) {
                                             </div>
                                             <p className="text-sm text-gray-600">{order.phone}</p>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                {format(new Date(order.created_date), 'MMM d, h:mm a')}
+                                                {order.created_date ? format(new Date(order.created_date), 'MMM d, h:mm a') : '—'}
                                             </p>
                                         </div>
                                     );
@@ -465,8 +465,8 @@ export default function RestaurantMessages({ restaurantId }) {
                                                             <p className="text-sm leading-relaxed">{msg.message}</p>
                                                             <div className="flex items-center justify-between mt-2">
                                                                 <p className="text-xs opacity-70">
-                                                                    {format(new Date(msg.created_date), 'h:mm a')}
-                                                                </p>
+                                                                                    {msg.created_date ? format(new Date(msg.created_date), 'h:mm a') : '—'}
+                                                                                </p>
                                                                 {msg.is_read && msg.sender_type === 'restaurant' && (
                                                                     <CheckCheck className="h-3 w-3 opacity-70" />
                                                                 )}
