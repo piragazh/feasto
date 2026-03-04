@@ -217,6 +217,7 @@ export default function SuperAdmin() {
                     {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
                     {activeTab === 'files' && <PublicFilesManagement />}
                     {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
+                    {activeTab === 'sms-log' && <SmsLogViewer />}
                     {activeTab === 'managers' && (
                         <iframe 
                             src={createPageUrl('ManageRestaurantManagers')} 
