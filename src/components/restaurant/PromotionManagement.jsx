@@ -55,7 +55,7 @@ export default function PromotionManagement({ restaurantId }) {
     const createPromotionMutation = useMutation({
         mutationFn: (data) => base44.entities.Promotion.create({ ...data, restaurant_id: restaurantId }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['promotions']);
+            queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
             toast.success('Promotion created successfully');
             resetForm();
         },
@@ -64,7 +64,7 @@ export default function PromotionManagement({ restaurantId }) {
     const updatePromotionMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Promotion.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['promotions']);
+            queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
             toast.success('Promotion updated');
             resetForm();
         },
@@ -73,7 +73,7 @@ export default function PromotionManagement({ restaurantId }) {
     const deletePromotionMutation = useMutation({
         mutationFn: (id) => base44.entities.Promotion.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['promotions']);
+            queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
             toast.success('Promotion deleted');
         },
     });
