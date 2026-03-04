@@ -75,7 +75,16 @@ Deno.serve(async (req) => {
         const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER');
 
         if (!accountSid || !authToken || !twilioPhone) {
-            // Twilio not configured - simulate SMS
+            // Twilio not configured - log simulation
+            await base44.asServiceRole.entities.SmsLog.create({
+                restaurant_id: restaurantId || null,
+                restaurant_name: restaurantName || null,
+                to: formattedPhone,
+                message,
+                order_id: orderId || null,
+                status: 'simulated',
+                type: smsType || 'customer_notification',
+            });
             return Response.json({ 
                 success: true, 
                 message: 'SMS simulation (Twilio not configured)',
@@ -113,6 +122,19 @@ Deno.serve(async (req) => {
 
         const result = await response.json();
         console.log(`✅ SMS sent successfully to ${formattedPhone}, SID: ${result.sid}`);
+
+        // Log the sent SMS
+        await base44.asServiceRole.entities.SmsLog.create({
+            restaurant_id: restaurantId || null,
+            restaurant_name: restaurantName || null,
+            to: formattedPhone,
+            message,
+            order_id: orderId || null,
+            status: 'sent',
+            message_sid: result.sid,
+            type: smsType || 'customer_notification',
+        });
+
         return Response.json({ 
             success: true, 
             messageSid: result.sid,
