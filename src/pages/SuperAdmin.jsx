@@ -23,6 +23,7 @@ import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettin
 import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManagement';
 import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
 import GlobalScreenHealthMonitor from '@/components/superadmin/GlobalScreenHealthMonitor';
+import SmsLogViewer from '@/components/superadmin/SmsLogViewer';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
