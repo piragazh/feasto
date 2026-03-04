@@ -139,7 +139,14 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const sendCustomerNotification = async (orderId, status, rejectionReason) => {
         try {
             const order = allOrders.find(o => o.id === orderId);
-            if (!order) return;
+            if (!order?.phone) return;
+
+            // Check restaurant SMS settings before sending
+            const smsCheck = await base44.functions.invoke('shouldSendOrderStatusSms', {
+                restaurantId,
+                status
+            });
+            if (!smsCheck?.data?.shouldSend) return;
 
             const orderLabel = order.order_type === 'collection' && order.order_number 
                 ? order.order_number 
@@ -159,7 +166,8 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             
             await base44.functions.invoke('sendSMS', {
                 to: order.phone,
-                message: message
+                message: message,
+                orderId: order.id
             });
         } catch (error) {
             console.error('SMS notification error:', error);
