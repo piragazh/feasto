@@ -517,7 +517,7 @@ export default function RestaurantMessages({ restaurantId }) {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-gray-500">
-                                {format(new Date(viewingPlatformMessage.created_date), 'MMM d, yyyy h:mm a')}
+                                {viewingPlatformMessage.created_date ? format(new Date(viewingPlatformMessage.created_date), 'MMM d, yyyy h:mm a') : '—'}
                             </span>
                             {viewingPlatformMessage.priority && (
                                 <span className={`text-xs px-2 py-1 rounded ${
