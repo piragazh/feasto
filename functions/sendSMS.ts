@@ -4,7 +4,7 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         
-        const { to, message, orderId } = await req.json();
+        const { to, message, orderId, restaurantId, restaurantName, smsType } = await req.json();
         
         // SECURITY: Either authenticated user OR valid recent order (for guest checkout)
         let isAuthorized = false;
