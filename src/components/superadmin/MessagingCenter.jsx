@@ -187,8 +187,8 @@ export default function MessagingCenter() {
                                             {msg.sender_type}
                                         </Badge>
                                         <p className="text-xs text-gray-500">
-                                            {format(new Date(msg.created_date), 'MMM d, h:mm a')}
-                                        </p>
+                                                                             {msg.created_date ? format(new Date(msg.created_date), 'MMM d, h:mm a') : '—'}
+                                                                         </p>
                                     </div>
                                 </div>
                             );

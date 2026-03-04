@@ -79,17 +79,15 @@ export default function RestaurantMessages({ restaurantId }) {
         if (selectedOrder && orderMessages.length > 0) {
             const unreadMessages = orderMessages.filter(m => m.sender_type === 'customer' && !m.is_read);
             unreadMessages.forEach(msg => {
-                if (!markOrderMessageAsRead.isPending) {
-                    markOrderMessageAsRead.mutate(msg.id);
-                }
+                markOrderMessageAsRead.mutate(msg.id);
             });
         }
-    }, [selectedOrder]);
+    }, [selectedOrder, orderMessages.length]);
 
     // Play notification sound for new messages
     useEffect(() => {
-        const currentAdminCount = adminMessages.filter(m => !m.is_read).length;
-        const currentOrderCount = orderMessages.filter(m => m.sender_type === 'customer' && !m.is_read).length;
+        const currentAdminCount = adminMessages.length;
+        const currentOrderCount = orderMessages.filter(m => m.sender_type === 'customer').length;
 
         // Only check for increases (new messages), not on initial load
         if (previousMessageCount.admin > 0 || previousMessageCount.order > 0) {
@@ -101,7 +99,7 @@ export default function RestaurantMessages({ restaurantId }) {
                 }
                 
                 // Show toast notification
-                if (currentAdminCount > previousMessageCount.admin) {
+                if (currentAdminCount > previousMessageCount.admin && previousMessageCount.admin > 0) {
                     toast.info('New platform message received', {
                         icon: '📬',
                         duration: 4000
@@ -117,7 +115,7 @@ export default function RestaurantMessages({ restaurantId }) {
         }
 
         setPreviousMessageCount({ admin: currentAdminCount, order: currentOrderCount });
-    }, [adminMessages.length, orderMessages.length]);
+    }, [adminMessages.length, orderMessages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const sendMutation = useMutation({
         mutationFn: (data) => base44.entities.Message.create(data),
@@ -321,9 +319,12 @@ export default function RestaurantMessages({ restaurantId }) {
                                 </div>
                             ) : (
                                 orders.map((order) => {
-                                    const hasUnread = orderMessages.filter(
-                                        m => m.order_id === order.id && m.sender_type === 'customer' && !m.is_read
-                                    ).length > 0;
+                                    // Note: orderMessages only contains messages for the currently selected order,
+                                    // so unread indicator per-row only works for the open order.
+                                    // This is a known limitation of the current data fetching approach.
+                                    const hasUnread = selectedOrder === order.id
+                                        ? orderMessages.filter(m => m.sender_type === 'customer' && !m.is_read).length > 0
+                                        : false;
                                     
                                     return (
                                         <div
