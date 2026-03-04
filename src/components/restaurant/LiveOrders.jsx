@@ -169,6 +169,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                 message,
                 orderId: order.id,
                 restaurantId,
+                restaurantName: order.restaurant_name || undefined,
                 smsType: 'customer_notification',
             });
         } catch (error) {

@@ -123,6 +123,16 @@ Deno.serve(async (req) => {
         }
 
         const result = await response.json();
+        await base44.asServiceRole.entities.SmsLog.create({
+            restaurant_id: restaurantId,
+            restaurant_name: restaurantName,
+            to: alertPhone,
+            message,
+            order_id: orderId,
+            status: 'sent',
+            message_sid: result.sid,
+            type: 'restaurant_alert',
+        });
         return Response.json({ 
             success: true, 
             messageSid: result.sid,
