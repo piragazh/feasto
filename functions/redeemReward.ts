@@ -45,12 +45,18 @@ Deno.serve(async (req) => {
         const couponCode = `REWARD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
         const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
         
+        // Map reward_type to coupon discount_type
+        let couponDiscountType = 'percentage';
+        if (targetReward.reward_type === 'fixed_discount') couponDiscountType = 'fixed';
+        else if (targetReward.reward_type === 'percentage_discount') couponDiscountType = 'percentage';
+        else if (targetReward.reward_type === 'free_delivery') couponDiscountType = 'fixed'; // handled at checkout level
+
         // Create coupon record
         await base44.entities.Coupon.create({
             code: couponCode,
             description: `Reward: ${targetReward.name}`,
-            discount_type: targetReward.discount_type || 'percentage',
-            discount_value: targetReward.discount_value || 10,
+            discount_type: couponDiscountType,
+            discount_value: targetReward.discount_value || 0,
             is_active: true,
             valid_until: expiresAt.split('T')[0],
             expires_at: expiresAt
