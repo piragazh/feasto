@@ -259,8 +259,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             );
         await Promise.all(promises);
         },
-        onSuccess: () => {
-            toast.success('Promotional offers sent successfully!');
+        onSuccess: (_, variables) => {
+            toast.success(`Offer sent to ${variables.emails.filter(e => e?.includes('@')).length} customers!`);
             setMessageDialog(false);
             setMessageContent('');
             setTargetSegment(null);
