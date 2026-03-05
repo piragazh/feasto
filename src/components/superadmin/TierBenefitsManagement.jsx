@@ -14,9 +14,9 @@ import { toast } from 'sonner';
 
 const TIERS = [
   { name: 'Bronze', minPoints: 0, icon: Gift },
-  { name: 'Silver', minPoints: 200, icon: Star },
-  { name: 'Gold', minPoints: 500, icon: Award },
-  { name: 'Platinum', minPoints: 1000, icon: Crown }
+  { name: 'Silver', minPoints: 500, icon: Star },
+  { name: 'Gold', minPoints: 1500, icon: Award },
+  { name: 'Platinum', minPoints: 3000, icon: Crown }
 ];
 
 const BENEFIT_TYPES = [
