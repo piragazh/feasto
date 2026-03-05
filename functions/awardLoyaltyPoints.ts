@@ -85,7 +85,8 @@ Deno.serve(async (req) => {
                     console.log(`✅ Updated ${userEmail}: +${pointsToAward} points (Total: ${newTotal})`);
                 }
 
-                // Create transaction record
+                // Create transaction record — set expires_at 1 year from now
+                const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
                 await base44.asServiceRole.entities.LoyaltyTransaction.create({
                     user_email: userEmail,
                     transaction_type: 'earned',
@@ -93,7 +94,9 @@ Deno.serve(async (req) => {
                     order_id: order.id,
                     restaurant_id: order.restaurant_id,
                     restaurant_name: order.restaurant_name,
-                    description: `Earned ${pointsToAward} points from order at ${order.restaurant_name}`
+                    description: `Earned ${pointsToAward} points from order at ${order.restaurant_name}`,
+                    expires_at: expiresAt,
+                    is_expired: false
                 });
 
                 // Mark order as awarded
