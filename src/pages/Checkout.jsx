@@ -1739,7 +1739,7 @@ export default function Checkout() {
                                     {restaurant?.loyalty_program_enabled !== false && (
                                       <div className="flex justify-between text-orange-600 text-sm pt-2">
                                           <span>🎁 You'll earn</span>
-                                          <span className="font-semibold">{Math.floor(total * (restaurant?.loyalty_points_multiplier || 1))} pts</span>
+                                          <span className="font-semibold">{Math.floor(total * pointsPerPound * (restaurant?.loyalty_points_multiplier || 1))} pts</span>
                                       </div>
                                     )}
                                     {smallOrderSurcharge > 0 && (
