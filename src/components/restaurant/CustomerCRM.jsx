@@ -117,11 +117,16 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             });
         });
 
-        // Add reviews (match by created_by OR customer_email field)
+        // Add reviews — try to match by phone first, then email
         reviews.forEach(review => {
-            const email = review.created_by || review.customer_email;
-            if (email && customerData[email]) {
-                customerData[email].reviews.push(review);
+            const reviewEmail = review.created_by || review.customer_email;
+            // Find the customer key: prefer phone match, then email match
+            const matchedKey = Object.keys(customerData).find(key => {
+                const c = customerData[key];
+                return (reviewEmail && c.email === reviewEmail);
+            });
+            if (matchedKey) {
+                customerData[matchedKey].reviews.push(review);
             }
         });
 
