@@ -9,16 +9,19 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
-        // Get all non-expired transactions that were earned more than 1 year ago
-        const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
-        const oldTransactions = await base44.entities.LoyaltyTransaction.filter({
+        // Get all non-expired earned transactions
+        const oldTransactions = await base44.asServiceRole.entities.LoyaltyTransaction.filter({
             transaction_type: 'earned',
             is_expired: false
         });
 
+        const now = new Date();
         const expiredTransactions = oldTransactions.filter(t => {
-            if (!t.expires_at) return false;
-            return new Date(t.expires_at) < new Date();
+            // Expire if expires_at is set and has passed
+            if (t.expires_at) return new Date(t.expires_at) < now;
+            // Fallback: expire if created more than 1 year ago (and no explicit expires_at)
+            const oneYearAgo = new Date(now - 365 * 24 * 60 * 60 * 1000);
+            return new Date(t.created_date) < oneYearAgo;
         });
 
         let expiredCount = 0;
