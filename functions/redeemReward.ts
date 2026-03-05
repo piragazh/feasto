@@ -51,7 +51,9 @@ Deno.serve(async (req) => {
         else if (targetReward.reward_type === 'percentage_discount') couponDiscountType = 'percentage';
         else if (targetReward.reward_type === 'free_delivery') couponDiscountType = 'fixed'; // handled at checkout level
 
-        // Create coupon record
+        // Create coupon record - scoped to this user via restaurant_id trick:
+        // We store user_email in a dedicated field by using the description uniquely,
+        // and set a restaurant_id of "loyalty_user_<email>" so we can filter by user
         await base44.entities.Coupon.create({
             code: couponCode,
             description: `Reward: ${targetReward.name}`,
@@ -59,7 +61,9 @@ Deno.serve(async (req) => {
             discount_value: targetReward.discount_value || 0,
             is_active: true,
             valid_until: expiresAt.split('T')[0],
-            expires_at: expiresAt
+            expires_at: expiresAt,
+            // Tag coupon with user email so they can only see their own
+            restaurant_id: `loyalty_user_${user.email}`
         });
 
         // Record transaction
