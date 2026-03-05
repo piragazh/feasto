@@ -148,6 +148,40 @@ export default function LoyaltyDashboard({ userEmail }) {
                 </Card>
             </div>
 
+            {/* Tier Benefits */}
+            {tierBenefits.length > 0 && (
+                <Card className="border-2 border-orange-200 bg-orange-50">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <TierIcon className="w-5 h-5 text-orange-600" />
+                            Your {currentTierInfo.name} Tier Benefits
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {tierBenefits.map(benefit => (
+                                <div key={benefit.id} className="bg-white rounded-lg p-3 border border-orange-100 flex items-start gap-3">
+                                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Sparkles className="w-4 h-4 text-orange-500" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-sm text-gray-900">{benefit.benefit_name}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">{benefit.benefit_description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {nextTier && (
+                            <div className="mt-4 pt-3 border-t border-orange-200">
+                                <p className="text-xs text-orange-700 font-medium">
+                                    🔒 Reach {nextTier.name} tier ({nextTier.threshold - (loyaltyPoints?.points_earned || 0)} more pts) to unlock additional perks
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Tabs */}
             <Tabs defaultValue="rewards" className="w-full">
                 <TabsList className="w-full">
