@@ -40,9 +40,11 @@ export default function LoyaltyRewards({ user }) {
         queryKey: ['redeemed-coupons', user.email],
         queryFn: async () => {
             try {
-                const coupons = await base44.entities.Coupon.filter({ is_active: true });
-                // Filter coupons that were created for this user (redeemed rewards), checking created_by
-                return coupons.filter(c => c.description && c.description.startsWith('Reward:') && c.created_by === user.email);
+                // Filter by the user-scoped restaurant_id tag set during redemption
+                const coupons = await base44.entities.Coupon.filter({
+                    restaurant_id: `loyalty_user_${user.email}`
+                });
+                return coupons.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
             } catch (e) {
                 return [];
             }
