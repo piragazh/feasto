@@ -44,6 +44,12 @@ Deno.serve(async (req) => {
                 const loyaltyPoints = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: userEmail });
 
                 if (!loyaltyPoints || loyaltyPoints.length === 0) {
+                    // Calculate tier even for new records
+                    let initialTier = 'bronze';
+                    if (pointsToAward >= 3000) initialTier = 'platinum';
+                    else if (pointsToAward >= 1500) initialTier = 'gold';
+                    else if (pointsToAward >= 500) initialTier = 'silver';
+
                     // Create new loyalty record
                     await base44.asServiceRole.entities.LoyaltyPoints.create({
                         user_email: userEmail,
@@ -51,7 +57,7 @@ Deno.serve(async (req) => {
                         points_earned: pointsToAward,
                         points_redeemed: 0,
                         orders_count: 1,
-                        tier: 'bronze'
+                        tier: initialTier
                     });
                     console.log(`✨ Created new loyalty account for ${userEmail}: ${pointsToAward} points`);
                 } else {
