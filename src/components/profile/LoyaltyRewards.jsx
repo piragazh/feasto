@@ -101,13 +101,17 @@ export default function LoyaltyRewards({ user }) {
     });
     const TierIcon = tier.icon;
 
-    const nextTierPoints = loyaltyPoints >= 1000 ? null : 
-                          loyaltyPoints >= 500 ? 1000 : 
-                          loyaltyPoints >= 200 ? 500 : 200;
+    // Progress based on lifetime earned, matching awardLoyaltyPoints tier thresholds
+    const tierThresholds = [0, 500, 1500, 3000];
+    const tierNames = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+    const currentTierIndex = tierThresholds.filter(t => lifetimeEarned >= t).length - 1;
+    const nextTierThreshold = currentTierIndex < 3 ? tierThresholds[currentTierIndex + 1] : null;
+    const currentTierThreshold = tierThresholds[currentTierIndex];
+    const nextTierPoints = nextTierThreshold;
 
-    const progressToNext = nextTierPoints ? 
-        ((loyaltyPoints % (nextTierPoints === 1000 ? 500 : nextTierPoints === 500 ? 300 : 200)) / 
-        (nextTierPoints === 1000 ? 500 : nextTierPoints === 500 ? 300 : 200)) * 100 : 100;
+    const progressToNext = nextTierThreshold
+        ? ((lifetimeEarned - currentTierThreshold) / (nextTierThreshold - currentTierThreshold)) * 100
+        : 100;
 
     const availableRewards = rewards.map(reward => ({
         ...reward,
