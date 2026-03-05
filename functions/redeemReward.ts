@@ -27,11 +27,18 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Insufficient points' }, { status: 400 });
         }
 
-        // Deduct points
+        // Deduct points — recalculate tier after deduction
         const newTotal = loyaltyRecord.total_points - targetReward.points_required;
+        const totalEarned = loyaltyRecord.points_earned || 0; // tier is based on lifetime earned, not current balance
+        let newTier = 'bronze';
+        if (totalEarned >= 3000) newTier = 'platinum';
+        else if (totalEarned >= 1500) newTier = 'gold';
+        else if (totalEarned >= 500) newTier = 'silver';
+
         await base44.entities.LoyaltyPoints.update(loyaltyRecord.id, {
             total_points: newTotal,
-            points_redeemed: (loyaltyRecord.points_redeemed || 0) + targetReward.points_required
+            points_redeemed: (loyaltyRecord.points_redeemed || 0) + targetReward.points_required,
+            tier: newTier
         });
 
         // Generate unique coupon code
