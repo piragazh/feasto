@@ -1727,10 +1727,10 @@ export default function Checkout() {
                                         <span>£{total.toFixed(2)}</span>
                                     </div>
                                     {restaurant?.loyalty_program_enabled !== false && (
-                                        <div className="flex justify-between text-orange-600 text-sm pt-2">
-                                            <span>🎁 You'll earn</span>
-                                            <span className="font-semibold">{Math.floor(total * (restaurant?.loyalty_points_multiplier || 1))} points</span>
-                                        </div>
+                                       <div className="flex justify-between text-orange-600 text-sm pt-2">
+                                           <span>🎁 You'll earn</span>
+                                           <span className="font-semibold">{Math.floor(total * (restaurant?.loyalty_points_multiplier || 1))} pts</span>
+                                       </div>
                                     )}
                                     {smallOrderSurcharge > 0 && (
                                         <div className="text-xs text-gray-500 pt-1">
