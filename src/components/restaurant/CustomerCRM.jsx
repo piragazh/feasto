@@ -540,7 +540,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                             {filteredCustomers.map((customer) => {
                                 const config = segmentConfig[customer.segment];
                                 return (
-                                    <Card key={customer.email} className="cursor-pointer hover:shadow-md transition-shadow">
+                                    <Card key={customer.phone || customer.email} className="cursor-pointer hover:shadow-md transition-shadow">
                                         <CardContent className="pt-4">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex-1">
