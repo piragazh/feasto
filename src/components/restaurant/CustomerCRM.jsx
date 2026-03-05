@@ -112,10 +112,10 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             });
         });
 
-        // Add reviews
+        // Add reviews (match by created_by OR customer_email field)
         reviews.forEach(review => {
-            const email = review.created_by;
-            if (customerData[email]) {
+            const email = review.created_by || review.customer_email;
+            if (email && customerData[email]) {
                 customerData[email].reviews.push(review);
             }
         });
