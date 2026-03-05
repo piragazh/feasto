@@ -75,11 +75,14 @@ export default function LoyaltyRewards({ user }) {
     const totalOrders = user.total_orders || 0;
     const totalSpent = user.total_spent || 0;
 
+    // Tier is based on lifetime points EARNED (not current balance), so spending doesn't demote you
+    const lifetimeEarned = userPoints?.points_earned || loyaltyPoints;
+
     // Calculate tier
     const getTier = () => {
-        if (loyaltyPoints >= 1000) return { name: 'Platinum', color: 'text-purple-600', icon: Crown };
-        if (loyaltyPoints >= 500) return { name: 'Gold', color: 'text-yellow-600', icon: Award };
-        if (loyaltyPoints >= 200) return { name: 'Silver', color: 'text-gray-600', icon: Star };
+        if (lifetimeEarned >= 3000) return { name: 'Platinum', color: 'text-purple-600', icon: Crown };
+        if (lifetimeEarned >= 1500) return { name: 'Gold', color: 'text-yellow-600', icon: Award };
+        if (lifetimeEarned >= 500) return { name: 'Silver', color: 'text-gray-600', icon: Star };
         return { name: 'Bronze', color: 'text-orange-600', icon: Gift };
     };
 
