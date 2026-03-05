@@ -59,6 +59,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
     const customerAnalytics = useMemo(() => {
         const customerData = {};
         
+        // Orders come sorted by -created_date so first encountered = most recent
         orders.forEach(order => {
             const email = order.created_by || order.guest_email || `guest_${order.id}`;
             if (!customerData[email]) {
@@ -76,15 +77,22 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                     reviews: []
                 };
             }
-            
-            // Keep most recent contact details
-            if (order.phone) customerData[email].phone = order.phone;
-            if (order.delivery_address) customerData[email].lastAddress = order.delivery_address;
-            if (order.guest_name) customerData[email].guestName = order.guest_name;
+
+            // Keep most recent contact details (first encounter is most recent due to sort order)
+            if (order.phone && !customerData[email].phone) customerData[email].phone = order.phone;
+            if (order.delivery_address && !customerData[email].lastAddress) customerData[email].lastAddress = order.delivery_address;
+            if (order.guest_name && !customerData[email].guestName) customerData[email].guestName = order.guest_name;
 
             customerData[email].orders.push(order);
             customerData[email].totalSpent += order.total || 0;
-            customerData[email].lastOrder = order.created_date;
+            // firstOrder = earliest date, so take the minimum
+            if (order.created_date < customerData[email].firstOrder) {
+                customerData[email].firstOrder = order.created_date;
+            }
+            // lastOrder = most recent, keep the maximum
+            if (order.created_date > customerData[email].lastOrder) {
+                customerData[email].lastOrder = order.created_date;
+            }
             
             // Track favorite items and dietary preferences
             order.items?.forEach(item => {
