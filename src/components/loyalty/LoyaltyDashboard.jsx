@@ -35,14 +35,13 @@ export default function LoyaltyDashboard({ userEmail }) {
         queryFn: () => base44.entities.LoyaltyReward.filter({ is_active: true })
     });
 
+    const currentTierForQuery = loyaltyPoints?.tier || 'bronze';
+    const currentTierNameForQuery = currentTierForQuery.charAt(0).toUpperCase() + currentTierForQuery.slice(1);
+
     const { data: tierBenefits = [] } = useQuery({
-        queryKey: ['tier-benefits-dashboard', userEmail],
-        queryFn: async () => {
-            const tier = loyaltyPoints?.tier || 'bronze';
-            const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-            return base44.entities.LoyaltyTierBenefit.filter({ tier_name: tierName, is_active: true });
-        },
-        enabled: !!loyaltyPoints
+        queryKey: ['tier-benefits-dashboard', currentTierNameForQuery],
+        queryFn: () => base44.entities.LoyaltyTierBenefit.filter({ tier_name: currentTierNameForQuery, is_active: true }),
+        enabled: !!userEmail
     });
 
     const tierInfo = {
