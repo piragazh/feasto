@@ -268,8 +268,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
     });
 
     const handleSendToSegment = (segment) => {
-        const customers = customerAnalytics.customers.filter(c => 
-            segment === 'all' ? true : c.segment === segment
+        const customers = customerAnalytics.customers.filter(c =>
+            (segment === 'all' ? true : c.segment === segment) && !!c.email
         );
         setTargetSegment({ segment, count: customers.length, emails: customers.map(c => c.email) });
         setMessageDialog(true);
