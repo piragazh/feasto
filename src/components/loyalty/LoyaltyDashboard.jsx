@@ -53,7 +53,8 @@ export default function LoyaltyDashboard({ userEmail }) {
 
     const availableRewards = rewards.filter(r => {
         const tierIndex = Object.keys(tierInfo).indexOf(currentTier);
-        const requiredTierIndex = Object.keys(tierInfo).indexOf(r.tier_required);
+        // If tier_required is unset or not in the map, treat it as 'bronze' (index 0)
+        const requiredTierIndex = Math.max(0, Object.keys(tierInfo).indexOf(r.tier_required || 'bronze'));
         return tierIndex >= requiredTierIndex && (loyaltyPoints?.total_points || 0) >= r.points_required;
     });
 
