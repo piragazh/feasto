@@ -251,14 +251,13 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                 body = `${offerData.title}\n\n${message}\n\nEnjoy FREE DELIVERY on your next order!`;
             }
             
-            const promises = emails.map(email => 
-                base44.integrations.Core.SendEmail({
-                    to: email,
-                    subject,
-                    body
-                })
+            // Filter out empty/invalid emails before sending
+        const validEmails = emails.filter(e => e && e.includes('@'));
+        if (validEmails.length === 0) throw new Error('No valid email addresses to send to');
+        const promises = validEmails.map(email =>
+                base44.integrations.Core.SendEmail({ to: email, subject, body })
             );
-            await Promise.all(promises);
+        await Promise.all(promises);
         },
         onSuccess: () => {
             toast.success('Promotional offers sent successfully!');
