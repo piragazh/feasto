@@ -575,83 +575,17 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
 
             {/* Customer Detail Dialog */}
             <Dialog open={!!selectedCustomer} onOpenChange={() => setSelectedCustomer(null)}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Customer Details</DialogTitle>
-                        <DialogDescription>{selectedCustomer?.email}</DialogDescription>
+                        <DialogTitle>Customer Profile</DialogTitle>
+                        <DialogDescription>{selectedCustomer?.guestName || selectedCustomer?.email}</DialogDescription>
                     </DialogHeader>
                     {selectedCustomer && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <Card>
-                                    <CardContent className="pt-4">
-                                        <p className="text-sm text-gray-600">Total Orders</p>
-                                        <p className="text-2xl font-bold">{selectedCustomer.orderCount}</p>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardContent className="pt-4">
-                                        <p className="text-sm text-gray-600">Total Spent</p>
-                                        <p className="text-2xl font-bold text-green-600">
-                                            £{selectedCustomer.totalSpent.toFixed(2)}
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            <div>
-                                <h4 className="font-semibold mb-2">Order History</h4>
-                                <ScrollArea className="h-64 border rounded-lg p-4">
-                                    <div className="space-y-2">
-                                        {selectedCustomer.orders.map((order) => (
-                                            <div key={order.id} className="flex justify-between items-center text-sm border-b pb-2">
-                                                <div>
-                                                    <p className="font-medium">Order #{order.id.slice(-6)}</p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {format(new Date(order.created_date), 'MMM d, yyyy')}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-semibold">£{order.total.toFixed(2)}</p>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {order.status}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-
-                            {selectedCustomer.reviews.length > 0 && (
-                                <div>
-                                    <h4 className="font-semibold mb-2">Reviews</h4>
-                                    <div className="space-y-2">
-                                        {selectedCustomer.reviews.map((review) => (
-                                            <Card key={review.id}>
-                                                <CardContent className="pt-4">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                className={`h-4 w-4 ${
-                                                                    i < review.rating
-                                                                        ? 'fill-yellow-400 text-yellow-400'
-                                                                        : 'text-gray-300'
-                                                                }`}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    {review.review_text && (
-                                                        <p className="text-sm text-gray-700">{review.review_text}</p>
-                                                    )}
-                                                </CardContent>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <CRMCustomerProfile
+                            customer={selectedCustomer}
+                            onClose={() => setSelectedCustomer(null)}
+                            restaurantName={restaurantName}
+                        />
                     )}
                 </DialogContent>
             </Dialog>
