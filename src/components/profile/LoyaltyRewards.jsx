@@ -66,7 +66,7 @@ export default function LoyaltyRewards({ user }) {
         return setting ? parseFloat(setting.setting_value) || defaultValue : defaultValue;
     };
 
-    const pointsPerPound = getSetting('loyalty_points_per_pound', 10);
+    const pointsPerPound = getSetting('loyalty_points_per_pound', 1);
     const firstOrderBonus = getSetting('loyalty_first_order_bonus', 50);
     const referralBonus = getSetting('loyalty_referral_bonus', 100);
     const minOrderValue = getSetting('loyalty_min_order_value', 0);
