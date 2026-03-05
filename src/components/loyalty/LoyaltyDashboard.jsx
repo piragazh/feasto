@@ -249,7 +249,7 @@ export default function LoyaltyDashboard({ userEmail }) {
                                         </div>
                                         <div className="text-right">
                                             <p className={`font-bold ${txn.transaction_type === 'earned' ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {txn.transaction_type === 'earned' ? '+' : ''}{txn.points > 0 && txn.transaction_type !== 'earned' ? '-' : ''}{Math.abs(txn.points)}
+                                                    {txn.transaction_type === 'earned' ? `+${Math.abs(txn.points)}` : `-${Math.abs(txn.points)}`}
                                                 </p>
                                             <Badge variant="outline" className="text-xs capitalize">
                                                 {txn.transaction_type}
