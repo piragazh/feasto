@@ -546,8 +546,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 flex-wrap mb-1">
                                                         <p className="font-semibold text-gray-900">
-                                                            {customer.guestName || customer.email}
-                                                        </p>
+                                                               {customer.guestName || customer.phone || customer.email}
+                                                            </p>
                                                         <Badge className={config.color}>{config.label}</Badge>
                                                     </div>
                                                     <div className="flex flex-wrap gap-3 text-xs text-gray-500">
