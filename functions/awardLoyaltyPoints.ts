@@ -23,9 +23,20 @@ Deno.serve(async (req) => {
                 const pointsToAward = order.loyalty_points_earned || 0;
                 if (pointsToAward <= 0) continue;
 
-                const userEmail = order.created_by || order.guest_email;
+                // Use created_by only if it's a real authenticated user (not anonymous/guest)
+                const createdBy = order.created_by;
+                const isAnonymous = !createdBy || 
+                    createdBy.includes('anonymous') || 
+                    createdBy.startsWith('guest') ||
+                    createdBy === 'undefined' ||
+                    createdBy === 'null';
+
+                const userEmail = isAnonymous ? null : createdBy;
+
                 if (!userEmail) {
-                    console.log(`⚠️ No user email for order ${order.id}`);
+                    console.log(`⚠️ Skipping order ${order.id} - no authenticated user (anonymous/guest)`);
+                    // Mark as awarded so it's not retried endlessly
+                    await base44.asServiceRole.entities.Order.update(order.id, { loyalty_points_awarded: true });
                     continue;
                 }
 
