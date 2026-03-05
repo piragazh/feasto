@@ -355,11 +355,11 @@ Order frequency: ${customer.orderFrequency}
 
                         <Button
                             onClick={handleSend}
-                            disabled={sending}
+                            disabled={sending || !customer.email}
                             className="w-full bg-orange-500 hover:bg-orange-600"
                         >
                             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                            {sending ? 'Sending...' : `Send to ${customer.email}`}
+                            {sending ? 'Sending...' : customer.email ? `Send to ${customer.email}` : 'No email address available'}
                         </Button>
                     </div>
                 </TabsContent>
