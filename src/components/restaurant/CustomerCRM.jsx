@@ -519,14 +519,18 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                                         <CardContent className="pt-4">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <p className="font-semibold text-gray-900">{customer.email}</p>
-                                                        <Badge className={config.color}>
-                                                            {config.label}
-                                                        </Badge>
+                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                        <p className="font-semibold text-gray-900">
+                                                            {customer.guestName || customer.email}
+                                                        </p>
+                                                        <Badge className={config.color}>{config.label}</Badge>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                                                        {customer.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{customer.email}</span>}
+                                                        {customer.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{customer.phone}</span>}
                                                     </div>
                                                     {customer.avgRating && (
-                                                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                        <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
                                                             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                                             {customer.avgRating.toFixed(1)} avg rating
                                                         </div>
