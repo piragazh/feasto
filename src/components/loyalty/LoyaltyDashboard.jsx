@@ -35,6 +35,16 @@ export default function LoyaltyDashboard({ userEmail }) {
         queryFn: () => base44.entities.LoyaltyReward.filter({ is_active: true })
     });
 
+    const { data: tierBenefits = [] } = useQuery({
+        queryKey: ['tier-benefits-dashboard', userEmail],
+        queryFn: async () => {
+            const tier = loyaltyPoints?.tier || 'bronze';
+            const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+            return base44.entities.LoyaltyTierBenefit.filter({ tier_name: tierName, is_active: true });
+        },
+        enabled: !!loyaltyPoints
+    });
+
     const tierInfo = {
         bronze: { name: 'Bronze', color: 'bg-amber-700', icon: Award, threshold: 0 },
         silver: { name: 'Silver', color: 'bg-gray-400', icon: Star, threshold: 500 },
