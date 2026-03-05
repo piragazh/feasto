@@ -12,8 +12,8 @@ Deno.serve(async (req) => {
         const { reward_id } = await req.json();
 
         // Get reward details
-        const reward = await base44.entities.LoyaltyReward.list();
-        const targetReward = reward.find(r => r.id === reward_id);
+        const rewards = await base44.entities.LoyaltyReward.filter({ id: reward_id });
+        const targetReward = rewards[0];
 
         if (!targetReward) {
             return Response.json({ error: 'Reward not found' }, { status: 404 });
