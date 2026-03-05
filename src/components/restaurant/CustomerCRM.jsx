@@ -123,10 +123,14 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         // Calculate segments
         const customers = Object.values(customerData).map(customer => {
             customer.orderCount = customer.orders.length;
-            customer.avgOrderValue = customer.totalSpent / customer.orderCount;
-            
-            const daysSinceFirst = (new Date() - new Date(customer.firstOrder)) / (1000 * 60 * 60 * 24);
-            const daysSinceLast = (new Date() - new Date(customer.lastOrder)) / (1000 * 60 * 60 * 24);
+            customer.avgOrderValue = customer.orderCount > 0 ? customer.totalSpent / customer.orderCount : 0;
+
+            const daysSinceFirst = customer.firstOrder
+                ? (new Date() - new Date(customer.firstOrder)) / (1000 * 60 * 60 * 24)
+                : 0;
+            const daysSinceLast = customer.lastOrder
+                ? (new Date() - new Date(customer.lastOrder)) / (1000 * 60 * 60 * 24)
+                : 0;
             
             customer.daysSinceLast = daysSinceLast;
             
