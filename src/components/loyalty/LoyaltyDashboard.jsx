@@ -72,6 +72,7 @@ export default function LoyaltyDashboard({ userEmail }) {
     const handleRedeemSuccess = () => {
         queryClient.invalidateQueries({ queryKey: ['loyaltyPoints', userEmail] });
         queryClient.invalidateQueries({ queryKey: ['loyaltyTransactions', userEmail] });
+        queryClient.invalidateQueries({ queryKey: ['tier-benefits-dashboard'] });
     };
 
     return (
