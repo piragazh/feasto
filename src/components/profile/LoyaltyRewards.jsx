@@ -165,7 +165,7 @@ export default function LoyaltyRewards({ user }) {
                         <div>
                             <div className="flex justify-between text-sm mb-2">
                                 <span className="text-gray-600">Progress to next tier</span>
-                                <span className="font-medium">{nextTierPoints - loyaltyPoints} points to go</span>
+                                <span className="font-medium">{nextTierPoints - lifetimeEarned} pts to {tierNames[currentTierIndex + 1]}</span>
                             </div>
                             <Progress value={progressToNext} className="h-2" />
                         </div>
