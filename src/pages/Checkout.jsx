@@ -276,6 +276,15 @@ export default function Checkout() {
         }
     }, [restaurant, orderType]);
 
+    // Load loyalty points per pound setting once on mount
+    useEffect(() => {
+        base44.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' })
+            .then(results => {
+                if (results?.[0]?.setting_value) setPointsPerPound(parseFloat(results[0].setting_value) || 1);
+            })
+            .catch(() => {});
+    }, []);
+
     // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
         try {
