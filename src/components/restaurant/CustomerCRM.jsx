@@ -15,11 +15,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, TrendingUp, DollarSign, Mail, Search, Filter, Send, Star, Percent, Calendar, Leaf } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Mail, Search, Filter, Send, Star, Percent, Calendar, Leaf, Phone, MapPin, Wand2, Loader2, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import CRMCustomerProfile from './CRMCustomerProfile';
 
 export default function CustomerCRM({ restaurantId }) {
     const [selectedSegment, setSelectedSegment] = useState('all');
