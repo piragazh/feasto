@@ -161,7 +161,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             }
             
             // Determine order frequency
-            const avgDaysBetweenOrders = daysSinceFirst / customer.orderCount;
+            const avgDaysBetweenOrders = customer.orderCount > 1 ? daysSinceFirst / customer.orderCount : daysSinceFirst;
             if (avgDaysBetweenOrders <= 14) {
                 customer.orderFrequency = 'frequent';
             } else if (avgDaysBetweenOrders <= 30) {
