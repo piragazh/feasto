@@ -152,7 +152,7 @@ export default function LoyaltyRewards({ user }) {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">{tier.name} Member</h2>
-                                <p className="text-gray-600">You have {loyaltyPoints} points</p>
+                                <p className="text-gray-600">You have {loyaltyPoints} points to spend</p>
                             </div>
                         </div>
                         <div className="text-right">
