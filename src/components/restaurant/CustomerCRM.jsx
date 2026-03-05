@@ -60,13 +60,17 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         const customerData = {};
         
         // Orders come sorted by -created_date so first encountered = most recent
+        // Group primarily by phone number, fall back to email, then unique order ID
         orders.forEach(order => {
-            const email = order.created_by || order.guest_email || `guest_${order.id}`;
-            if (!customerData[email]) {
-                customerData[email] = {
-                    email: order.created_by || order.guest_email || '',
+            const phone = order.phone;
+            const email = order.created_by || order.guest_email;
+            const key = phone || email || `unknown_${order.id}`;
+
+            if (!customerData[key]) {
+                customerData[key] = {
+                    email: email || '',
                     guestName: order.guest_name || null,
-                    phone: order.phone || null,
+                    phone: phone || null,
                     lastAddress: order.delivery_address || null,
                     orders: [],
                     totalSpent: 0,
@@ -79,34 +83,35 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             }
 
             // Keep most recent contact details (first encounter is most recent due to sort order)
-            if (order.phone && !customerData[email].phone) customerData[email].phone = order.phone;
-            if (order.delivery_address && !customerData[email].lastAddress) customerData[email].lastAddress = order.delivery_address;
-            if (order.guest_name && !customerData[email].guestName) customerData[email].guestName = order.guest_name;
+            if (order.phone && !customerData[key].phone) customerData[key].phone = order.phone;
+            if (order.delivery_address && !customerData[key].lastAddress) customerData[key].lastAddress = order.delivery_address;
+            if (order.guest_name && !customerData[key].guestName) customerData[key].guestName = order.guest_name;
+            if (email && !customerData[key].email) customerData[key].email = email;
 
-            customerData[email].orders.push(order);
-            customerData[email].totalSpent += order.total || 0;
+            customerData[key].orders.push(order);
+            customerData[key].totalSpent += order.total || 0;
             // firstOrder = earliest date, so take the minimum
-            if (order.created_date < customerData[email].firstOrder) {
-                customerData[email].firstOrder = order.created_date;
+            if (order.created_date < customerData[key].firstOrder) {
+                customerData[key].firstOrder = order.created_date;
             }
             // lastOrder = most recent, keep the maximum
-            if (order.created_date > customerData[email].lastOrder) {
-                customerData[email].lastOrder = order.created_date;
+            if (order.created_date > customerData[key].lastOrder) {
+                customerData[key].lastOrder = order.created_date;
             }
             
             // Track favorite items and dietary preferences
             order.items?.forEach(item => {
-                customerData[email].favoriteItems[item.name] = 
-                    (customerData[email].favoriteItems[item.name] || 0) + item.quantity;
+                customerData[key].favoriteItems[item.name] = 
+                    (customerData[key].favoriteItems[item.name] || 0) + item.quantity;
                 
                 // Detect dietary preferences from ordered items
                 const menuItem = menuItems.find(m => m.name === item.name);
                 if (menuItem) {
                     if (menuItem.is_vegetarian) {
-                        customerData[email].vegetarianOrders = (customerData[email].vegetarianOrders || 0) + 1;
+                        customerData[key].vegetarianOrders = (customerData[key].vegetarianOrders || 0) + 1;
                     }
                     if (menuItem.is_spicy) {
-                        customerData[email].spicyOrders = (customerData[email].spicyOrders || 0) + 1;
+                        customerData[key].spicyOrders = (customerData[key].spicyOrders || 0) + 1;
                     }
                 }
             });
