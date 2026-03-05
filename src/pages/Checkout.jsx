@@ -118,6 +118,7 @@ export default function Checkout() {
     const [isExistingPhone, setIsExistingPhone] = useState(false);
     const [user, setUser] = useState(null);
     const [showManualAddressEntry, setShowManualAddressEntry] = useState(false);
+    const [pointsPerPound, setPointsPerPound] = useState(1);
 
     // ============================================
     // INITIALIZATION - Runs when page loads
