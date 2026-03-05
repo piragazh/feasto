@@ -607,7 +607,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Customer Profile</DialogTitle>
-                        <DialogDescription>{selectedCustomer?.guestName || selectedCustomer?.email}</DialogDescription>
+                        <DialogDescription>{selectedCustomer?.guestName || selectedCustomer?.phone || selectedCustomer?.email}</DialogDescription>
                     </DialogHeader>
                     {selectedCustomer && (
                         <CRMCustomerProfile
