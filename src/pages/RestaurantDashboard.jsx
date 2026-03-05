@@ -545,7 +545,7 @@ export default function RestaurantDashboard() {
                             <DriverManagement restaurantId={restaurant.id} />
                         </TabsContent>
                         <TabsContent value="crm">
-                            <CustomerCRM restaurantId={restaurant.id} />
+                            <CustomerCRM restaurantId={restaurant.id} restaurantName={restaurant.name} />
                         </TabsContent>
                         <TabsContent value="refunds">
                             <RefundManagement restaurantId={restaurant.id} />
