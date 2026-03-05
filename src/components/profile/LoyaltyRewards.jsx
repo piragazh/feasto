@@ -41,8 +41,8 @@ export default function LoyaltyRewards({ user }) {
         queryFn: async () => {
             try {
                 const coupons = await base44.entities.Coupon.filter({ is_active: true });
-                // Filter coupons that were created for this user (redeemed rewards)
-                return coupons.filter(c => c.description && c.description.startsWith('Reward:'));
+                // Filter coupons that were created for this user (redeemed rewards), checking created_by
+                return coupons.filter(c => c.description && c.description.startsWith('Reward:') && c.created_by === user.email);
             } catch (e) {
                 return [];
             }
