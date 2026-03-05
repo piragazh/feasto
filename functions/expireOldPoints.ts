@@ -29,48 +29,56 @@ Deno.serve(async (req) => {
 
         // Mark transactions as expired and track points to deduct per user
         for (const transaction of expiredTransactions) {
-            await base44.entities.LoyaltyTransaction.update(transaction.id, {
+            await base44.asServiceRole.entities.LoyaltyTransaction.update(transaction.id, {
                 is_expired: true
             });
 
-            // Track points to deduct per user
-            if (!userPointsMap[transaction.user_email]) {
-                userPointsMap[transaction.user_email] = 0;
+            // Track points to deduct per user (only positive earned points)
+            const pts = Math.abs(transaction.points || 0);
+            if (pts > 0) {
+                if (!userPointsMap[transaction.user_email]) userPointsMap[transaction.user_email] = 0;
+                userPointsMap[transaction.user_email] += pts;
             }
-            userPointsMap[transaction.user_email] += transaction.points;
             expiredCount++;
         }
 
-        // Update loyalty points for each user
+        // Update loyalty points for each affected user
         for (const userEmail in userPointsMap) {
-            const userPoints = await base44.entities.LoyaltyPoints.filter({ user_email: userEmail });
+            const userPoints = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: userEmail });
             if (userPoints.length > 0) {
                 const loyaltyRecord = userPoints[0];
-                const newTotal = Math.max(0, loyaltyRecord.total_points - userPointsMap[userEmail]);
+                const pointsToDeduct = userPointsMap[userEmail];
+                const newTotal = Math.max(0, (loyaltyRecord.total_points || 0) - pointsToDeduct);
                 
-                await base44.entities.LoyaltyPoints.update(loyaltyRecord.id, {
-                    total_points: newTotal
+                // Tier still based on lifetime earned - expiry doesn't change tier
+                const totalEarned = loyaltyRecord.points_earned || 0;
+                let tier = 'bronze';
+                if (totalEarned >= 3000) tier = 'platinum';
+                else if (totalEarned >= 1500) tier = 'gold';
+                else if (totalEarned >= 500) tier = 'silver';
+
+                await base44.asServiceRole.entities.LoyaltyPoints.update(loyaltyRecord.id, {
+                    total_points: newTotal,
+                    tier
                 });
 
-                // Create expiration record
-                await base44.entities.LoyaltyTransaction.create({
+                // Create expiration transaction record
+                await base44.asServiceRole.entities.LoyaltyTransaction.create({
                     user_email: userEmail,
                     transaction_type: 'expired',
-                    points: -userPointsMap[userEmail],
-                    description: `${userPointsMap[userEmail]} points expired after 1 year`
+                    points: -pointsToDeduct,
+                    description: `${pointsToDeduct} points expired`
                 });
             }
         }
 
-        // Deactivate expired coupons
-        const allCoupons = await base44.entities.Coupon.list();
+        // Deactivate expired reward coupons
+        const allCoupons = await base44.asServiceRole.entities.Coupon.list();
         let deactivatedCount = 0;
 
         for (const coupon of allCoupons) {
-            if (coupon.expires_at && new Date(coupon.expires_at) < new Date() && coupon.is_active) {
-                await base44.entities.Coupon.update(coupon.id, {
-                    is_active: false
-                });
+            if (coupon.expires_at && new Date(coupon.expires_at) < now && coupon.is_active) {
+                await base44.asServiceRole.entities.Coupon.update(coupon.id, { is_active: false });
                 deactivatedCount++;
             }
         }
