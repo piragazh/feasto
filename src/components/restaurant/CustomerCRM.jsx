@@ -60,10 +60,13 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         const customerData = {};
         
         orders.forEach(order => {
-            const email = order.created_by;
+            const email = order.created_by || order.guest_email || `guest_${order.id}`;
             if (!customerData[email]) {
                 customerData[email] = {
-                    email,
+                    email: order.created_by || order.guest_email || '',
+                    guestName: order.guest_name || null,
+                    phone: order.phone || null,
+                    lastAddress: order.delivery_address || null,
                     orders: [],
                     totalSpent: 0,
                     avgOrderValue: 0,
@@ -74,6 +77,11 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                 };
             }
             
+            // Keep most recent contact details
+            if (order.phone) customerData[email].phone = order.phone;
+            if (order.delivery_address) customerData[email].lastAddress = order.delivery_address;
+            if (order.guest_name) customerData[email].guestName = order.guest_name;
+
             customerData[email].orders.push(order);
             customerData[email].totalSpent += order.total || 0;
             customerData[email].lastOrder = order.created_date;
