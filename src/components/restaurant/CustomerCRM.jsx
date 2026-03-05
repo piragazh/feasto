@@ -214,7 +214,11 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
     const filteredCustomers = useMemo(() => {
         return customerAnalytics.customers.filter(customer => {
             const matchesSegment = selectedSegment === 'all' || customer.segment === selectedSegment;
-            const matchesSearch = !searchQuery || customer.email.toLowerCase().includes(searchQuery.toLowerCase());
+            const lq = searchQuery.toLowerCase();
+            const matchesSearch = !searchQuery ||
+                (customer.email && customer.email.toLowerCase().includes(lq)) ||
+                (customer.guestName && customer.guestName.toLowerCase().includes(lq)) ||
+                (customer.phone && customer.phone.includes(searchQuery));
             
             // Advanced filters
             const matchesFrequency = advancedFilters.orderFrequency === 'all' || customer.orderFrequency === advancedFilters.orderFrequency;
