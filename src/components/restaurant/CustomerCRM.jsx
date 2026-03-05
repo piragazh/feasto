@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import CRMCustomerProfile from './CRMCustomerProfile';
 
-export default function CustomerCRM({ restaurantId }) {
+export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restaurant' }) {
     const [selectedSegment, setSelectedSegment] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCustomer, setSelectedCustomer] = useState(null);
