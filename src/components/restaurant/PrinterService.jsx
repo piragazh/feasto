@@ -229,31 +229,8 @@ export class PrinterService {
         }
     }
 
-    enableAutoReconnect(enabled = true) {
-        this.autoReconnectEnabled = enabled;
-        if (enabled && !this.device?.gatt?.connected && this.printerInfo) {
-            this.handleDisconnect();
-        }
-    }
-
-    getConnectionStatus() {
-        return {
-            connected: this.isConnected(),
-            reconnecting: this.reconnecting,
-            lastConnectionTime: this.lastConnectionTime,
-            reconnectAttempts: this.reconnectAttempts
-        };
-    }
-
-    stopConnectionMonitor() {
-        if (this.connectionCheckInterval) {
-            clearInterval(this.connectionCheckInterval);
-            this.connectionCheckInterval = null;
-        }
-    }
-
     isConnected() {
-        return this.device?.gatt?.connected || false;
+        return this.device?.gatt?.connected && !!this.characteristic;
     }
 
     async printReceipt(order, restaurant, config) {
