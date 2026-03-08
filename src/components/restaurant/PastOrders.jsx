@@ -187,7 +187,7 @@ export default function PastOrders({ restaurantId }) {
                                                     <p className="font-semibold">Refunded Items:</p>
                                                     <ul className="list-disc list-inside ml-2">
                                                         {order.refunded_items.map((item, idx) => (
-                                                            <li key={idx}>{item.name} (£{item.price || 0).toFixed(2)})</li>
+                                                            <li key={idx}>{item.name} (£{(item.price || 0).toFixed(2)})</li>
                                                         ))}
                                                     </ul>
                                                 </div>
@@ -236,7 +236,7 @@ export default function PastOrders({ restaurantId }) {
                                                 <p className="font-semibold">Items:</p>
                                                 <ul className="list-disc list-inside ml-2">
                                                     {order.refund_requested_items.map((item, idx) => (
-                                                        <li key={idx}>{item.name} (£{item.price || 0).toFixed(2)})</li>
+                                                        <li key={idx}>{item.name} (£{(item.price || 0).toFixed(2)})</li>
                                                     ))}
                                                 </ul>
                                             </div>
