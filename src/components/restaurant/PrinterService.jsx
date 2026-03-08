@@ -209,87 +209,18 @@ export class PrinterService {
 
             this.characteristic = characteristicFound;
             this.lastConnectionTime = new Date();
-            this.reconnectAttempts = 0;
             
-            // Save printer info to localStorage for auto-connect
-            try {
-                localStorage.setItem('printerInfo', JSON.stringify(this.printerInfo));
-            } catch (e) {
-                console.log('Could not save printer info:', e);
-            }
-            
-            // Set up disconnect listener for auto-reconnect
-            this.device.addEventListener('gattserverdisconnected', () => {
-                console.log('⚠️ Printer disconnected, will attempt to reconnect...');
-                this.handleDisconnect();
-            });
-            
-            // Start connection monitoring
-            this.startConnectionMonitor();
-            this.notifyConnectionStatus(true);
-            
-            if (!silent) {
-                console.log('🎉 Printer connected successfully!');
-                console.log('📝 Using characteristic:', this.characteristic.uuid);
-            }
-            return true;
-        } catch (error) {
-            if (!silent) console.error('❌ Printer connection failed:', error);
-            throw new Error(`Printer connection failed: ${error.message}`);
-        }
-    }
-
-    async handleDisconnect() {
-        if (this.reconnecting || !this.autoReconnectEnabled) return;
-        
-        this.reconnecting = true;
-        this.reconnectAttempts = 0;
-        
-        const attemptReconnect = async () => {
-            if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-                console.error('❌ Max reconnection attempts reached');
+            // Listen for disconnect — notify but don't auto-reconnect 
+            // (requestDevice requires a user gesture, auto-reconnect always fails)
+            this.device.removeEventListener('gattserverdisconnected', this._onDisconnect);
+            this._onDisconnect = () => {
+                console.log('⚠️ Printer GATT disconnected');
+                this.characteristic = null;
                 this.notifyConnectionStatus(false);
-                this.reconnecting = false;
-                return;
-            }
+            };
+            this.device.addEventListener('gattserverdisconnected', this._onDisconnect);
             
-            this.reconnectAttempts++;
-            const delayMs = Math.min(2000 * this.reconnectAttempts, 30000); // Exponential backoff, max 30s
-            
-            console.log(`🔄 Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delayMs}ms...`);
-            
-            setTimeout(async () => {
-                try {
-                    if (this.printerInfo && this.autoReconnectEnabled) {
-                        await this.connect(this.printerInfo, true);
-                        console.log('✅ Reconnected successfully');
-                        this.reconnectAttempts = 0;
-                        this.notifyConnectionStatus(true);
-                        this.reconnecting = false;
-                    }
-                } catch (error) {
-                    console.error(`❌ Reconnection attempt ${this.reconnectAttempts} failed:`, error.message);
-                    await attemptReconnect();
-                }
-            }, delayMs);
-        };
-        
-        await attemptReconnect();
-    }
-
-    startConnectionMonitor() {
-        // Clear existing interval
-        if (this.connectionCheckInterval) {
-            clearInterval(this.connectionCheckInterval);
-        }
-        
-        // Check connection every 15 seconds
-        this.connectionCheckInterval = setInterval(async () => {
-            if (!this.device?.gatt?.connected && this.printerInfo && !this.reconnecting) {
-                console.log('🔄 Connection lost, attempting reconnect...');
-                await this.handleDisconnect();
-            }
-        }, 15000);
+            console.log('📝 Using characteristic:', this.characteristic.uuid);
     }
 
     setConnectionStatusCallback(callback) {
