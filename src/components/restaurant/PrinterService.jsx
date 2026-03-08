@@ -387,16 +387,16 @@ export class PrinterService {
             // Totals
             const lineWidth = config.printer_width === '80mm' ? 48 : 32;
             if (config.template !== 'compact') {
-                const subtotal = `£${order.subtotal.toFixed(2)}`;
+                const subtotal = `£${(order.subtotal || 0).toFixed(2)}`;
                 const subtotalPad = lineWidth - 9 - subtotal.length;
                 await this.sendText(`Subtotal:${' '.repeat(Math.max(1, subtotalPad))}${subtotal}\n`);
                 
-                if (order.delivery_fee > 0) {
+                if ((order.delivery_fee || 0) > 0) {
                     const delivery = `£${order.delivery_fee.toFixed(2)}`;
                     const deliveryPad = lineWidth - 9 - delivery.length;
                     await this.sendText(`Delivery:${' '.repeat(Math.max(1, deliveryPad))}${delivery}\n`);
                 }
-                if (order.discount > 0) {
+                if ((order.discount || 0) > 0) {
                     const discount = `-£${order.discount.toFixed(2)}`;
                     const discountPad = lineWidth - 9 - discount.length;
                     await this.sendText(`Discount:${' '.repeat(Math.max(1, discountPad))}${discount}\n`);
