@@ -163,14 +163,26 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
                                 )}
                             </div>
                         </div>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={disconnectPrinter}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                            Disconnect
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                            {connectionStatus !== 'connected' && (
+                                <Button
+                                    size="sm"
+                                    onClick={reconnectPrinter}
+                                    disabled={isConnecting}
+                                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                                >
+                                    {isConnecting ? 'Connecting...' : 'Reconnect'}
+                                </Button>
+                            )}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={disconnectPrinter}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                                Disconnect
+                            </Button>
+                        </div>
                     </div>
                 </Card>
             ) : (
