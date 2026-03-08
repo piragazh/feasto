@@ -217,6 +217,7 @@ function LiveOrdersSection({ restaurantId }) {
         const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
 
         const printWindow = window.open('', '', 'width=300,height=600');
+        if (!printWindow) { toast.error('Popup blocked. Allow popups to print.'); return; }
         const orderLabel = order.order_type === 'collection' && order.order_number
             ? order.order_number : `#${order.id.slice(-6)}`;
         printWindow.document.write(`<html><head><title>Order ${orderLabel}</title><style>
@@ -229,9 +230,9 @@ function LiveOrdersSection({ restaurantId }) {
         <p><strong>Type:</strong> ${order.order_type?.toUpperCase()}</p>
         <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
         <div class="sep"></div>
-        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — £${(i.price * i.quantity).toFixed(2)}</p>`).join('')}
+        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — £${((i.price || 0) * i.quantity).toFixed(2)}</p>`).join('')}
         <div class="sep"></div>
-        <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
+        <p class="total">TOTAL: £${(order.total || 0).toFixed(2)}</p>
         </body></html>`);
         printWindow.document.close();
         printWindow.print();
