@@ -16,17 +16,12 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
         if (selectedPrinter?.id) {
             setConnectedDevice({ name: selectedPrinter.name });
             
-            // Try to reconnect silently
-            if (!printerService.isConnected()) {
-                printerService.connect(selectedPrinter, true)
-                    .then(() => {
-                        setConnectionStatus('connected');
-                    })
-                    .catch(() => {
-                        setConnectionStatus('error');
-                    });
-            } else {
+            if (printerService.isConnected()) {
                 setConnectionStatus('connected');
+            } else {
+                // Don't attempt silent auto-connect — requestDevice() requires a user gesture.
+                // Just show disconnected so the user can click Reconnect.
+                setConnectionStatus('disconnected');
             }
         }
 
