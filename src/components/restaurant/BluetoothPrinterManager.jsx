@@ -44,7 +44,7 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
 
         setIsConnecting(true);
         try {
-            console.log('🔍 Scanning for Bluetooth printers...');
+            // Step 1: Let user select the device (requires user gesture)
             const device = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: [
@@ -52,31 +52,32 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
                     'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
                     '49535343-fe7d-4ae5-8fa9-9fafd205e455',
                     '0000fff0-0000-1000-8000-00805f9b34fb',
-                    '0000ffe0-0000-1000-8000-00805f9b34fb', // Sunmi
-                    '00001101-0000-1000-8000-00805f9b34fb'  // SPP
+                    '0000ffe0-0000-1000-8000-00805f9b34fb',
+                    '00001101-0000-1000-8000-00805f9b34fb'
                 ]
             });
 
-            console.log('✅ Device selected:', device.name, device.id);
-
-            // Store printer info
             const printerInfo = {
                 id: device.id,
                 name: device.name,
                 connectedAt: new Date().toISOString()
             };
 
+            // Step 2: Actually connect GATT so we can print immediately
+            await printerService.connectDevice(device);
             setConnectedDevice(device);
+            setConnectionStatus('connected');
             onPrinterSelect(printerInfo);
-            toast.success(`Printer "${device.name}" connected successfully!`);
+            toast.success(`Printer "${device.name}" connected and ready!`);
         } catch (error) {
             console.error('❌ Connection error:', error);
             if (error.name === 'NotFoundError') {
                 toast.error('No printer found. Make sure your printer is on and in pairing mode.');
             } else if (error.name === 'NotSupportedError') {
                 toast.error('This feature requires HTTPS. Make sure you are using a secure connection.');
-            } else {
-                toast.error('Failed to connect to printer: ' + error.message);
+            } else if (error.name !== 'AbortError') {
+                // Don't show error if user just cancelled the dialog
+                toast.error('Failed to connect: ' + error.message);
             }
         } finally {
             setIsConnecting(false);
