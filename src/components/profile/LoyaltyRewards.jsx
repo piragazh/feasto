@@ -407,7 +407,7 @@ export default function LoyaltyRewards({ user }) {
                                                     <p className={`font-semibold ${
                                                         isRedeemed || isExpired ? 'text-red-600' : 'text-green-600'
                                                     }`}>
-                                                        {transaction.points > 0 ? '+' : ''}{transaction.points}
+                                                        {isEarned ? `+${Math.abs(transaction.points)}` : `-${Math.abs(transaction.points)}`}
                                                     </p>
                                                     {isExpired && <p className="text-xs text-gray-500">Expired</p>}
                                                 </div>
