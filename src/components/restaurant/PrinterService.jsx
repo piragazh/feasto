@@ -85,43 +85,46 @@ export class PrinterService {
         return commands[this.commandSet] || commands.esc_pos;
     }
 
+    // Connect using a device object that was already selected via requestDevice (requires user gesture)
+    async connectDevice(device) {
+        if (!device) throw new Error('No device provided');
+        this.printerInfo = { id: device.id, name: device.name };
+        this.device = device;
+        await this._connectGatt();
+        try { localStorage.setItem('printerInfo', JSON.stringify(this.printerInfo)); } catch(e) {}
+        this.notifyConnectionStatus(true);
+        return true;
+    }
+
+    // Connect using stored printerInfo — only works if device is still in browser's paired list
+    // (i.e. user previously paired it in the same browser session/origin)
     async connect(printerInfo, silent = false) {
         try {
             if (!printerInfo?.id) {
                 throw new Error('No printer configured. Please connect a printer in Settings > Printing.');
             }
 
-            // Check if Web Bluetooth is supported
             if (!navigator.bluetooth) {
                 throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
             }
 
-            if (!silent) console.log('🖨️ Connecting to printer:', printerInfo);
-            
-            // Store printer info for reconnection
             this.printerInfo = printerInfo;
-            
+
             let device = null;
 
-            // Try to get previously paired devices first
+            // Try to get from browser's already-paired devices list (no user gesture needed)
             if (navigator.bluetooth.getDevices) {
                 try {
                     const devices = await navigator.bluetooth.getDevices();
-                    console.log('📱 Available paired devices:', devices);
                     device = devices.find(d => d.id === printerInfo.id);
+                    if (device && !silent) console.log('📱 Found printer in paired devices:', device.name);
                 } catch (e) {
-                    console.log('⚠️ getDevices failed, will try requestDevice:', e);
+                    if (!silent) console.log('⚠️ getDevices not available:', e.message);
                 }
             }
 
-            // If device not found in paired devices, request user to select it
             if (!device) {
-                console.log('🔍 Printer not in paired devices, requesting user selection...');
-                device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: this.PRINTER_SERVICES
-                });
-                console.log('✅ User selected device:', device);
+                throw new Error('Printer not found in paired devices. Please use the "Scan for Printers" button to reconnect.');
             }
 
             this.device = device;
