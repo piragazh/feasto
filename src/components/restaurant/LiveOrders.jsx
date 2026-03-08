@@ -398,13 +398,13 @@ Provide only the time range (e.g., "25-30 min").`;
                     ` : ''}
                     <div class="separator"></div>
                     <h3>PAYMENT SUMMARY:</h3>
-                    <p><strong>Subtotal:</strong> £${order.subtotal.toFixed(2)}</p>
-                    ${order.delivery_fee > 0 ? `<p><strong>Delivery Fee:</strong> £${order.delivery_fee.toFixed(2)}</p>` : ''}
-                    ${order.small_order_surcharge > 0 ? `<p><strong>Small Order Surcharge:</strong> £${order.small_order_surcharge.toFixed(2)}</p>` : ''}
-                    ${order.discount > 0 ? `<p><strong>Discount:</strong> -£${order.discount.toFixed(2)}</p>` : ''}
+                    <p><strong>Subtotal:</strong> £${(order.subtotal || 0).toFixed(2)}</p>
+                    ${(order.delivery_fee || 0) > 0 ? `<p><strong>Delivery Fee:</strong> £${(order.delivery_fee).toFixed(2)}</p>` : ''}
+                    ${(order.small_order_surcharge || 0) > 0 ? `<p><strong>Small Order Surcharge:</strong> £${(order.small_order_surcharge).toFixed(2)}</p>` : ''}
+                    ${(order.discount || 0) > 0 ? `<p><strong>Discount:</strong> -£${(order.discount).toFixed(2)}</p>` : ''}
                     ${order.coupon_code ? `<p><strong>Coupon Applied:</strong> ${order.coupon_code}</p>` : ''}
                     <div class="separator"></div>
-                    <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
+                    <p class="total">TOTAL: £${(order.total || 0).toFixed(2)}</p>
                     ${config.footer_text ? `<p style="text-align: center; margin-top: 10px;">${config.footer_text}</p>` : ''}
                 </body>
             </html>
