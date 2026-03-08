@@ -10,14 +10,10 @@ export class PrinterService {
         this.device = null;
         this.characteristic = null;
         this.commandSet = 'esc_pos';
-        this.reconnecting = false;
-        this.connectionCheckInterval = null;
         this.printerInfo = null;
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.autoReconnectEnabled = true;
         this.lastConnectionTime = null;
         this.connectionStatusCallback = null;
+        this._onDisconnect = null;
         // Common Bluetooth printer service UUIDs
         this.PRINTER_SERVICES = [
             '000018f0-0000-1000-8000-00805f9b34fb', // Generic printer service
