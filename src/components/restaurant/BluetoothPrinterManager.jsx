@@ -83,6 +83,21 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
         }
     };
 
+    const reconnectPrinter = async () => {
+        if (!selectedPrinter?.id) return;
+        setIsConnecting(true);
+        try {
+            await printerService.connect(selectedPrinter, false);
+            setConnectionStatus('connected');
+            toast.success('Printer reconnected!');
+        } catch (error) {
+            setConnectionStatus('error');
+            toast.error('Reconnect failed: ' + error.message);
+        } finally {
+            setIsConnecting(false);
+        }
+    };
+
     const disconnectPrinter = () => {
         printerService.disconnect();
         setConnectedDevice(null);
