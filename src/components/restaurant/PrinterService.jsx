@@ -233,6 +233,32 @@ export class PrinterService {
         return this.device?.gatt?.connected && !!this.characteristic;
     }
 
+    getConnectionStatus() {
+        return {
+            connected: this.isConnected(),
+            lastConnectionTime: this.lastConnectionTime,
+            reconnecting: false,
+            reconnectAttempts: 0,
+        };
+    }
+
+    enableAutoReconnect(enabled) {
+        // Auto-reconnect requires a user gesture so it cannot be done silently.
+        // This method is a no-op stub kept for API compatibility.
+    }
+
+    async tryAutoConnect() {
+        const stored = (() => { try { return JSON.parse(localStorage.getItem('printerInfo')); } catch { return null; } })();
+        const printerInfo = stored || this.printerInfo;
+        if (!printerInfo?.id || this.isConnected()) return false;
+        try {
+            await this.connect(printerInfo, true);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async printReceipt(order, restaurant, config) {
         if (!config.bluetooth_printer) {
             throw new Error('No printer connected. Please connect a printer in Settings > Printing.');
