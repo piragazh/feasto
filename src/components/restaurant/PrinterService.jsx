@@ -407,7 +407,7 @@ export class PrinterService {
             if (config.template === 'itemized') {
                 await this.sendCommand(cmd.doubleHeight);
             }
-            const total = `£${order.total.toFixed(2)}`;
+            const total = `£${(order.total || 0).toFixed(2)}`;
             const totalPad = lineWidth - 6 - total.length;
             await this.sendText(`TOTAL:${' '.repeat(Math.max(1, totalPad))}${total}\n`);
             await this.sendCommand(cmd.normal);
