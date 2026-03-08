@@ -300,7 +300,7 @@ export class PrinterService {
             await this.sendCommand(cmd.boldOff);
             
             // Address
-            if (config.template !== 'compact') {
+            if (config.template !== 'compact' && restaurant.address) {
                 await this.sendText(`${restaurant.address}\n`);
             }
             await this.sendCommand(cmd.alignLeft);
