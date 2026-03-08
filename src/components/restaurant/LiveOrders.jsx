@@ -291,6 +291,10 @@ Provide only the time range (e.g., "25-30 min").`;
         const totalFontSize = config.font_size === 'small' ? '38px' : config.font_size === 'large' ? '48px' : '42px';
 
         const printWindow = window.open('', '', 'width=300,height=600');
+        if (!printWindow) {
+            toast.error('Popup blocked. Please allow popups for this site to print.');
+            return;
+        }
         const orderLabel = order.order_type === 'collection' && order.order_number 
             ? order.order_number 
             : `#${order.id.slice(-6)}`;
