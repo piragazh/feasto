@@ -214,8 +214,20 @@ function LiveOrdersSection({ restaurantId }) {
         const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
         const restaurant = restaurants?.[0];
         const config = restaurant?.printer_config || {};
-        const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
 
+        // Use Bluetooth printer if configured
+        if (config.bluetooth_printer?.id) {
+            try {
+                await printerService.printReceipt(order, restaurant, config);
+                toast.success('Receipt printed');
+            } catch (e) {
+                toast.error('Print failed: ' + e.message);
+            }
+            return;
+        }
+
+        // Fallback: browser print popup
+        const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
         const printWindow = window.open('', '', 'width=300,height=600');
         if (!printWindow) { toast.error('Popup blocked. Allow popups to print.'); return; }
         const orderLabel = order.order_type === 'collection' && order.order_number
