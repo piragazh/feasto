@@ -147,8 +147,8 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
                                     'text-yellow-900'
                                 }`}>
                                     {connectionStatus === 'connected' ? '✓ Connected' :
-                                     connectionStatus === 'error' ? '✗ Connection Error' :
-                                     '↻ Reconnecting...'}
+                                    connectionStatus === 'error' ? '✗ Connection Error' :
+                                    '⚠ Not Connected'}
                                 </p>
                                 <p className={`text-sm mt-1 ${
                                     connectionStatus === 'connected' ? 'text-green-700' :
