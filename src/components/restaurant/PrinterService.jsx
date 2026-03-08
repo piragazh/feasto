@@ -359,10 +359,10 @@ export class PrinterService {
                     await this.sendCommand(cmd.boldOn);
                     await this.sendText(`${item.quantity}x ${item.name}\n`);
                     await this.sendCommand(cmd.boldOff);
-                    await this.sendText(`    £${(item.price * item.quantity).toFixed(2)}\n`);
+                    await this.sendText(`    £${((item.price || 0) * item.quantity).toFixed(2)}\n`);
                 } else {
                     const itemName = `${item.quantity}x ${item.name}`;
-                    const price = `£${(item.price * item.quantity).toFixed(2)}`;
+                    const price = `£${((item.price || 0) * item.quantity).toFixed(2)}`;
                     // Adjust padding based on printer width (80mm = 48 chars, 58mm = 32 chars)
                     const lineWidth = config.printer_width === '80mm' ? 48 : 32;
                     const padding = lineWidth - itemName.length - price.length;
