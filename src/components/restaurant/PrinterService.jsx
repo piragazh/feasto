@@ -474,7 +474,8 @@ export class PrinterService {
         }
         try {
             const encoder = new TextEncoder();
-            const data = encoder.encode(command);
+            // If already a Uint8Array (e.g. image data), use it directly
+            const data = command instanceof Uint8Array ? command : encoder.encode(command);
             
             console.log(`📤 Sending ${data.length} bytes to printer`);
             
