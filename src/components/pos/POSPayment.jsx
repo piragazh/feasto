@@ -628,7 +628,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                 <div className="text-center py-4">
                                     <p className={`text-3xl font-bold text-green-500`}>£{terminalAmount.toFixed(2)}</p>
                                     <p className={`${t.subtext} text-sm mt-2`}>Transaction approved</p>
-                                    <p className={`${t.textSub} text-xs mt-1 font-mono`}>{terminalTransactionRef}</p>
+                                    <p className={`${t.subtext} text-xs mt-1 font-mono`}>{terminalTransactionRef}</p>
                                 </div>
                             </div>
                         </AlertDialogDescription>
