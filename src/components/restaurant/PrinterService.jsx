@@ -269,9 +269,9 @@ export class PrinterService {
         this.setCommandSet(config.command_set);
         const cmd = this.getCommands();
 
-        // Check if we need to reconnect
-        if (!this.device || !this.device.gatt?.connected || !this.characteristic) {
-            console.log('Reconnecting to printer...');
+        // If not connected, attempt to reconnect via paired devices list (no user gesture needed)
+        if (!this.device?.gatt?.connected || !this.characteristic) {
+            console.log('🔄 Printer not connected, attempting reconnect via paired devices...');
             await this.connect(config.bluetooth_printer, true);
         }
 
