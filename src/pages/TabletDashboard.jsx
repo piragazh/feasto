@@ -310,7 +310,7 @@ function LiveOrdersSection({ restaurantId }) {
                              {order.items.map((item, i) => (
                                  <div key={i} className="flex justify-between text-sm">
                                      <span className="font-medium">{item.quantity}x {item.name}</span>
-                                     <span className="text-gray-600">£{(item.price * item.quantity).toFixed(2)}</span>
+                                     <span className="text-gray-600">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                  </div>
                              ))}
                          </div>
@@ -835,7 +835,7 @@ function OrderHistorySection({ restaurantId }) {
                                             {order.items.map((item, i) => (
                                                 <div key={i} className="flex justify-between text-xs">
                                                     <span className="font-medium">{item.quantity}x {item.name}</span>
-                                                    <span className="text-gray-600">£{(item.price * item.quantity).toFixed(2)}</span>
+                                                    <span className="text-gray-600">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                 </div>
                                             ))}
                                         </div>
