@@ -128,7 +128,18 @@ export class PrinterService {
             }
 
             this.device = device;
-            
+            await this._connectGatt();
+            try { localStorage.setItem('printerInfo', JSON.stringify(this.printerInfo)); } catch(e) {}
+            this.notifyConnectionStatus(true);
+            if (!silent) console.log('🎉 Printer connected successfully!');
+            return true;
+        } catch (error) {
+            if (!silent) console.error('❌ Printer connection failed:', error);
+            throw new Error(error.message || 'Printer connection failed');
+        }
+    }
+
+    async _connectGatt() {
             console.log('🔌 Connecting to GATT server...');
             const server = await this.device.gatt.connect();
             console.log('✅ GATT connected, discovering services...');
