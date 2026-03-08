@@ -198,7 +198,7 @@ function LiveOrdersSection({ restaurantId }) {
             const statusHistory = [...(order?.status_history || []), {
                 status, timestamp: new Date().toISOString(), note: rejection_reason || ''
             }];
-            await base44.entities.Order.update(orderId, { status, statusHistory, rejection_reason });
+            await base44.entities.Order.update(orderId, { status, status_history: statusHistory, rejection_reason });
             // SMS notification
             try {
                 await base44.functions.invoke('sendSMS', {
