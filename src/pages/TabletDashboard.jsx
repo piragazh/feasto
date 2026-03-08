@@ -284,7 +284,7 @@ function LiveOrdersSection({ restaurantId }) {
                                 </div>
                                 <p className="text-sm text-gray-500 mt-1">{format(new Date(order.created_date), 'h:mm a, MMM d')}</p>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-gray-900">£{(order.total || 0).toFixed(2)}</p>
                         </div>
 
                         {/* AI Summary */}
