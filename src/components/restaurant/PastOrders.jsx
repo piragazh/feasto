@@ -104,7 +104,7 @@ export default function PastOrders({ restaurantId }) {
                                     <Badge className={(order.status === 'delivered' || order.status === 'collected') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
                                         {order.status}
                                     </Badge>
-                                    <p className="text-lg font-bold mt-1">£{order.total.toFixed(2)}</p>
+                                    <p className="text-lg font-bold mt-1">£{(order.total || 0).toFixed(2)}</p>
                                 </div>
                             </div>
                             <div className="text-sm text-gray-600 mb-3">
@@ -132,7 +132,7 @@ export default function PastOrders({ restaurantId }) {
                                         {order.items?.map((item, idx) => (
                                             <div key={idx} className="flex justify-between text-sm">
                                                 <span>{item.quantity}x {item.name}</span>
-                                                <span className="font-medium">£{(item.price * item.quantity).toFixed(2)}</span>
+                                                <span className="font-medium">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
