@@ -790,7 +790,7 @@ function OrderHistorySection({ restaurantId }) {
                                         {getStatusLabel(order.status)}
                                     </Badge>
                                 </div>
-                                <span className="text-lg font-bold text-gray-900">£{order.total.toFixed(2)}</span>
+                                <span className="text-lg font-bold text-gray-900">£{(order.total || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs text-gray-500">
                                 <span>{format(new Date(order.created_date), 'd MMM, HH:mm')}</span>
