@@ -176,6 +176,31 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
                         </div>
 
                         <div>
+                        <Label>Screen Orientation</Label>
+                        <div className="flex gap-2 mt-2">
+                            {[
+                                { value: 'landscape', label: 'Landscape' },
+                                { value: 'portrait', label: 'Portrait' },
+                                { value: 'auto', label: 'Auto' }
+                            ].map(opt => (
+                                <Button
+                                    key={opt.value}
+                                    type="button"
+                                    variant={orientation === opt.value ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setOrientation(opt.value)}
+                                    className="flex-1"
+                                >
+                                    {opt.label}
+                                </Button>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Set the display orientation for this screen
+                        </p>
+                        </div>
+
+                        <div>
                         <Label>Screen Rotation (degrees)</Label>
                         <div className="flex gap-2 mt-2">
                             {[0, 90, 180, 270].map(deg => (
