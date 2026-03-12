@@ -105,7 +105,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const createWallContentMutation = useMutation({
         mutationFn: (data) => base44.entities.MediaWallContent.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['wall-content']);
+            queryClient.invalidateQueries({ queryKey: ['wall-content', restaurantId, wallName] });
             toast.success('Full-wall content added');
             resetForm();
         }
@@ -114,7 +114,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const updateWallContentMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.MediaWallContent.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['wall-content']);
+            queryClient.invalidateQueries({ queryKey: ['wall-content', restaurantId, wallName] });
             toast.success('Content updated');
             resetForm();
         }
@@ -123,7 +123,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const deleteWallContentMutation = useMutation({
         mutationFn: (id) => base44.entities.MediaWallContent.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['wall-content']);
+            queryClient.invalidateQueries({ queryKey: ['wall-content', restaurantId, wallName] });
             toast.success('Content deleted');
         }
     });
@@ -131,7 +131,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const createIndividualContentMutation = useMutation({
         mutationFn: (data) => base44.entities.PromotionalContent.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['individual-content']);
+            queryClient.invalidateQueries({ queryKey: ['individual-content', restaurantId, wallName] });
             toast.success('Screen content added');
             resetForm();
         }
@@ -140,7 +140,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const updateIndividualContentMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.PromotionalContent.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['individual-content']);
+            queryClient.invalidateQueries({ queryKey: ['individual-content', restaurantId, wallName] });
             toast.success('Content updated');
             resetForm();
         }
@@ -149,7 +149,7 @@ export default function UnifiedMediaWallManager({ restaurantId, wallName, wallCo
     const deleteIndividualContentMutation = useMutation({
         mutationFn: (id) => base44.entities.PromotionalContent.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['individual-content']);
+            queryClient.invalidateQueries({ queryKey: ['individual-content', restaurantId, wallName] });
             toast.success('Content deleted');
         }
     });

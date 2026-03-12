@@ -45,7 +45,7 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.MediaFile.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['media-files']);
+            queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
             toast.success('File deleted successfully');
         },
     });
@@ -53,7 +53,7 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
     const updateFileMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.MediaFile.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['media-files']);
+            queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
             toast.success('File updated');
             setEditingFile(null);
         },
@@ -169,7 +169,7 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
                 uploadedFiles.push(mediaFile);
             }
 
-            queryClient.invalidateQueries(['media-files']);
+            queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
             toast.success(`${files.length} file(s) uploaded successfully`);
         } catch (error) {
             toast.error('Some files failed to upload');

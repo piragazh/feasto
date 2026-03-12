@@ -55,12 +55,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 
                 if (schedule.recurring?.enabled) {
                     const currentDay = now.getDay();
-                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const nowTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                     
                     if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
                     
                     const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return currentTime >= range.start_time && currentTime <= range.end_time;
+                        return nowTimeStr >= range.start_time && nowTimeStr <= range.end_time;
                     });
                     
                     if (!inTimeRange) return false;
@@ -97,12 +97,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 
                 if (schedule.recurring?.enabled) {
                     const currentDay = now.getDay();
-                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const nowTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                     
                     if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
                     
                     const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return currentTime >= range.start_time && currentTime <= range.end_time;
+                        return nowTimeStr >= range.start_time && nowTimeStr <= range.end_time;
                     });
                     
                     if (!inTimeRange) return false;
@@ -295,8 +295,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         };
     }, [screen?.id, refetchScreen]);
 
-    // Clamp currentIndex if content shrinks after a refetch
+    // Clamp currentIndex if content shrinks after a refetch — use useEffect to avoid setState-during-render
     const safeIndex = content.length > 0 ? Math.min(currentIndex, content.length - 1) : 0;
+
+    useEffect(() => {
+        if (content.length > 0 && currentIndex >= content.length) {
+            setCurrentIndex(content.length - 1);
+        }
+    }, [content.length]);
 
     useEffect(() => {
         setVideoLoopCount(0);
@@ -451,12 +457,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 layout={screen.layout_template}
             />
         );
-    }
-
-    // Otherwise, use classic single-content display
-    // Reset index if it's out of bounds after content refresh
-    if (currentIndex !== safeIndex) {
-        setCurrentIndex(safeIndex);
     }
 
     if (content.length === 0) {
