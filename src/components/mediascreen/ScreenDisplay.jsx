@@ -470,7 +470,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    const currentContent = content[currentIndex];
+    const currentContent = content[safeIndex];
 
     return (
         <div className="h-screen w-screen bg-black relative overflow-hidden">
@@ -519,7 +519,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
             <div className="h-full w-full flex items-center justify-center relative">
                 {content.map((item, index) => {
-                    const isActive = index === currentIndex;
+                    const isActive = index === safeIndex;
                     const transition = item.transition || 'fade';
                     
                     let transitionClass = '';
