@@ -357,6 +357,18 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
+    // Show loading state while data is being fetched
+    if (screenLoading || contentLoading) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
+                <div className="text-center text-white">
+                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-lg opacity-70">Loading screen...</p>
+                </div>
+            </div>
+        );
+    }
+
     // Use synced playlist display if playlist is active
     if (screen?.media_wall_config?.enabled && usePlaylistSync) {
         return (
