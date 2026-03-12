@@ -524,7 +524,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                     return (
                         <div
                             key={item.id}
-                            className="absolute inset-0 flex items-center justify-center animate-fadeIn"
+                            className="absolute inset-0 flex items-center justify-center"
+                            style={{ animation: 'fadeIn 0.8s ease-in-out' }}
                         >
                             {item.media_type === 'video' ? (
                                 <video
