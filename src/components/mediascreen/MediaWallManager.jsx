@@ -332,10 +332,28 @@ export default function MediaWallManager({ restaurantId }) {
                                     <div className="text-center">
                                         <Monitor className="h-8 w-8 mx-auto text-gray-600 mb-2" />
                                         <p className="font-semibold">{screen.screen_name}</p>
+                                        <Badge variant="outline" className="mt-2 text-xs capitalize">
+                                            {screen.orientation || 'landscape'}
+                                        </Badge>
+                                        <div className="mt-3 flex gap-2">
+                                            <Select
+                                                value={screen.orientation || 'landscape'}
+                                                onValueChange={(value) => updateScreenMutation.mutate({ id: screen.id, data: { orientation: value } })}
+                                            >
+                                                <SelectTrigger className="h-8 text-xs flex-1">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="landscape">Landscape</SelectItem>
+                                                    <SelectItem value="portrait">Portrait</SelectItem>
+                                                    <SelectItem value="auto">Auto</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="mt-3 w-full"
+                                            className="mt-2 w-full"
                                             onClick={() => handleConfigureScreen(screen)}
                                         >
                                             <Grid3x3 className="h-3 w-3 mr-1" />
