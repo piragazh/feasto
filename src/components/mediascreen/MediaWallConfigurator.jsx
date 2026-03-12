@@ -6,9 +6,10 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Grid3x3, Monitor, Maximize2, Check, Maximize, Minimize, Move } from 'lucide-react';
+import { Grid3x3, Monitor, Maximize2, Check, Maximize, Minimize, Move, RotateCcw } from 'lucide-react';
 
 export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
+    const [orientation, setOrientation] = useState(screen?.orientation || 'landscape');
     const [config, setConfig] = useState({
         enabled: screen?.media_wall_config?.enabled || false,
         position: screen?.media_wall_config?.position || { row: 0, col: 0 },
