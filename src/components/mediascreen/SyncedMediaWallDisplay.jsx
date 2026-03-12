@@ -5,10 +5,12 @@ import CustomContentWidget from './CustomContentWidget';
 
 export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition = null }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [syncTimestamp, setSyncTimestamp] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const videoRef = useRef(null);
     const imageRef = useRef(null);
+    // Use refs to track sync state to avoid re-creating the interval on every state change
+    const currentIndexRef = useRef(0);
+    const syncTimestampRef = useRef(null);
 
     // Fetch active playlist
     const { data: playlists = [] } = useQuery({
@@ -68,25 +70,21 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
         refetchInterval: 30000
     });
 
-    // Synchronization logic
+    // Synchronization logic - use refs to avoid re-creating interval on every state change
     useEffect(() => {
         if (!playlistContent.length) return;
 
         const calculateSyncPosition = () => {
             const totalDuration = playlistContent.reduce((sum, c) => sum + (c.duration || 10), 0);
             const now = Date.now();
-            const baseTime = Math.floor(now / 1000) * 1000; // Round to nearest second
+            const baseTime = Math.floor(now / 1000) * 1000;
             const elapsedInCycle = (baseTime / 1000) % totalDuration;
             
             let accumulated = 0;
             for (let i = 0; i < playlistContent.length; i++) {
                 const duration = playlistContent[i].duration || 10;
                 if (elapsedInCycle < accumulated + duration) {
-                    return {
-                        index: i,
-                        offset: (elapsedInCycle - accumulated) * 1000,
-                        timestamp: baseTime
-                    };
+                    return { index: i, offset: (elapsedInCycle - accumulated) * 1000, timestamp: baseTime };
                 }
                 accumulated += duration;
             }
@@ -96,11 +94,11 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
         const sync = () => {
             const { index, offset, timestamp } = calculateSyncPosition();
             
-            if (index !== currentIndex || !syncTimestamp || timestamp !== syncTimestamp) {
+            if (index !== currentIndexRef.current || !syncTimestampRef.current || timestamp !== syncTimestampRef.current) {
+                currentIndexRef.current = index;
+                syncTimestampRef.current = timestamp;
                 setCurrentIndex(index);
-                setSyncTimestamp(timestamp);
                 
-                // Sync video playback
                 if (videoRef.current && playlistContent[index]?.media_type === 'video') {
                     videoRef.current.currentTime = offset / 1000;
                     videoRef.current.play().catch(() => {});
@@ -108,13 +106,10 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
             }
         };
 
-        // Initial sync
         sync();
-
-        // Sync every second
         const interval = setInterval(sync, 1000);
         return () => clearInterval(interval);
-    }, [playlistContent, currentIndex, syncTimestamp]);
+    }, [playlistContent]); // Only re-run when content changes, not on every index/timestamp change
 
     // Auto-advance content
     useEffect(() => {

@@ -106,7 +106,7 @@ export default function ContentManagement({ restaurantId }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.PromotionalContent.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
+            queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
             toast.success('Content created successfully');
             resetForm();
         },
@@ -119,7 +119,7 @@ export default function ContentManagement({ restaurantId }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.PromotionalContent.update(id, data),
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
+            queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
             // Only close the dialog if we were editing (i.e. the dialog was open)
             // For inline toggle/switch updates, editingContent is null so we skip resetForm
             if (variables._closeDialog) {
@@ -136,7 +136,7 @@ export default function ContentManagement({ restaurantId }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.PromotionalContent.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
+            queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
             toast.success('Content deleted');
         },
     });
@@ -144,21 +144,21 @@ export default function ContentManagement({ restaurantId }) {
     const createScreenMutation = useMutation({
         mutationFn: (data) => base44.entities.Screen.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['screens'] });
+            queryClient.invalidateQueries({ queryKey: ['screens', restaurantId] });
         },
     });
 
     const updateScreenMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['screens'] });
+            queryClient.invalidateQueries({ queryKey: ['screens', restaurantId] });
         },
     });
 
     const deleteScreenMutation = useMutation({
         mutationFn: (id) => base44.entities.Screen.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['screens'] });
+            queryClient.invalidateQueries({ queryKey: ['screens', restaurantId] });
         },
     });
 
@@ -1066,7 +1066,7 @@ export default function ContentManagement({ restaurantId }) {
                         });
 
                         Promise.all(createPromises).then(() => {
-                            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
+                            queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
                             toast.success(`${fileUrlOrArray.length} content items created successfully`);
                         }).catch(() => {
                             toast.error('Failed to create some content items');

@@ -27,7 +27,7 @@ export default function ScreenControl({ restaurantId }) {
     const updateScreenMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['screens-control'] });
+            queryClient.invalidateQueries({ queryKey: ['screens-control', restaurantId] });
         },
     });
 
