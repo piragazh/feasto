@@ -37,7 +37,8 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
     };
 
     useEffect(() => {
-        if ((zone.type === 'carousel' || zone.type === 'media') && content.length > 1) {
+        const zoneType = zone.type || zone.content_type || 'media';
+        if ((zoneType === 'carousel' || zoneType === 'media') && content.length > 1) {
             const currentItem = content[carouselIndex % content.length];
             
             if (currentItem?.media_type !== 'video') {
