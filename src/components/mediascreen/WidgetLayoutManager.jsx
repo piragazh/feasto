@@ -39,7 +39,7 @@ export default function WidgetLayoutManager({ restaurantId }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.WidgetLayout.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['widget-layouts']);
+            queryClient.invalidateQueries({ queryKey: ['widget-layouts', restaurantId] });
             toast.success('Widget layout created');
             resetForm();
         }
@@ -48,7 +48,7 @@ export default function WidgetLayoutManager({ restaurantId }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.WidgetLayout.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['widget-layouts']);
+            queryClient.invalidateQueries({ queryKey: ['widget-layouts', restaurantId] });
             toast.success('Widget layout updated');
             resetForm();
         }
@@ -57,7 +57,7 @@ export default function WidgetLayoutManager({ restaurantId }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.WidgetLayout.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['widget-layouts']);
+            queryClient.invalidateQueries({ queryKey: ['widget-layouts', restaurantId] });
             toast.success('Widget layout deleted');
         }
     });

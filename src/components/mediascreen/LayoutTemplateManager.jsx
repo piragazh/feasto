@@ -216,7 +216,7 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
     const createTemplateMutation = useMutation({
         mutationFn: (data) => base44.entities.LayoutTemplate.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['layout-templates']);
+            queryClient.invalidateQueries({ queryKey: ['layout-templates', restaurantId] });
             toast.success('Template saved successfully');
             setShowSaveDialog(false);
             setTemplateName('');
@@ -227,7 +227,7 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
     const deleteTemplateMutation = useMutation({
         mutationFn: (id) => base44.entities.LayoutTemplate.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['layout-templates']);
+            queryClient.invalidateQueries({ queryKey: ['layout-templates', restaurantId] });
             toast.success('Template deleted');
         }
     });
@@ -235,7 +235,7 @@ export default function LayoutTemplateManager({ restaurantId, onSelectTemplate, 
     const updateTemplateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.LayoutTemplate.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['layout-templates']);
+            queryClient.invalidateQueries({ queryKey: ['layout-templates', restaurantId] });
             toast.success('Template updated');
             setShowEditDialog(false);
             setEditingTemplate(null);

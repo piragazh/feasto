@@ -209,7 +209,7 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                 await base44.entities.MediaWallContent.create(rec);
             }
 
-            queryClient.invalidateQueries(['timeline-rows', restaurantId, wallName]);
+            queryClient.invalidateQueries({ queryKey: ['timeline-rows', restaurantId, wallName] });
             setDirty(false);
             toast.success('Timeline saved!');
         } catch (e) {
