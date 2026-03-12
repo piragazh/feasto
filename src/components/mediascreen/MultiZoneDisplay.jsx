@@ -63,7 +63,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
     const renderContent = () => {
         const zoneType = zone.type || zone.content_type || 'media';
         switch (zoneType) {
-            case 'media':
+            case 'media': {
                 if (content.length === 0) return null;
                 const mediaItem = content[carouselIndex % content.length];
                 return mediaItem.media_type === 'video' ? (
@@ -83,8 +83,9 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                         className="w-full h-full object-cover"
                     />
                 );
+            }
 
-            case 'carousel':
+            case 'carousel': {
                 if (content.length === 0) return null;
                 const carouselItem = content[carouselIndex % content.length];
                 return (
@@ -120,6 +121,7 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
                         )}
                     </div>
                 );
+            }
 
             case 'text':
                 return (

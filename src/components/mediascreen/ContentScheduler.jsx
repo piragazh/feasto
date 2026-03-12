@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,20 +19,27 @@ const DAYS_OF_WEEK = [
     { value: 6, label: 'Sat' }
 ];
 
-export default function ContentScheduler({ open, onClose, content, onSave }) {
-    const [schedule, setSchedule] = useState(content?.schedule || {
+const DEFAULT_SCHEDULE = {
+    enabled: false,
+    start_date: '',
+    end_date: '',
+    recurring: {
         enabled: false,
-        start_date: '',
-        end_date: '',
-        recurring: {
-            enabled: false,
-            type: 'daily',
-            days_of_week: [1, 2, 3, 4, 5],
-            time_ranges: [{ start_time: '09:00', end_time: '17:00' }]
-        }
-    });
+        type: 'daily',
+        days_of_week: [1, 2, 3, 4, 5],
+        time_ranges: [{ start_time: '09:00', end_time: '17:00' }]
+    }
+};
 
+export default function ContentScheduler({ open, onClose, content, onSave }) {
+    const [schedule, setSchedule] = useState(content?.schedule || DEFAULT_SCHEDULE);
     const [priority, setPriority] = useState(content?.priority || 1);
+
+    // Sync state when a different content item is passed in
+    React.useEffect(() => {
+        setSchedule(content?.schedule || DEFAULT_SCHEDULE);
+        setPriority(content?.priority || 1);
+    }, [content?.id]);
 
     const handleToggleDay = (day) => {
         const days = schedule.recurring.days_of_week || [];
