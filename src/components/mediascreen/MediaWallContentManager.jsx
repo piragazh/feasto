@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Maximize2, Plus, Edit, Trash2, Clock, ArrowUp, ArrowDown, Calendar, Image as ImageIcon, FolderOpen, Upload } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import ContentScheduler from './ContentScheduler';
 import FileManager from './FileManager';
