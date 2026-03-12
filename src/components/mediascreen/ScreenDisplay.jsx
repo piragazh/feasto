@@ -577,7 +577,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                         <div
                             key={index}
                             className={`h-2 rounded-full transition-all ${
-                                index === currentIndex 
+                                index === safeIndex 
                                     ? 'w-8 bg-white' 
                                     : 'w-2 bg-white/50'
                             }`}
