@@ -122,7 +122,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         refetchInterval: 30000,
     });
 
-    const { data: content = [] } = useQuery({
+    const { data: content = [], isLoading: contentLoading } = useQuery({
         queryKey: ['screen-content', restaurantId, screenName],
         queryFn: async () => {
             const allContent = await base44.entities.PromotionalContent.filter({ 
