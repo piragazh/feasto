@@ -386,8 +386,6 @@ export default function ContentManagement({ restaurantId }) {
             is_active: formData.is_active !== false,
         };
 
-        console.log('Submitting data:', data);
-
         try {
             if (editingContent) {
                 await updateMutation.mutateAsync({ id: editingContent.id, data, _closeDialog: true });
