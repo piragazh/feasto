@@ -9,11 +9,12 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
     const [videoLoopCount, setVideoLoopCount] = useState(0);
 
     useEffect(() => {
-        if (zone.type === 'clock') {
+        const zoneType = zone.type || zone.content_type || 'media';
+        if (zoneType === 'clock') {
             const timer = setInterval(() => setCurrentTime(new Date()), 1000);
             return () => clearInterval(timer);
         }
-    }, [zone.type]);
+    }, [zone.type, zone.content_type]);
 
     useEffect(() => {
         setVideoLoopCount(0);
