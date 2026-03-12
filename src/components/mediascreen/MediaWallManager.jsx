@@ -69,12 +69,12 @@ export default function MediaWallManager({ restaurantId }) {
         setShowConfigurator(true);
     };
 
-    const handleSaveConfig = async (config) => {
+    const handleSaveConfig = async (config, orientation) => {
         if (!configuringScreen) return;
         
         await updateScreenMutation.mutateAsync({
             id: configuringScreen.id,
-            data: { media_wall_config: config }
+            data: { media_wall_config: config, orientation }
         });
         setShowConfigurator(false);
         setConfiguringScreen(null);
