@@ -59,7 +59,8 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
     };
 
     const renderContent = () => {
-        switch (zone.type) {
+        const zoneType = zone.type || zone.content_type || 'media';
+        switch (zoneType) {
             case 'media':
                 if (content.length === 0) return null;
                 const mediaItem = content[carouselIndex % content.length];
