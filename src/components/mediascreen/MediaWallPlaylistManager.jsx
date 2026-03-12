@@ -49,7 +49,7 @@ export default function MediaWallPlaylistManager({ restaurantId, wallName }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.MediaWallPlaylist.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['media-wall-playlists']);
+            queryClient.invalidateQueries({ queryKey: ['media-wall-playlists', restaurantId, wallName] });
             toast.success('Playlist created');
             resetForm();
         }
@@ -58,7 +58,7 @@ export default function MediaWallPlaylistManager({ restaurantId, wallName }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.MediaWallPlaylist.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['media-wall-playlists']);
+            queryClient.invalidateQueries({ queryKey: ['media-wall-playlists', restaurantId, wallName] });
             toast.success('Playlist updated');
             resetForm();
         }
@@ -67,7 +67,7 @@ export default function MediaWallPlaylistManager({ restaurantId, wallName }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.MediaWallPlaylist.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['media-wall-playlists']);
+            queryClient.invalidateQueries({ queryKey: ['media-wall-playlists', restaurantId, wallName] });
             toast.success('Playlist deleted');
         }
     });

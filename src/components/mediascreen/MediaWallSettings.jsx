@@ -34,8 +34,8 @@ export default function MediaWallSettings({ restaurantId }) {
             const restaurant = await base44.entities.Restaurant.filter({ id: restaurantId });
             if (restaurant?.[0]?.latitude && restaurant?.[0]?.longitude) {
                 const result = await base44.functions.invoke('getWeather', {
-                    lat: restaurant[0].latitude,
-                    lng: restaurant[0].longitude
+                    latitude: restaurant[0].latitude,
+                    longitude: restaurant[0].longitude
                 });
                 return result.data;
             }
@@ -59,7 +59,7 @@ export default function MediaWallSettings({ restaurantId }) {
     const updateScreenMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['screens']);
+            queryClient.invalidateQueries({ queryKey: ['screens', restaurantId] });
             toast.success('Settings updated');
         }
     });

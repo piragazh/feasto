@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,29 +8,48 @@ export default function ContentPreview({ content, open, onClose, isFullWall = fa
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [displayTime, setDisplayTime] = useState(0);
+    // Use refs to avoid re-creating the interval on every state change
+    const displayTimeRef = useRef(0);
+    const currentIndexRef = useRef(0);
 
     useEffect(() => {
         if (!open || !content || content.length === 0) return;
         setCurrentIndex(0);
         setDisplayTime(0);
+        displayTimeRef.current = 0;
+        currentIndexRef.current = 0;
     }, [open, content]);
+
+    useEffect(() => {
+        currentIndexRef.current = currentIndex;
+        displayTimeRef.current = 0;
+        setDisplayTime(0);
+    }, [currentIndex]);
 
     useEffect(() => {
         if (!isPlaying || !content || content.length === 0) return;
 
         const timer = setInterval(() => {
-            setDisplayTime(prev => prev + 0.1);
-            const currentItem = content[currentIndex];
+            const currentItem = content[currentIndexRef.current];
             const itemDuration = currentItem?.duration || 10;
+            const newTime = displayTimeRef.current + 0.1;
 
-            if (displayTime >= itemDuration - 0.1) {
+            if (newTime >= itemDuration) {
+                displayTimeRef.current = 0;
                 setDisplayTime(0);
-                setCurrentIndex(prev => (prev + 1) % content.length);
+                setCurrentIndex(prev => {
+                    const next = (prev + 1) % content.length;
+                    currentIndexRef.current = next;
+                    return next;
+                });
+            } else {
+                displayTimeRef.current = newTime;
+                setDisplayTime(parseFloat(newTime.toFixed(1)));
             }
         }, 100);
 
         return () => clearInterval(timer);
-    }, [isPlaying, displayTime, currentIndex, content]);
+    }, [isPlaying, content]); // No displayTime/currentIndex in deps — using refs instead
 
     if (!content || content.length === 0) return null;
 

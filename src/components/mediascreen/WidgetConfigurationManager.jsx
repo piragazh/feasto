@@ -50,7 +50,7 @@ export default function WidgetConfigurationManager({ restaurantId }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.WidgetConfiguration.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['widget-configurations']);
+            queryClient.invalidateQueries({ queryKey: ['widget-configurations', restaurantId] });
             toast.success('Configuration created');
             resetForm();
         }
@@ -59,7 +59,7 @@ export default function WidgetConfigurationManager({ restaurantId }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.WidgetConfiguration.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['widget-configurations']);
+            queryClient.invalidateQueries({ queryKey: ['widget-configurations', restaurantId] });
             toast.success('Configuration updated');
             resetForm();
         }
@@ -68,7 +68,7 @@ export default function WidgetConfigurationManager({ restaurantId }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.WidgetConfiguration.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['widget-configurations']);
+            queryClient.invalidateQueries({ queryKey: ['widget-configurations', restaurantId] });
             toast.success('Configuration deleted');
         }
     });
