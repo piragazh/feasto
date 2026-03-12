@@ -179,15 +179,19 @@ function ZoneRenderer({ zone, restaurant, content, weather }) {
         }
     };
 
+    // Support both zone formats: old (zone.position.x, zone.type) and new (zone.x, zone.content_type)
+    const pos = zone.position || { x: zone.x || 0, y: zone.y || 0, width: zone.width || 100, height: zone.height || 100 };
+    const zoneType = zone.type || zone.content_type || 'media';
+
     return (
         <div
             className="absolute overflow-hidden"
             style={{
-                left: `${zone.position.x}%`,
-                top: `${zone.position.y}%`,
-                width: `${zone.position.width}%`,
-                height: `${zone.position.height}%`,
-                backgroundColor: (zone.type === 'clock' || zone.type === 'weather') ? 'transparent' : (zone.styling?.backgroundColor || '#000'),
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
+                width: `${pos.width}%`,
+                height: `${pos.height}%`,
+                backgroundColor: (zoneType === 'clock' || zoneType === 'weather') ? 'transparent' : (zone.styling?.backgroundColor || '#000'),
                 borderRadius: `${zone.styling?.borderRadius || 0}px`
             }}
         >
