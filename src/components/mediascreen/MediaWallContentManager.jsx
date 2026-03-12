@@ -43,7 +43,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.MediaWallContent.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['wall-content']);
+            queryClient.invalidateQueries({ queryKey: ['wall-content', restaurantId, wallName] });
             toast.success('Wall content created');
             resetForm();
         }
@@ -52,7 +52,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.MediaWallContent.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['wall-content']);
+            queryClient.invalidateQueries({ queryKey: ['wall-content', restaurantId, wallName] });
             toast.success('Wall content updated');
             resetForm();
         }
@@ -61,7 +61,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.MediaWallContent.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['wall-content']);
+            queryClient.invalidateQueries({ queryKey: ['wall-content', restaurantId, wallName] });
             toast.success('Wall content deleted');
         }
     });
