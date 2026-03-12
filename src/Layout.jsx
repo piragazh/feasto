@@ -618,11 +618,15 @@ export default function Layout({ children, currentPageName }) {
             )}
 
             <main className="min-h-screen">
-                <PullToRefresh onRefresh={() => window.location.reload()}>
-                    <PageTransition>
-                        {children}
-                    </PageTransition>
-                </PullToRefresh>
+                {isFullScreenPage ? (
+                    children
+                ) : (
+                    <PullToRefresh onRefresh={() => window.location.reload()}>
+                        <PageTransition>
+                            {children}
+                        </PageTransition>
+                    </PullToRefresh>
+                )}
             </main>
 
                 {/* AI Chatbot Widget */}
