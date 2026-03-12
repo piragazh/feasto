@@ -329,6 +329,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         }
     }, [currentIndex, content]);
 
+    // Wall content rotation (must be at top level, not inside conditional)
+    useEffect(() => {
+        if (!screen?.media_wall_config?.enabled || wallContent.length <= 1) return;
+        const currentWallContent = wallContent[wallContentIndex % wallContent.length];
+        const duration = (currentWallContent?.duration || 10) * 1000;
+        const timer = setTimeout(() => {
+            setWallContentIndex(prev => (prev + 1) % wallContent.length);
+        }, duration);
+        return () => clearTimeout(timer);
+    }, [wallContentIndex, wallContent, screen?.media_wall_config?.enabled]);
+
     const getWeatherIcon = (description) => {
         const desc = description?.toLowerCase() || '';
         if (desc.includes('rain')) return <CloudRain className="h-6 w-6" />;
