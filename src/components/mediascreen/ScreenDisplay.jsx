@@ -20,7 +20,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         staleTime: 60000,
     });
 
-    const { data: screen, refetch: refetchScreen } = useQuery({
+    const { data: screen, refetch: refetchScreen, isLoading: screenLoading } = useQuery({
         queryKey: ['screen', restaurantId, screenName],
         queryFn: async () => {
             const screens = await base44.entities.Screen.filter({ 
