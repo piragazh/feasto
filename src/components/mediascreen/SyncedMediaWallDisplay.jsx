@@ -152,9 +152,9 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
     if (!playlistContent.length) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p>Loading synchronized content...</p>
+                <div className="text-center opacity-60">
+                    <p className="text-lg">No content available</p>
+                    <p className="text-sm mt-1">Add content to this wall to begin displaying</p>
                 </div>
             </div>
         );
