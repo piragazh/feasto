@@ -52,21 +52,29 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
 
     const activePlaylist = playlists[0];
 
-    // Fetch content for active playlist
+    // Fetch content - use playlist content_ids if available, otherwise fetch all wall content directly
     const { data: playlistContent = [] } = useQuery({
-        queryKey: ['playlist-content', activePlaylist?.id],
+        queryKey: ['playlist-content', restaurantId, wallName, activePlaylist?.id],
         queryFn: async () => {
-            if (!activePlaylist?.content_ids) return [];
-            
-            const content = await Promise.all(
-                activePlaylist.content_ids.map(id => 
-                    base44.entities.MediaWallContent.filter({ id })
-                )
-            );
-            
-            return content.flat().filter(c => c && c.sync_enabled !== false);
+            if (activePlaylist?.content_ids?.length) {
+                const content = await Promise.all(
+                    activePlaylist.content_ids.map(id => 
+                        base44.entities.MediaWallContent.filter({ id })
+                    )
+                );
+                return content.flat().filter(c => c && c.is_active !== false);
+            }
+
+            // Fallback: fetch all active content for this wall directly
+            const content = await base44.entities.MediaWallContent.filter({ 
+                restaurant_id: restaurantId,
+                wall_name: wallName
+            });
+            return content
+                .filter(c => c && c.is_active !== false)
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
         },
-        enabled: !!activePlaylist,
+        enabled: !!restaurantId && !!wallName,
         refetchInterval: 30000
     });
 
