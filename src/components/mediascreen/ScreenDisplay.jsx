@@ -387,17 +387,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         const totalWidth = (screenWidth * cols) + (bezel * (cols - 1));
         const totalHeight = (screenHeight * rows) + (bezel * (rows - 1));
         
-        useEffect(() => {
-            if (wallContent.length <= 1) return;
-            
-            const duration = (currentWallContent?.duration || 10) * 1000;
-            const timer = setTimeout(() => {
-                setWallContentIndex(prev => (prev + 1) % wallContent.length);
-            }, duration);
-            
-            return () => clearTimeout(timer);
-        }, [wallContentIndex, wallContent.length]);
-        
         return (
             <div 
                 className="h-screen w-screen bg-black overflow-hidden relative"
