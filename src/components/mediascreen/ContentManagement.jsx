@@ -324,11 +324,11 @@ export default function ContentManagement({ restaurantId }) {
         );
     };
 
-    const isContentScheduleActive = (content, currentTime) => {
+    const isContentScheduleActive = (content, checkTime) => {
         if (!content.schedule?.enabled) return true;
         
         const schedule = content.schedule;
-        const now = currentTime || new Date();
+        const now = checkTime || new Date();
         
         // Check date range
         if (schedule.start_date && new Date(schedule.start_date) > now) return false;
@@ -337,14 +337,14 @@ export default function ContentManagement({ restaurantId }) {
         // Check recurring schedule
         if (schedule.recurring?.enabled) {
             const currentDay = now.getDay();
-            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
             // Check if current day is selected
             if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
             
             // Check if current time is within any time range
             const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                return currentTime >= range.start_time && currentTime <= range.end_time;
+                return currentTimeStr >= range.start_time && currentTimeStr <= range.end_time;
             });
             
             if (!inTimeRange) return false;
@@ -443,16 +443,18 @@ export default function ContentManagement({ restaurantId }) {
     };
 
     const moveContent = async (content, direction) => {
-        const currentIndex = sortedContent.findIndex(c => c.id === content.id);
+        // Only reorder within the same screen
+        const screenContent = sortedContent.filter(c => c.screen_name === content.screen_name);
+        const currentIndex = screenContent.findIndex(c => c.id === content.id);
         if (
             (direction === 'up' && currentIndex === 0) || 
-            (direction === 'down' && currentIndex === sortedContent.length - 1)
+            (direction === 'down' && currentIndex === screenContent.length - 1)
         ) {
             return;
         }
 
         const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-        const swapContent = sortedContent[swapIndex];
+        const swapContent = screenContent[swapIndex];
 
         await updateMutation.mutateAsync({ 
             id: content.id, 
@@ -1064,7 +1066,7 @@ export default function ContentManagement({ restaurantId }) {
                         });
 
                         Promise.all(createPromises).then(() => {
-                            queryClient.invalidateQueries(['promotional-content']);
+                            queryClient.invalidateQueries({ queryKey: ['promotional-content'] });
                             toast.success(`${fileUrlOrArray.length} content items created successfully`);
                         }).catch(() => {
                             toast.error('Failed to create some content items');

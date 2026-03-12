@@ -145,12 +145,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 // Check recurring schedule
                 if (schedule.recurring?.enabled) {
                     const currentDay = now.getDay();
-                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                     
                     if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
                     
                     const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return currentTime >= range.start_time && currentTime <= range.end_time;
+                        return currentTimeStr >= range.start_time && currentTimeStr <= range.end_time;
                     });
                     
                     if (!inTimeRange) return false;
@@ -294,6 +294,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             }
         };
     }, [screen?.id, refetchScreen]);
+
+    // Clamp currentIndex if content shrinks after a refetch
+    const safeIndex = content.length > 0 ? Math.min(currentIndex, content.length - 1) : 0;
 
     useEffect(() => {
         setVideoLoopCount(0);
@@ -451,6 +454,11 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     }
 
     // Otherwise, use classic single-content display
+    // Reset index if it's out of bounds after content refresh
+    if (currentIndex !== safeIndex) {
+        setCurrentIndex(safeIndex);
+    }
+
     if (content.length === 0) {
         return (
             <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 text-white">

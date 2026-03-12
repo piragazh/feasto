@@ -174,7 +174,7 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
             return { screenId, command };
         },
         onSuccess: (data) => {
-            queryClient.invalidateQueries(['screen-health']);
+            queryClient.invalidateQueries({ queryKey: ['screen-health'] });
             refetchLogs();
             toast.success(`Command "${data.command}" sent to screen`);
         },
@@ -198,7 +198,7 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['screen-health']);
+            queryClient.invalidateQueries({ queryKey: ['screen-health'] });
             toast.success('Issue marked as resolved');
         }
     });
@@ -214,7 +214,7 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['screen-health']);
+            queryClient.invalidateQueries({ queryKey: ['screen-health'] });
             toast.success('Cleared resolved issues');
         }
     });
