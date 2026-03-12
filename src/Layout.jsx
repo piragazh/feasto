@@ -334,6 +334,7 @@ export default function Layout({ children, currentPageName }) {
     };
 
     const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
+    const isFullScreenPage = ['MediaScreen', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay'].includes(currentPageName);
     const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap', 'CustomerDisplay'].includes(currentPageName);
     const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
     
