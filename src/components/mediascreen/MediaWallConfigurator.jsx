@@ -22,7 +22,6 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
     });
 
     const handleSave = () => {
-        // Ensure all numeric values are properly typed
         const sanitizedConfig = {
             ...config,
             position: {
@@ -36,7 +35,7 @@ export default function MediaWallConfigurator({ screen, onSave, onCancel }) {
             bezel_compensation: Number(config.bezel_compensation),
             rotation: Number(config.rotation)
         };
-        onSave(sanitizedConfig);
+        onSave(sanitizedConfig, orientation);
     };
 
     const renderGridPreview = () => {
