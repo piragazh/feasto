@@ -225,7 +225,7 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
                     src={currentContent.media_url}
                     alt={currentContent.title}
                     className={hasPosition ? 'absolute' : 'w-full h-full object-cover'}
-                    style={{ ...(hasPosition ? mediaStyle : {}), opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s' }}
+                    style={{ ...(hasPosition ? mediaStyle : {}) }}
                     onLoad={() => setIsLoading(false)}
                     onLoadStart={() => setIsLoading(true)}
                 />
