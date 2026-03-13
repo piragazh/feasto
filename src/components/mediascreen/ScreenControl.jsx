@@ -395,10 +395,23 @@ export default function ScreenControl({ restaurantId }) {
                                                     </div>
 
                                                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            <RotateCw className="h-3 w-3 mr-1" />
-                                                            {screen.orientation || 'landscape'}
-                                                        </Badge>
+                                                        <div className="flex items-center gap-1">
+                                                            <RotateCw className="h-3 w-3 text-gray-500" />
+                                                            <Select
+                                                                value={screen.orientation || 'landscape'}
+                                                                onValueChange={(val) => updateScreenMutation.mutate({ id: screen.id, data: { orientation: val } })}
+                                                            >
+                                                                <SelectTrigger className="h-7 w-32 text-xs">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="landscape">Landscape</SelectItem>
+                                                                    <SelectItem value="portrait">Portrait</SelectItem>
+                                                                    <SelectItem value="portrait_flipped">Portrait (Flipped)</SelectItem>
+                                                                    <SelectItem value="landscape_flipped">Landscape (Flipped)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
                                                         {screen.media_wall_config?.enabled && (
                                                             <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
                                                                 <Grid3x3 className="h-3 w-3 mr-1" />
