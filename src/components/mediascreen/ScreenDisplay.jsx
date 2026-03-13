@@ -476,19 +476,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     return (
         <div className="h-screen w-screen bg-black relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent z-10 p-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        {restaurant?.logo_url && (
-                            <img 
-                                src={restaurant.logo_url} 
-                                alt={restaurant.name}
-                                className="h-16 w-16 rounded-lg object-cover"
-                            />
-                        )}
-                        <h1 className="text-3xl font-bold text-white">{restaurant?.name}</h1>
-                    </div>
-                    
+            <div className="absolute top-0 right-0 z-10 p-6">
+                <div className="flex items-center justify-end">
                     <div className="flex items-center gap-6 text-white">
                         <div className="text-right">
                             <div className="text-2xl font-bold">
