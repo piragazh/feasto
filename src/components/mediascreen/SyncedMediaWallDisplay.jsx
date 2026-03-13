@@ -5,7 +5,7 @@ import CustomContentWidget from './CustomContentWidget';
 
 export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition = null, gridSize = null, bezelCompensation = 0 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const videoRef = useRef(null);
     const imageRef = useRef(null);
     // Use refs to track sync state to avoid re-creating the interval on every state change
