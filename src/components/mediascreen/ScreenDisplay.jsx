@@ -474,8 +474,18 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     const currentContent = content[safeIndex];
 
+    const orientationRotation = {
+        landscape: 0,
+        portrait: 90,
+        portrait_flipped: 270,
+        landscape_flipped: 180
+    }[screen?.orientation || 'landscape'] || 0;
+
     return (
-        <div className="h-screen w-screen bg-black relative overflow-hidden">
+        <div
+            className="h-screen w-screen bg-black relative overflow-hidden"
+            style={orientationRotation ? { transform: `rotate(${orientationRotation}deg)`, transformOrigin: 'center center' } : undefined}
+        >
             <div className="absolute top-0 right-0 z-10 p-6">
                 <div className="flex items-center justify-end">
                     <div className="flex items-center gap-6 text-white">
