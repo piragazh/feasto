@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import CustomContentWidget from './CustomContentWidget';
 
-export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition = null }) {
+export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition = null, gridSize = null, bezelCompensation = 0 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const videoRef = useRef(null);
