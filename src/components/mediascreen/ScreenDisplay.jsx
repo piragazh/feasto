@@ -385,6 +385,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 restaurantId={restaurantId}
                 wallName={screen.media_wall_config.wall_name}
                 screenPosition={screen.media_wall_config.position}
+                gridSize={screen.media_wall_config.grid_size}
+                bezelCompensation={screen.media_wall_config.bezel_compensation || 0}
             />
         );
     }
