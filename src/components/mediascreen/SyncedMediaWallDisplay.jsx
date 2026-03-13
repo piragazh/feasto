@@ -167,6 +167,31 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
     const isWidget = currentContent.media_type?.startsWith('widget_');
     const widgetType = isWidget ? currentContent.media_type.replace('widget_', '') : null;
 
+    // Calculate position offset for this screen's portion of the wall
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    const hasPosition = screenPosition && gridSize;
+    const { row = 0, col = 0 } = screenPosition || {};
+    const { rows = 1, cols = 1 } = gridSize || {};
+    const bezel = bezelCompensation || 0;
+    const offsetX = hasPosition ? -(col * screenWidth) - (col * bezel) : 0;
+    const offsetY = hasPosition ? -(row * screenHeight) - (row * bezel) : 0;
+    const totalWidth = hasPosition ? (screenWidth * cols) + (bezel * (cols - 1)) : screenWidth;
+    const totalHeight = hasPosition ? (screenHeight * rows) + (bezel * (rows - 1)) : screenHeight;
+
+    const mediaStyle = hasPosition ? {
+        position: 'absolute',
+        left: `${offsetX}px`,
+        top: `${offsetY}px`,
+        width: `${totalWidth}px`,
+        height: `${totalHeight}px`,
+        objectFit: 'cover'
+    } : {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover'
+    };
+
     return (
         <div className="h-screen w-screen overflow-hidden bg-gray-900 relative">
             {isWidget ? (
@@ -177,9 +202,11 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
                 />
             ) : currentContent.media_type === 'video' ? (
                 <video
+                    key={currentContent.id}
                     ref={videoRef}
                     src={currentContent.media_url}
-                    className="w-full h-full object-cover"
+                    className={hasPosition ? 'absolute' : 'w-full h-full object-cover'}
+                    style={hasPosition ? mediaStyle : undefined}
                     muted
                     autoPlay
                     playsInline
@@ -193,11 +220,12 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
                 />
             ) : (
                 <img
+                    key={currentContent.id}
                     ref={imageRef}
                     src={currentContent.media_url}
                     alt={currentContent.title}
-                    className="w-full h-full object-cover transition-opacity duration-300"
-                    style={{ opacity: isLoading ? 0 : 1 }}
+                    className={hasPosition ? 'absolute' : 'w-full h-full object-cover'}
+                    style={{ ...(hasPosition ? mediaStyle : {}), opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s' }}
                     onLoad={() => setIsLoading(false)}
                     onLoadStart={() => setIsLoading(true)}
                 />
