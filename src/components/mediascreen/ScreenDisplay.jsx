@@ -511,6 +511,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         <div
             className="h-screen w-screen bg-black relative overflow-hidden"
             style={rotationStyle}
+        >
             <div className="absolute top-0 right-0 z-10 p-6">
                 <div className="flex items-center justify-end">
                     <div className="flex items-center gap-6 text-white">
