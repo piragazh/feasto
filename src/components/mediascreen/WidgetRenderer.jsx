@@ -13,15 +13,15 @@ function WeatherWidget({ config = {}, className = '' }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetch = async () => {
+        const loadWeather = async () => {
             try {
                 const res = await base44.functions.invoke('getWeather', { location, units });
                 if (res.data) setWeather(res.data);
             } catch {}
             finally { setLoading(false); }
         };
-        fetch();
-        const interval = setInterval(fetch, 10 * 60 * 1000);
+        loadWeather();
+        const interval = setInterval(loadWeather, 10 * 60 * 1000);
         return () => clearInterval(interval);
     }, [location, units]);
 

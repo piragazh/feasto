@@ -94,7 +94,7 @@ export default function CountdownTimerWidget({ config = {}, className = '' }) {
         { label: 'HRS', value: timeLeft?.hours ?? 0 },
         { label: 'MIN', value: timeLeft?.minutes ?? 0 },
         ...(show_seconds ? [{ label: 'SEC', value: timeLeft?.seconds ?? 0 }] : [])
-    ].filter(u => timeLeft?.days > 0 || u.label !== 'DAYS' || true);
+    ];
 
     // Hide days if 0 and more than one hour remaining
     const visibleUnits = timeLeft?.days === 0

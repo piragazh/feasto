@@ -214,7 +214,8 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
         queryKey: ['weather', restaurant?.latitude, restaurant?.longitude],
         queryFn: async () => {
             if (!restaurant?.latitude || !restaurant?.longitude) return null;
-            return await base44.functions.invoke('getWeather', { latitude: restaurant.latitude, longitude: restaurant.longitude });
+            const res = await base44.functions.invoke('getWeather', { latitude: restaurant.latitude, longitude: restaurant.longitude });
+            return res?.data ?? res;
         },
         enabled: !!restaurant?.latitude && !!restaurant?.longitude,
         staleTime: 600000,
