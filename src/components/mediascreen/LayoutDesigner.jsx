@@ -46,6 +46,7 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout, r
 
     const canvasRef = useRef(null);
     const dragRef = useRef(null); // { type:'move'|'resize', zoneId, handle, startX, startY, origZone }
+    const didDragRef = useRef(false); // track if a real drag happened to suppress click-deselect
 
     // Load widget configurations for the current restaurant
     const { data: widgetConfigs = [] } = useQuery({
