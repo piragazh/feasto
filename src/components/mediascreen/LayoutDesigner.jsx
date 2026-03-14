@@ -1,561 +1,426 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Image, Type, Layout, Clock, CloudRain, List, Eye } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Plus, Move, LayoutTemplate, CloudRain, Clock, UtensilsCrossed, Image, List, Tv, Star, AlignJustify } from 'lucide-react';
 import { toast } from 'sonner';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
-const ZONE_TYPES = [
-    { value: 'media', label: 'Media (Image/Video)', icon: Image },
-    { value: 'carousel', label: 'Image Carousel', icon: Layout },
-    { value: 'text', label: 'Text Block', icon: Type },
-    { value: 'clock', label: 'Clock & Date', icon: Clock },
-    { value: 'weather', label: 'Weather Widget', icon: CloudRain },
-    { value: 'menu', label: 'Menu Items', icon: List }
+const WIDGET_TYPES = [
+    { value: 'media',       label: 'Media / Video',     icon: Image,          color: '#6366f1', desc: 'Image or video content' },
+    { value: 'menu',        label: 'Menu Board',         icon: UtensilsCrossed, color: '#10b981', desc: 'Restaurant menu items' },
+    { value: 'weather',     label: 'Weather',            icon: CloudRain,      color: '#0ea5e9', desc: 'Live weather widget' },
+    { value: 'clock',       label: 'Clock & Date',       icon: Clock,          color: '#8b5cf6', desc: 'Real-time clock' },
+    { value: 'live_orders', label: 'Live Orders',        icon: List,           color: '#f97316', desc: 'Order queue display' },
+    { value: 'ticker',      label: 'Promo Ticker',       icon: AlignJustify,   color: '#f59e0b', desc: 'Scrolling text banner' },
+    { value: 'branding',    label: 'Restaurant Brand',   icon: Star,           color: '#ec4899', desc: 'Logo & name' },
+    { value: 'queue_status',label: 'Queue Status',       icon: Tv,             color: '#14b8a6', desc: 'Queue / serving numbers' },
 ];
 
-const PRESET_LAYOUTS = [
-    {
-        name: 'Full Screen',
-        zones: [{ id: '1', type: 'media', position: { x: 0, y: 0, width: 100, height: 100 } }]
-    },
-    {
-        name: 'Split Horizontal',
-        zones: [
-            { id: '1', type: 'media', position: { x: 0, y: 0, width: 50, height: 100 } },
-            { id: '2', type: 'media', position: { x: 50, y: 0, width: 50, height: 100 } }
-        ]
-    },
-    {
-        name: 'Main + Sidebar',
-        zones: [
-            { id: '1', type: 'carousel', position: { x: 0, y: 0, width: 70, height: 100 } },
-            { id: '2', type: 'text', position: { x: 70, y: 0, width: 30, height: 50 } },
-            { id: '3', type: 'weather', position: { x: 70, y: 50, width: 30, height: 25 } },
-            { id: '4', type: 'clock', position: { x: 70, y: 75, width: 30, height: 25 } }
-        ]
-    },
-    {
-        name: 'Picture-in-Picture',
-        zones: [
-            { id: '1', type: 'media', position: { x: 0, y: 0, width: 100, height: 100 } },
-            { id: '2', type: 'media', position: { x: 65, y: 65, width: 30, height: 30 } }
-        ]
-    },
-    {
-        name: 'Triple Split',
-        zones: [
-            { id: '1', type: 'media', position: { x: 0, y: 0, width: 100, height: 60 } },
-            { id: '2', type: 'carousel', position: { x: 0, y: 60, width: 50, height: 40 } },
-            { id: '3', type: 'text', position: { x: 50, y: 60, width: 50, height: 40 } }
-        ]
-    }
+const SNAP = 2; // snap to grid %
+
+function snapVal(v) { return Math.round(v / SNAP) * SNAP; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+const RESIZE_HANDLES = [
+    { id: 'se', cursor: 'se-resize', style: { bottom: -5, right: -5 } },
+    { id: 'sw', cursor: 'sw-resize', style: { bottom: -5, left: -5 } },
+    { id: 'ne', cursor: 'ne-resize', style: { top: -5, right: -5 } },
+    { id: 'nw', cursor: 'nw-resize', style: { top: -5, left: -5 } },
+    { id: 'n',  cursor: 'n-resize',  style: { top: -5, left: '50%', transform: 'translateX(-50%)' } },
+    { id: 's',  cursor: 's-resize',  style: { bottom: -5, left: '50%', transform: 'translateX(-50%)' } },
+    { id: 'e',  cursor: 'e-resize',  style: { right: -5, top: '50%', transform: 'translateY(-50%)' } },
+    { id: 'w',  cursor: 'w-resize',  style: { left: -5, top: '50%', transform: 'translateY(-50%)' } },
 ];
 
-export default function LayoutDesigner({ open, onClose, onSave, initialLayout }) {
-    const [layoutName, setLayoutName] = useState(initialLayout?.template_name || '');
-    const [zones, setZones] = useState(initialLayout?.zones || []);
-    const [selectedZone, setSelectedZone] = useState(null);
-    const [activeTab, setActiveTab] = useState('design');
-    const addZone = (type = 'media') => {
-        const newZone = {
-            id: Date.now().toString(),
-            type,
-            position: { x: 10, y: 10, width: 30, height: 30 },
-            content_filter: {},
-            styling: { 
-                backgroundColor: type === 'clock' ? 'transparent' : '#000000',
-                textColor: '#ffffff',
-                fontSize: 24,
-                fontWeight: 'normal',
-                textAlign: 'center',
-                borderRadius: 8,
-                padding: 16,
-                backgroundOpacity: 100
-            }
+let zoneCounter = 1;
+
+export default function LayoutDesigner({ open, onClose, onSave, initialLayout, restaurantId }) {
+    const [name, setName] = useState('');
+    const [zones, setZones] = useState([]);
+    const [selectedId, setSelectedId] = useState(null);
+
+    const canvasRef = useRef(null);
+    const dragRef = useRef(null); // { type:'move'|'resize', zoneId, handle, startX, startY, origZone }
+
+    // Load widget configurations for the current restaurant
+    const { data: widgetConfigs = [] } = useQuery({
+        queryKey: ['widgetConfigs', restaurantId],
+        queryFn: () => restaurantId ? base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId, is_active: true }) : [],
+        enabled: !!restaurantId && open,
+    });
+
+    // Init from initialLayout
+    useEffect(() => {
+        if (!open) return;
+        if (initialLayout) {
+            setName(initialLayout.name || '');
+            // Normalize zones from either schema
+            const rawZones = initialLayout.zones || [];
+            setZones(rawZones.map((z, i) => ({
+                id: z.id || `zone_${i}`,
+                label: z.label || z.type || 'Zone',
+                content_type: z.content_type || z.type || 'media',
+                x: z.x ?? z.position?.x ?? 10,
+                y: z.y ?? z.position?.y ?? 10,
+                width: z.width ?? z.position?.width ?? 30,
+                height: z.height ?? z.position?.height ?? 30,
+                widget_config_id: z.widget_config_id || '',
+            })));
+        } else {
+            setName('');
+            setZones([]);
+            setSelectedId(null);
+        }
+    }, [open, initialLayout]);
+
+    const addZone = (type) => {
+        const zone = {
+            id: `zone_${Date.now()}_${zoneCounter++}`,
+            label: WIDGET_TYPES.find(w => w.value === type)?.label || type,
+            content_type: type,
+            x: 10, y: 10, width: 35, height: 25,
+            widget_config_id: '',
         };
-        setZones([...zones, newZone]);
-        setSelectedZone(newZone.id);
+        setZones(prev => [...prev, zone]);
+        setSelectedId(zone.id);
     };
 
-    const removeZone = (zoneId) => {
-        setZones(zones.filter(z => z.id !== zoneId));
-        if (selectedZone === zoneId) setSelectedZone(null);
+    const removeZone = (id) => {
+        setZones(prev => prev.filter(z => z.id !== id));
+        if (selectedId === id) setSelectedId(null);
     };
 
-    const updateZone = (zoneId, updates) => {
-        setZones(zones.map(z => z.id === zoneId ? { ...z, ...updates } : z));
+    const updateZone = (id, patch) => {
+        setZones(prev => prev.map(z => z.id === id ? { ...z, ...patch } : z));
     };
 
-    const updateZonePosition = (zoneId, field, value) => {
-        setZones(zones.map(z => 
-            z.id === zoneId 
-                ? { ...z, position: { ...z.position, [field]: value } } 
-                : z
-        ));
+    // ── Mouse drag / resize ─────────────────────────────────────────────────
+    const getPct = (clientX, clientY) => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return { px: 0, py: 0 };
+        return {
+            px: ((clientX - rect.left) / rect.width) * 100,
+            py: ((clientY - rect.top) / rect.height) * 100,
+        };
     };
 
-    const updateZoneStyling = (zoneId, styleField, value) => {
-        setZones(zones.map(z => 
-            z.id === zoneId 
-                ? { ...z, styling: { ...z.styling, [styleField]: value } } 
-                : z
-        ));
+    const onZoneMouseDown = (e, zoneId, handle = null) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedId(zoneId);
+        const zone = zones.find(z => z.id === zoneId);
+        dragRef.current = {
+            type: handle ? 'resize' : 'move',
+            zoneId,
+            handle,
+            startX: e.clientX,
+            startY: e.clientY,
+            origZone: { ...zone },
+        };
     };
 
-    const loadPreset = (preset) => {
-        setZones(preset.zones.map(z => ({
-            ...z,
-            content_filter: {},
-            styling: { backgroundColor: '#000000', borderRadius: 8 }
-        })));
-        toast.success(`Loaded preset: ${preset.name}`);
-    };
+    const onMouseMove = useCallback((e) => {
+        if (!dragRef.current) return;
+        const { type, zoneId, handle, startX, startY, origZone } = dragRef.current;
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
 
+        const dx = ((e.clientX - startX) / rect.width) * 100;
+        const dy = ((e.clientY - startY) / rect.height) * 100;
+
+        if (type === 'move') {
+            const nx = clamp(snapVal(origZone.x + dx), 0, 100 - origZone.width);
+            const ny = clamp(snapVal(origZone.y + dy), 0, 100 - origZone.height);
+            setZones(prev => prev.map(z => z.id === zoneId ? { ...z, x: nx, y: ny } : z));
+        } else {
+            let { x, y, width, height } = origZone;
+            if (handle.includes('e')) width = clamp(snapVal(origZone.width + dx), 5, 100 - x);
+            if (handle.includes('s')) height = clamp(snapVal(origZone.height + dy), 5, 100 - y);
+            if (handle.includes('w')) {
+                const newX = clamp(snapVal(origZone.x + dx), 0, origZone.x + origZone.width - 5);
+                width = origZone.x + origZone.width - newX;
+                x = newX;
+            }
+            if (handle.includes('n')) {
+                const newY = clamp(snapVal(origZone.y + dy), 0, origZone.y + origZone.height - 5);
+                height = origZone.y + origZone.height - newY;
+                y = newY;
+            }
+            setZones(prev => prev.map(z => z.id === zoneId ? { ...z, x, y, width, height } : z));
+        }
+    }, []);
+
+    const onMouseUp = useCallback(() => { dragRef.current = null; }, []);
+
+    useEffect(() => {
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }, [onMouseMove, onMouseUp]);
+
+    // ── Save ────────────────────────────────────────────────────────────────
     const handleSave = () => {
-        if (!layoutName.trim()) {
-            toast.error('Please enter a layout name');
-            return;
-        }
-
-        if (zones.length === 0) {
-            toast.error('Please add at least one zone');
-            return;
-        }
-
-        onSave({
-            template_name: layoutName,
-            zones
-        });
+        if (!name.trim()) { toast.error('Enter a layout name'); return; }
+        if (zones.length === 0) { toast.error('Add at least one zone'); return; }
+        onSave({ name: name.trim(), zones });
         onClose();
     };
 
-    const selectedZoneData = zones.find(z => z.id === selectedZone);
+    const selectedZone = zones.find(z => z.id === selectedId);
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl max-h-[90vh]">
-                <DialogHeader>
-                    <DialogTitle>Layout Designer</DialogTitle>
+            <DialogContent className="max-w-[96vw] w-full max-h-[96vh] h-full flex flex-col p-0 gap-0 overflow-hidden">
+                <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
+                    <DialogTitle className="flex items-center gap-2">
+                        <LayoutTemplate className="h-5 w-5 text-orange-500" />
+                        Custom Layout Designer
+                    </DialogTitle>
                 </DialogHeader>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList>
-                        <TabsTrigger value="design">Design</TabsTrigger>
-                        <TabsTrigger value="presets">Presets</TabsTrigger>
-                        <TabsTrigger value="preview">Preview</TabsTrigger>
-                    </TabsList>
+                <div className="flex flex-1 min-h-0 overflow-hidden">
+                    {/* ── LEFT: Widget palette ────────────────────────── */}
+                    <div className="w-44 flex-shrink-0 border-r bg-gray-50 overflow-y-auto p-3 space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">Add Widget</p>
+                        {WIDGET_TYPES.map(wt => {
+                            const Icon = wt.icon;
+                            return (
+                                <button
+                                    key={wt.value}
+                                    onClick={() => addZone(wt.value)}
+                                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-200 group"
+                                >
+                                    <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: wt.color + '22' }}>
+                                        <Icon className="h-3.5 w-3.5" style={{ color: wt.color }} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-700 leading-tight">{wt.label}</p>
+                                        <p className="text-[10px] text-gray-400 leading-tight">{wt.desc}</p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                    <TabsContent value="design">
-                        <div className="grid grid-cols-3 gap-4">
-                            {/* Canvas */}
-                            <div className="col-span-2 space-y-4">
-                                <div>
-                                    <Label>Layout Name</Label>
-                                    <Input
-                                        value={layoutName}
-                                        onChange={(e) => setLayoutName(e.target.value)}
-                                        placeholder="e.g., Main Entrance Layout"
-                                        className="mt-1"
-                                    />
-                                </div>
+                    {/* ── CENTER: Canvas ──────────────────────────────── */}
+                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-900 p-4">
+                        {/* Name */}
+                        <div className="flex items-center gap-3 mb-3 flex-shrink-0">
+                            <Input
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                placeholder="Layout name (e.g. Menu Board)"
+                                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 h-8 text-sm max-w-xs"
+                            />
+                            <span className="text-gray-400 text-xs">{zones.length} zone{zones.length !== 1 ? 's' : ''}</span>
+                        </div>
 
-                                <div className="relative bg-gray-900 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                                    {zones.map(zone => {
-                                        const Icon = ZONE_TYPES.find(t => t.value === zone.type)?.icon;
-                                        const bgOpacity = (zone.styling?.backgroundOpacity || 100) / 100;
-                                        const bgColor = zone.styling?.backgroundColor || '#000000';
-                                        const rgbMatch = bgColor.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-                                        const backgroundColor = rgbMatch 
-                                            ? `rgba(${parseInt(rgbMatch[1], 16)}, ${parseInt(rgbMatch[2], 16)}, ${parseInt(rgbMatch[3], 16)}, ${bgOpacity})`
-                                            : bgColor;
-                                        
-                                        return (
-                                            <div
-                                                key={zone.id}
-                                                onClick={() => setSelectedZone(zone.id)}
-                                                className={`absolute border-2 cursor-pointer transition-all hover:border-blue-400 ${
-                                                    selectedZone === zone.id ? 'border-blue-500' : 'border-white/30'
-                                                }`}
-                                                style={{
-                                                    left: `${zone.position.x}%`,
-                                                    top: `${zone.position.y}%`,
-                                                    width: `${zone.position.width}%`,
-                                                    height: `${zone.position.height}%`,
-                                                    backgroundColor: selectedZone === zone.id ? 'rgba(59, 130, 246, 0.2)' : backgroundColor,
-                                                    borderRadius: `${zone.styling?.borderRadius || 0}px`,
-                                                    padding: `${zone.styling?.padding || 16}px`,
-                                                    color: zone.styling?.textColor || '#ffffff',
-                                                    fontSize: `${(zone.styling?.fontSize || 24) * 0.5}px`,
-                                                    fontWeight: zone.styling?.fontWeight || 'normal',
-                                                    textAlign: zone.styling?.textAlign || 'center'
-                                                }}
-                                            >
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    {Icon && <Icon className="h-8 w-8 opacity-50" />}
-                                                </div>
-                                                <div className="absolute top-1 left-1 bg-black/70 px-2 py-1 rounded text-xs text-white">
-                                                    {zone.type}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    
-                                    {zones.length === 0 && (
-                                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                                            <p>Add zones to start designing your layout</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-2 flex-wrap">
-                                    {ZONE_TYPES.map(type => {
-                                        const Icon = type.icon;
-                                        return (
-                                            <Button
-                                                key={type.value}
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => addZone(type.value)}
-                                            >
-                                                <Icon className="h-4 w-4 mr-1" />
-                                                {type.label}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Properties Panel */}
-                            <div className="space-y-4 overflow-hidden">
-                                <h3 className="font-semibold">Zone Properties</h3>
-                                
-                                {selectedZoneData ? (
-                                    <Card className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">Zone: {selectedZoneData.type}</span>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => removeZone(selectedZoneData.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4 text-red-500" />
-                                            </Button>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Type</Label>
-                                            <Select
-                                                value={selectedZoneData.type}
-                                                onValueChange={(value) => updateZone(selectedZoneData.id, { type: value })}
-                                            >
-                                                <SelectTrigger className="h-8 mt-1">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {ZONE_TYPES.map(type => (
-                                                        <SelectItem key={type.value} value={type.value}>
-                                                            {type.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">X Position (%)</Label>
-                                            <Slider
-                                                value={[selectedZoneData.position.x]}
-                                                onValueChange={([value]) => updateZonePosition(selectedZoneData.id, 'x', value)}
-                                                max={100}
-                                                step={1}
-                                                className="mt-2"
-                                            />
-                                            <span className="text-xs text-gray-500">{selectedZoneData.position.x}%</span>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Y Position (%)</Label>
-                                            <Slider
-                                                value={[selectedZoneData.position.y]}
-                                                onValueChange={([value]) => updateZonePosition(selectedZoneData.id, 'y', value)}
-                                                max={100}
-                                                step={1}
-                                                className="mt-2"
-                                            />
-                                            <span className="text-xs text-gray-500">{selectedZoneData.position.y}%</span>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Width (%)</Label>
-                                            <Slider
-                                                value={[selectedZoneData.position.width]}
-                                                onValueChange={([value]) => updateZonePosition(selectedZoneData.id, 'width', value)}
-                                                max={100}
-                                                step={1}
-                                                className="mt-2"
-                                            />
-                                            <span className="text-xs text-gray-500">{selectedZoneData.position.width}%</span>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Height (%)</Label>
-                                            <Slider
-                                                value={[selectedZoneData.position.height]}
-                                                onValueChange={([value]) => updateZonePosition(selectedZoneData.id, 'height', value)}
-                                                max={100}
-                                                step={1}
-                                                className="mt-2"
-                                            />
-                                            <span className="text-xs text-gray-500">{selectedZoneData.position.height}%</span>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Background Color</Label>
-                                            <div className="flex gap-2 mt-1">
-                                                <Input
-                                                    type="color"
-                                                    value={selectedZoneData.styling?.backgroundColor || '#000000'}
-                                                    onChange={(e) => updateZoneStyling(selectedZoneData.id, 'backgroundColor', e.target.value)}
-                                                    className="h-8 w-16 p-1"
-                                                />
-                                                <Input
-                                                    type="text"
-                                                    value={selectedZoneData.styling?.backgroundColor || '#000000'}
-                                                    onChange={(e) => updateZoneStyling(selectedZoneData.id, 'backgroundColor', e.target.value)}
-                                                    className="h-8 flex-1"
-                                                    placeholder="#000000"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Background Opacity (%)</Label>
-                                            <Slider
-                                                value={[selectedZoneData.styling?.backgroundOpacity || 100]}
-                                                onValueChange={([value]) => updateZoneStyling(selectedZoneData.id, 'backgroundOpacity', value)}
-                                                max={100}
-                                                step={5}
-                                                className="mt-2"
-                                            />
-                                            <span className="text-xs text-gray-500">{selectedZoneData.styling?.backgroundOpacity || 100}%</span>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Text Color</Label>
-                                            <div className="flex gap-2 mt-1">
-                                                <Input
-                                                    type="color"
-                                                    value={selectedZoneData.styling?.textColor || '#ffffff'}
-                                                    onChange={(e) => updateZoneStyling(selectedZoneData.id, 'textColor', e.target.value)}
-                                                    className="h-8 w-16 p-1"
-                                                />
-                                                <Input
-                                                    type="text"
-                                                    value={selectedZoneData.styling?.textColor || '#ffffff'}
-                                                    onChange={(e) => updateZoneStyling(selectedZoneData.id, 'textColor', e.target.value)}
-                                                    className="h-8 flex-1"
-                                                    placeholder="#ffffff"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Font Size (px)</Label>
-                                            <Input
-                                                type="number"
-                                                value={selectedZoneData.styling?.fontSize || 24}
-                                                onChange={(e) => updateZoneStyling(selectedZoneData.id, 'fontSize', parseInt(e.target.value) || 24)}
-                                                min="12"
-                                                max="120"
-                                                className="h-8 mt-1"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Font Weight</Label>
-                                            <Select
-                                                value={selectedZoneData.styling?.fontWeight || 'normal'}
-                                                onValueChange={(value) => updateZoneStyling(selectedZoneData.id, 'fontWeight', value)}
-                                            >
-                                                <SelectTrigger className="h-8 mt-1">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="normal">Normal</SelectItem>
-                                                    <SelectItem value="bold">Bold</SelectItem>
-                                                    <SelectItem value="lighter">Light</SelectItem>
-                                                    <SelectItem value="600">Semi-Bold</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Text Align</Label>
-                                            <Select
-                                                value={selectedZoneData.styling?.textAlign || 'center'}
-                                                onValueChange={(value) => updateZoneStyling(selectedZoneData.id, 'textAlign', value)}
-                                            >
-                                                <SelectTrigger className="h-8 mt-1">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="left">Left</SelectItem>
-                                                    <SelectItem value="center">Center</SelectItem>
-                                                    <SelectItem value="right">Right</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Padding (px)</Label>
-                                            <Input
-                                                type="number"
-                                                value={selectedZoneData.styling?.padding || 16}
-                                                onChange={(e) => updateZoneStyling(selectedZoneData.id, 'padding', parseInt(e.target.value) || 16)}
-                                                min="0"
-                                                max="100"
-                                                className="h-8 mt-1"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs">Border Radius (px)</Label>
-                                            <Input
-                                                type="number"
-                                                value={selectedZoneData.styling?.borderRadius || 0}
-                                                onChange={(e) => updateZoneStyling(selectedZoneData.id, 'borderRadius', parseInt(e.target.value) || 0)}
-                                                min="0"
-                                                max="100"
-                                                className="h-8 mt-1"
-                                            />
-                                        </div>
-                                    </Card>
-                                ) : (
-                                    <Card className="p-4">
-                                        <p className="text-sm text-gray-500 text-center">Select a zone to edit properties</p>
-                                    </Card>
+                        {/* Canvas */}
+                        <div className="flex-1 flex items-center justify-center overflow-hidden">
+                            <div
+                                ref={canvasRef}
+                                className="relative rounded-lg overflow-hidden select-none"
+                                style={{
+                                    aspectRatio: '16/9',
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    width: '100%',
+                                    background: 'repeating-linear-gradient(0deg,transparent,transparent 39px,#374151 39px,#374151 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,#374151 39px,#374151 40px), #1f2937',
+                                    cursor: 'default',
+                                }}
+                                onClick={() => setSelectedId(null)}
+                            >
+                                {zones.length === 0 && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
+                                        <Plus className="h-8 w-8 mb-2 opacity-30" />
+                                        <p className="text-sm opacity-50">Click a widget on the left to add it</p>
+                                    </div>
                                 )}
 
-                                <div className="text-xs text-gray-500 space-y-1">
-                                    <p><strong>Zones:</strong> {zones.length}</p>
-                                    <p><strong>Tip:</strong> Click a zone to select and edit it</p>
-                                </div>
+                                {zones.map(zone => {
+                                    const wt = WIDGET_TYPES.find(w => w.value === zone.content_type);
+                                    const Icon = wt?.icon || Image;
+                                    const color = wt?.color || '#6366f1';
+                                    const isSelected = selectedId === zone.id;
+
+                                    return (
+                                        <div
+                                            key={zone.id}
+                                            className={`absolute flex flex-col items-center justify-center transition-shadow ${isSelected ? 'shadow-[0_0_0_2px_white,0_0_0_4px_#f97316]' : 'shadow-[0_0_0_1px_rgba(255,255,255,0.2)]'}`}
+                                            style={{
+                                                left: `${zone.x}%`,
+                                                top: `${zone.y}%`,
+                                                width: `${zone.width}%`,
+                                                height: `${zone.height}%`,
+                                                backgroundColor: color + (isSelected ? '44' : '22'),
+                                                borderRadius: 4,
+                                                cursor: 'move',
+                                            }}
+                                            onMouseDown={e => onZoneMouseDown(e, zone.id)}
+                                        >
+                                            <Icon className="h-5 w-5 opacity-70" style={{ color }} />
+                                            <span className="text-[10px] font-semibold mt-1 text-white/70 truncate px-1 max-w-full text-center leading-tight">{zone.label}</span>
+                                            <span className="text-[9px] text-white/40 truncate px-1 max-w-full text-center">{Math.round(zone.width)}×{Math.round(zone.height)}%</span>
+
+                                            {/* Resize handles */}
+                                            {isSelected && RESIZE_HANDLES.map(h => (
+                                                <div
+                                                    key={h.id}
+                                                    className="absolute w-2.5 h-2.5 bg-orange-500 rounded-sm border border-white"
+                                                    style={{ ...h.style, cursor: h.cursor, position: 'absolute', zIndex: 10 }}
+                                                    onMouseDown={e => onZoneMouseDown(e, zone.id, h.id)}
+                                                />
+                                            ))}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
+                    </div>
 
-                        <div className="flex gap-2 mt-4">
-                            <Button onClick={handleSave} className="flex-1">
-                                Save Layout
-                            </Button>
-                            <Button onClick={onClose} variant="outline">
-                                Cancel
-                            </Button>
-                        </div>
-                    </TabsContent>
+                    {/* ── RIGHT: Zone Properties ──────────────────────── */}
+                    <div className="w-56 flex-shrink-0 border-l bg-white overflow-y-auto p-3">
+                        {selectedZone ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-bold uppercase text-gray-500">Zone Settings</p>
+                                    <button onClick={() => removeZone(selectedZone.id)} className="text-red-400 hover:text-red-600">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
 
-                    <TabsContent value="presets">
-                        <div className="grid grid-cols-3 gap-4">
-                            {PRESET_LAYOUTS.map((preset) => (
-                                <Card
-                                    key={preset.name}
-                                    className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                                    onClick={() => loadPreset(preset)}
-                                >
-                                    <div className="relative bg-gray-900 rounded mb-2" style={{ aspectRatio: '16/9' }}>
-                                        {preset.zones.map((zone, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="absolute border border-white/30 bg-blue-500/20"
-                                                style={{
-                                                    left: `${zone.position.x}%`,
-                                                    top: `${zone.position.y}%`,
-                                                    width: `${zone.position.width}%`,
-                                                    height: `${zone.position.height}%`
-                                                }}
-                                            />
+                                <div>
+                                    <Label className="text-[10px] text-gray-500">Label</Label>
+                                    <Input value={selectedZone.label} onChange={e => updateZone(selectedZone.id, { label: e.target.value })} className="h-7 text-xs mt-1" />
+                                </div>
+
+                                <div>
+                                    <Label className="text-[10px] text-gray-500">Widget Type</Label>
+                                    <Select value={selectedZone.content_type} onValueChange={v => updateZone(selectedZone.id, { content_type: v, label: WIDGET_TYPES.find(w => w.value === v)?.label || v })}>
+                                        <SelectTrigger className="h-7 text-xs mt-1">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {WIDGET_TYPES.map(wt => <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Widget config selector for applicable types */}
+                                {['weather', 'clock', 'menu', 'live_orders', 'queue_status'].includes(selectedZone.content_type) && widgetConfigs.filter(c => c.widget_type === selectedZone.content_type || c.widget_type === 'menu_widget' && selectedZone.content_type === 'menu').length > 0 && (
+                                    <div>
+                                        <Label className="text-[10px] text-gray-500">Widget Config</Label>
+                                        <Select value={selectedZone.widget_config_id || 'default'} onValueChange={v => updateZone(selectedZone.id, { widget_config_id: v === 'default' ? '' : v })}>
+                                            <SelectTrigger className="h-7 text-xs mt-1">
+                                                <SelectValue placeholder="Default" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="default">Default</SelectItem>
+                                                {widgetConfigs
+                                                    .filter(c => c.widget_type === selectedZone.content_type || (c.widget_type === 'menu_widget' && selectedZone.content_type === 'menu'))
+                                                    .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)
+                                                }
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {/* Position / size */}
+                                <div>
+                                    <Label className="text-[10px] text-gray-500 mb-1 block">Position & Size (%)</Label>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        {['x','y','width','height'].map(field => (
+                                            <div key={field}>
+                                                <Label className="text-[9px] text-gray-400">{field.toUpperCase()}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={Math.round(selectedZone[field])}
+                                                    onChange={e => {
+                                                        const v = parseInt(e.target.value) || 0;
+                                                        updateZone(selectedZone.id, { [field]: clamp(v, field === 'width' || field === 'height' ? 5 : 0, 100) });
+                                                    }}
+                                                    className="h-6 text-xs p-1"
+                                                    min={field === 'width' || field === 'height' ? 5 : 0}
+                                                    max={100}
+                                                />
+                                            </div>
                                         ))}
                                     </div>
-                                    <h4 className="font-semibold text-sm">{preset.name}</h4>
-                                    <p className="text-xs text-gray-500">{preset.zones.length} zones</p>
-                                </Card>
-                            ))}
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="preview" className="space-y-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-center gap-2">
-                                <Eye className="h-5 w-5 text-blue-600" />
-                                <p className="text-sm text-blue-800">
-                                    <strong>Preview Mode:</strong> Visualize how your layout will look with applied styles
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="relative bg-gray-900 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                            {zones.map(zone => {
-                                const bgOpacity = (zone.styling?.backgroundOpacity || 100) / 100;
-                                const bgColor = zone.styling?.backgroundColor || '#000000';
-                                const rgbMatch = bgColor.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-                                const backgroundColor = rgbMatch 
-                                    ? `rgba(${parseInt(rgbMatch[1], 16)}, ${parseInt(rgbMatch[2], 16)}, ${parseInt(rgbMatch[3], 16)}, ${bgOpacity})`
-                                    : bgColor;
-                                
-                                return (
-                                    <div
-                                        key={zone.id}
-                                        className="absolute flex items-center justify-center"
-                                        style={{
-                                            left: `${zone.position.x}%`,
-                                            top: `${zone.position.y}%`,
-                                            width: `${zone.position.width}%`,
-                                            height: `${zone.position.height}%`,
-                                            backgroundColor,
-                                            borderRadius: `${zone.styling?.borderRadius || 0}px`,
-                                            padding: `${zone.styling?.padding || 16}px`,
-                                            color: zone.styling?.textColor || '#ffffff',
-                                            fontSize: `${(zone.styling?.fontSize || 24) * 0.8}px`,
-                                            fontWeight: zone.styling?.fontWeight || 'normal',
-                                            textAlign: zone.styling?.textAlign || 'center'
-                                        }}
-                                    >
-                                        <div className="w-full">
-                                            <div className="font-semibold mb-2">{zone.type.toUpperCase()}</div>
-                                            <div className="text-xs opacity-70">
-                                                {zone.type === 'text' && 'Sample text content will appear here'}
-                                                {zone.type === 'media' && 'Image/Video content'}
-                                                {zone.type === 'carousel' && 'Rotating images'}
-                                                {zone.type === 'clock' && new Date().toLocaleTimeString()}
-                                                {zone.type === 'weather' && '24°C ☀️'}
-                                                {zone.type === 'menu' && 'Menu items list'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            
-                            {zones.length === 0 && (
-                                <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                                    <p>No zones to preview. Add zones in the Design tab.</p>
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="font-semibold text-sm mb-2">Layout Summary</h4>
-                            <div className="space-y-1 text-xs text-gray-600">
-                                <p><strong>Total Zones:</strong> {zones.length}</p>
-                                <p><strong>Zone Types:</strong> {[...new Set(zones.map(z => z.type))].join(', ') || 'None'}</p>
+                                {/* Zone color preview */}
+                                <div className="rounded-lg border p-2 flex items-center gap-2">
+                                    {(() => { const wt = WIDGET_TYPES.find(w => w.value === selectedZone.content_type); const Icon = wt?.icon || Image; return <Icon className="h-4 w-4" style={{ color: wt?.color }} />; })()}
+                                    <div>
+                                        <p className="text-xs font-medium">{selectedZone.label}</p>
+                                        <p className="text-[10px] text-gray-400">{Math.round(selectedZone.width)}% × {Math.round(selectedZone.height)}%</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                                <Move className="h-8 w-8 text-gray-300 mb-2" />
+                                <p className="text-xs text-gray-400">Click a zone to edit its properties</p>
+                            </div>
+                        )}
+
+                        {/* Zone list */}
+                        {zones.length > 0 && (
+                            <div className="mt-4 space-y-1">
+                                <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">All Zones</p>
+                                {zones.map(zone => {
+                                    const wt = WIDGET_TYPES.find(w => w.value === zone.content_type);
+                                    const Icon = wt?.icon || Image;
+                                    return (
+                                        <button
+                                            key={zone.id}
+                                            onClick={() => setSelectedId(zone.id)}
+                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors ${selectedId === zone.id ? 'bg-orange-50 border border-orange-200' : 'hover:bg-gray-50'}`}
+                                        >
+                                            <Icon className="h-3 w-3 flex-shrink-0" style={{ color: wt?.color }} />
+                                            <span className="truncate text-gray-700">{zone.label}</span>
+                                            <button
+                                                onClick={e => { e.stopPropagation(); removeZone(zone.id); }}
+                                                className="ml-auto text-gray-300 hover:text-red-400 flex-shrink-0"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </button>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Footer ─────────────────────────────────────────── */}
+                <div className="px-4 py-3 border-t flex-shrink-0 flex items-center justify-between bg-white">
+                    <div className="flex items-center gap-2">
+                        {zones.map(zone => {
+                            const wt = WIDGET_TYPES.find(w => w.value === zone.content_type);
+                            return (
+                                <Badge key={zone.id} variant="outline" className="text-[10px] gap-1 py-0" style={{ borderColor: wt?.color + '66', color: wt?.color }}>
+                                    {zone.label}
+                                </Badge>
+                            );
+                        })}
+                        {zones.length === 0 && <span className="text-xs text-gray-400">No zones yet — add widgets from the left panel</span>}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+                        <Button size="sm" onClick={handleSave} className="bg-orange-500 hover:bg-orange-600 text-white">
+                            Save Layout
+                        </Button>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     );
