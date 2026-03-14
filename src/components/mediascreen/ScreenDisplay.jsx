@@ -611,12 +611,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                             </div>
                         </div>
                         
-                        {weather?.data && (
+                        {weather?.temperature && (
                             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                {getWeatherIcon(weather.data.description)}
+                                {getWeatherIcon(weather.description)}
                                 <div>
-                                    <div className="text-xl font-bold">{weather.data.temperature}°C</div>
-                                    <div className="text-xs opacity-80 capitalize">{weather.data.description}</div>
+                                    <div className="text-xl font-bold">{weather.temperature}°C</div>
+                                    <div className="text-xs opacity-80 capitalize">{weather.description}</div>
                                 </div>
                             </div>
                         )}
