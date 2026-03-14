@@ -368,15 +368,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             }
         };
 
-        // Check for commands every 5 seconds
-        commandCheckIntervalRef.current = setInterval(checkCommands, 5000);
+        // Check for commands every 10 seconds (skip when offline)
+        commandCheckIntervalRef.current = setInterval(() => {
+            if (isOnline) checkCommands();
+        }, 10000);
 
         return () => {
             if (commandCheckIntervalRef.current) {
                 clearInterval(commandCheckIntervalRef.current);
             }
         };
-    }, [screen?.id, refetchScreen]);
+    }, [screen?.id, refetchScreen, isOnline]);
 
     // Clamp currentIndex if content shrinks after a refetch — use useEffect to avoid setState-during-render
     const safeIndex = content.length > 0 ? Math.min(currentIndex, content.length - 1) : 0;
