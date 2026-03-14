@@ -151,6 +151,7 @@ export default function StudioWidgets({ restaurantId }) {
                                                         {cfg.widget_type === 'queue_status' && cfg.settings?.queue_status?.queue_label}
                                                         {cfg.widget_type === 'clock' && cfg.settings?.clock?.format + ' format'}
                                                         {cfg.widget_type === 'orders' && cfg.settings?.orders?.display_mode}
+                                                                                        {cfg.widget_type === 'menu_widget' && (cfg.settings?.menu_widget?.category_filter === 'all' ? 'All categories' : cfg.settings?.menu_widget?.category_filter)}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-1">
@@ -374,7 +375,49 @@ export default function StudioWidgets({ restaurantId }) {
                                 </div>
                             )}
 
-                            {/* COUNTDOWN TIMER */}
+                            {/* MENU WIDGET */}
+                                    {form.widget_type === 'menu_widget' && (
+                                        <div className="space-y-4">
+                                            <div><Label>Display Title</Label>
+                                                <Input value={form.settings.title || ''} onChange={e => updateSetting('title', e.target.value)} placeholder="e.g., Our Menu" className="mt-1.5" /></div>
+                                            <div><Label>Category Filter</Label>
+                                                <Input value={form.settings.category_filter || 'all'} onChange={e => updateSetting('category_filter', e.target.value)} placeholder="e.g., Burgers — or leave 'all'" className="mt-1.5" />
+                                                <p className="text-xs text-gray-400 mt-1">Type a category name to show only that category, or leave as <code>all</code></p>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div><Label>Max Items</Label>
+                                                    <Input type="number" min={1} max={50} value={form.settings.max_items || 12} onChange={e => updateSetting('max_items', parseInt(e.target.value)||12)} className="mt-1.5" /></div>
+                                                <div><Label>Columns</Label>
+                                                    <Select value={String(form.settings.columns || 2)} onValueChange={v => updateSetting('columns', parseInt(v))}>
+                                                        <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="1">1 Column</SelectItem>
+                                                            <SelectItem value="2">2 Columns</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div><Label>Theme</Label>
+                                                    <Select value={form.settings.theme || 'dark'} onValueChange={v => updateSetting('theme', v)}>
+                                                        <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="dark">Dark</SelectItem>
+                                                            <SelectItem value="light">Light</SelectItem>
+                                                            <SelectItem value="branded">Branded</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            <div><Label>Auto-refresh interval (seconds)</Label>
+                                                <Input type="number" min={10} value={form.settings.refresh_interval || 60} onChange={e => updateSetting('refresh_interval', parseInt(e.target.value)||60)} className="mt-1.5" /></div>
+                                            <div className="flex flex-wrap gap-6">
+                                                <div className="flex items-center gap-3"><Switch checked={form.settings.show_prices !== false} onCheckedChange={v => updateSetting('show_prices', v)} /><Label>Show Prices</Label></div>
+                                                <div className="flex items-center gap-3"><Switch checked={form.settings.show_images !== false} onCheckedChange={v => updateSetting('show_images', v)} /><Label>Show Images</Label></div>
+                                                <div className="flex items-center gap-3"><Switch checked={!!form.settings.show_unavailable} onCheckedChange={v => updateSetting('show_unavailable', v)} /><Label>Show Unavailable Items</Label></div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                             {/* COUNTDOWN TIMER */}
                             {form.widget_type === 'countdown_timer' && (
                                 <div className="space-y-4">
                                     <div><Label>Title</Label>
