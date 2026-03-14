@@ -116,8 +116,13 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 return true;
             }).sort((a, b) => (b.priority || 1) - (a.priority || 1));
         },
-        refetchInterval: 30000,
-        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled
+        refetchInterval: isOnline ? 60000 : false,
+        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        initialData: () => readCache(`playlists_${restaurantId}_${screen?.media_wall_config?.wall_name}`),
+        initialDataUpdatedAt: 0,
+        retry: 2,
     });
 
     const usePlaylistSync = activePlaylists.length > 0;
