@@ -17,6 +17,16 @@ import { createPageUrl } from '@/utils';
 import ContentScheduler from './ContentScheduler';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import VideoEditor from './VideoEditor';
+import { Zap, Cloud, Clock, ShoppingBag, TrendingUp, Users, Timer } from 'lucide-react';
+
+const WIDGET_TYPE_META = {
+    weather: { label: 'Weather', icon: Cloud, color: 'text-sky-500' },
+    clock: { label: 'Clock', icon: Clock, color: 'text-violet-500' },
+    orders: { label: 'Live Orders', icon: ShoppingBag, color: 'text-amber-500' },
+    stock_ticker: { label: 'Stock Ticker', icon: TrendingUp, color: 'text-emerald-500' },
+    queue_status: { label: 'Queue Status', icon: Users, color: 'text-orange-500' },
+    countdown_timer: { label: 'Countdown', icon: Timer, color: 'text-pink-500' },
+};
 
 export default function StudioPlaylists({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -29,6 +39,7 @@ export default function StudioPlaylists({ restaurantId }) {
     const [editingItem, setEditingItem] = useState(null);
     const [editingPhoto, setEditingPhoto] = useState(null);
     const [editingVideo, setEditingVideo] = useState(null);
+    const [showWidgetPicker, setShowWidgetPicker] = useState(false);
 
     const { data: screens = [] } = useQuery({
         queryKey: ['screens', restaurantId],
@@ -39,6 +50,12 @@ export default function StudioPlaylists({ restaurantId }) {
     const { data: allContent = [] } = useQuery({
         queryKey: ['promotional-content', restaurantId],
         queryFn: () => base44.entities.PromotionalContent.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
+    const { data: widgetConfigs = [] } = useQuery({
+        queryKey: ['widget-configurations', restaurantId],
+        queryFn: () => base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId,
     });
 
@@ -116,6 +133,24 @@ export default function StudioPlaylists({ restaurantId }) {
             updateContentMutation.mutateAsync({ id: item.id, data: { display_order: index } })
         );
         await Promise.all(updates);
+    };
+
+    const handleAddWidget = async (widgetConfig) => {
+        if (!selectedScreen) { toast.error('Select a screen first'); return; }
+        await createContentMutation.mutateAsync({
+            restaurant_id: restaurantId,
+            title: widgetConfig.name,
+            screen_name: selectedScreen.screen_name,
+            media_url: '',
+            media_type: 'widget',
+            widget_type: widgetConfig.widget_type,
+            widget_config_id: widgetConfig.id,
+            duration: 30,
+            transition: 'fade',
+            display_order: screenPlaylist.length,
+            is_active: true
+        });
+        setShowWidgetPicker(false);
     };
 
     const handleAddFromLibrary = async (file) => {
