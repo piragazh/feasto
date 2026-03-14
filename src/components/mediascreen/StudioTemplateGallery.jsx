@@ -163,10 +163,70 @@ export default function StudioTemplateGallery({ restaurantId }) {
 
     return (
         <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Template Gallery</h1>
-                <p className="text-gray-500 text-sm mt-1">{LAYOUT_TEMPLATES.length} professional screen layouts ready to apply</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Template Gallery</h1>
+                    <p className="text-gray-500 text-sm mt-1">{LAYOUT_TEMPLATES.length} professional screen layouts + {customLayouts.length} custom</p>
+                </div>
+                <Button onClick={() => { setEditingCustomTemplate(null); setShowDesigner(true); }} className="bg-orange-500 hover:bg-orange-600 gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create Custom Layout
+                </Button>
             </div>
+
+            {/* Custom Layouts Section */}
+            {customLayouts.length > 0 && (
+                <div>
+                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Your Custom Layouts</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {customLayouts.map(cl => {
+                            const tpl = customToPreviewTemplate(cl);
+                            return (
+                                <div
+                                    key={cl.id}
+                                    className="bg-white rounded-2xl border border-orange-200 overflow-hidden cursor-pointer hover:border-orange-400 hover:shadow-lg transition-all group"
+                                    onClick={() => { setSelectedTemplate(tpl); setShowApplyDialog(true); }}
+                                >
+                                    <div className="relative p-4 bg-gray-950">
+                                        <TemplatePreview template={tpl} />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors rounded-2xl m-1">
+                                            <div className="bg-orange-500 text-white text-sm font-bold px-4 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                                Apply Template
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <div>
+                                                <h3 className="font-bold text-gray-900">{cl.name}</h3>
+                                                <p className="text-xs text-gray-500 mt-0.5">{cl.zones?.length || 0} zones · Custom</p>
+                                            </div>
+                                            <Badge className="text-[10px] bg-orange-100 text-orange-700 border-orange-200 flex-shrink-0">Custom</Badge>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                                            {(cl.zones || []).map((z, i) => (
+                                                <span key={i} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${CONTENT_TYPE_COLORS[z.content_type] || 'bg-gray-100 text-gray-600'}`}>
+                                                    {z.content_type}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-1 mt-3" onClick={e => e.stopPropagation()}>
+                                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1 flex-1"
+                                                onClick={() => { setEditingCustomTemplate(cl); setShowDesigner(true); }}>
+                                                <Pencil className="h-3 w-3" />Edit
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                                                onClick={() => { if (window.confirm('Delete this layout?')) deleteCustomLayoutMutation.mutate(cl.id); }}>
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="flex gap-2 flex-wrap">
                 {CATEGORIES.map(cat => (
