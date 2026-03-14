@@ -251,14 +251,20 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         queryKey: ['weather', restaurant?.latitude, restaurant?.longitude],
         queryFn: async () => {
             if (!restaurant?.latitude || !restaurant?.longitude) return null;
-            return await base44.functions.invoke('getWeather', {
+            const data = await base44.functions.invoke('getWeather', {
                 latitude: restaurant.latitude,
                 longitude: restaurant.longitude
             });
+            writeCache(`weather_${restaurantId}`, data);
+            return data;
         },
-        enabled: !!restaurant?.latitude && !!restaurant?.longitude,
-        staleTime: 600000,
-        refetchInterval: 600000,
+        enabled: !!restaurant?.latitude && !!restaurant?.longitude && isOnline,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        refetchInterval: isOnline ? 10 * 60 * 1000 : false,
+        initialData: () => readCache(`weather_${restaurantId}`),
+        initialDataUpdatedAt: 0,
+        retry: 1,
     });
 
     useEffect(() => {
