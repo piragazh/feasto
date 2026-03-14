@@ -380,10 +380,11 @@ export default function StudioWidgets({ restaurantId }) {
                                         <div className="space-y-4">
                                             <div><Label>Display Title</Label>
                                                 <Input value={form.settings.title || ''} onChange={e => updateSetting('title', e.target.value)} placeholder="e.g., Our Menu" className="mt-1.5" /></div>
-                                            <div><Label>Category Filter</Label>
-                                                <Input value={form.settings.category_filter || 'all'} onChange={e => updateSetting('category_filter', e.target.value)} placeholder="e.g., Burgers — or leave 'all'" className="mt-1.5" />
-                                                <p className="text-xs text-gray-400 mt-1">Type a category name to show only that category, or leave as <code>all</code></p>
-                                            </div>
+                                            <MenuCategorySelect
+                                                restaurantId={restaurantId}
+                                                value={form.settings.category_filter || 'all'}
+                                                onChange={v => updateSetting('category_filter', v)}
+                                            />
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div><Label>Max Items</Label>
                                                     <Input type="number" min={1} max={50} value={form.settings.max_items || 12} onChange={e => updateSetting('max_items', parseInt(e.target.value)||12)} className="mt-1.5" /></div>
