@@ -612,6 +612,60 @@ export default function StudioPlaylists({ restaurantId }) {
                 onClose={() => setEditingVideo(null)}
                 onSave={() => { setEditingVideo(null); toast.success('Video updated'); }}
             />
+
+            {/* Per-item Template Picker */}
+            <Dialog open={!!templatePickerItem} onOpenChange={(open) => { if (!open) setTemplatePickerItem(null); }}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Layout className="h-5 w-5 text-orange-500" />
+                            Layout for "{templatePickerItem?.title || 'this item'}"
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-gray-500 -mt-2">
+                        Choose a layout template that will be active <strong>only while this item plays</strong>. Falls back to the screen's default when finished.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                        {/* No template option */}
+                        <button
+                            onClick={async () => {
+                                await updateContentMutation.mutateAsync({ id: templatePickerItem.id, data: { layout_template: null } });
+                                toast.success('Template removed — will use screen default');
+                                setTemplatePickerItem(null);
+                            }}
+                            className={`rounded-xl border-2 p-3 text-left transition-all hover:border-gray-400 ${!templatePickerItem?.layout_template ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}
+                        >
+                            <div className="bg-gray-800 rounded-lg h-16 flex items-center justify-center mb-2">
+                                <span className="text-gray-400 text-xs">Default</span>
+                            </div>
+                            <p className="text-xs font-semibold text-gray-700">Use Screen Default</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">No override</p>
+                        </button>
+
+                        {LAYOUT_TEMPLATES.map(tpl => {
+                            const isActive = templatePickerItem?.layout_template?.name === tpl.name;
+                            return (
+                                <button
+                                    key={tpl.id}
+                                    onClick={async () => {
+                                        await updateContentMutation.mutateAsync({
+                                            id: templatePickerItem.id,
+                                            data: { layout_template: { name: tpl.name, zones: tpl.zones } }
+                                        });
+                                        toast.success(`Template "${tpl.name}" set for this item`);
+                                        setTemplatePickerItem(null);
+                                    }}
+                                    className={`rounded-xl border-2 p-3 text-left transition-all hover:border-orange-400 ${isActive ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}
+                                >
+                                    <TemplatePreview template={tpl} size="sm" />
+                                    <p className="text-xs font-semibold text-gray-700 mt-2 truncate">{tpl.name}</p>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">{tpl.category}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
