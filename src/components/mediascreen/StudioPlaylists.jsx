@@ -11,13 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import {
     Monitor, Plus, Trash2, GripVertical, Play, Image as ImageIcon,
     Film, Clock, Copy, ExternalLink, Edit, RotateCw, X,
-    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer
+    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import ContentScheduler from './ContentScheduler';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import VideoEditor from './VideoEditor';
+import { LAYOUT_TEMPLATES } from './layoutTemplates';
+import { TemplatePreview } from './StudioTemplateGallery';
 
 const WIDGET_TYPE_META = {
     weather: { label: 'Weather', icon: Cloud, color: 'text-sky-500' },
