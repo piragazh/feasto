@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2, Wand2, Image, Video, Film, Copy, Share2, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, Image, Copy, Share2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AIContentGenerator({ open, onClose, onContentGenerated, restaurantName, existingContent, initialPrompt = '' }) {
@@ -31,10 +31,6 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
             setPrompt(initialPrompt);
         }
     }, [initialPrompt]);
-
-    const contentTypes = [
-        { value: 'image', label: 'Static Image', icon: Image, description: 'High-quality promotional image' }
-    ];
 
     const stylePresets = [
         { value: 'vibrant', label: 'Vibrant & Colorful', prompt: 'vibrant, colorful, eye-catching, high contrast' },
@@ -178,7 +174,7 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
                 }
             });
 
-            setOptimizedSuggestions(response.suggestions);
+            setOptimizedSuggestions(response?.suggestions || response);
             toast.success('Suggestions generated!');
         } catch (error) {
             toast.error('Failed to optimize content');
