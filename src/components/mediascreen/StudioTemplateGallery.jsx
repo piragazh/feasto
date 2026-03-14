@@ -335,6 +335,15 @@ export default function StudioTemplateGallery({ restaurantId }) {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Custom Layout Designer */}
+            <LayoutDesigner
+                open={showDesigner}
+                onClose={() => { setShowDesigner(false); setEditingCustomTemplate(null); }}
+                onSave={handleSaveCustomLayout}
+                initialLayout={editingCustomTemplate}
+                restaurantId={restaurantId}
+            />
         </div>
     );
 }
