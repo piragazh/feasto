@@ -196,6 +196,7 @@ export default function VideoEditor({ open, videoUrl, onClose, onSave }) {
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Video Editor</DialogTitle>
+                    <DialogDescription>Trim, add text overlays, and configure export settings for your video.</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
