@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Check, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { LAYOUT_TEMPLATES } from './layoutTemplates';
 
-const TEMPLATES = [
+const TEMPLATES = LAYOUT_TEMPLATES; const _UNUSED = [
     {
         id: 'fullscreen',
         name: 'Full Screen',
