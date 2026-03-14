@@ -306,11 +306,16 @@ const CONTENT_TYPE_COLORS = {
 };
 
 function TemplatePreview({ template, size = 'md' }) {
+    const isPortrait = template.portrait;
     const h = size === 'sm' ? 80 : 130;
+    // Portrait: use fixed height with narrower width to show portrait aspect
+    const style = isPortrait
+        ? { height: h * 1.6, maxWidth: h, margin: '0 auto' }
+        : { height: h };
     return (
         <div
             className="bg-gray-900 rounded-xl overflow-hidden relative"
-            style={{ height: h }}
+            style={style}
         >
             <div className="absolute inset-0 p-2">
                 {template.preview.map((zone, i) => (
