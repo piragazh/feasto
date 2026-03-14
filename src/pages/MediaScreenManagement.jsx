@@ -5,7 +5,7 @@ import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import {
     Monitor, ArrowLeft, BarChart3, Play, Image as ImageIcon,
-    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings
+    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio
 } from 'lucide-react';
 import StudioOverview from '@/components/mediascreen/StudioOverview';
 import StudioPlaylists from '@/components/mediascreen/StudioPlaylists';
@@ -13,14 +13,16 @@ import StudioMediaLibrary from '@/components/mediascreen/StudioMediaLibrary';
 import StudioTemplateGallery from '@/components/mediascreen/StudioTemplateGallery';
 import ScreenControl from '@/components/mediascreen/ScreenControl';
 import MediaWallManager from '@/components/mediascreen/MediaWallManager';
+import StudioWidgets from '@/components/mediascreen/StudioWidgets';
 
 const NAV_ITEMS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'playlists', label: 'Screens & Playlists', icon: Play },
     { id: 'library', label: 'Media Library', icon: ImageIcon },
     { id: 'templates', label: 'Templates', icon: Palette },
+    { id: 'widgets', label: 'Live Widgets', icon: Zap },
     { id: 'walls', label: 'Media Walls', icon: Grid3x3 },
-    { id: 'control', label: 'Live Control', icon: Zap },
+    { id: 'control', label: 'Live Control', icon: Settings },
 ];
 
 export default function MediaScreenManagement() {
@@ -101,6 +103,8 @@ export default function MediaScreenManagement() {
                 return <StudioMediaLibrary restaurantId={restaurant.id} />;
             case 'templates':
                 return <StudioTemplateGallery restaurantId={restaurant.id} />;
+            case 'widgets':
+                return <StudioWidgets restaurantId={restaurant.id} />;
             case 'walls':
                 return (
                     <div className="p-6">
