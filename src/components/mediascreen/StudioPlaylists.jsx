@@ -42,6 +42,7 @@ export default function StudioPlaylists({ restaurantId }) {
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, media_url }
     const [editingVideo, setEditingVideo] = useState(null);
     const [showWidgetPicker, setShowWidgetPicker] = useState(false);
+    const [templatePickerItem, setTemplatePickerItem] = useState(null); // content item to assign template to
 
     const { data: screens = [] } = useQuery({
         queryKey: ['screens', restaurantId],
