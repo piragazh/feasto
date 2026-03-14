@@ -16,7 +16,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
     const [viewMode, setViewMode] = useState('grid');
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [editingPhoto, setEditingPhoto] = useState(null);
+    const [editingPhoto, setEditingPhoto] = useState(null); // { id, file_url }
     const [editingVideo, setEditingVideo] = useState(null);
     const fileInputRef = useRef(null);
 
