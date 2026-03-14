@@ -10,14 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import {
     Monitor, Plus, Trash2, GripVertical, Play, Image as ImageIcon,
-    Film, Clock, Copy, ExternalLink, Edit, RotateCw, X
+    Film, Clock, Copy, ExternalLink, Edit, RotateCw, X,
+    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import ContentScheduler from './ContentScheduler';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import VideoEditor from './VideoEditor';
-import { Zap, Cloud, Clock, ShoppingBag, TrendingUp, Users, Timer } from 'lucide-react';
 
 const WIDGET_TYPE_META = {
     weather: { label: 'Weather', icon: Cloud, color: 'text-sky-500' },
