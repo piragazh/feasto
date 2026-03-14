@@ -14,6 +14,7 @@ import StudioTemplateGallery from '@/components/mediascreen/StudioTemplateGaller
 import ScreenControl from '@/components/mediascreen/ScreenControl';
 import MediaWallManager from '@/components/mediascreen/MediaWallManager';
 import StudioWidgets from '@/components/mediascreen/StudioWidgets';
+import AIContentGenerator from '@/components/mediascreen/AIContentGenerator';
 
 const NAV_ITEMS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
     { id: 'templates', label: 'Templates', icon: Palette },
     { id: 'widgets', label: 'Live Widgets', icon: Zap },
     { id: 'walls', label: 'Media Walls', icon: Grid3x3 },
+    { id: 'ai', label: 'AI Generator', icon: Radio },
     { id: 'control', label: 'Live Control', icon: Settings },
 ];
 
@@ -105,6 +107,31 @@ export default function MediaScreenManagement() {
                 return <StudioTemplateGallery restaurantId={restaurant.id} />;
             case 'widgets':
                 return <StudioWidgets restaurantId={restaurant.id} />;
+            case 'ai':
+                return (
+                    <div className="p-6">
+                        <div className="mb-6">
+                            <h1 className="text-2xl font-bold text-gray-900">AI Content Generator</h1>
+                            <p className="text-gray-500 text-sm mt-1">Generate promotional images using AI</p>
+                        </div>
+                        <AIContentGenerator
+                            open={true}
+                            onClose={() => setActiveSection('library')}
+                            onContentGenerated={(content) => {
+                                base44.entities.PromotionalContent.create({
+                                    restaurant_id: restaurant.id,
+                                    ...content,
+                                    screen_name: '',
+                                    transition: 'fade',
+                                    display_order: 0,
+                                    is_active: true
+                                });
+                                setActiveSection('library');
+                            }}
+                            restaurantName={restaurant.name}
+                        />
+                    </div>
+                );
             case 'walls':
                 return (
                     <div className="p-6">
