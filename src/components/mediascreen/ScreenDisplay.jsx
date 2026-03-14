@@ -170,8 +170,10 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             });
         },
         enabled: !!restaurantId && !!screen?.media_wall_config?.enabled && !usePlaylistSync,
-        staleTime: 30000,
-        refetchInterval: 30000,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        refetchInterval: isOnline ? 60000 : false,
+        retry: 2,
     });
 
     const { data: content = [], isLoading: contentLoading } = useQuery({
