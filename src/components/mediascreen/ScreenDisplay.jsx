@@ -184,6 +184,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 screen_name: screenName,
                 is_active: true
             });
+            writeCache(`content_${restaurantId}_${screenName}`, allContent);
             
             // Filter by schedule and sort by priority, then display order
             const now = new Date();
