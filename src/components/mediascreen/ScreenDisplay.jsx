@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
 import MultiZoneDisplay from './MultiZoneDisplay';
 import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
+import WidgetRenderer from './WidgetRenderer';
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -170,6 +171,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         staleTime: 30000,
         gcTime: 300000,
         refetchInterval: 30000,
+    });
+
+    // Fetch widget configs for inline widget playlist items
+    const { data: widgetConfigs = [] } = useQuery({
+        queryKey: ['widget-configurations', restaurantId],
+        queryFn: () => base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+        staleTime: 60000,
     });
 
     const { data: weather } = useQuery({
@@ -528,7 +537,23 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                             className="absolute inset-0 flex items-center justify-center"
                             style={{ animation: 'fadeIn 0.8s ease-in-out' }}
                         >
-                            {item.media_type === 'video' ? (
+                            {item.media_type === 'widget' ? (
+                                (() => {
+                                    const cfg = item.widget_config_id
+                                        ? widgetConfigs.find(w => w.id === item.widget_config_id)
+                                        : widgetConfigs.find(w => w.widget_type === item.widget_type && w.is_active);
+                                    const widgetType = item.widget_type || cfg?.widget_type;
+                                    const widgetConf = cfg ? (cfg.settings?.[widgetType] || {}) : {};
+                                    return (
+                                        <WidgetRenderer
+                                            widgetType={widgetType}
+                                            config={widgetConf}
+                                            restaurantId={restaurantId}
+                                            className="w-full h-full"
+                                        />
+                                    );
+                                })()
+                            ) : item.media_type === 'video' ? (
                                 <video
                                     src={item.media_url}
                                     autoPlay
