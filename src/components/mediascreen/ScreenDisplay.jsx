@@ -551,7 +551,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 text-white">
                 <div className="text-center">
                     <h1 className="text-4xl font-bold mb-4">{restaurant?.name}</h1>
-                    <p className="text-xl">No content configured for this screen</p>
+                    <p className="text-xl">
+                        {!isOnline ? 'Waiting for connection…' : 'No content configured for this screen'}
+                    </p>
                 </div>
             </div>
         );
