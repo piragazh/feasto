@@ -6,13 +6,44 @@ import MultiZoneDisplay from './MultiZoneDisplay';
 import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
 import WidgetRenderer from './WidgetRenderer';
 
+// --- localStorage cache helpers ---
+const CACHE_VERSION = 'v1';
+const cacheKey = (key) => `screen_cache_${CACHE_VERSION}_${key}`;
+
+function readCache(key) {
+    try {
+        const raw = localStorage.getItem(cacheKey(key));
+        if (!raw) return undefined;
+        const { data, ts } = JSON.parse(raw);
+        return data;
+    } catch { return undefined; }
+}
+
+function writeCache(key, data) {
+    try {
+        localStorage.setItem(cacheKey(key), JSON.stringify({ data, ts: Date.now() }));
+    } catch {}
+}
+
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [videoLoopCount, setVideoLoopCount] = useState(0);
     const [wallContentIndex, setWallContentIndex] = useState(0);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     const heartbeatIntervalRef = useRef(null);
     const commandCheckIntervalRef = useRef(null);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
