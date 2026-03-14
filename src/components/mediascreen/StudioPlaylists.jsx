@@ -544,6 +544,49 @@ export default function StudioPlaylists({ restaurantId }) {
                 onSave={() => { setEditingPhoto(null); toast.success('Photo updated'); }}
             />
 
+            {/* Widget Picker Dialog */}
+            <Dialog open={showWidgetPicker} onOpenChange={setShowWidgetPicker}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Zap className="h-5 w-5 text-yellow-500" />
+                            Add Widget to "{selectedScreen?.screen_name}"
+                        </DialogTitle>
+                    </DialogHeader>
+                    {widgetConfigs.length === 0 ? (
+                        <div className="text-center py-10">
+                            <Zap className="h-12 w-12 text-gray-200 mx-auto mb-3" />
+                            <p className="text-gray-700 font-semibold">No widgets configured yet</p>
+                            <p className="text-gray-400 text-sm mt-1">Go to <strong>Live Widgets</strong> in the sidebar to create widget configurations first, then come back here to add them to your playlist.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <p className="text-sm text-gray-500 mb-3">Select a widget to insert into the playlist. It will display for the configured duration before advancing to the next item.</p>
+                            {widgetConfigs.map(cfg => {
+                                const meta = WIDGET_TYPE_META[cfg.widget_type] || {};
+                                const Icon = meta.icon || Zap;
+                                return (
+                                    <button
+                                        key={cfg.id}
+                                        onClick={() => handleAddWidget(cfg)}
+                                        className="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
+                                    >
+                                        <div className={`w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center flex-shrink-0`}>
+                                            <Icon className={`h-5 w-5 ${meta.color || 'text-gray-500'}`} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-gray-900 text-sm">{cfg.name}</p>
+                                            <p className="text-xs text-gray-500">{meta.label || cfg.widget_type} widget · displays for 30s</p>
+                                        </div>
+                                        <Plus className="h-4 w-4 text-gray-400 group-hover:text-orange-500 flex-shrink-0" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {/* Video editor */}
             <VideoEditor
                 open={!!editingVideo}
