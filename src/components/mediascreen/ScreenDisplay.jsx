@@ -304,7 +304,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 clearInterval(heartbeatIntervalRef.current);
             }
         };
-    }, [screen?.id]);
+    }, [screen?.id, isOnline]);
 
     // Command listener
     useEffect(() => {
