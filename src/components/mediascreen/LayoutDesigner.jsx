@@ -135,6 +135,8 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout, r
         const dx = ((e.clientX - startX) / rect.width) * 100;
         const dy = ((e.clientY - startY) / rect.height) * 100;
 
+        didDragRef.current = true;
+
         if (type === 'move') {
             const nx = clamp(snapVal(origZone.x + dx), 0, 100 - origZone.width);
             const ny = clamp(snapVal(origZone.y + dy), 0, 100 - origZone.height);
