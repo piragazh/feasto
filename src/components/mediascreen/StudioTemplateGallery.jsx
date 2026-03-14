@@ -134,9 +134,32 @@ export default function StudioTemplateGallery({ restaurantId }) {
         });
     };
 
+    const handleSaveCustomLayout = ({ name, zones }) => {
+        const payload = {
+            restaurant_id: restaurantId,
+            name,
+            zones,
+            is_active: true,
+        };
+        if (editingCustomTemplate?.id) payload.id = editingCustomTemplate.id;
+        saveCustomLayoutMutation.mutate(payload);
+    };
+
     const filteredTemplates = selectedCategory === 'All'
         ? LAYOUT_TEMPLATES
         : LAYOUT_TEMPLATES.filter(t => t.category === selectedCategory);
+
+    // Build a preview-compatible object from a custom layout
+    const customToPreviewTemplate = (cl) => ({
+        id: cl.id,
+        name: cl.name,
+        category: 'Custom',
+        zones: cl.zones || [],
+        preview: (cl.zones || []).map((z, i) => ({
+            x: z.x, y: z.y, w: z.width, h: z.height,
+            color: ['#6366f1','#10b981','#f97316','#0ea5e9','#f59e0b','#ec4899','#8b5cf6','#14b8a6'][i % 8]
+        })),
+    });
 
     return (
         <div className="p-6 space-y-6">
