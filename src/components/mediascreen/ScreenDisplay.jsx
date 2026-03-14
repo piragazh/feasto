@@ -292,10 +292,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         };
 
         // Send initial heartbeat
-        sendHeartbeat();
+        if (isOnline) sendHeartbeat();
 
-        // Send heartbeat every 30 seconds
-        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+        // Send heartbeat every 60 seconds
+        heartbeatIntervalRef.current = setInterval(() => {
+            if (isOnline) sendHeartbeat();
+        }, 60000);
 
         return () => {
             if (heartbeatIntervalRef.current) {
