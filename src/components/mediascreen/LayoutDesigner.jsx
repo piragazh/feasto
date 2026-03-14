@@ -245,7 +245,7 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout, r
                                     background: 'repeating-linear-gradient(0deg,transparent,transparent 39px,#374151 39px,#374151 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,#374151 39px,#374151 40px), #1f2937',
                                     cursor: 'default',
                                 }}
-                                onClick={() => setSelectedId(null)}
+                                onClick={onCanvasClick}
                             >
                                 {zones.length === 0 && (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
