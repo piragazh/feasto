@@ -181,7 +181,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                     <div className="flex justify-end gap-1.5">
                                         {fileType === 'image' && (
                                             <button
-                                                onClick={() => setEditingPhoto(file.file_url)}
+                                                onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })}
                                                 className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow"
                                                 title="Edit photo"
                                             >
@@ -254,7 +254,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                         <td className="px-5 py-3">
                                             <div className="flex items-center justify-end gap-1">
                                                 {fileType === 'image' && (
-                                                    <Button size="sm" variant="ghost" onClick={() => setEditingPhoto(file.file_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
+                                                    <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
                                                         <Edit className="h-3.5 w-3.5" />
                                                     </Button>
                                                 )}
