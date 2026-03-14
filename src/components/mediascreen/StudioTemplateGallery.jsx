@@ -185,6 +185,112 @@ const TEMPLATES = [
             { x: 81, y: 51, w: 19, h: 49, color: '#10b981' }
         ]
     },
+    // ─── Portrait Templates ───────────────────────────────────────────
+    {
+        id: 'portrait_fullscreen',
+        name: 'Portrait Full Screen',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Single full-screen zone for portrait displays — ideal for vertical video or imagery',
+        zones: [{ id: 'main', x: 0, y: 0, width: 100, height: 100, content_type: 'media', label: 'Main Content' }],
+        preview: [{ x: 0, y: 0, w: 100, h: 100, color: '#6366f1' }]
+    },
+    {
+        id: 'portrait_menu_full',
+        name: 'Portrait Menu Board',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Full menu display optimised for portrait screens with branding header',
+        zones: [
+            { id: 'header', x: 0, y: 0, width: 100, height: 15, content_type: 'branding', label: 'Branding' },
+            { id: 'menu', x: 0, y: 15, width: 100, height: 85, content_type: 'menu', label: 'Menu Items' }
+        ],
+        preview: [
+            { x: 0, y: 0, w: 100, h: 14, color: '#f97316' },
+            { x: 0, y: 16, w: 100, h: 84, color: '#1e293b' }
+        ]
+    },
+    {
+        id: 'portrait_menu_ticker',
+        name: 'Portrait Menu + Ticker',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Portrait menu board with a promotional ticker at the bottom',
+        zones: [
+            { id: 'header', x: 0, y: 0, width: 100, height: 12, content_type: 'branding', label: 'Branding' },
+            { id: 'menu', x: 0, y: 12, width: 100, height: 73, content_type: 'menu', label: 'Menu Items' },
+            { id: 'ticker', x: 0, y: 85, width: 100, height: 15, content_type: 'ticker', label: 'Promo Ticker' }
+        ],
+        preview: [
+            { x: 0, y: 0, w: 100, h: 11, color: '#f97316' },
+            { x: 0, y: 13, w: 100, h: 71, color: '#1e293b' },
+            { x: 0, y: 86, w: 100, h: 14, color: '#f59e0b' }
+        ]
+    },
+    {
+        id: 'portrait_orders',
+        name: 'Portrait Order Queue',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Order collection display for portrait screens with branding and live queue',
+        zones: [
+            { id: 'header', x: 0, y: 0, width: 100, height: 18, content_type: 'branding', label: 'Branding' },
+            { id: 'orders', x: 0, y: 18, width: 100, height: 82, content_type: 'live_orders', label: 'Order Queue' }
+        ],
+        preview: [
+            { x: 0, y: 0, w: 100, h: 17, color: '#f97316' },
+            { x: 0, y: 19, w: 100, h: 81, color: '#0f172a' }
+        ]
+    },
+    {
+        id: 'portrait_split',
+        name: 'Portrait Split',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Two stacked zones — top for media, bottom for menu or info',
+        zones: [
+            { id: 'top', x: 0, y: 0, width: 100, height: 50, content_type: 'media', label: 'Top Media' },
+            { id: 'bottom', x: 0, y: 50, width: 100, height: 50, content_type: 'menu', label: 'Bottom Content' }
+        ],
+        preview: [
+            { x: 0, y: 0, w: 100, h: 49, color: '#6366f1' },
+            { x: 0, y: 51, w: 100, h: 49, color: '#10b981' }
+        ]
+    },
+    {
+        id: 'portrait_promo_stack',
+        name: 'Portrait Promo Stack',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Three stacked promo zones — great for showcasing deals in a vertical layout',
+        zones: [
+            { id: 'top', x: 0, y: 0, width: 100, height: 33, content_type: 'media', label: 'Promo 1' },
+            { id: 'mid', x: 0, y: 33, width: 100, height: 34, content_type: 'media', label: 'Promo 2' },
+            { id: 'bot', x: 0, y: 67, width: 100, height: 33, content_type: 'media', label: 'Promo 3' }
+        ],
+        preview: [
+            { x: 0, y: 0, w: 100, h: 32, color: '#6366f1' },
+            { x: 0, y: 34, w: 100, h: 32, color: '#8b5cf6' },
+            { x: 0, y: 68, w: 100, h: 32, color: '#a78bfa' }
+        ]
+    },
+    {
+        id: 'portrait_weather_menu',
+        name: 'Portrait Widget + Menu',
+        category: 'Portrait',
+        portrait: true,
+        description: 'Weather & clock widgets at top with menu board below for portrait kiosks',
+        zones: [
+            { id: 'weather', x: 0, y: 0, width: 50, height: 20, content_type: 'weather', label: 'Weather' },
+            { id: 'clock', x: 50, y: 0, width: 50, height: 20, content_type: 'clock', label: 'Clock' },
+            { id: 'menu', x: 0, y: 20, width: 100, height: 80, content_type: 'menu', label: 'Menu Items' }
+        ],
+        preview: [
+            { x: 0, y: 0, w: 49, h: 19, color: '#0ea5e9' },
+            { x: 51, y: 0, w: 49, h: 19, color: '#10b981' },
+            { x: 0, y: 21, w: 100, h: 79, color: '#1e293b' }
+        ]
+    },
 ];
 
 const CATEGORIES = ['All', 'Simple', 'Split', 'Dashboard', 'Restaurant', 'Promo'];
