@@ -87,6 +87,32 @@ export default function StudioTemplateGallery({ restaurantId }) {
         enabled: !!restaurantId,
     });
 
+    const { data: customLayouts = [] } = useQuery({
+        queryKey: ['custom-layouts', restaurantId],
+        queryFn: () => base44.entities.LayoutTemplate.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
+    const saveCustomLayoutMutation = useMutation({
+        mutationFn: (data) => data.id
+            ? base44.entities.LayoutTemplate.update(data.id, data)
+            : base44.entities.LayoutTemplate.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['custom-layouts', restaurantId] });
+            toast.success('Custom layout saved!');
+            setShowDesigner(false);
+            setEditingCustomTemplate(null);
+        }
+    });
+
+    const deleteCustomLayoutMutation = useMutation({
+        mutationFn: (id) => base44.entities.LayoutTemplate.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['custom-layouts', restaurantId] });
+            toast.success('Layout deleted');
+        }
+    });
+
     const updateScreenMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Screen.update(id, data),
         onSuccess: () => {
