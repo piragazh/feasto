@@ -26,7 +26,7 @@ export default function MenuWidget({ config = {}, restaurantId, className = '' }
 
     useEffect(() => {
         const load = async () => {
-            if (!restaurantId) return;
+            if (!restaurantId) { setLoading(false); return; }
             try {
                 const all = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
                 const available = show_unavailable ? all : all.filter(i => i.is_available !== false);
