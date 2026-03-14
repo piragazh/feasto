@@ -537,13 +537,19 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    // If screen has a multi-zone layout, use MultiZoneDisplay
-    if (screen?.layout_template?.zones && screen.layout_template.zones.length > 0) {
+    // Determine active layout: per-item override takes priority over screen default
+    const activeLayout = content[safeIndex]?.layout_template?.zones?.length > 0
+        ? content[safeIndex].layout_template
+        : screen?.layout_template;
+
+    // If there's an active multi-zone layout, use MultiZoneDisplay
+    if (activeLayout?.zones && activeLayout.zones.length > 0) {
         return (
             <MultiZoneDisplay
+                key={`layout-${safeIndex}-${activeLayout.name}`}
                 restaurantId={restaurantId}
                 screenName={screenName}
-                layout={screen.layout_template}
+                layout={activeLayout}
             />
         );
     }
