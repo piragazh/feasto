@@ -576,13 +576,13 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                     muted
                                     loop={content.length === 1}
                                     onEnded={() => handleVideoEnd(item)}
-                                    className="max-h-full max-w-full object-contain"
+                                    className="w-full h-full object-cover"
                                 />
                             ) : (
                                 <img
                                     src={item.media_url}
                                     alt={item.title}
-                                    className="max-h-full max-w-full object-contain"
+                                    className="w-full h-full object-cover"
                                 />
                             )}
                         </div>
