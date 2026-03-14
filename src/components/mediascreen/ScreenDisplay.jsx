@@ -47,9 +47,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
-        queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0]),
-        enabled: !!restaurantId,
-        staleTime: 60000,
+        queryFn: async () => {
+            const data = await base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0]);
+            writeCache(`restaurant_${restaurantId}`, data);
+            return data;
+        },
+        enabled: !!restaurantId && isOnline,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        initialData: () => readCache(`restaurant_${restaurantId}`),
+        initialDataUpdatedAt: 0,
+        retry: 2,
     });
 
     const { data: screen, refetch: refetchScreen, isLoading: screenLoading } = useQuery({
@@ -59,10 +67,16 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 restaurant_id: restaurantId,
                 screen_name: screenName
             });
-            return screens[0];
+            const data = screens[0];
+            writeCache(`screen_${restaurantId}_${screenName}`, data);
+            return data;
         },
-        enabled: !!restaurantId && !!screenName,
-        staleTime: 60000,
+        enabled: !!restaurantId && !!screenName && isOnline,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        initialData: () => readCache(`screen_${restaurantId}_${screenName}`),
+        initialDataUpdatedAt: 0,
+        retry: 2,
     });
 
     // Check if there's an active playlist for this media wall
