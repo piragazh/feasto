@@ -78,6 +78,8 @@ export default function StudioTemplateGallery({ restaurantId }) {
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [showApplyDialog, setShowApplyDialog] = useState(false);
     const [targetScreen, setTargetScreen] = useState('');
+    const [showDesigner, setShowDesigner] = useState(false);
+    const [editingCustomTemplate, setEditingCustomTemplate] = useState(null);
 
     const { data: screens = [] } = useQuery({
         queryKey: ['screens', restaurantId],
