@@ -123,6 +123,7 @@ export default function InlinePhotoEditor({ open, onClose, imageUrl, onSave }) {
             <DialogContent className="max-w-6xl max-h-[95vh]">
                 <DialogHeader>
                     <DialogTitle>Photo Editor</DialogTitle>
+                    <DialogDescription>Adjust brightness, contrast, saturation and transform your image.</DialogDescription>
                 </DialogHeader>
 
                 <div className="grid grid-cols-3 gap-6">
