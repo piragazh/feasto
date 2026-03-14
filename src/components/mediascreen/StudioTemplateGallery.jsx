@@ -58,8 +58,8 @@ export function TemplatePreview({ template, size = 'md' }) {
                         key={i}
                         className="absolute rounded"
                         style={{
-                            left: `${zone.x + (i > 0 ? 0.5 : 0)}%`,
-                            top: `${zone.y + (i > 0 ? 0.5 : 0)}%`,
+                            left: `${zone.x}%`,
+                            top: `${zone.y}%`,
                             width: `${zone.w}%`,
                             height: `${zone.h}%`,
                             backgroundColor: zone.color,
