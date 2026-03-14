@@ -9,7 +9,7 @@ import { Check, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 
-const TEMPLATES = LAYOUT_TEMPLATES; const _UNUSED = [
+const _TEMPLATES_INLINE = [
     {
         id: 'fullscreen',
         name: 'Full Screen',
