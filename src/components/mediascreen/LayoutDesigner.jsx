@@ -171,7 +171,7 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout, r
         if (!name.trim()) { toast.error('Enter a layout name'); return; }
         if (zones.length === 0) { toast.error('Add at least one zone'); return; }
         onSave({ name: name.trim(), zones });
-        onClose();
+        // onClose is called by parent's onSuccess handler after the mutation completes
     };
 
     const selectedZone = zones.find(z => z.id === selectedId);
