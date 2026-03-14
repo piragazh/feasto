@@ -490,11 +490,27 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         landscape_flipped: 180
     }[screen?.orientation || 'landscape'] || 0;
 
+    // For portrait rotation on a landscape screen: swap width/height so after rotation it fills the full viewport
+    const isRotated = orientationRotation === 90 || orientationRotation === 270;
+    const rotationStyle = isRotated ? {
+        transform: `rotate(${orientationRotation}deg)`,
+        transformOrigin: 'center center',
+        width: '100vh',
+        height: '100vw',
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        marginLeft: '-50vh',
+        marginTop: '-50vw',
+    } : orientationRotation ? {
+        transform: `rotate(${orientationRotation}deg)`,
+        transformOrigin: 'center center',
+    } : undefined;
+
     return (
         <div
             className="h-screen w-screen bg-black relative overflow-hidden"
-            style={orientationRotation ? { transform: `rotate(${orientationRotation}deg)`, transformOrigin: 'center center' } : undefined}
-        >
+            style={rotationStyle}
             <div className="absolute top-0 right-0 z-10 p-6">
                 <div className="flex items-center justify-end">
                     <div className="flex items-center gap-6 text-white">
