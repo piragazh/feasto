@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, ExternalLink, Copy, Plus, Settings, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3, Calendar, Clock, Tag, X } from 'lucide-react';
+import { Upload, Sparkles, Trash2, Edit, ArrowUp, ArrowDown, Copy, Plus, FolderOpen, Scissors, Image as ImageIcon, Monitor, Grid3x3, Calendar, Clock, Tag, X } from 'lucide-react';
 import { toast } from 'sonner';
 import AIContentGenerator from './AIContentGenerator';
 import AIContentAssistant from './AIContentAssistant';

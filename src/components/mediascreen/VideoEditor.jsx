@@ -23,7 +23,6 @@ export default function VideoEditor({ open, videoUrl, onClose, onSave }) {
     const [trimSegments, setTrimSegments] = useState([]);
     const [segmentTransition, setSegmentTransition] = useState('fade');
     const videoRef = useRef(null);
-    const canvasRef = useRef(null);
 
     useEffect(() => {
         if (open && videoRef.current) {

@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RotateCw, FlipHorizontal, FlipVertical, ZoomIn, ZoomOut, Sun, Contrast, Droplet, Crop, Save, X } from 'lucide-react';
+import { RotateCw, FlipHorizontal, FlipVertical, ZoomIn, ZoomOut, Sun, Contrast, Droplet, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 
@@ -22,8 +22,6 @@ export default function InlinePhotoEditor({ open, onClose, imageUrl, onSave }) {
         flipV: false,
         zoom: 1
     });
-    const [cropMode, setCropMode] = useState(false);
-    const [cropDimensions, setCropDimensions] = useState({ x: 0, y: 0, width: 0, height: 0 });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -108,8 +106,6 @@ export default function InlinePhotoEditor({ open, onClose, imageUrl, onSave }) {
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
             onSave(file_url);
-            toast.success('Image saved successfully!');
-            onClose();
         } catch (error) {
             console.error('Save error:', error);
             toast.error('Failed to save image');
