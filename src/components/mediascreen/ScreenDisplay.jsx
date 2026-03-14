@@ -222,9 +222,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             });
         },
         enabled: !!restaurantId && !!screenName,
-        staleTime: 30000,
-        gcTime: 300000,
-        refetchInterval: 30000,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 24 * 60 * 60 * 1000,
+        refetchInterval: isOnline ? 60000 : false,
+        initialData: () => readCache(`content_${restaurantId}_${screenName}`) ?? [],
+        initialDataUpdatedAt: 0,
+        retry: 2,
     });
 
     // Fetch widget configs for inline widget playlist items
