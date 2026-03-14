@@ -293,7 +293,7 @@ const TEMPLATES = [
     },
 ];
 
-const CATEGORIES = ['All', 'Simple', 'Split', 'Dashboard', 'Restaurant', 'Promo'];
+const CATEGORIES = ['All', 'Simple', 'Split', 'Dashboard', 'Restaurant', 'Promo', 'Portrait'];
 
 const CONTENT_TYPE_COLORS = {
     media: 'bg-indigo-100 text-indigo-700',
