@@ -402,7 +402,7 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                             onCheckedChange={(v) => updateContentMutation.mutate({ id: item.id, data: { is_active: v } })}
                                                                         />
                                                                         {item.media_type === 'image' && (
-                                                                            <Button size="sm" variant="ghost" onClick={() => setEditingPhoto(item.media_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
+                                                                            <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: item.id, media_url: item.media_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
                                                                                 <Edit className="h-3.5 w-3.5" />
                                                                             </Button>
                                                                         )}
@@ -539,9 +539,15 @@ export default function StudioPlaylists({ restaurantId }) {
             {/* Photo editor */}
             <InlinePhotoEditor
                 open={!!editingPhoto}
-                imageUrl={editingPhoto}
+                imageUrl={editingPhoto?.media_url}
                 onClose={() => setEditingPhoto(null)}
-                onSave={() => { setEditingPhoto(null); toast.success('Photo updated'); }}
+                onSave={async (newUrl) => {
+                    if (editingPhoto?.id) {
+                        await updateContentMutation.mutateAsync({ id: editingPhoto.id, data: { media_url: newUrl } });
+                    }
+                    setEditingPhoto(null);
+                    toast.success('Photo updated');
+                }}
             />
 
             {/* Widget Picker Dialog */}
