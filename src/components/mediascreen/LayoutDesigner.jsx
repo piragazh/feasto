@@ -161,6 +161,11 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout, r
 
     const onMouseUp = useCallback(() => { dragRef.current = null; }, []);
 
+    const onCanvasClick = () => {
+        if (didDragRef.current) { didDragRef.current = false; return; }
+        setSelectedId(null);
+    };
+
     useEffect(() => {
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
