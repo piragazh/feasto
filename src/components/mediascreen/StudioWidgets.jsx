@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
     Plus, Trash2, Edit, Cloud, Clock, ShoppingBag,
-    TrendingUp, Users, Timer, Check, Eye, Zap
+    TrendingUp, Users, Timer, Check, Eye, Zap, UtensilsCrossed
 } from 'lucide-react';
 import { toast } from 'sonner';
 import WidgetRenderer from './WidgetRenderer';
@@ -22,6 +22,7 @@ const WIDGET_TYPES = [
     { id: 'stock_ticker', label: 'Stock Ticker', icon: TrendingUp, desc: 'Live market price scrolling ticker', color: 'from-emerald-500 to-green-600' },
     { id: 'queue_status', label: 'Queue Status', icon: Users, desc: 'Customer queue & wait times', color: 'from-orange-500 to-red-500' },
     { id: 'countdown_timer', label: 'Countdown Timer', icon: Timer, desc: 'Promotional countdown to an event', color: 'from-pink-500 to-rose-600' },
+    { id: 'menu_widget', label: 'Menu Board', icon: UtensilsCrossed, desc: 'Live menu items — auto-syncs prices & availability', color: 'from-teal-500 to-cyan-600' },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS = {
     stock_ticker: { symbols: ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN'], refresh_interval: 60, show_change: true, scroll_speed: 'medium', theme: 'dark' },
     queue_status: { queue_label: 'Now Serving', max_display: 6, show_wait_time: true, avg_wait_minutes: 10, status_filter: 'preparing', theme: 'dark' },
     countdown_timer: { target_date: '', title: 'Offer Ends In', subtitle: '', message_after: '🎉 Offer Ended!', theme: 'dark', show_seconds: true },
+    menu_widget: { title: 'Our Menu', category_filter: 'all', max_items: 12, columns: 2, show_prices: true, show_images: true, show_unavailable: false, theme: 'dark', refresh_interval: 60 },
 };
 
 export default function StudioWidgets({ restaurantId }) {
