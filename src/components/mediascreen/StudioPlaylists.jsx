@@ -282,6 +282,10 @@ export default function StudioPlaylists({ restaurantId }) {
                                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                                     Preview
                                 </Button>
+                                <Button size="sm" variant="outline" onClick={() => setShowWidgetPicker(true)}>
+                                    <Zap className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
+                                    Add Widget
+                                </Button>
                                 <Button size="sm" onClick={() => setShowAddDialog(true)} className="bg-orange-500 hover:bg-orange-600">
                                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                                     Add Media
