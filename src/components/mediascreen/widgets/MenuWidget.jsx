@@ -74,7 +74,7 @@ export default function MenuWidget({ config = {}, restaurantId, className = '' }
                             <img
                                 src={item.image_url}
                                 alt={item.name}
-                                className={columns === 1 ? 'w-14 h-14 rounded-lg object-cover flex-shrink-0' : 'w-full h-24 object-cover'}
+                                className={columns === 1 ? 'w-14 h-14 rounded-lg object-contain flex-shrink-0' : 'w-full h-24 object-contain'}
                             />
                         )}
                         <div className={columns === 1 ? 'flex-1 min-w-0' : 'p-2.5 flex-1'}>
