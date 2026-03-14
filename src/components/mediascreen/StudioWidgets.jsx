@@ -15,6 +15,28 @@ import {
 import { toast } from 'sonner';
 import WidgetRenderer from './WidgetRenderer';
 
+function MenuCategorySelect({ restaurantId, value, onChange }) {
+    const { data: menuItems = [] } = useQuery({
+        queryKey: ['menu-items-categories', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+    const categories = ['all', ...new Set(menuItems.map(i => i.category).filter(Boolean))];
+    return (
+        <div>
+            <Label>Category Filter</Label>
+            <Select value={value} onValueChange={onChange}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select category..." /></SelectTrigger>
+                <SelectContent>
+                    {categories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
 const WIDGET_TYPES = [
     { id: 'weather', label: 'Weather', icon: Cloud, desc: 'Real-time localized weather conditions', color: 'from-sky-500 to-blue-600' },
     { id: 'clock', label: 'Clock', icon: Clock, desc: 'Live time & date display', color: 'from-violet-500 to-purple-600' },
