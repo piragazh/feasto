@@ -114,6 +114,7 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout, r
         e.preventDefault();
         e.stopPropagation();
         setSelectedId(zoneId);
+        didDragRef.current = false;
         const zone = zones.find(z => z.id === zoneId);
         dragRef.current = {
             type: handle ? 'resize' : 'move',
