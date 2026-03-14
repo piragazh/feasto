@@ -328,7 +328,18 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                         {index + 1}
                                                                     </div>
                                                                     <div className="w-24 h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
-                                                                        {item.media_type === 'video' ? (
+                                                                        {item.media_type === 'widget' ? (
+                                                                            (() => {
+                                                                                const meta = WIDGET_TYPE_META[item.widget_type] || {};
+                                                                                const Icon = meta.icon || Zap;
+                                                                                return (
+                                                                                    <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center gap-1">
+                                                                                        <Icon className={`h-5 w-5 ${meta.color || 'text-yellow-400'}`} />
+                                                                                        <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide">{meta.label || item.widget_type}</span>
+                                                                                    </div>
+                                                                                );
+                                                                            })()
+                                                                        ) : item.media_type === 'video' ? (
                                                                             <video src={item.media_url} className="w-full h-full object-cover" muted />
                                                                         ) : (
                                                                             <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
@@ -337,9 +348,9 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="font-semibold text-gray-900 text-sm truncate">{item.title || 'Untitled'}</p>
                                                                         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                                                            <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1">
-                                                                                {item.media_type === 'video' ? <Film className="h-2.5 w-2.5" /> : <ImageIcon className="h-2.5 w-2.5" />}
-                                                                                {item.media_type}
+                                                                            <Badge variant="outline" className={`text-[10px] h-5 px-1.5 gap-1 ${item.media_type === 'widget' ? 'border-yellow-400 text-yellow-600 bg-yellow-50' : ''}`}>
+                                                                                {item.media_type === 'widget' ? <Zap className="h-2.5 w-2.5" /> : item.media_type === 'video' ? <Film className="h-2.5 w-2.5" /> : <ImageIcon className="h-2.5 w-2.5" />}
+                                                                                {item.media_type === 'widget' ? (WIDGET_TYPE_META[item.widget_type]?.label || item.widget_type) : item.media_type}
                                                                             </Badge>
                                                                             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
                                                                                 {item.transition || 'fade'}
