@@ -90,6 +90,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 wall_name: screen.media_wall_config.wall_name,
                 is_active: true
             });
+            writeCache(`playlists_${restaurantId}_${screen.media_wall_config.wall_name}`, playlists);
 
             const now = new Date();
             return playlists.filter(playlist => {
