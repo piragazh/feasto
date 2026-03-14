@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Monitor, Play, Image as ImageIcon, Palette, Zap, Plus, ExternalLink, BarChart3, Clock, Film, TrendingUp } from 'lucide-react';
+import { Monitor, Play, Image as ImageIcon, Palette, Zap, Plus, ExternalLink, Film, TrendingUp } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
 

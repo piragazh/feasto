@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
     Plus, Trash2, Edit, Cloud, Clock, ShoppingBag,
-    TrendingUp, Users, Timer, Check, Eye, Globe, Zap
+    TrendingUp, Users, Timer, Check, Eye, Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import WidgetRenderer from './WidgetRenderer';

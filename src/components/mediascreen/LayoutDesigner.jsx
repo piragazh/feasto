@@ -62,8 +62,6 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout })
     const [zones, setZones] = useState(initialLayout?.zones || []);
     const [selectedZone, setSelectedZone] = useState(null);
     const [activeTab, setActiveTab] = useState('design');
-    const [previewMode, setPreviewMode] = useState(false);
-
     const addZone = (type = 'media') => {
         const newZone = {
             id: Date.now().toString(),
@@ -134,8 +132,6 @@ export default function LayoutDesigner({ open, onClose, onSave, initialLayout })
             template_name: layoutName,
             zones
         });
-
-        toast.success('Layout saved successfully!');
         onClose();
     };
 

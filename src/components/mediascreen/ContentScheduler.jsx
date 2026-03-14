@@ -114,8 +114,6 @@ export default function ContentScheduler({ open, onClose, content, onSave }) {
         }
 
         onSave({ schedule, priority });
-        toast.success('Schedule saved successfully');
-        onClose();
     };
 
     return (
