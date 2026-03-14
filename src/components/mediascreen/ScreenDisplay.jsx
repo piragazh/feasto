@@ -233,9 +233,18 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     // Fetch widget configs for inline widget playlist items
     const { data: widgetConfigs = [] } = useQuery({
         queryKey: ['widget-configurations', restaurantId],
-        queryFn: () => base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId }),
-        enabled: !!restaurantId,
-        staleTime: 60000,
+        queryFn: async () => {
+            const data = await base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId });
+            writeCache(`widgets_${restaurantId}`, data);
+            return data;
+        },
+        enabled: !!restaurantId && isOnline,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 24 * 60 * 60 * 1000,
+        refetchInterval: isOnline ? 5 * 60 * 1000 : false,
+        initialData: () => readCache(`widgets_${restaurantId}`) ?? [],
+        initialDataUpdatedAt: 0,
+        retry: 2,
     });
 
     const { data: weather } = useQuery({
