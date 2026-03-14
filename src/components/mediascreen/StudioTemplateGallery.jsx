@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Sparkles, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
+import LayoutDesigner from './LayoutDesigner';
 
 const CATEGORIES = ['All', 'Simple', 'Split', 'Dashboard', 'Restaurant', 'Promo', 'Portrait'];
 
