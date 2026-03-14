@@ -279,9 +279,12 @@ export default function StudioMediaLibrary({ restaurantId }) {
             {/* Editors */}
             <InlinePhotoEditor
                 open={!!editingPhoto}
-                imageUrl={editingPhoto}
+                imageUrl={editingPhoto?.file_url}
                 onClose={() => setEditingPhoto(null)}
-                onSave={(newUrl) => {
+                onSave={async (newUrl) => {
+                    if (editingPhoto?.id) {
+                        await base44.entities.MediaFile.update(editingPhoto.id, { file_url: newUrl });
+                    }
                     setEditingPhoto(null);
                     queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
                     toast.success('Photo saved');
