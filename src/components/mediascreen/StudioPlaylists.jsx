@@ -417,6 +417,9 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                         <Button size="sm" variant="ghost" onClick={() => { setSchedulingContent(item); setShowScheduler(true); }} className="h-8 w-8 p-0 text-gray-400 hover:text-violet-600" title="Schedule">
                                                                             <Clock className="h-3.5 w-3.5" />
                                                                         </Button>
+                                                                        <Button size="sm" variant="ghost" onClick={() => setTemplatePickerItem(item)} className={`h-8 w-8 p-0 hover:text-orange-600 ${item.layout_template ? 'text-orange-500' : 'text-gray-400'}`} title="Set layout template for this item">
+                                                                            <Layout className="h-3.5 w-3.5" />
+                                                                        </Button>
                                                                         <Button size="sm" variant="ghost" onClick={() => deleteContentMutation.mutate(item.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
                                                                             <Trash2 className="h-3.5 w-3.5" />
                                                                         </Button>
