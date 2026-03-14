@@ -538,11 +538,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     }
 
     // Determine active layout: per-item override takes priority over screen default
-    const activeLayout = content[safeIndex]?.layout_template?.zones?.length > 0
-        ? content[safeIndex].layout_template
+    const currentItem = content[safeIndex];
+    const activeLayout = currentItem?.layout_template?.zones?.length > 0
+        ? currentItem.layout_template
         : screen?.layout_template;
 
     // If there's an active multi-zone layout, use MultiZoneDisplay
+    // When using per-item templates, ScreenDisplay still drives the index timer (above),
+    // so each item's duration controls how long its template shows before the next item.
     if (activeLayout?.zones && activeLayout.zones.length > 0) {
         return (
             <MultiZoneDisplay
