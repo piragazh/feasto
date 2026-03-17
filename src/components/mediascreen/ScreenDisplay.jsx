@@ -614,6 +614,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             className="h-screen w-screen bg-black relative overflow-hidden"
             style={rotationStyle}
         >
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
             <div className="absolute top-0 right-0 z-10 p-6">
                 <div className="flex items-center justify-end">
                     <div className="flex items-center gap-6 text-white">
