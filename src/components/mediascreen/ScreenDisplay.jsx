@@ -396,16 +396,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     }, [currentIndex]);
 
     const advanceIndex = (currentLen) => {
-        setCurrentIndex(prev => {
-            const next = (prev + 1) % currentLen;
-            setPrevIndex(prev);
-            setIsTransitioning(true);
-            setTimeout(() => {
-                setPrevIndex(null);
-                setIsTransitioning(false);
-            }, 800);
-            return next;
-        });
+        setCurrentIndex(prev => (prev + 1) % currentLen);
     };
 
     const handleVideoEnd = (item) => {
