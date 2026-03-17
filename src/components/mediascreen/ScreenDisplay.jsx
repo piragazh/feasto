@@ -653,58 +653,40 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             </div>
 
             <div className="h-full w-full relative">
-                {/* Previous item fades out */}
-                {prevIndex !== null && content[prevIndex] && (() => {
-                    const item = content[prevIndex];
-                    return (
-                        <div
-                            key={`prev-${item.id}`}
-                            className="absolute inset-0 flex items-center justify-center"
-                            style={{ opacity: isTransitioning ? 0 : 1, transition: 'opacity 0.8s ease-in-out', zIndex: 1 }}
-                        >
-                            {item.media_type === 'widget' ? null : item.media_type === 'video' ? (
-                                <video src={item.media_url} muted className="w-full h-full object-cover" />
-                            ) : (
-                                <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                            )}
-                        </div>
-                    );
-                })()}
+                {/* Render all items stacked — only the current one is visible. No unmounting = no black flash. */}
+                {content.map((item, index) => {
+                    const isActive = index === safeIndex;
+                    const cfg = item.widget_config_id
+                        ? widgetConfigs.find(w => w.id === item.widget_config_id)
+                        : widgetConfigs.find(w => w.widget_type === item.widget_type && w.is_active);
+                    const widgetType = item.widget_type || cfg?.widget_type;
+                    const widgetConf = cfg ? (cfg.settings?.[widgetType] || {}) : {};
 
-                {/* Current item fades in */}
-                {(() => {
-                    const item = content[safeIndex];
-                    if (!item) return null;
                     return (
                         <div
-                            key={`curr-${item.id}`}
+                            key={item.id}
                             className="absolute inset-0 flex items-center justify-center"
-                            style={{ opacity: isTransitioning ? 1 : 1, transition: 'opacity 0.8s ease-in-out', zIndex: 2, animation: prevIndex !== null ? 'fadeIn 0.8s ease-in-out' : 'none' }}
+                            style={{
+                                opacity: isActive ? 1 : 0,
+                                transition: 'opacity 0.8s ease-in-out',
+                                zIndex: isActive ? 2 : 1,
+                                pointerEvents: isActive ? 'auto' : 'none',
+                            }}
                         >
                             {item.media_type === 'widget' ? (
-                                (() => {
-                                    const cfg = item.widget_config_id
-                                        ? widgetConfigs.find(w => w.id === item.widget_config_id)
-                                        : widgetConfigs.find(w => w.widget_type === item.widget_type && w.is_active);
-                                    const widgetType = item.widget_type || cfg?.widget_type;
-                                    const widgetConf = cfg ? (cfg.settings?.[widgetType] || {}) : {};
-                                    return (
-                                        <WidgetRenderer
-                                            widgetType={widgetType}
-                                            config={widgetConf}
-                                            restaurantId={restaurantId}
-                                            className="w-full h-full"
-                                        />
-                                    );
-                                })()
+                                <WidgetRenderer
+                                    widgetType={widgetType}
+                                    config={widgetConf}
+                                    restaurantId={restaurantId}
+                                    className="w-full h-full"
+                                />
                             ) : item.media_type === 'video' ? (
                                 <video
-                                    key={item.id}
                                     src={item.media_url}
-                                    autoPlay
+                                    autoPlay={isActive}
                                     muted
                                     loop={content.length === 1}
-                                    onEnded={() => handleVideoEnd(item)}
+                                    onEnded={() => isActive && handleVideoEnd(item)}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
@@ -716,7 +698,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                             )}
                         </div>
                     );
-                })()}
+                })}
             </div>
 
             {content.length > 1 && (
