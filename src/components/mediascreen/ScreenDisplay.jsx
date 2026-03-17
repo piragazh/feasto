@@ -27,8 +27,6 @@ function writeCache(key, data) {
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [prevIndex, setPrevIndex] = useState(null);
-    const [isTransitioning, setIsTransitioning] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [videoLoopCount, setVideoLoopCount] = useState(0);
     const [wallContentIndex, setWallContentIndex] = useState(0);
