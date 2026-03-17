@@ -646,15 +646,34 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 </div>
             </div>
 
-            <div className="h-full w-full flex items-center justify-center relative">
+            <div className="h-full w-full relative">
+                {/* Previous item fades out */}
+                {prevIndex !== null && content[prevIndex] && (() => {
+                    const item = content[prevIndex];
+                    return (
+                        <div
+                            key={`prev-${item.id}`}
+                            className="absolute inset-0 flex items-center justify-center"
+                            style={{ opacity: isTransitioning ? 0 : 1, transition: 'opacity 0.8s ease-in-out', zIndex: 1 }}
+                        >
+                            {item.media_type === 'widget' ? null : item.media_type === 'video' ? (
+                                <video src={item.media_url} muted className="w-full h-full object-cover" />
+                            ) : (
+                                <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                            )}
+                        </div>
+                    );
+                })()}
+
+                {/* Current item fades in */}
                 {(() => {
                     const item = content[safeIndex];
                     if (!item) return null;
                     return (
                         <div
-                            key={item.id}
+                            key={`curr-${item.id}`}
                             className="absolute inset-0 flex items-center justify-center"
-                            style={{ animation: 'fadeIn 0.8s ease-in-out' }}
+                            style={{ opacity: isTransitioning ? 1 : 1, transition: 'opacity 0.8s ease-in-out', zIndex: 2, animation: prevIndex !== null ? 'fadeIn 0.8s ease-in-out' : 'none' }}
                         >
                             {item.media_type === 'widget' ? (
                                 (() => {
@@ -674,6 +693,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                 })()
                             ) : item.media_type === 'video' ? (
                                 <video
+                                    key={item.id}
                                     src={item.media_url}
                                     autoPlay
                                     muted
