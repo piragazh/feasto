@@ -432,7 +432,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         if (currentContent?.media_type !== 'video') {
             const duration = (currentContent?.duration || 10) * 1000;
             const timer = setTimeout(() => {
-                setCurrentIndex((prev) => (prev + 1) % content.length);
+                advanceIndex(content.length);
             }, duration);
             return () => clearTimeout(timer);
         }
