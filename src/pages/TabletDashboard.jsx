@@ -1126,7 +1126,7 @@ function StatusBar({ restaurant }) {
             setNetwork(prev => ({ ...prev, online: navigator.onLine }));
             try {
                 const start = performance.now();
-                await fetch('/api/health', { method: 'HEAD' });
+                await fetch('/api/health', { method: 'GET' });
                 const latency = Math.round(performance.now() - start);
                 setNetwork(prev => ({ ...prev, latency, speed: latency < 100 ? 'good' : latency < 500 ? 'fair' : 'poor' }));
             } catch {
