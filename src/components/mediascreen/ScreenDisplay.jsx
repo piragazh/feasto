@@ -123,8 +123,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         enabled: !!restaurantId && !!screen?.media_wall_config?.enabled,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
-        initialData: () => readCache(`playlists_${restaurantId}_${screen?.media_wall_config?.wall_name}`),
-        initialDataUpdatedAt: 0,
+        initialData: () => readCache(`playlists_${restaurantId}_${screen?.media_wall_config?.wall_name}`).data,
+        initialDataUpdatedAt: () => readCache(`playlists_${restaurantId}_${screen?.media_wall_config?.wall_name}`).ts,
         retry: 2,
     });
 
