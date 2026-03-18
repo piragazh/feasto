@@ -397,8 +397,19 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         setVideoLoopCount(0);
     }, [currentIndex]);
 
+    const TRANSITION_DURATION = 700; // ms
+
     const advanceIndex = (currentLen) => {
-        setCurrentIndex(prev => (prev + 1) % currentLen);
+        setCurrentIndex(prev => {
+            const next = (prev + 1) % currentLen;
+            setPrevIndex(prev);
+            setIsTransitioning(true);
+            setTimeout(() => {
+                setPrevIndex(null);
+                setIsTransitioning(false);
+            }, TRANSITION_DURATION + 100);
+            return next;
+        });
     };
 
     const handleVideoEnd = (item) => {
