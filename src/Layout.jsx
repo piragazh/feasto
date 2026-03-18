@@ -107,14 +107,14 @@ export default function Layout({ children, currentPageName }) {
             const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
             const posMode = currentPageName === 'POSDashboard' ? 'pos' : currentPageName === 'TabletDashboard' ? 'tablet' : 'dashboard';
             if (dashboardRestaurantId) {
-                manifestLink.href = `/api/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
+                manifestLink.href = `/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
             } else {
-                manifestLink.href = `/api/getManifest?mode=${posMode}`;
+                manifestLink.href = `/getManifest?mode=${posMode}`;
             }
         } else if (customDomainRestaurantId) {
-            manifestLink.href = `/api/getManifest?restaurant_id=${customDomainRestaurantId}`;
+            manifestLink.href = `/getManifest?restaurant_id=${customDomainRestaurantId}`;
         } else {
-            manifestLink.href = `/api/getManifest`;
+            manifestLink.href = `/getManifest`;
         }
 
         // Add theme-color meta tag
