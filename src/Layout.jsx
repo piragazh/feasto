@@ -102,14 +102,14 @@ export default function Layout({ children, currentPageName }) {
         }
         
         // For restaurant dashboard / POS, use restaurant-specific dashboard manifest
-        if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard') {
+        if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard' || currentPageName === 'TabletDashboard') {
             const urlParams = new URLSearchParams(window.location.search);
             const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
-            const posMode = currentPageName === 'POSDashboard' ? 'pos' : 'dashboard';
+            const posMode = currentPageName === 'POSDashboard' ? 'pos' : currentPageName === 'TabletDashboard' ? 'tablet' : 'dashboard';
             if (dashboardRestaurantId) {
                 manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
             } else {
-                manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest`;
+                manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?mode=${posMode}`;
             }
         } else if (customDomainRestaurantId) {
             manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${customDomainRestaurantId}`;
