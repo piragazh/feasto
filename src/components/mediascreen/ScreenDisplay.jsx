@@ -35,6 +35,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const heartbeatIntervalRef = useRef(null);
     const commandCheckIntervalRef = useRef(null);
+    const videoRefs = useRef({});
 
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
