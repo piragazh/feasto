@@ -228,8 +228,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         staleTime: 5 * 60 * 1000,
         gcTime: 24 * 60 * 60 * 1000,
         refetchInterval: isOnline ? 60000 : false,
-        initialData: () => readCache(`content_${restaurantId}_${screenName}`) ?? [],
-        initialDataUpdatedAt: 0,
+        initialData: () => readCache(`content_${restaurantId}_${screenName}`).data ?? [],
+        initialDataUpdatedAt: () => readCache(`content_${restaurantId}_${screenName}`).ts,
         retry: 2,
     });
 
