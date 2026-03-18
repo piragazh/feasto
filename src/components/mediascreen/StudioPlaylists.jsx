@@ -505,7 +505,7 @@ export default function StudioPlaylists({ restaurantId }) {
                     <h3 className="font-bold text-gray-900 text-sm">Media Library</h3>
                     <p className="text-xs text-gray-400 mt-0.5">Click to add to playlist</p>
                 </div>
-                <div className="flex-1 overflow-y-auto p-3">
+                <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-3">
                     {mediaFiles.length === 0 ? (
                         <div className="text-center py-10">
                             <ImageIcon className="h-10 w-10 text-gray-200 mx-auto mb-3" />
