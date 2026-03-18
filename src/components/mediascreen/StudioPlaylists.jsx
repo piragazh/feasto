@@ -208,10 +208,36 @@ export default function StudioPlaylists({ restaurantId }) {
         deleteScreenMutation.mutate(screen.id);
     };
 
+    const [mobileView, setMobileView] = useState('screens'); // 'screens' | 'playlist' | 'library'
+
+    // Auto-advance to playlist view on mobile when a screen is selected
+    const handleSelectScreen = (screen) => {
+        setSelectedScreen(screen);
+        setMobileView('playlist');
+    };
+
     return (
         <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+            {/* Mobile bottom tab bar */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 flex">
+                {[
+                    { id: 'screens', label: 'Screens', icon: Monitor },
+                    { id: 'playlist', label: 'Playlist', icon: Play },
+                    { id: 'library', label: 'Library', icon: ImageIcon },
+                ].map(tab => {
+                    const Icon = tab.icon;
+                    return (
+                        <button key={tab.id} onClick={() => setMobileView(tab.id)}
+                            className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors ${mobileView === tab.id ? 'text-orange-500' : 'text-gray-500'}`}>
+                            <Icon className="h-5 w-5" />
+                            {tab.label}
+                        </button>
+                    );
+                })}
+            </div>
+
             {/* Left: Screen list */}
-            <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+            <div className={`${mobileView === 'screens' ? 'flex' : 'hidden'} md:flex w-full md:w-64 bg-white border-r border-gray-200 flex-col flex-shrink-0`}>
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="font-bold text-gray-900 text-sm">Screens</h3>
                     <Button size="sm" variant="ghost" onClick={() => setShowAddScreen(true)} className="h-7 w-7 p-0 text-gray-500 hover:text-orange-500">
