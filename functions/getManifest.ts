@@ -33,6 +33,20 @@ Deno.serve(async (req) => {
             ]
         };
 
+        // Handle mode without restaurant_id
+        if (!restaurantId && mode === 'tablet') {
+            manifest.name = "MealDrop Tablet";
+            manifest.short_name = "Tablet";
+            manifest.description = "Restaurant tablet management";
+            manifest.start_url = "/TabletDashboard";
+            manifest.display = "standalone";
+            manifest.orientation = "landscape-primary";
+            return new Response(JSON.stringify(manifest), {
+                status: 200,
+                headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public, max-age=3600' }
+            });
+        }
+
         // If restaurant ID provided, customize with restaurant details
         if (restaurantId) {
             const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
