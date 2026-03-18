@@ -748,11 +748,20 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                 />
                             ) : item.media_type === 'video' ? (
                                 <video
-                                    ref={el => videoRefs.current[index] = el}
+                                    ref={el => {
+                                        videoRefs.current[index] = el;
+                                        // If this is the active item and video just mounted, play it
+                                        if (el && isActive) {
+                                            el.play().catch(() => {});
+                                        }
+                                    }}
                                     src={item.media_url}
                                     muted
                                     playsInline
                                     loop={content.length === 1}
+                                    onCanPlay={(e) => {
+                                        if (isActive) e.target.play().catch(() => {});
+                                    }}
                                     onEnded={() => isActive && handleVideoEnd(item)}
                                     className="w-full h-full object-cover"
                                 />
