@@ -483,7 +483,7 @@ Return a JSON screen ad plan with this exact structure:
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3 pt-2 border-t">
+                    <div className="flex flex-wrap gap-3 pt-2 border-t">
                         {!generatedUrl ? (
                             <Button
                                 onClick={handleGenerateScreenAd}
@@ -494,8 +494,11 @@ Return a JSON screen ad plan with this exact structure:
                             </Button>
                         ) : (
                             <>
+                                <Button onClick={handleAddToLibrary} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                                    <Library className="h-4 w-4 mr-2" />Add to Library
+                                </Button>
                                 <Button onClick={handleUseContent} className="flex-1 bg-green-600 hover:bg-green-700">
-                                    <CheckCircle className="h-4 w-4 mr-2" />Use This Ad
+                                    <CheckCircle className="h-4 w-4 mr-2" />Use in Playlist
                                 </Button>
                                 <Button onClick={() => { setGeneratedUrl(null); setScreenPlan(null); }} variant="outline">
                                     Regenerate
