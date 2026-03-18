@@ -135,6 +135,7 @@ export default function ContentScheduler({ open, onClose, content, onSave }) {
                         <Calendar className="h-5 w-5" />
                         Content Scheduling
                     </DialogTitle>
+                    <DialogDescription>Set when this content should be displayed on screen.</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6">
