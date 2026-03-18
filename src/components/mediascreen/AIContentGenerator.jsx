@@ -570,7 +570,6 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
                         )}
                     </TabsContent>
                 </Tabs>
-            </DialogContent>
-        </Dialog>
+        </div>
     );
 }
