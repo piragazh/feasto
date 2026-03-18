@@ -184,6 +184,7 @@ Return a JSON screen ad plan with this exact structure:
 
     const handleUseContent = () => {
         if (!generatedUrl) return;
+        if (!onContentGenerated) { toast.error('No playlist target — add to Library instead'); return; }
         onContentGenerated({
             media_url: generatedUrl,
             media_type: outputType === 'gif' ? 'gif' : 'image',
