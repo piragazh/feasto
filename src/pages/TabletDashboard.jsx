@@ -1186,7 +1186,7 @@ export default function TabletDashboard() {
             .catch(() => setUser(null))
             .finally(() => setAuthLoading(false));
 
-        // Setup PWA manifest and service worker
+        // Setup PWA manifest (before any prompt listeners)
         setupPWA();
 
         // Check if already installed
@@ -1194,20 +1194,16 @@ export default function TabletDashboard() {
             setIsInstalled(true);
         }
 
-        // Use already-captured prompt or wait for it
-        if (window.__pwaInstallPrompt) {
-            setInstallPrompt(window.__pwaInstallPrompt);
+        // Listen for install prompt
+        const handleBeforeInstallPrompt = (e) => {
+            e.preventDefault();
+            setInstallPrompt(e);
             setCanShowInstall(true);
-        }
-        const handler = () => { 
-            if (window.__pwaInstallPrompt) {
-                setInstallPrompt(window.__pwaInstallPrompt);
-                setCanShowInstall(true);
-            }
+            console.log('✅ Install prompt captured');
         };
-        window.addEventListener('pwaInstallPromptReady', handler);
 
-        return () => window.removeEventListener('pwaInstallPromptReady', handler);
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     }, []);
 
     const setupPWA = async () => {
