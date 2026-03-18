@@ -1269,22 +1269,28 @@ export default function TabletDashboard() {
     };
 
     const handleInstall = async () => {
+        console.log('Install button clicked. Prompt available:', !!installPrompt);
+        
         if (!installPrompt) {
-            toast.error('Install prompt not available. Try refreshing the page.');
+            console.warn('No install prompt available');
+            toast.error('Install prompt not available. Try refreshing the page or check browser support.');
             return;
         }
+        
         try {
             await installPrompt.prompt();
             const { outcome } = await installPrompt.userChoice;
+            console.log('Install outcome:', outcome);
+            
             if (outcome === 'accepted') {
                 setIsInstalled(true);
                 setCanShowInstall(false);
-                toast.success('App installed!');
+                toast.success('App installed! Check your home screen.');
             } else {
-                // User dismissed, but keep button available for retry on other devices
-                toast.info('Install cancelled. Button remains available on other devices.');
+                toast.info('Install cancelled.');
             }
         } catch (err) {
+            console.error('Install error:', err);
             toast.error('Install failed: ' + err.message);
         }
     };
