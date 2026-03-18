@@ -1371,7 +1371,10 @@ export default function TabletDashboard() {
                         <Menu className="h-5 w-5 text-gray-600" />
                     </button>
                     <h1 className="text-lg font-semibold text-gray-800">{tabLabels[activeTab]}</h1>
-                    <div className="ml-auto">
+                    <div className="ml-auto flex items-center gap-3">
+                        {!isInstalled && !installPrompt && (
+                            <span className="text-xs text-gray-500">PWA ready (Chrome/Edge to install)</span>
+                        )}
                         {!isInstalled && (canShowInstall || installPrompt) && (
                             <Button 
                                 onClick={handleInstall} 
