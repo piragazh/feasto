@@ -486,6 +486,7 @@ export default function StudioWidgets({ restaurantId }) {
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Widget Preview — {previewWidget?.name}</DialogTitle>
+                        <DialogDescription>Live preview of how this widget will appear on screen.</DialogDescription>
                     </DialogHeader>
                     {previewWidget && (
                         <div className="rounded-2xl overflow-hidden" style={{ height: previewWidget.widget_type === 'stock_ticker' ? 64 : 320 }}>
