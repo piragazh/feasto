@@ -304,7 +304,7 @@ Return a JSON screen ad plan with this exact structure:
                             {/* Category */}
                             <div>
                                 <Label className="text-sm font-semibold">Menu Category</Label>
-                                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                <Select value={selectedCategory} onValueChange={v => { setSelectedCategory(v); setCustomCategory(''); }}>
                                     <SelectTrigger className="mt-2">
                                         <SelectValue placeholder="All categories" />
                                     </SelectTrigger>
@@ -315,8 +315,36 @@ Return a JSON screen ad plan with this exact structure:
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {itemsForCategory.length > 0 && (
+                                {itemsForCategory.length > 0 && !customCategory && (
                                     <p className="text-xs text-gray-500 mt-1">{itemsForCategory.length} items — {itemsForCategory.filter(i => i.is_popular).length} popular</p>
+                                )}
+                                <Input
+                                    value={customCategory}
+                                    onChange={e => { setCustomCategory(e.target.value); if (e.target.value) setSelectedCategory(''); }}
+                                    placeholder="Or type a custom category (e.g. Summer Specials)"
+                                    className="mt-2 text-sm"
+                                />
+                            </div>
+
+                            {/* Output Type */}
+                            <div>
+                                <Label className="text-sm font-semibold">Output Type</Label>
+                                <div className="flex gap-3 mt-2">
+                                    <button
+                                        onClick={() => setOutputType('image')}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${outputType === 'image' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                    >
+                                        <Image className="h-4 w-4" /> Image
+                                    </button>
+                                    <button
+                                        onClick={() => setOutputType('gif')}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${outputType === 'gif' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                    >
+                                        <Zap className="h-4 w-4" /> GIF Style
+                                    </button>
+                                </div>
+                                {outputType === 'gif' && (
+                                    <p className="text-[11px] text-amber-600 mt-1.5 bg-amber-50 rounded px-2 py-1">Generates a dynamic motion-style image saved as GIF. For true animation, upload a real GIF in Media Library.</p>
                                 )}
                             </div>
 
