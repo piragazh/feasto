@@ -1,76 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2, Wand2, Image, Copy, Share2, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, Copy, Share2, RefreshCw, Monitor, Smartphone, Zap, Image, Eye, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function AIContentGenerator({ open, onClose, onContentGenerated, restaurantName, existingContent, initialPrompt = '' }) {
-    const [contentType, setContentType] = useState('image');
-    const [prompt, setPrompt] = useState(initialPrompt);
-    const [style, setStyle] = useState('vibrant');
-    const [aspectRatio, setAspectRatio] = useState('16:9');
+export default function AIContentGenerator({ onClose, onContentGenerated, restaurantName, restaurantId, restaurantColor = '#f97316', websiteUrl = '', existingContent, initialPrompt = '' }) {
+    const [activeTab, setActiveTab] = useState('screen');
+    const [orientation, setOrientation] = useState('landscape'); // landscape | portrait
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [promoOffer, setPromoOffer] = useState('');
+    const [customPrompt, setCustomPrompt] = useState(initialPrompt);
+    const [style, setStyle] = useState('cinematic');
     const [duration, setDuration] = useState(10);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isGeneratingContent, setIsGeneratingContent] = useState(false);
     const [generatedUrl, setGeneratedUrl] = useState(null);
-    const [activeTab, setActiveTab] = useState('create');
+    const [screenPlan, setScreenPlan] = useState(null);
+    const [variations, setVariations] = useState([]);
+    const [socialSnippets, setSocialSnippets] = useState(null);
     const [keywords, setKeywords] = useState('');
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [optimizedSuggestions, setOptimizedSuggestions] = useState(null);
-    const [socialSnippets, setSocialSnippets] = useState(null);
-    const [variations, setVariations] = useState([]);
 
-    React.useEffect(() => {
-        if (initialPrompt) {
-            setPrompt(initialPrompt);
-        }
+    useEffect(() => {
+        if (initialPrompt) setCustomPrompt(initialPrompt);
     }, [initialPrompt]);
 
+    // Fetch menu items
+    const { data: menuItems = [] } = useQuery({
+        queryKey: ['menu-items-ai', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
+    const categories = [...new Set(menuItems.map(i => i.category).filter(Boolean))];
+
+    const itemsForCategory = selectedCategory
+        ? menuItems.filter(i => i.category === selectedCategory && i.is_available !== false)
+        : menuItems.filter(i => i.is_available !== false).slice(0, 20);
+
     const stylePresets = [
-        { value: 'vibrant', label: 'Vibrant & Colorful', prompt: 'vibrant, colorful, eye-catching, high contrast' },
-        { value: 'elegant', label: 'Elegant & Minimal', prompt: 'elegant, minimal, sophisticated, clean design' },
-        { value: 'modern', label: 'Modern & Bold', prompt: 'modern, bold, dynamic, contemporary' },
-        { value: 'playful', label: 'Playful & Fun', prompt: 'playful, fun, energetic, youthful' },
-        { value: 'professional', label: 'Professional', prompt: 'professional, sleek, corporate, polished' }
+        { value: 'cinematic', label: 'Cinematic Fast-Food', desc: 'Dark + brand glow, fire tones, bold type' },
+        { value: 'vibrant', label: 'Vibrant & Bold', desc: 'High contrast, colorful, eye-catching' },
+        { value: 'elegant', label: 'Elegant Premium', desc: 'Minimal, dark, sophisticated' },
+        { value: 'neon', label: 'Neon Night', desc: 'Dark background, neon accents, modern' },
     ];
 
-    const promptTemplates = [
-        { label: 'New Menu Item', prompt: `Promotional image for new ${restaurantName} menu item, delicious food photography, appetizing presentation` },
-        { label: 'Special Offer', prompt: `Special offer banner for ${restaurantName}, attractive discount promotion, bold text overlay` },
-        { label: 'Seasonal Campaign', prompt: `Seasonal campaign for ${restaurantName}, themed decorations, festive atmosphere` },
-        { label: 'Happy Hour', prompt: `Happy hour promotion for ${restaurantName}, drinks and appetizers, lively atmosphere` },
-        { label: 'Brand Showcase', prompt: `Brand showcase for ${restaurantName}, restaurant ambiance, premium quality` }
-    ];
+    const buildScreenAdPrompt = () => {
+        const items = itemsForCategory.slice(0, 8);
+        const heroItems = items.filter(i => i.is_popular).slice(0, 2).length > 0
+            ? items.filter(i => i.is_popular).slice(0, 2)
+            : items.slice(0, 2);
 
-    const handleGenerate = async () => {
-        if (!prompt.trim()) {
-            toast.error('Please enter a description');
+        const itemList = items.map(i => `${i.name} £${i.price}`).join(', ');
+        const heroList = heroItems.map(i => `${i.name} £${i.price}${i.description ? ' - ' + i.description.slice(0, 40) : ''}`).join('; ');
+        const orientationDesc = orientation === 'portrait'
+            ? 'vertical portrait format (9:16), tall screen, mobile/totem display'
+            : 'horizontal landscape format (16:9), wide LED screen, window display';
+        const styleMap = {
+            cinematic: 'cinematic fast-food advertising style like McDonald\'s or KFC, dark background with orange fire glow gradient, bold dramatic typography',
+            vibrant: 'vibrant colorful high-contrast promotional style, bold colors, eye-catching composition',
+            elegant: 'elegant premium dark restaurant branding, minimal layout, sophisticated typography',
+            neon: 'neon night-club restaurant style, dark background with glowing neon accents, futuristic typography'
+        };
+
+        return `Create a ${orientationDesc} LED promotional screen ad for "${restaurantName}".
+
+Style: ${styleMap[style]}
+Brand color: ${restaurantColor}
+
+HERO ITEMS (large, dominant): ${heroList}
+ALL MENU ITEMS on screen: ${itemList}
+${promoOffer ? `PROMO: ${promoOffer} - make this DOMINANT with urgency (LIMITED TIME / TODAY ONLY)` : ''}
+${websiteUrl ? `CTA: ORDER NOW - ${websiteUrl}` : 'CTA: ORDER NOW / SKIP THE QUEUE'}
+
+DESIGN RULES:
+- Readable from 5 meters away — massive bold text
+- Dark background with brand color (${restaurantColor}) glow/gradient
+- Hero item takes up 40% of screen with appetite-appeal close-up
+- Prices in large visible text with currency symbol
+- Use power words: CRISPY, LOADED, JUICY, FIERY, MELTED
+- NO paragraphs — only short punchy labels
+- ${orientation === 'portrait' ? 'Stack content vertically: header → hero → item grid → offer → CTA' : 'Left: hero item + price. Right: item grid. Bottom: offer + CTA bar'}
+- Professional food photography lighting, 4K quality
+- ${promoOffer ? 'Promo badge/banner must be impossible to miss' : 'Strong visual hierarchy'}`;
+    };
+
+    const handleGenerateScreenAd = async () => {
+        if (itemsForCategory.length === 0 && !customPrompt.trim()) {
+            toast.error('Please select a category or enter a custom prompt');
             return;
         }
-
         setIsGenerating(true);
         setGeneratedUrl(null);
+        setScreenPlan(null);
 
         try {
-            const stylePrompt = stylePresets.find(s => s.value === style)?.prompt || '';
-            const aspectRatioPrompt = aspectRatio === '16:9' 
-                ? 'widescreen 16:9 aspect ratio, horizontal composition' 
-                : 'standard 4:3 aspect ratio, traditional screen format';
-            const fullPrompt = `${prompt}, ${stylePrompt}, ${aspectRatioPrompt}, professional photography, high resolution, 4K quality, promotional material, eye-catching`;
+            const imagePrompt = itemsForCategory.length > 0 ? buildScreenAdPrompt() : customPrompt;
 
-            const { url } = await base44.integrations.Core.GenerateImage({ 
-                prompt: fullPrompt 
-            });
-            
-            setGeneratedUrl(url);
-            toast.success('Content generated successfully!');
+            // Generate the AI screen plan + image in parallel
+            const [imageResult, planResult] = await Promise.all([
+                base44.integrations.Core.GenerateImage({ prompt: imagePrompt }),
+                itemsForCategory.length > 0 ? base44.integrations.Core.InvokeLLM({
+                    prompt: `You are a digital signage content strategist. Generate a structured screen ad plan for "${restaurantName}".
+
+Category: ${selectedCategory || 'All Menu'}
+Items: ${itemsForCategory.slice(0, 10).map(i => `${i.name} £${i.price} (popular: ${i.is_popular ? 'yes' : 'no'})`).join(', ')}
+Brand color: ${restaurantColor}
+Orientation: ${orientation}
+Offer: ${promoOffer || 'none'}
+Website: ${websiteUrl || 'none'}
+
+Return a JSON screen ad plan with this exact structure:
+{
+  "header": { "category_title": "...", "hook": "..." },
+  "hero_items": [{ "name": "...", "price": "...", "punch_line": "..." }],
+  "secondary_items": [{ "name": "...", "price": "..." }],
+  "offer_section": { "text": "...", "urgency": "..." },
+  "cta": { "primary": "...", "secondary": "...", "website": "..." },
+  "style": { "primary_color": "...", "background": "...", "font_weight": "bold" },
+  "animation": { "hero_effect": "...", "text_transition": "...", "loop_seconds": 10 }
+}`,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            header: { type: "object", properties: { category_title: { type: "string" }, hook: { type: "string" } } },
+                            hero_items: { type: "array", items: { type: "object", properties: { name: { type: "string" }, price: { type: "string" }, punch_line: { type: "string" } } } },
+                            secondary_items: { type: "array", items: { type: "object", properties: { name: { type: "string" }, price: { type: "string" } } } },
+                            offer_section: { type: "object", properties: { text: { type: "string" }, urgency: { type: "string" } } },
+                            cta: { type: "object", properties: { primary: { type: "string" }, secondary: { type: "string" }, website: { type: "string" } } },
+                            style: { type: "object", properties: { primary_color: { type: "string" }, background: { type: "string" }, font_weight: { type: "string" } } },
+                            animation: { type: "object", properties: { hero_effect: { type: "string" }, text_transition: { type: "string" }, loop_seconds: { type: "number" } } }
+                        }
+                    }
+                }) : Promise.resolve(null)
+            ]);
+
+            setGeneratedUrl(imageResult.url);
+            if (planResult) setScreenPlan(planResult);
+            toast.success('Screen ad generated!');
         } catch (error) {
-            toast.error('Failed to generate content. Please try again.');
+            toast.error('Generation failed. Please try again.');
             console.error(error);
         } finally {
             setIsGenerating(false);
@@ -79,497 +157,410 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
 
     const handleUseContent = () => {
         if (!generatedUrl) return;
-
         onContentGenerated({
             media_url: generatedUrl,
             media_type: 'image',
-            duration: duration,
+            duration,
             ai_generated: true,
-            ai_prompt: prompt,
-            title: prompt.slice(0, 50)
+            ai_prompt: buildScreenAdPrompt(),
+            title: screenPlan?.header?.category_title || customPrompt.slice(0, 50) || `${restaurantName} Screen Ad`,
         });
-
-        handleReset();
-    };
-
-    const handleReset = () => {
-        setPrompt('');
-        setGeneratedUrl(null);
-        setContentType('image');
-        setStyle('vibrant');
-        onClose();
-    };
-
-    const useTemplate = (template) => {
-        setPrompt(template);
+        onClose?.();
     };
 
     const handleGenerateVariations = async () => {
-        if (!existingContent?.ai_prompt && !prompt.trim()) {
-            toast.error('Please provide content to generate variations from');
+        if (itemsForCategory.length === 0 && !customPrompt.trim()) {
+            toast.error('Select a category or enter a prompt first');
             return;
         }
-
-        setIsGenerating(true);
+        setIsGeneratingContent(true);
         setVariations([]);
-
         try {
-            const basePrompt = existingContent?.ai_prompt || prompt;
+            const base = buildScreenAdPrompt();
             const variationPrompts = [
-                `${basePrompt}, alternative composition, different angle`,
-                `${basePrompt}, different color scheme, fresh perspective`,
-                `${basePrompt}, unique style variation, creative twist`
+                base + ', alternative composition, different angle, warm tones',
+                base + ', close-up hero shot, dramatic lighting',
+                base + ', wide grid layout, multiple items showcase',
             ];
-
-            const generatedVariations = [];
-            for (const varPrompt of variationPrompts) {
-                const { url } = await base44.integrations.Core.GenerateImage({ prompt: varPrompt });
-                generatedVariations.push({ url, prompt: varPrompt });
-            }
-
-            setVariations(generatedVariations);
-            toast.success('Variations generated successfully!');
+            const results = await Promise.all(variationPrompts.map(p => base44.integrations.Core.GenerateImage({ prompt: p })));
+            setVariations(results.map((r, i) => ({ url: r.url, label: ['Alt Composition', 'Close-up Hero', 'Grid Showcase'][i] })));
+            toast.success('Variations generated!');
         } catch (error) {
             toast.error('Failed to generate variations');
-            console.error(error);
         } finally {
-            setIsGenerating(false);
+            setIsGeneratingContent(false);
         }
     };
 
     const handleOptimizeContent = async () => {
-        if (!keywords.trim()) {
-            toast.error('Please enter keywords');
-            return;
-        }
-
+        if (!keywords.trim()) { toast.error('Enter keywords first'); return; }
         setIsOptimizing(true);
         setOptimizedSuggestions(null);
-
         try {
             const response = await base44.integrations.Core.InvokeLLM({
-                prompt: `Generate 5 optimized titles and descriptions for restaurant promotional content based on these keywords: "${keywords}". 
-                Context: This is for ${restaurantName}.
-                Make them engaging, concise, and action-oriented.
-                Return JSON with format: {
-                    "suggestions": [
-                        {"title": "...", "description": "..."}
-                    ]
-                }`,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        suggestions: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    title: { type: "string" },
-                                    description: { type: "string" }
-                                }
-                            }
-                        }
-                    }
-                }
+                prompt: `Generate 5 aggressive, high-conversion screen ad titles and hooks for a restaurant LED display. Keywords: "${keywords}". Restaurant: ${restaurantName}. Style: cinematic fast-food advertising. Use power words (CRISPY, LOADED, JUICY, FIERY). Max 6 words per hook. Return JSON: { "suggestions": [{ "title": "...", "hook": "...", "cta": "..." }] }`,
+                response_json_schema: { type: "object", properties: { suggestions: { type: "array", items: { type: "object", properties: { title: { type: "string" }, hook: { type: "string" }, cta: { type: "string" } } } } } }
             });
-
-            setOptimizedSuggestions(response?.suggestions || response);
+            setOptimizedSuggestions(response?.suggestions || []);
             toast.success('Suggestions generated!');
         } catch (error) {
-            toast.error('Failed to optimize content');
-            console.error(error);
+            toast.error('Failed to generate suggestions');
         } finally {
             setIsOptimizing(false);
         }
     };
 
     const handleGenerateSocialSnippets = async () => {
-        const contentText = prompt || existingContent?.title || '';
-        if (!contentText.trim()) {
-            toast.error('Please provide content description');
-            return;
-        }
-
-        setIsGenerating(true);
+        const text = screenPlan?.header?.hook || customPrompt || '';
+        if (!text.trim()) { toast.error('Generate a screen ad first or enter a prompt'); return; }
+        setIsGeneratingContent(true);
         setSocialSnippets(null);
-
         try {
             const response = await base44.integrations.Core.InvokeLLM({
-                prompt: `Create social media snippets for this promotional content: "${contentText}"
-                Context: ${restaurantName}
-                Generate posts for Instagram, Facebook, and Twitter. Keep them engaging and platform-appropriate.
-                Return JSON with format: {
-                    "instagram": "...",
-                    "facebook": "...",
-                    "twitter": "..."
-                }`,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        instagram: { type: "string" },
-                        facebook: { type: "string" },
-                        twitter: { type: "string" }
-                    }
-                }
+                prompt: `Create aggressive, high-conversion social media posts for "${restaurantName}" based on: "${text}". Instagram, Facebook, Twitter. Emojis. Short punchy. Return JSON: { "instagram": "...", "facebook": "...", "twitter": "..." }`,
+                response_json_schema: { type: "object", properties: { instagram: { type: "string" }, facebook: { type: "string" }, twitter: { type: "string" } } }
             });
-
             setSocialSnippets(response);
-            toast.success('Social media snippets generated!');
+            toast.success('Social snippets generated!');
         } catch (error) {
-            toast.error('Failed to generate social snippets');
-            console.error(error);
+            toast.error('Failed to generate snippets');
         } finally {
-            setIsGenerating(false);
+            setIsGeneratingContent(false);
         }
     };
 
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        toast.success('Copied to clipboard!');
-    };
-
-    const useSuggestion = (suggestion) => {
-        setPrompt(suggestion.title + '. ' + suggestion.description);
-        setActiveTab('create');
-    };
-
-    const useVariation = (variation) => {
-        setGeneratedUrl(variation.url);
-        setPrompt(variation.prompt);
-        setActiveTab('create');
-    };
+    const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success('Copied!'); };
 
     return (
-        <div className="max-w-4xl">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="create">Create</TabsTrigger>
-                        <TabsTrigger value="variations">Variations</TabsTrigger>
-                        <TabsTrigger value="optimize">Optimize</TabsTrigger>
-                        <TabsTrigger value="social">Social</TabsTrigger>
-                    </TabsList>
+        <div className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="screen" className="flex items-center gap-1.5 text-xs"><Monitor className="h-3.5 w-3.5" />Screen Ad</TabsTrigger>
+                    <TabsTrigger value="variations" className="flex items-center gap-1.5 text-xs"><RefreshCw className="h-3.5 w-3.5" />Variations</TabsTrigger>
+                    <TabsTrigger value="optimize" className="flex items-center gap-1.5 text-xs"><Zap className="h-3.5 w-3.5" />Optimize</TabsTrigger>
+                    <TabsTrigger value="social" className="flex items-center gap-1.5 text-xs"><Share2 className="h-3.5 w-3.5" />Social</TabsTrigger>
+                </TabsList>
 
-                    <TabsContent value="create" className="space-y-6 mt-6">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs text-blue-800">
-                            <strong>ℹ️ Note:</strong> AI generates static images only. For animated GIFs or videos, please upload them manually in the content form.
+                {/* ── SCREEN AD TAB ── */}
+                <TabsContent value="screen" className="mt-6 space-y-6">
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-orange-900 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" /> Goal: Increase walk-ins & upsell high-margin items
                         </p>
+                        <p className="text-xs text-orange-700 mt-1">Cinematic LED screen ads designed to convert from 5 meters away</p>
                     </div>
 
-                    {/* Quick Templates */}
-                    <div>
-                        <Label className="text-base font-semibold mb-3 block">Quick Start Templates</Label>
-                        <div className="flex flex-wrap gap-2">
-                            {promptTemplates.map((template) => (
-                                <Button
-                                    key={template.label}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => useTemplate(template.prompt)}
-                                    className="text-xs"
-                                >
-                                    {template.label}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* LEFT: Inputs */}
+                        <div className="space-y-4">
+                            {/* Orientation */}
+                            <div>
+                                <Label className="text-sm font-semibold">Screen Orientation</Label>
+                                <div className="flex gap-3 mt-2">
+                                    <button
+                                        onClick={() => setOrientation('landscape')}
+                                        className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${orientation === 'landscape' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                    >
+                                        <Monitor className={`h-8 w-12 ${orientation === 'landscape' ? 'text-orange-500' : 'text-gray-400'}`} />
+                                        <span className="text-xs font-medium">Landscape 16:9</span>
+                                        <span className="text-[10px] text-gray-500">Window / Wall display</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setOrientation('portrait')}
+                                        className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${orientation === 'portrait' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                    >
+                                        <Smartphone className={`h-8 w-5 ${orientation === 'portrait' ? 'text-orange-500' : 'text-gray-400'}`} />
+                                        <span className="text-xs font-medium">Portrait 9:16</span>
+                                        <span className="text-[10px] text-gray-500">Totem / tall screen</span>
+                                    </button>
+                                </div>
+                            </div>
 
-                    {/* Prompt Input */}
-                    <div>
-                        <Label>Describe Your Content</Label>
-                        <Textarea
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="E.g., A mouthwatering burger with melted cheese, fresh lettuce, and crispy bacon, with flames in the background..."
-                            rows={4}
-                            className="mt-2"
-                        />
-                    </div>
+                            {/* Category */}
+                            <div>
+                                <Label className="text-sm font-semibold">Menu Category</Label>
+                                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                    <SelectTrigger className="mt-2">
+                                        <SelectValue placeholder="All categories" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={null}>All Categories</SelectItem>
+                                        {categories.map(c => (
+                                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {itemsForCategory.length > 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">{itemsForCategory.length} items — {itemsForCategory.filter(i => i.is_popular).length} popular</p>
+                                )}
+                            </div>
 
-                    {/* Style Selection */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <Label>Visual Style</Label>
-                            <Select value={style} onValueChange={setStyle}>
-                                <SelectTrigger className="mt-2">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {stylePresets.map((preset) => (
-                                        <SelectItem key={preset.value} value={preset.value}>
-                                            {preset.label}
-                                        </SelectItem>
+                            {/* Style */}
+                            <div>
+                                <Label className="text-sm font-semibold">Visual Style</Label>
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {stylePresets.map(s => (
+                                        <button
+                                            key={s.value}
+                                            onClick={() => setStyle(s.value)}
+                                            className={`p-2.5 rounded-lg border-2 text-left transition-all ${style === s.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                        >
+                                            <p className="text-xs font-semibold">{s.label}</p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
+                                        </button>
                                     ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                                </div>
+                            </div>
 
-                        <div>
-                            <Label>Aspect Ratio</Label>
-                            <Select value={aspectRatio} onValueChange={setAspectRatio}>
-                                <SelectTrigger className="mt-2">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="16:9">16:9 (Widescreen)</SelectItem>
-                                    <SelectItem value="4:3">4:3 (Standard)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label>Display Duration (seconds)</Label>
-                            <Input
-                                type="number"
-                                value={duration}
-                                onChange={(e) => setDuration(parseInt(e.target.value) || 10)}
-                                min="3"
-                                max="60"
-                                className="mt-2"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Preview */}
-                    {generatedUrl && (
-                        <div>
-                            <Label className="text-base font-semibold mb-3 block">Preview</Label>
-                            <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center min-h-[300px]">
-                                <img 
-                                    src={generatedUrl} 
-                                    alt="Generated content"
-                                    className="max-h-[400px] max-w-full object-contain rounded-lg shadow-lg"
+                            {/* Offer */}
+                            <div>
+                                <Label className="text-sm font-semibold">Promo / Offer <span className="text-gray-400 font-normal">(optional)</span></Label>
+                                <Input
+                                    value={promoOffer}
+                                    onChange={e => setPromoOffer(e.target.value)}
+                                    placeholder="e.g. 15% OFF – USE CODE WEB15"
+                                    className="mt-2"
                                 />
                             </div>
-                        </div>
-                    )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-3">
-                        {!generatedUrl ? (
-                            <>
-                                <Button 
-                                    onClick={handleGenerate} 
-                                    className="flex-1 bg-purple-600 hover:bg-purple-700"
-                                    disabled={isGenerating || !prompt.trim()}
-                                >
-                                    {isGenerating ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Generating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles className="h-4 w-4 mr-2" />
-                                            Generate Content
-                                        </>
+                            {/* Custom Prompt Override */}
+                            <div>
+                                <Label className="text-sm font-semibold">Custom Prompt Override <span className="text-gray-400 font-normal">(optional)</span></Label>
+                                <Textarea
+                                    value={customPrompt}
+                                    onChange={e => setCustomPrompt(e.target.value)}
+                                    placeholder="Leave blank to auto-generate from menu. Or write your own description..."
+                                    rows={2}
+                                    className="mt-2 text-sm"
+                                />
+                            </div>
+
+                            {/* Duration */}
+                            <div>
+                                <Label className="text-sm font-semibold">Display Duration: {duration}s</Label>
+                                <input
+                                    type="range" min="5" max="30" value={duration}
+                                    onChange={e => setDuration(parseInt(e.target.value))}
+                                    className="w-full mt-2 accent-orange-500"
+                                />
+                                <div className="flex justify-between text-[10px] text-gray-400"><span>5s</span><span>30s</span></div>
+                            </div>
+                        </div>
+
+                        {/* RIGHT: Preview */}
+                        <div className="space-y-4">
+                            <Label className="text-sm font-semibold flex items-center gap-2"><Eye className="h-4 w-4" />Preview</Label>
+
+                            {/* Image Preview */}
+                            <div className={`bg-gray-900 rounded-xl overflow-hidden flex items-center justify-center border-2 border-gray-700 ${orientation === 'portrait' ? 'aspect-[9/16] max-h-[500px]' : 'aspect-video'}`}>
+                                {isGenerating ? (
+                                    <div className="text-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-2" />
+                                        <p className="text-xs text-gray-400">Generating cinematic ad...</p>
+                                    </div>
+                                ) : generatedUrl ? (
+                                    <img src={generatedUrl} alt="Generated screen ad" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="text-center px-6">
+                                        <Monitor className="h-10 w-10 text-gray-600 mx-auto mb-3" />
+                                        <p className="text-xs text-gray-500">Your screen ad will appear here</p>
+                                        <p className="text-[10px] text-gray-600 mt-1">{orientation === 'portrait' ? '9:16 Portrait' : '16:9 Landscape'} format</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Screen Plan Preview */}
+                            {screenPlan && (
+                                <div className="bg-gray-900 rounded-xl p-4 text-white space-y-3">
+                                    <p className="text-xs font-bold text-orange-400 uppercase tracking-wider">Generated Screen Plan</p>
+                                    <div>
+                                        <p className="text-lg font-black">{screenPlan.header?.category_title}</p>
+                                        <p className="text-orange-400 font-bold text-sm">{screenPlan.header?.hook}</p>
+                                    </div>
+                                    {screenPlan.hero_items?.length > 0 && (
+                                        <div className="space-y-1">
+                                            {screenPlan.hero_items.map((item, i) => (
+                                                <div key={i} className="flex items-center justify-between bg-orange-500/20 rounded px-2 py-1">
+                                                    <div>
+                                                        <span className="text-sm font-bold">{item.name}</span>
+                                                        <span className="text-xs text-gray-300 ml-2">{item.punch_line}</span>
+                                                    </div>
+                                                    <span className="text-orange-400 font-black">{item.price}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
+                                    {screenPlan.secondary_items?.length > 0 && (
+                                        <div className="grid grid-cols-3 gap-1">
+                                            {screenPlan.secondary_items.slice(0, 6).map((item, i) => (
+                                                <div key={i} className="bg-white/5 rounded px-1.5 py-1 text-center">
+                                                    <p className="text-[10px] font-semibold truncate">{item.name}</p>
+                                                    <p className="text-[10px] text-orange-400 font-bold">{item.price}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {screenPlan.offer_section?.text && (
+                                        <div className="bg-orange-500 rounded px-3 py-2 text-center">
+                                            <p className="text-sm font-black">{screenPlan.offer_section.text}</p>
+                                            <p className="text-xs font-bold opacity-80">{screenPlan.offer_section.urgency}</p>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between text-xs text-gray-400 border-t border-white/10 pt-2">
+                                        <span className="font-bold text-white">{screenPlan.cta?.primary}</span>
+                                        {screenPlan.cta?.website && <span>{screenPlan.cta.website}</span>}
+                                    </div>
+                                    {screenPlan.animation && (
+                                        <div className="text-[10px] text-gray-500 space-y-0.5">
+                                            <p>🎬 {screenPlan.animation.hero_effect}</p>
+                                            <p>✨ {screenPlan.animation.text_transition}</p>
+                                            <p>🔄 Loop: {screenPlan.animation.loop_seconds}s</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Copy JSON button */}
+                            {screenPlan && (
+                                <Button variant="outline" size="sm" className="w-full" onClick={() => copyToClipboard(JSON.stringify(screenPlan, null, 2))}>
+                                    <Copy className="h-3.5 w-3.5 mr-2" />Copy Screen Plan JSON
                                 </Button>
-                                <Button onClick={handleReset} variant="outline">
-                                    Cancel
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Button 
-                                    onClick={handleUseContent} 
-                                    className="flex-1 bg-green-600 hover:bg-green-700"
-                                >
-                                    Use This Content
-                                </Button>
-                                <Button 
-                                    onClick={() => setGeneratedUrl(null)} 
-                                    variant="outline"
-                                >
-                                    Generate Again
-                                </Button>
-                                <Button onClick={handleReset} variant="outline">
-                                    Cancel
-                                </Button>
-                            </>
-                        )}
+                            )}
+                        </div>
                     </div>
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p className="text-sm text-blue-800">
-                                <strong>💡 Tips:</strong> Be specific and descriptive. Include details about colors, mood, 
-                                composition, and any text or branding elements you want to feature.
-                            </p>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="variations" className="space-y-6 mt-6">
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                            <p className="text-sm text-purple-800">
-                                <strong>🔄 Generate Variations:</strong> Create alternative versions of your content with different styles and compositions.
-                            </p>
-                        </div>
-
-                        <div>
-                            <Label>Base Content Description</Label>
-                            <Textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Enter description or edit existing content prompt..."
-                                rows={3}
-                                className="mt-2"
-                            />
-                            {existingContent?.ai_prompt && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Using prompt from existing content
-                                </p>
-                            )}
-                        </div>
-
-                        <Button 
-                            onClick={handleGenerateVariations}
-                            className="w-full bg-purple-600 hover:bg-purple-700"
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Generating Variations...
-                                </>
-                            ) : (
-                                <>
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Generate 3 Variations
-                                </>
-                            )}
-                        </Button>
-
-                        {variations.length > 0 && (
-                            <div className="grid grid-cols-3 gap-4">
-                                {variations.map((variation, index) => (
-                                    <Card key={index} className="p-2 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => useVariation(variation)}>
-                                        <img 
-                                            src={variation.url} 
-                                            alt={`Variation ${index + 1}`}
-                                            className="w-full h-32 object-cover rounded"
-                                        />
-                                        <Button size="sm" className="w-full mt-2" variant="outline">
-                                            Use This
-                                        </Button>
-                                    </Card>
-                                ))}
-                            </div>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-2 border-t">
+                        {!generatedUrl ? (
+                            <Button
+                                onClick={handleGenerateScreenAd}
+                                className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold"
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating Cinematic Ad...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate Screen Ad</>}
+                            </Button>
+                        ) : (
+                            <>
+                                <Button onClick={handleUseContent} className="flex-1 bg-green-600 hover:bg-green-700">
+                                    <CheckCircle className="h-4 w-4 mr-2" />Use This Ad
+                                </Button>
+                                <Button onClick={() => { setGeneratedUrl(null); setScreenPlan(null); }} variant="outline">
+                                    Regenerate
+                                </Button>
+                            </>
                         )}
-                    </TabsContent>
+                        {onClose && (
+                            <Button onClick={onClose} variant="outline">Cancel</Button>
+                        )}
+                    </div>
+                </TabsContent>
 
-                    <TabsContent value="optimize" className="space-y-6 mt-6">
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <p className="text-sm text-green-800">
-                                <strong>✨ Content Optimization:</strong> Get AI-powered title and description suggestions based on your keywords.
-                            </p>
-                        </div>
-
+                {/* ── VARIATIONS TAB ── */}
+                <TabsContent value="variations" className="mt-6 space-y-5">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <p className="text-sm text-purple-800"><strong>🔄 Generate 3 variations</strong> — different compositions of the same screen ad</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>Keywords</Label>
-                            <Input
-                                value={keywords}
-                                onChange={(e) => setKeywords(e.target.value)}
-                                placeholder="e.g., burger, special offer, weekend deal"
-                                className="mt-2"
-                            />
+                            <Label>Category</Label>
+                            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                <SelectTrigger className="mt-2"><SelectValue placeholder="All categories" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={null}>All</SelectItem>
+                                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
+                        <div>
+                            <Label>Orientation</Label>
+                            <Select value={orientation} onValueChange={setOrientation}>
+                                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="landscape">Landscape 16:9</SelectItem>
+                                    <SelectItem value="portrait">Portrait 9:16</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <Button onClick={handleGenerateVariations} className="w-full bg-purple-600 hover:bg-purple-700" disabled={isGeneratingContent}>
+                        {isGeneratingContent ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><RefreshCw className="h-4 w-4 mr-2" />Generate 3 Variations</>}
+                    </Button>
+                    {variations.length > 0 && (
+                        <div className="grid grid-cols-3 gap-4">
+                            {variations.map((v, i) => (
+                                <Card key={i} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setGeneratedUrl(v.url); setActiveTab('screen'); }}>
+                                    <div className={`${orientation === 'portrait' ? 'aspect-[9/16]' : 'aspect-video'} bg-gray-900`}>
+                                        <img src={v.url} alt={v.label} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="p-2">
+                                        <p className="text-xs font-semibold text-center">{v.label}</p>
+                                        <Button size="sm" className="w-full mt-1" variant="outline">Use This</Button>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </TabsContent>
 
-                        <Button 
-                            onClick={handleOptimizeContent}
-                            className="w-full bg-green-600 hover:bg-green-700"
-                            disabled={isOptimizing}
-                        >
-                            {isOptimizing ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Optimizing...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Generate Optimized Suggestions
-                                </>
-                            )}
-                        </Button>
-
-                        {optimizedSuggestions && (
-                            <div className="space-y-3">
-                                {optimizedSuggestions.map((suggestion, index) => (
-                                    <Card key={index} className="p-4 hover:shadow-md transition-shadow">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1">
-                                                <h4 className="font-semibold text-sm mb-1">{suggestion.title}</h4>
-                                                <p className="text-xs text-gray-600">{suggestion.description}</p>
-                                            </div>
-                                            <Button size="sm" variant="outline" onClick={() => useSuggestion(suggestion)}>
-                                                Use
-                                            </Button>
+                {/* ── OPTIMIZE TAB ── */}
+                <TabsContent value="optimize" className="mt-6 space-y-5">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p className="text-sm text-green-800"><strong>⚡ AI Copy Optimizer</strong> — Generate aggressive, high-conversion headlines & hooks for your screen ads</p>
+                    </div>
+                    <div>
+                        <Label>Keywords / Items to promote</Label>
+                        <Input value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="e.g. loaded burger, weekend special, crispy wings" className="mt-2" />
+                    </div>
+                    <Button onClick={handleOptimizeContent} className="w-full bg-green-600 hover:bg-green-700" disabled={isOptimizing}>
+                        {isOptimizing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate High-Conversion Copy</>}
+                    </Button>
+                    {optimizedSuggestions?.length > 0 && (
+                        <div className="space-y-3">
+                            {optimizedSuggestions.map((s, i) => (
+                                <Card key={i} className="p-4 hover:shadow-md transition-shadow border-l-4 border-l-orange-400">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1">
+                                            <p className="font-black text-sm">{s.title}</p>
+                                            <p className="text-orange-600 font-bold text-xs mt-0.5">{s.hook}</p>
+                                            <Badge variant="outline" className="text-[10px] mt-1">{s.cta}</Badge>
                                         </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-
-                    <TabsContent value="social" className="space-y-6 mt-6">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p className="text-sm text-blue-800">
-                                <strong>📱 Social Media:</strong> Generate platform-optimized snippets for Instagram, Facebook, and Twitter.
-                            </p>
+                                        <Button size="sm" variant="outline" onClick={() => { setCustomPrompt(s.title + ' ' + s.hook); setActiveTab('screen'); }}>Use</Button>
+                                    </div>
+                                </Card>
+                            ))}
                         </div>
+                    )}
+                </TabsContent>
 
-                        <div>
-                            <Label>Content Description</Label>
-                            <Textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Describe your promotional content..."
-                                rows={3}
-                                className="mt-2"
-                            />
-                        </div>
-
-                        <Button 
-                            onClick={handleGenerateSocialSnippets}
-                            className="w-full bg-blue-600 hover:bg-blue-700"
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Generating...
-                                </>
-                            ) : (
-                                <>
-                                    <Share2 className="h-4 w-4 mr-2" />
-                                    Generate Social Snippets
-                                </>
-                            )}
-                        </Button>
-
-                        {socialSnippets && (
-                            <div className="space-y-4">
-                                {Object.entries(socialSnippets).map(([platform, text]) => (
-                                    <Card key={platform} className="p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1">
-                                                <h4 className="font-semibold text-sm mb-2 capitalize">{platform}</h4>
-                                                <p className="text-sm text-gray-700">{text}</p>
-                                            </div>
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline"
-                                                onClick={() => copyToClipboard(text)}
-                                            >
-                                                <Copy className="h-4 w-4" />
-                                            </Button>
+                {/* ── SOCIAL TAB ── */}
+                <TabsContent value="social" className="mt-6 space-y-5">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-sm text-blue-800"><strong>📱 Social Media Copy</strong> — Repurpose your screen ad content for Instagram, Facebook & Twitter</p>
+                    </div>
+                    <div>
+                        <Label>Content to repurpose</Label>
+                        <Textarea value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder="Describe your promotion or generate a screen ad first..." rows={3} className="mt-2" />
+                    </div>
+                    <Button onClick={handleGenerateSocialSnippets} className="w-full bg-blue-600 hover:bg-blue-700" disabled={isGeneratingContent}>
+                        {isGeneratingContent ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Share2 className="h-4 w-4 mr-2" />Generate Social Posts</>}
+                    </Button>
+                    {socialSnippets && (
+                        <div className="space-y-3">
+                            {Object.entries(socialSnippets).map(([platform, text]) => (
+                                <Card key={platform} className="p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1">
+                                            <p className="font-bold text-sm capitalize mb-1">{platform === 'twitter' ? 'X / Twitter' : platform}</p>
+                                            <p className="text-sm text-gray-700">{text}</p>
                                         </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
+                                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(text)}><Copy className="h-4 w-4" /></Button>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
