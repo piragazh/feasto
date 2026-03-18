@@ -414,69 +414,74 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                             )}
                                                                             </div>
                                                                     </div>
-                                                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                                                        {item.media_type !== 'video' ? (
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className="text-xs text-gray-400">Duration:</span>
-                                                                                <Input
-                                                                                    type="number"
-                                                                                    value={item.duration || 10}
-                                                                                    onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { duration: parseInt(e.target.value) || 10 } })}
-                                                                                    className="w-14 h-7 text-xs text-center p-1"
-                                                                                    min="1"
-                                                                                    onClick={e => e.stopPropagation()}
-                                                                                />
-                                                                                <span className="text-xs text-gray-400">s</span>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className="text-xs text-gray-400">Loops:</span>
-                                                                                <Input
-                                                                                    type="number"
-                                                                                    value={item.video_loop_count || 1}
-                                                                                    onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { video_loop_count: parseInt(e.target.value) || 1 } })}
-                                                                                    className="w-14 h-7 text-xs text-center p-1"
-                                                                                    min="1"
-                                                                                />
-                                                                            </div>
-                                                                        )}
-                                                                        <Select
-                                                                            value={item.transition || 'fade'}
-                                                                            onValueChange={(val) => updateContentMutation.mutate({ id: item.id, data: { transition: val } })}
-                                                                        >
-                                                                            <SelectTrigger className="h-7 w-24 text-xs">
-                                                                                <SelectValue />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                <SelectItem value="fade">Fade</SelectItem>
-                                                                                <SelectItem value="slide">Slide</SelectItem>
-                                                                                <SelectItem value="zoom">Zoom</SelectItem>
-                                                                                <SelectItem value="none">None</SelectItem>
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                        <Switch
-                                                                            checked={item.is_active}
-                                                                            onCheckedChange={(v) => updateContentMutation.mutate({ id: item.id, data: { is_active: v } })}
-                                                                        />
-                                                                        {item.media_type === 'image' && (
-                                                                            <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: item.id, media_url: item.media_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
-                                                                                <Edit className="h-3.5 w-3.5" />
+                                                                    <div className="flex flex-col gap-1.5 flex-shrink-0 items-end">
+                                                                        {/* Row 1: duration/loops + transition + active toggle */}
+                                                                        <div className="flex items-center gap-1 md:gap-2">
+                                                                            {item.media_type !== 'video' ? (
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        value={item.duration || 10}
+                                                                                        onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { duration: parseInt(e.target.value) || 10 } })}
+                                                                                        className="w-12 h-7 text-xs text-center p-1"
+                                                                                        min="1"
+                                                                                        onClick={e => e.stopPropagation()}
+                                                                                    />
+                                                                                    <span className="text-xs text-gray-400">s</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        value={item.video_loop_count || 1}
+                                                                                        onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { video_loop_count: parseInt(e.target.value) || 1 } })}
+                                                                                        className="w-12 h-7 text-xs text-center p-1"
+                                                                                        min="1"
+                                                                                    />
+                                                                                    <span className="text-xs text-gray-400">×</span>
+                                                                                </div>
+                                                                            )}
+                                                                            <Select
+                                                                                value={item.transition || 'fade'}
+                                                                                onValueChange={(val) => updateContentMutation.mutate({ id: item.id, data: { transition: val } })}
+                                                                            >
+                                                                                <SelectTrigger className="h-7 w-20 text-xs">
+                                                                                    <SelectValue />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <SelectItem value="fade">Fade</SelectItem>
+                                                                                    <SelectItem value="slide">Slide</SelectItem>
+                                                                                    <SelectItem value="zoom">Zoom</SelectItem>
+                                                                                    <SelectItem value="none">None</SelectItem>
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                            <Switch
+                                                                                checked={item.is_active}
+                                                                                onCheckedChange={(v) => updateContentMutation.mutate({ id: item.id, data: { is_active: v } })}
+                                                                            />
+                                                                        </div>
+                                                                        {/* Row 2: action buttons */}
+                                                                        <div className="flex items-center gap-0.5">
+                                                                            {item.media_type === 'image' && (
+                                                                                <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: item.id, media_url: item.media_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
+                                                                                    <Edit className="h-3.5 w-3.5" />
+                                                                                </Button>
+                                                                            )}
+                                                                            {item.media_type === 'video' && (
+                                                                                <Button size="sm" variant="ghost" onClick={() => setEditingVideo(item.media_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit video">
+                                                                                    <RotateCw className="h-3.5 w-3.5" />
+                                                                                </Button>
+                                                                            )}
+                                                                            <Button size="sm" variant="ghost" onClick={() => { setSchedulingContent(item); setShowScheduler(true); }} className={`h-8 w-8 p-0 hover:text-violet-600 ${item.schedule?.enabled ? 'text-violet-500' : 'text-gray-400'}`} title="Schedule">
+                                                                                <Clock className="h-3.5 w-3.5" />
                                                                             </Button>
-                                                                        )}
-                                                                        {item.media_type === 'video' && (
-                                                                            <Button size="sm" variant="ghost" onClick={() => setEditingVideo(item.media_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit video">
-                                                                                <RotateCw className="h-3.5 w-3.5" />
+                                                                            <Button size="sm" variant="ghost" onClick={() => setTemplatePickerItem(item)} className={`h-8 w-8 p-0 hover:text-orange-600 ${item.layout_template ? 'text-orange-500' : 'text-gray-400'}`} title="Set layout template">
+                                                                                <Layout className="h-3.5 w-3.5" />
                                                                             </Button>
-                                                                        )}
-                                                                        <Button size="sm" variant="ghost" onClick={() => { setSchedulingContent(item); setShowScheduler(true); }} className="h-8 w-8 p-0 text-gray-400 hover:text-violet-600" title="Schedule">
-                                                                            <Clock className="h-3.5 w-3.5" />
-                                                                        </Button>
-                                                                        <Button size="sm" variant="ghost" onClick={() => setTemplatePickerItem(item)} className={`h-8 w-8 p-0 hover:text-orange-600 ${item.layout_template ? 'text-orange-500' : 'text-gray-400'}`} title="Set layout template for this item">
-                                                                            <Layout className="h-3.5 w-3.5" />
-                                                                        </Button>
-                                                                        <Button size="sm" variant="ghost" onClick={() => deleteContentMutation.mutate(item.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
-                                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                                        </Button>
+                                                                            <Button size="sm" variant="ghost" onClick={() => deleteContentMutation.mutate(item.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
