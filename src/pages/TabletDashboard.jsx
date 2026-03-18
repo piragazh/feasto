@@ -1212,31 +1212,46 @@ export default function TabletDashboard() {
 
     const setupPWA = async () => {
         try {
-            // Try saved restaurant ID first, then URL param
             const savedRestaurantId = sessionStorage.getItem('tablet_restaurant_id');
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
-            // Set manifest link
+            // Create a data URL for the manifest to avoid fetch issues
+            const manifest = {
+                "name": rid ? "Restaurant Tablet" : "MealDrop Tablet",
+                "short_name": "Tablet",
+                "description": "Tablet management dashboard",
+                "start_url": rid ? `/TabletDashboard?restaurant_id=${rid}` : "/TabletDashboard",
+                "display": "standalone",
+                "background_color": "#ffffff",
+                "theme_color": "#f97316",
+                "orientation": "landscape-primary",
+                "icons": [
+                    {
+                        "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
+                        "sizes": "192x192",
+                        "type": "image/png",
+                        "purpose": "any maskable"
+                    },
+                    {
+                        "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
+                        "sizes": "512x512",
+                        "type": "image/png",
+                        "purpose": "any maskable"
+                    }
+                ]
+            };
+
+            // Set manifest link with data URL
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
                 manifestLink.rel = 'manifest';
                 document.head.appendChild(manifestLink);
             }
-            const manifestUrl = rid
-                ? `/api/getManifest?restaurant_id=${rid}&mode=tablet`
-                : `/api/getManifest?mode=tablet`;
-            manifestLink.href = manifestUrl;
-
-            // Force fetch manifest to trigger browser PWA detection
-            try {
-                const response = await fetch(manifestUrl);
-                const manifest = await response.json();
-                console.log('✅ PWA Manifest loaded:', manifest.name);
-            } catch (err) {
-                console.warn('Failed to prefetch manifest:', err);
-            }
+            const dataUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
+            manifestLink.href = dataUrl;
+            console.log('✅ PWA Manifest set:', manifest.name);
 
             // Register service worker for offline support
             if ('serviceWorker' in navigator) {
