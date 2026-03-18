@@ -261,7 +261,7 @@ export default function StudioPlaylists({ restaurantId }) {
                             const isSelected = selectedScreen?.id === screen.id;
                             return (
                                 <div key={screen.id} className={`group flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors border-r-2 ${isSelected ? 'bg-orange-50 border-orange-500' : 'border-transparent'}`}
-                                    onClick={() => setSelectedScreen(screen)}
+                                    onClick={() => handleSelectScreen(screen)}
                                 >
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-orange-100' : 'bg-gray-100'}`}>
                                         <Monitor className={`h-4 w-4 ${isSelected ? 'text-orange-600' : 'text-gray-500'}`} />
