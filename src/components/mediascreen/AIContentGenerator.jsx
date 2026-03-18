@@ -496,6 +496,9 @@ Return a JSON screen ad plan with this exact structure:
                             </Button>
                         ) : (
                             <>
+                                <Button onClick={() => setShowCanvasEditor(true)} className="flex-1 bg-purple-600 hover:bg-purple-700">
+                                    <PenLine className="h-4 w-4 mr-2" />Edit in Canvas
+                                </Button>
                                 <Button onClick={handleAddToLibrary} className="flex-1 bg-blue-600 hover:bg-blue-700">
                                     <Library className="h-4 w-4 mr-2" />Add to Library
                                 </Button>
