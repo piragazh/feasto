@@ -1225,8 +1225,8 @@ export default function TabletDashboard() {
                 document.head.appendChild(manifestLink);
             }
             const manifestUrl = rid
-                ? `/.netlify/functions/getManifest?restaurant_id=${rid}&mode=tablet`
-                : `/.netlify/functions/getManifest?mode=tablet`;
+                ? `/api/getManifest?restaurant_id=${rid}&mode=tablet`
+                : `/api/getManifest?mode=tablet`;
             manifestLink.href = manifestUrl;
 
             // Force fetch manifest to trigger browser PWA detection
