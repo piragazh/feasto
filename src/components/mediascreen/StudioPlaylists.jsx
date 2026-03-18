@@ -38,7 +38,7 @@ export default function StudioPlaylists({ restaurantId }) {
     const [schedulingContent, setSchedulingContent] = useState(null);
     const [showAddScreen, setShowAddScreen] = useState(false);
     const [newScreenName, setNewScreenName] = useState('');
-    const [editingItem, setEditingItem] = useState(null);
+
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, media_url }
     const [editingVideo, setEditingVideo] = useState(null);
     const [showWidgetPicker, setShowWidgetPicker] = useState(false);
