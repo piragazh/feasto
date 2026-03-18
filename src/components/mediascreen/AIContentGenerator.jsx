@@ -645,5 +645,6 @@ Return a JSON screen ad plan with this exact structure:
                 </TabsContent>
             </Tabs>
         </div>
+        </>
     );
 }
