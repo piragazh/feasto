@@ -33,6 +33,7 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
     const [keywords, setKeywords] = useState('');
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [optimizedSuggestions, setOptimizedSuggestions] = useState(null);
+    const [showCanvasEditor, setShowCanvasEditor] = useState(false);
 
     useEffect(() => {
         if (initialPrompt) setCustomPrompt(initialPrompt);
