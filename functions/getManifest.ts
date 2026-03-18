@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
             manifest.short_name = "Tablet";
             manifest.description = "Restaurant tablet management";
             manifest.start_url = "/TabletDashboard";
-            manifest.orientation = "landscape-primary";
             manifest.categories = ["productivity"];
         }
     } catch (e) {
