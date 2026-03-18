@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2, Copy, Share2, RefreshCw, Monitor, Smartphone, Zap, Image, Eye, CheckCircle, Library, Plus } from 'lucide-react';
+import { Sparkles, Loader2, Copy, Share2, RefreshCw, Monitor, Smartphone, Zap, Image, Eye, CheckCircle, Library, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
+import CanvasEditor from './CanvasEditor';
 
 export default function AIContentGenerator({ onClose, onContentGenerated, restaurantName, restaurantId, restaurantColor = '#f97316', websiteUrl = '', existingContent, initialPrompt = '' }) {
     const queryClient = useQueryClient();
