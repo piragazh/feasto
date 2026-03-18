@@ -1212,7 +1212,7 @@ export default function TabletDashboard() {
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
-            // Build manifest object directly (no fetch needed)
+            // Build manifest
             const manifest = {
                 "name": rid ? "Restaurant Tablet" : "MealDrop Tablet",
                 "short_name": "Tablet",
@@ -1223,6 +1223,7 @@ export default function TabletDashboard() {
                 "theme_color": "#f97316",
                 "orientation": "landscape-primary",
                 "scope": "/",
+                "categories": ["productivity"],
                 "icons": [
                     {
                         "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
@@ -1239,18 +1240,19 @@ export default function TabletDashboard() {
                 ]
             };
 
-            // Set manifest as blob URL
-            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-            const blobUrl = URL.createObjectURL(blob);
-            
+            // Create and set manifest via data URL (inline approach)
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
                 manifestLink.rel = 'manifest';
                 document.head.appendChild(manifestLink);
             }
-            manifestLink.href = blobUrl;
-            console.log('✅ PWA Manifest ready (blob URL)');
+
+            // Use data: URL for instant availability without network fetch
+            const dataUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
+            manifestLink.href = dataUrl;
+            
+            console.log('✅ PWA Manifest set (data URL)', { name: manifest.name, start_url: manifest.start_url });
 
             // Register service worker
             if ('serviceWorker' in navigator) {
@@ -1258,11 +1260,11 @@ export default function TabletDashboard() {
                     await navigator.serviceWorker.register('/sw.js');
                     console.log('✅ Service worker registered');
                 } catch (err) {
-                    console.log('Service worker registration failed:', err);
+                    console.log('Service worker registration failed:', err.message);
                 }
             }
         } catch (err) {
-            console.log('PWA setup error:', err);
+            console.error('PWA setup error:', err);
         }
     };
 
