@@ -625,6 +625,7 @@ export default function StudioPlaylists({ restaurantId }) {
                             <Zap className="h-5 w-5 text-yellow-500" />
                             Add Widget to "{selectedScreen?.screen_name}"
                         </DialogTitle>
+                        <DialogDescription>Select a widget configuration to insert into this screen's playlist.</DialogDescription>
                     </DialogHeader>
                     {widgetConfigs.length === 0 ? (
                         <div className="text-center py-10">
