@@ -500,7 +500,7 @@ export default function StudioPlaylists({ restaurantId }) {
             </div>
 
             {/* Right: Media picker */}
-            <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+            <div className={`${mobileView === 'library' ? 'flex' : 'hidden'} md:flex w-full md:w-72 bg-white border-l border-gray-200 flex-col flex-shrink-0`}>
                 <div className="px-4 py-3 border-b border-gray-100">
                     <h3 className="font-bold text-gray-900 text-sm">Media Library</h3>
                     <p className="text-xs text-gray-400 mt-0.5">Click to add to playlist</p>
