@@ -284,7 +284,7 @@ export default function StudioPlaylists({ restaurantId }) {
             </div>
 
             {/* Center: Playlist */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+            <div className={`${mobileView === 'playlist' ? 'flex' : 'hidden'} md:flex flex-1 flex-col overflow-hidden bg-gray-50`}>
                 {!selectedScreen ? (
                     <div className="flex-1 flex items-center justify-center">
                         <div className="text-center">
