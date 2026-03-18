@@ -1,129 +1,92 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
+    const fallbackManifest = {
+        "name": "MealDrop",
+        "short_name": "MealDrop",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#f97316",
+        "scope": "/",
+        "icons": [
+            {
+                "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ]
+    };
+
     try {
         const url = new URLSearchParams(req.url.split('?')[1]);
         const restaurantId = url.get('restaurant_id');
         const mode = url.get('mode');
 
-        // Default manifest
-        let manifest = {
-            "name": "MealDrop",
-            "short_name": "MealDrop",
-            "description": "Order food from your favourite restaurants",
-            "start_url": "/",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#f97316",
-            "orientation": "portrait-primary",
-            "scope": "/",
-            "categories": ["food"],
-            "icons": [
-                {
-                    "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                    "sizes": "192x192",
-                    "type": "image/png",
-                    "purpose": "any maskable"
-                },
-                {
-                    "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                    "sizes": "512x512",
-                    "type": "image/png",
-                    "purpose": "any maskable"
-                }
-            ]
-        };
+        let manifest = { ...fallbackManifest };
 
-        // Tablet mode without restaurant ID
-        if (!restaurantId && mode === 'tablet') {
+        // Tablet mode
+        if (mode === 'tablet' && !restaurantId) {
             manifest.name = "MealDrop Tablet";
             manifest.short_name = "Tablet";
             manifest.description = "Restaurant tablet management";
             manifest.start_url = "/TabletDashboard";
-            manifest.display = "standalone";
             manifest.orientation = "landscape-primary";
-            manifest.scope = "/";
             manifest.categories = ["productivity"];
         }
 
-        // Customize with restaurant data if provided
+        // Customize with restaurant if provided
         if (restaurantId) {
             try {
                 const base44 = createClientFromRequest(req);
                 const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
                 const restaurant = restaurants?.[0];
 
-            if (restaurant) {
-                const themeColor = restaurant.theme_primary_color || "#f97316";
+                if (restaurant) {
+                    const themeColor = restaurant.theme_primary_color || "#f97316";
+                    const iconUrl = restaurant.logo_url || fallbackManifest.icons[0].src;
 
-                if (mode === 'dashboard') {
-                    // Restaurant Dashboard PWA
-                    manifest.name = `${restaurant.name} Dashboard`;
+                    manifest.name = mode === 'dashboard' ? `${restaurant.name} Dashboard` : mode === 'pos' ? `${restaurant.name} POS` : mode === 'tablet' ? `${restaurant.name} Tablet` : restaurant.name;
                     manifest.short_name = restaurant.name.substring(0, 12);
-                    manifest.description = `Manage orders and settings for ${restaurant.name}`;
-                    manifest.start_url = `/RestaurantDashboard?restaurant_id=${restaurantId}`;
+                    manifest.description = mode === 'dashboard' ? `Manage orders for ${restaurant.name}` : mode === 'pos' ? `POS for ${restaurant.name}` : mode === 'tablet' ? `Tablet for ${restaurant.name}` : restaurant.description || `Order from ${restaurant.name}`;
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
-                    manifest.scope = "/";
-                    manifest.categories = ["productivity"];
-                } else if (mode === 'pos') {
-                    // POS PWA
-                    manifest.name = `${restaurant.name} POS`;
-                    manifest.short_name = `${restaurant.name.substring(0, 9)} POS`;
-                    manifest.description = `Point of Sale for ${restaurant.name}`;
-                    manifest.start_url = `/POSDashboard?restaurantId=${restaurantId}`;
-                    manifest.display = "fullscreen";
-                    manifest.theme_color = themeColor;
-                    manifest.background_color = themeColor;
-                    manifest.scope = "/";
-                    manifest.categories = ["productivity"];
-                } else if (mode === 'tablet') {
-                    // Tablet Dashboard PWA
-                    manifest.name = `${restaurant.name} Tablet`;
-                    manifest.short_name = restaurant.name.substring(0, 12);
-                    manifest.description = `Tablet management for ${restaurant.name}`;
-                    manifest.start_url = `/TabletDashboard?restaurant_id=${restaurantId}`;
-                    manifest.display = "standalone";
-                    manifest.orientation = "landscape-primary";
-                    manifest.theme_color = themeColor;
-                    manifest.background_color = themeColor;
-                    manifest.scope = "/";
-                    manifest.categories = ["productivity"];
-                } else {
-                    // Customer-facing PWA for custom domain
-                    manifest.name = restaurant.name;
-                    manifest.short_name = restaurant.name.substring(0, 12);
-                    manifest.description = restaurant.description || `Order from ${restaurant.name}`;
-                    manifest.start_url = `/Restaurant?id=${restaurantId}`;
-                    manifest.theme_color = themeColor;
-                    manifest.scope = "/";
-                    manifest.categories = ["food"];
-                }
-                
-                const iconUrl = restaurant.logo_url || "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png";
-                manifest.icons = [
-                    {
-                        "src": iconUrl,
-                        "sizes": "192x192",
-                        "type": "image/png",
-                        "purpose": "any maskable"
-                    },
-                    {
-                        "src": iconUrl,
-                        "sizes": "512x512",
-                        "type": "image/png",
-                        "purpose": "any maskable"
+
+                    if (mode === 'dashboard') {
+                        manifest.start_url = `/RestaurantDashboard?restaurant_id=${restaurantId}`;
+                        manifest.categories = ["productivity"];
+                    } else if (mode === 'pos') {
+                        manifest.start_url = `/POSDashboard?restaurantId=${restaurantId}`;
+                        manifest.display = "fullscreen";
+                        manifest.categories = ["productivity"];
+                    } else if (mode === 'tablet') {
+                        manifest.start_url = `/TabletDashboard?restaurant_id=${restaurantId}`;
+                        manifest.orientation = "landscape-primary";
+                        manifest.categories = ["productivity"];
+                    } else {
+                        manifest.start_url = `/Restaurant?id=${restaurantId}`;
+                        manifest.categories = ["food"];
                     }
-                ];
-            }
-            } catch (restaurantError) {
-                console.error('[getManifest] Restaurant fetch error:', restaurantError.message);
-                // Continue with default manifest if restaurant fetch fails
+
+                    manifest.icons = [
+                        { "src": iconUrl, "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+                        { "src": iconUrl, "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+                    ];
+                }
+            } catch (err) {
+                console.error('[getManifest] Restaurant fetch failed:', err.message);
+                // Use fallback manifest
             }
         }
 
-        const manifestJson = JSON.stringify(manifest);
-        return new Response(manifestJson, {
+        return new Response(JSON.stringify(manifest), {
             status: 200,
             headers: {
                 'Content-Type': 'application/manifest+json',
@@ -131,24 +94,7 @@ Deno.serve(async (req) => {
             }
         });
     } catch (error) {
-        console.error('[getManifest] Error:', error.message);
-        // Return fallback manifest even on error
-        const fallbackManifest = {
-            "name": "MealDrop",
-            "short_name": "MealDrop",
-            "start_url": "/",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#f97316",
-            "icons": [
-                {
-                    "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                    "sizes": "192x192",
-                    "type": "image/png",
-                    "purpose": "any maskable"
-                }
-            ]
-        };
+        console.error('[getManifest] Critical error:', error.message);
         return new Response(JSON.stringify(fallbackManifest), {
             status: 200,
             headers: {
