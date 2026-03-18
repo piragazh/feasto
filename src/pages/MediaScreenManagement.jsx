@@ -116,7 +116,6 @@ export default function MediaScreenManagement() {
                             <p className="text-gray-500 text-sm mt-1">Generate promotional images using AI</p>
                         </div>
                         <AIContentGenerator
-                            open={true}
                             onClose={() => setActiveSection('library')}
                             onContentGenerated={(content) => {
                                 base44.entities.PromotionalContent.create({
@@ -130,6 +129,9 @@ export default function MediaScreenManagement() {
                                 setActiveSection('library');
                             }}
                             restaurantName={restaurant.name}
+                            restaurantId={restaurant.id}
+                            restaurantColor={restaurant.theme_primary_color || '#f97316'}
+                            websiteUrl={restaurant.custom_domain || ''}
                         />
                     </div>
                 );
