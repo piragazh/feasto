@@ -3,9 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     Monitor, ArrowLeft, BarChart3, Play, Image as ImageIcon,
-    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio
+    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio, Menu, X
 } from 'lucide-react';
 import StudioOverview from '@/components/mediascreen/StudioOverview';
 import StudioPlaylists from '@/components/mediascreen/StudioPlaylists';
