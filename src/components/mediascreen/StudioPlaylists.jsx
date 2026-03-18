@@ -364,6 +364,23 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                                     {item.layout_template.name}
                                                                                 </Badge>
                                                                             )}
+                                                                            {item.schedule?.enabled && (
+                                                                                <Badge className="text-[10px] h-5 px-1.5 bg-violet-100 text-violet-700 border-violet-200 gap-1">
+                                                                                    <Clock className="h-2.5 w-2.5" />
+                                                                                    {item.schedule.recurring?.enabled
+                                                                                        ? (() => {
+                                                                                            const days = item.schedule.recurring.days_of_week || [];
+                                                                                            const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                                                                                            if (days.length === 7) return 'Every day';
+                                                                                            if (JSON.stringify(days) === JSON.stringify([1,2,3,4,5])) return 'Weekdays';
+                                                                                            if (JSON.stringify(days) === JSON.stringify([0,6])) return 'Weekends';
+                                                                                            if (days.length === 1) return `Every ${names[days[0]]}`;
+                                                                                            return days.map(d => names[d]).join(', ');
+                                                                                        })()
+                                                                                        : 'Scheduled'
+                                                                                    }
+                                                                                </Badge>
+                                                                            )}
                                                                             </div>
                                                                     </div>
                                                                     <div className="flex items-center gap-2 flex-shrink-0">
