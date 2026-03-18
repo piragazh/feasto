@@ -5,6 +5,7 @@ import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
 import MultiZoneDisplay from './MultiZoneDisplay';
 import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
 import WidgetRenderer from './WidgetRenderer';
+import { useMediaPrecache } from '@/hooks/useMediaPrecache';
 
 // --- localStorage cache helpers ---
 const CACHE_VERSION = 'v1';
