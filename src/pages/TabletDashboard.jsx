@@ -1202,31 +1202,41 @@ export default function TabletDashboard() {
 
     const setupPWA = async () => {
         try {
-            // Get restaurant from URL or default
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id');
-            
-            if (rid) {
-                // Update manifest link for tablet mode
-                let manifestLink = document.querySelector('link[rel="manifest"]');
-                if (!manifestLink) {
-                    manifestLink = document.createElement('link');
-                    manifestLink.rel = 'manifest';
-                    document.head.appendChild(manifestLink);
-                }
-                manifestLink.href = `/.netlify/functions/getManifest?restaurant_id=${rid}&mode=tablet`;
 
-                // Register service worker for offline support
-                if ('serviceWorker' in navigator) {
-                    try {
-                        await navigator.serviceWorker.register('/sw.js');
-                    } catch (err) {
-                        console.log('Service worker registration failed:', err);
-                    }
+            // Always set manifest for tablet mode (with or without restaurant_id)
+            let manifestLink = document.querySelector('link[rel="manifest"]');
+            if (!manifestLink) {
+                manifestLink = document.createElement('link');
+                manifestLink.rel = 'manifest';
+                document.head.appendChild(manifestLink);
+            }
+            manifestLink.href = rid
+                ? `/.netlify/functions/getManifest?restaurant_id=${rid}&mode=tablet`
+                : `/.netlify/functions/getManifest?mode=tablet`;
+
+            // Register service worker for offline support
+            if ('serviceWorker' in navigator) {
+                try {
+                    await navigator.serviceWorker.register('/sw.js');
+                } catch (err) {
+                    console.log('Service worker registration failed:', err);
                 }
             }
         } catch (err) {
             console.log('PWA setup error:', err);
+        }
+    };
+
+    const handleInstall = async () => {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setIsInstalled(true);
+            setInstallPrompt(null);
+            toast.success('App installed successfully!');
         }
     };
 
