@@ -1221,24 +1221,14 @@ export default function TabletDashboard() {
                 manifestUrl += `&restaurant_id=${rid}`;
             }
 
-            const response = await fetch(manifestUrl);
-            if (!response.ok) {
-                console.error('Manifest fetch failed:', response.status);
-                return;
-            }
-
-            const manifest = await response.json();
-            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-            const blobUrl = URL.createObjectURL(blob);
-            
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
                 manifestLink.rel = 'manifest';
                 document.head.appendChild(manifestLink);
             }
-            manifestLink.href = blobUrl;
-            console.log('✅ PWA Manifest set');
+            manifestLink.href = manifestUrl;
+            console.log('✅ PWA Manifest linked:', manifestUrl);
 
             if ('serviceWorker' in navigator) {
                 await navigator.serviceWorker.register('/sw.js');
