@@ -1208,21 +1208,32 @@ export default function TabletDashboard() {
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id');
 
-            // Always set manifest for tablet mode (with or without restaurant_id)
+            // Set manifest link
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
                 manifestLink.rel = 'manifest';
                 document.head.appendChild(manifestLink);
             }
-            manifestLink.href = rid
+            const manifestUrl = rid
                 ? `/.netlify/functions/getManifest?restaurant_id=${rid}&mode=tablet`
                 : `/.netlify/functions/getManifest?mode=tablet`;
+            manifestLink.href = manifestUrl;
+
+            // Force fetch manifest to trigger browser PWA detection
+            try {
+                const response = await fetch(manifestUrl);
+                const manifest = await response.json();
+                console.log('✅ PWA Manifest loaded:', manifest.name);
+            } catch (err) {
+                console.warn('Failed to prefetch manifest:', err);
+            }
 
             // Register service worker for offline support
             if ('serviceWorker' in navigator) {
                 try {
                     await navigator.serviceWorker.register('/sw.js');
+                    console.log('✅ Service worker registered');
                 } catch (err) {
                     console.log('Service worker registration failed:', err);
                 }
