@@ -240,15 +240,7 @@ export default function AIContentGenerator({ open, onClose, onContentGenerated, 
     };
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Wand2 className="h-5 w-5 text-purple-500" />
-                        AI Content Generator
-                    </DialogTitle>
-                </DialogHeader>
-
+        <div className="max-w-4xl">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="create">Create</TabsTrigger>
