@@ -258,7 +258,22 @@ Return a JSON screen ad plan with this exact structure:
 
     const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success('Copied!'); };
 
+    const handleCanvasUse = (url) => {
+        setGeneratedUrl(url);
+        setShowCanvasEditor(false);
+        toast.success('Canvas exported — ready to use or add to library');
+    };
+
     return (
+        <>
+        <CanvasEditor
+            open={showCanvasEditor}
+            onClose={() => setShowCanvasEditor(false)}
+            backgroundUrl={generatedUrl}
+            restaurantId={restaurantId}
+            menuItems={menuItems}
+            onUse={handleCanvasUse}
+        />
         <div className="w-full">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-4">
