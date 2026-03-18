@@ -1212,20 +1212,35 @@ export default function TabletDashboard() {
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
+            // Fetch manifest directly to ensure valid JSON
             let manifestUrl = '/getManifest?mode=tablet';
             if (rid) {
                 manifestUrl += `&restaurant_id=${rid}`;
             }
 
-            let manifestLink = document.querySelector('link[rel="manifest"]');
-            if (!manifestLink) {
-                manifestLink = document.createElement('link');
-                manifestLink.rel = 'manifest';
-                document.head.appendChild(manifestLink);
+            try {
+                const response = await fetch(manifestUrl);
+                if (!response.ok) {
+                    console.error('Manifest fetch failed:', response.status, response.statusText);
+                    return;
+                }
+                const manifest = await response.json();
+                
+                // Create blob URL from the fetched manifest
+                const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                let manifestLink = document.querySelector('link[rel="manifest"]');
+                if (!manifestLink) {
+                    manifestLink = document.createElement('link');
+                    manifestLink.rel = 'manifest';
+                    document.head.appendChild(manifestLink);
+                }
+                manifestLink.href = blobUrl;
+                console.log('✅ PWA Manifest loaded and set as blob URL');
+            } catch (err) {
+                console.error('Failed to fetch manifest:', err.message);
             }
-
-            manifestLink.href = manifestUrl;
-            console.log('✅ PWA Manifest linked:', manifestUrl);
 
             // Register service worker
             if ('serviceWorker' in navigator) {
