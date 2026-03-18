@@ -327,7 +327,7 @@ export default function StudioPlaylists({ restaurantId }) {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
                             {screenPlaylist.length === 0 ? (
                                 <div
                                     onClick={() => setShowAddDialog(true)}
