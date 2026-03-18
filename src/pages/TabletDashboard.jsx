@@ -1234,13 +1234,17 @@ export default function TabletDashboard() {
 
     const handleInstall = async () => {
         if (!installPrompt) return;
-        installPrompt.prompt();
-        const { outcome } = await installPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setIsInstalled(true);
-            setInstallPrompt(null);
-            window.__pwaInstallPrompt = null;
-            toast.success('App installed successfully!');
+        try {
+            await installPrompt.prompt();
+            const { outcome } = await installPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setIsInstalled(true);
+                setInstallPrompt(null);
+                window.__pwaInstallPrompt = null;
+                toast.success('App installed!');
+            }
+        } catch (err) {
+            toast.error('Install failed: ' + err.message);
         }
     };
 
