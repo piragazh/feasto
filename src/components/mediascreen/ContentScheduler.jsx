@@ -244,6 +244,29 @@ export default function ContentScheduler({ open, onClose, content, onSave }) {
 
                                 {schedule.recurring.enabled && (
                                     <>
+                                        {/* Quick presets */}
+                                        <div>
+                                            <Label className="text-xs text-gray-500 uppercase tracking-wide">Quick Presets</Label>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {DAY_PRESETS.map(preset => {
+                                                    const isActive = JSON.stringify(schedule.recurring.days_of_week?.slice().sort()) === JSON.stringify(preset.days.slice().sort());
+                                                    return (
+                                                        <button
+                                                            key={preset.label}
+                                                            type="button"
+                                                            onClick={() => setSchedule(prev => ({
+                                                                ...prev,
+                                                                recurring: { ...prev.recurring, days_of_week: preset.days }
+                                                            }))}
+                                                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isActive ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-700 border-gray-300 hover:border-violet-400 hover:text-violet-600'}`}
+                                                        >
+                                                            {preset.emoji} {preset.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
                                         <div>
                                             <Label>Days of Week</Label>
                                             <div className="flex gap-2 mt-2">
