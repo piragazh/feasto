@@ -573,6 +573,7 @@ export default function StudioPlaylists({ restaurantId }) {
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>Add Media to "{selectedScreen?.screen_name}"</DialogTitle>
+                        <DialogDescription>Upload an image or video to add to this screen's playlist.</DialogDescription>
                     </DialogHeader>
                     <AddMediaForm
                         restaurantId={restaurantId}
