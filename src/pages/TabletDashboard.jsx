@@ -1212,35 +1212,11 @@ export default function TabletDashboard() {
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
-            // Build manifest
-            const manifest = {
-                "name": rid ? "Restaurant Tablet" : "MealDrop Tablet",
-                "short_name": "Tablet",
-                "description": "Tablet management dashboard",
-                "start_url": rid ? `/TabletDashboard?restaurant_id=${rid}` : "/TabletDashboard",
-                "display": "standalone",
-                "background_color": "#ffffff",
-                "theme_color": "#f97316",
-                "orientation": "landscape-primary",
-                "scope": "/",
-                "categories": ["productivity"],
-                "icons": [
-                    {
-                        "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                        "sizes": "192x192",
-                        "type": "image/png",
-                        "purpose": "any maskable"
-                    },
-                    {
-                        "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                        "sizes": "512x512",
-                        "type": "image/png",
-                        "purpose": "any maskable"
-                    }
-                ]
-            };
+            let manifestUrl = '/getManifest?mode=tablet';
+            if (rid) {
+                manifestUrl += `&restaurant_id=${rid}`;
+            }
 
-            // Create and set manifest via data URL (inline approach)
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
@@ -1248,11 +1224,8 @@ export default function TabletDashboard() {
                 document.head.appendChild(manifestLink);
             }
 
-            // Use data: URL for instant availability without network fetch
-            const dataUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
-            manifestLink.href = dataUrl;
-            
-            console.log('✅ PWA Manifest set (data URL)', { name: manifest.name, start_url: manifest.start_url });
+            manifestLink.href = manifestUrl;
+            console.log('✅ PWA Manifest linked:', manifestUrl);
 
             // Register service worker
             if ('serviceWorker' in navigator) {
