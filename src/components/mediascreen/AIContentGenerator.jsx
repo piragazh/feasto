@@ -13,9 +13,12 @@ import { Sparkles, Loader2, Copy, Share2, RefreshCw, Monitor, Smartphone, Zap, I
 import { toast } from 'sonner';
 
 export default function AIContentGenerator({ onClose, onContentGenerated, restaurantName, restaurantId, restaurantColor = '#f97316', websiteUrl = '', existingContent, initialPrompt = '' }) {
+    const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('screen');
     const [orientation, setOrientation] = useState('landscape'); // landscape | portrait
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [customCategory, setCustomCategory] = useState(''); // free-text custom category
+    const [outputType, setOutputType] = useState('image'); // image | gif
     const [promoOffer, setPromoOffer] = useState('');
     const [customPrompt, setCustomPrompt] = useState(initialPrompt);
     const [style, setStyle] = useState('cinematic');
