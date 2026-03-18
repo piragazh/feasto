@@ -1175,6 +1175,8 @@ export default function TabletDashboard() {
     const [authLoading, setAuthLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('orders');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [installPrompt, setInstallPrompt] = useState(null);
+    const [isInstalled, setIsInstalled] = useState(false);
     const queryClient = useQueryClient();
 
     useEffect(() => {
