@@ -162,11 +162,29 @@ Return a JSON screen ad plan with this exact structure:
         }
     };
 
+    const handleAddToLibrary = async () => {
+        if (!generatedUrl) return;
+        const title = screenPlan?.header?.category_title || effectiveCategory || customPrompt.slice(0, 50) || `${restaurantName} Screen Ad`;
+        try {
+            await base44.entities.MediaFile.create({
+                restaurant_id: restaurantId,
+                file_url: generatedUrl,
+                file_name: `${title}.${outputType}`,
+                file_type: outputType === 'gif' ? 'image/gif' : 'image/png',
+                file_size: 0,
+            });
+            queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
+            toast.success('Added to Media Library!');
+        } catch (error) {
+            toast.error('Failed to add to library');
+        }
+    };
+
     const handleUseContent = () => {
         if (!generatedUrl) return;
         onContentGenerated({
             media_url: generatedUrl,
-            media_type: 'image',
+            media_type: outputType === 'gif' ? 'gif' : 'image',
             duration,
             ai_generated: true,
             ai_prompt: buildScreenAdPrompt(),
