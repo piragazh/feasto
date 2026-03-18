@@ -8,6 +8,15 @@
     <title>Base44 APP</title>
   </head>
   <body>
+    <script>
+      // Capture PWA install prompt before React mounts
+      window.__pwaInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+        window.dispatchEvent(new Event('pwaInstallPromptReady'));
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
