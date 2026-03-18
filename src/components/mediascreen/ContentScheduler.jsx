@@ -19,6 +19,17 @@ const DAYS_OF_WEEK = [
     { value: 6, label: 'Sat' }
 ];
 
+const DAY_PRESETS = [
+    { label: 'Every Monday',    days: [1], emoji: '📅' },
+    { label: 'Every Tuesday',   days: [2], emoji: '🌮' },
+    { label: 'Every Wednesday', days: [3], emoji: '📅' },
+    { label: 'Every Thursday',  days: [4], emoji: '📅' },
+    { label: 'Every Friday',    days: [5], emoji: '🎉' },
+    { label: 'Weekdays',        days: [1,2,3,4,5], emoji: '💼' },
+    { label: 'Weekends',        days: [0,6], emoji: '🎊' },
+    { label: 'Every Day',       days: [0,1,2,3,4,5,6], emoji: '📆' },
+];
+
 const DEFAULT_SCHEDULE = {
     enabled: false,
     start_date: '',
