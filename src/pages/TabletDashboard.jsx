@@ -1177,6 +1177,7 @@ export default function TabletDashboard() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [installPrompt, setInstallPrompt] = useState(null);
     const [isInstalled, setIsInstalled] = useState(false);
+    const [canShowInstall, setCanShowInstall] = useState(true);
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -1196,8 +1197,14 @@ export default function TabletDashboard() {
         // Use already-captured prompt or wait for it
         if (window.__pwaInstallPrompt) {
             setInstallPrompt(window.__pwaInstallPrompt);
+            setCanShowInstall(true);
         }
-        const handler = () => { if (window.__pwaInstallPrompt) setInstallPrompt(window.__pwaInstallPrompt); };
+        const handler = () => { 
+            if (window.__pwaInstallPrompt) {
+                setInstallPrompt(window.__pwaInstallPrompt);
+                setCanShowInstall(true);
+            }
+        };
         window.addEventListener('pwaInstallPromptReady', handler);
 
         return () => window.removeEventListener('pwaInstallPromptReady', handler);
@@ -1244,15 +1251,20 @@ export default function TabletDashboard() {
     };
 
     const handleInstall = async () => {
-        if (!installPrompt) return;
+        if (!installPrompt) {
+            toast.error('Install prompt not available. Try refreshing the page.');
+            return;
+        }
         try {
             await installPrompt.prompt();
             const { outcome } = await installPrompt.userChoice;
             if (outcome === 'accepted') {
                 setIsInstalled(true);
-                setInstallPrompt(null);
-                window.__pwaInstallPrompt = null;
+                setCanShowInstall(false);
                 toast.success('App installed!');
+            } else {
+                // User dismissed, but keep button available for retry on other devices
+                toast.info('Install cancelled. Button remains available on other devices.');
             }
         } catch (err) {
             toast.error('Install failed: ' + err.message);
@@ -1323,7 +1335,7 @@ export default function TabletDashboard() {
                     </button>
                     <h1 className="text-lg font-semibold text-gray-800">{tabLabels[activeTab]}</h1>
                     <div className="ml-auto">
-                        {!isInstalled && installPrompt && (
+                        {!isInstalled && canShowInstall && installPrompt && (
                             <Button onClick={handleInstall} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
                                 <Download className="h-4 w-4" />
                                 Install App
