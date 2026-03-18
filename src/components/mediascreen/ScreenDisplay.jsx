@@ -611,15 +611,59 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         transformOrigin: 'center center',
     } : undefined;
 
+    // Returns CSS transition styles for incoming/outgoing items based on transition type
+    const getTransitionStyles = (item, role) => {
+        const transition = item?.transition || 'fade';
+        const dur = `${TRANSITION_DURATION}ms ease-in-out`;
+
+        if (transition === 'none') {
+            return {
+                incoming: { opacity: 1 },
+                outgoing: { opacity: 0 },
+            }[role];
+        }
+
+        if (transition === 'fade') {
+            return {
+                incoming: { opacity: isTransitioning ? 1 : 1, animation: `sd-fadeIn ${dur}`, transition: `opacity ${dur}` },
+                outgoing: { opacity: 0, transition: `opacity ${dur}` },
+            }[role];
+        }
+
+        if (transition === 'slide') {
+            return {
+                incoming: { transform: 'translateX(0)', animation: `sd-slideIn ${dur}` },
+                outgoing: { transform: 'translateX(-100%)', transition: `transform ${dur}` },
+            }[role];
+        }
+
+        if (transition === 'zoom') {
+            return {
+                incoming: { opacity: 1, transform: 'scale(1)', animation: `sd-zoomIn ${dur}` },
+                outgoing: { opacity: 0, transform: 'scale(1.05)', transition: `opacity ${dur}, transform ${dur}` },
+            }[role];
+        }
+
+        return role === 'incoming' ? { opacity: 1 } : { opacity: 0 };
+    };
+
     return (
         <div
             className="h-screen w-screen bg-black relative overflow-hidden"
             style={rotationStyle}
         >
             <style>{`
-                @keyframes fadeIn {
+                @keyframes sd-fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
+                }
+                @keyframes sd-slideIn {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                }
+                @keyframes sd-zoomIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to { opacity: 1; transform: scale(1); }
                 }
             `}</style>
             <div className="absolute top-0 right-0 z-10 p-6">
