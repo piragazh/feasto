@@ -1216,42 +1216,18 @@ export default function TabletDashboard() {
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
-            // Create a data URL for the manifest to avoid fetch issues
-            const manifest = {
-                "name": rid ? "Restaurant Tablet" : "MealDrop Tablet",
-                "short_name": "Tablet",
-                "description": "Tablet management dashboard",
-                "start_url": rid ? `/TabletDashboard?restaurant_id=${rid}` : "/TabletDashboard",
-                "display": "standalone",
-                "background_color": "#ffffff",
-                "theme_color": "#f97316",
-                "orientation": "landscape-primary",
-                "icons": [
-                    {
-                        "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                        "sizes": "192x192",
-                        "type": "image/png",
-                        "purpose": "any maskable"
-                    },
-                    {
-                        "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
-                        "sizes": "512x512",
-                        "type": "image/png",
-                        "purpose": "any maskable"
-                    }
-                ]
-            };
-
-            // Set manifest link with data URL
+            // Set manifest link to function endpoint
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
                 manifestLink.rel = 'manifest';
                 document.head.appendChild(manifestLink);
             }
-            const dataUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
-            manifestLink.href = dataUrl;
-            console.log('✅ PWA Manifest set:', manifest.name);
+            const manifestUrl = rid
+                ? `/getManifest?restaurant_id=${rid}&mode=tablet`
+                : `/getManifest?mode=tablet`;
+            manifestLink.href = manifestUrl;
+            console.log('✅ PWA Manifest link set:', manifestUrl);
 
             // Register service worker for offline support
             if ('serviceWorker' in navigator) {
