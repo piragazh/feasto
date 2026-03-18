@@ -677,6 +677,7 @@ export default function StudioPlaylists({ restaurantId }) {
                             <Layout className="h-5 w-5 text-orange-500" />
                             Layout for "{templatePickerItem?.title || 'this item'}"
                         </DialogTitle>
+                        <DialogDescription>Choose a layout template to apply while this item plays.</DialogDescription>
                     </DialogHeader>
                     <p className="text-sm text-gray-500 -mt-2">
                         Choose a layout template that will be active <strong>only while this item plays</strong>. Falls back to the screen's default when finished.
