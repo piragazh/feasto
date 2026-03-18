@@ -295,29 +295,34 @@ export default function StudioPlaylists({ restaurantId }) {
                     </div>
                 ) : (
                     <>
-                        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-                            <div>
-                                <h2 className="font-bold text-gray-900 text-lg">{selectedScreen.screen_name}</h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    {screenPlaylist.length} items · Loop: {Math.floor(totalDuration / 60)}m {totalDuration % 60}s
-                                </p>
+                        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between flex-shrink-0 gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <button onClick={() => setMobileView('screens')} className="md:hidden text-gray-400 hover:text-gray-700 flex-shrink-0">
+                                    <X className="h-4 w-4" />
+                                </button>
+                                <div className="min-w-0">
+                                    <h2 className="font-bold text-gray-900 text-base md:text-lg truncate">{selectedScreen.screen_name}</h2>
+                                    <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">
+                                        {screenPlaylist.length} items · Loop: {Math.floor(totalDuration / 60)}m {totalDuration % 60}s
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button size="sm" variant="outline" onClick={() => copyScreenUrl(selectedScreen)}>
-                                    <Copy className="h-3.5 w-3.5 mr-1.5" />
-                                    Copy URL
+                            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => copyScreenUrl(selectedScreen)} className="h-8 w-8 p-0 md:w-auto md:px-3">
+                                    <Copy className="h-3.5 w-3.5" />
+                                    <span className="hidden md:inline ml-1.5">Copy URL</span>
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => openScreenUrl(selectedScreen)}>
-                                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                                    Preview
+                                <Button size="sm" variant="outline" onClick={() => openScreenUrl(selectedScreen)} className="h-8 w-8 p-0 md:w-auto md:px-3">
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    <span className="hidden md:inline ml-1.5">Preview</span>
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => setShowWidgetPicker(true)}>
-                                    <Zap className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
-                                    Add Widget
+                                <Button size="sm" variant="outline" onClick={() => setShowWidgetPicker(true)} className="h-8 w-8 p-0 md:w-auto md:px-3">
+                                    <Zap className="h-3.5 w-3.5 text-yellow-500" />
+                                    <span className="hidden md:inline ml-1.5">Add Widget</span>
                                 </Button>
-                                <Button size="sm" onClick={() => setShowAddDialog(true)} className="bg-orange-500 hover:bg-orange-600">
-                                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                                    Add Media
+                                <Button size="sm" onClick={() => setShowAddDialog(true)} className="bg-orange-500 hover:bg-orange-600 h-8 px-3">
+                                    <Plus className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline ml-1">Add Media</span>
                                 </Button>
                             </div>
                         </div>
