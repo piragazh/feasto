@@ -396,6 +396,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     useEffect(() => {
         setVideoLoopCount(0);
+        // Play the active video, pause all others
+        Object.entries(videoRefs.current).forEach(([idx, video]) => {
+            if (!video) return;
+            if (parseInt(idx) === currentIndex) {
+                video.currentTime = 0;
+                video.play().catch(() => {});
+            } else {
+                video.pause();
+                video.currentTime = 0;
+            }
+        });
     }, [currentIndex]);
 
     const TRANSITION_DURATION = 700; // ms
