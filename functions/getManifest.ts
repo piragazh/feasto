@@ -48,9 +48,10 @@ Deno.serve(async (req) => {
 
         // Customize with restaurant data if provided
         if (restaurantId) {
-            const base44 = createClientFromRequest(req);
-            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
-            const restaurant = restaurants?.[0];
+            try {
+                const base44 = createClientFromRequest(req);
+                const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+                const restaurant = restaurants?.[0];
 
             if (restaurant) {
                 const themeColor = restaurant.theme_primary_color || "#f97316";
@@ -114,6 +115,10 @@ Deno.serve(async (req) => {
                         "purpose": "any maskable"
                     }
                 ];
+            }
+            } catch (restaurantError) {
+                console.error('[getManifest] Restaurant fetch error:', restaurantError.message);
+                // Continue with default manifest if restaurant fetch fails
             }
         }
 

@@ -1258,28 +1258,32 @@ export default function TabletDashboard() {
     };
 
     const handleInstall = async () => {
-        console.log('Install button clicked. Prompt available:', !!installPrompt);
+        console.log('[PWA] Install button clicked. Prompt available:', !!installPrompt);
         
         if (!installPrompt) {
-            console.warn('No install prompt available');
+            console.warn('[PWA] No install prompt available');
             toast.error('Install prompt not available. Try refreshing the page or check browser support.');
             return;
         }
         
         try {
+            console.log('[PWA] Calling prompt()...');
             await installPrompt.prompt();
+            console.log('[PWA] Prompt shown');
             const { outcome } = await installPrompt.userChoice;
-            console.log('Install outcome:', outcome);
+            console.log('[PWA] User choice:', outcome);
             
             if (outcome === 'accepted') {
                 setIsInstalled(true);
                 setCanShowInstall(false);
+                setInstallPrompt(null);
                 toast.success('App installed! Check your home screen.');
             } else {
+                console.log('[PWA] User declined install');
                 toast.info('Install cancelled.');
             }
         } catch (err) {
-            console.error('Install error:', err);
+            console.error('[PWA] Install error:', err);
             toast.error('Install failed: ' + err.message);
         }
     };
