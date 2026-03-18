@@ -456,8 +456,8 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                                 </SelectContent>
                                                                             </Select>
                                                                             <Switch
-                                                                                checked={item.is_active}
-                                                                                onCheckedChange={(v) => updateContentMutation.mutate({ id: item.id, data: { is_active: v } })}
+                                                                               checked={item.is_active ?? true}
+                                                                               onCheckedChange={(v) => updateContentMutation.mutate({ id: item.id, data: { is_active: v } })}
                                                                             />
                                                                         </div>
                                                                         {/* Row 2: action buttons */}
