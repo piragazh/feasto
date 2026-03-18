@@ -1187,6 +1187,17 @@ export default function TabletDashboard() {
 
         // Setup PWA manifest and service worker
         setupPWA();
+
+        // Capture PWA install prompt
+        const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+        window.addEventListener('beforeinstallprompt', handler);
+
+        // Check if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            setIsInstalled(true);
+        }
+
+        return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
 
     const setupPWA = async () => {
