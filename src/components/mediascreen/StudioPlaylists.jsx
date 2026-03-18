@@ -548,6 +548,7 @@ export default function StudioPlaylists({ restaurantId }) {
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
                         <DialogTitle>Add New Screen</DialogTitle>
+                        <DialogDescription>Enter a unique name for this screen.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <Input
