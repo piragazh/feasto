@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
     try {
@@ -17,6 +17,8 @@ Deno.serve(async (req) => {
             "background_color": "#ffffff",
             "theme_color": "#f97316",
             "orientation": "portrait-primary",
+            "scope": "/",
+            "categories": ["food"],
             "icons": [
                 {
                     "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
@@ -41,10 +43,8 @@ Deno.serve(async (req) => {
             manifest.start_url = "/TabletDashboard";
             manifest.display = "standalone";
             manifest.orientation = "landscape-primary";
-            return new Response(JSON.stringify(manifest), {
-                status: 200,
-                headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public, max-age=3600' }
-            });
+            manifest.scope = "/";
+            manifest.categories = ["productivity"];
         }
 
         // If restaurant ID provided, customize with restaurant details
@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
                     manifest.start_url = `/RestaurantDashboard?restaurant_id=${restaurantId}`;
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
+                    manifest.scope = "/";
+                    manifest.categories = ["productivity"];
                 } else if (mode === 'pos') {
                     // POS PWA
                     manifest.name = `${restaurant.name} POS`;
@@ -72,6 +74,8 @@ Deno.serve(async (req) => {
                     manifest.display = "fullscreen";
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
+                    manifest.scope = "/";
+                    manifest.categories = ["productivity"];
                 } else if (mode === 'tablet') {
                     // Tablet Dashboard PWA
                     manifest.name = `${restaurant.name} Tablet`;
@@ -82,6 +86,8 @@ Deno.serve(async (req) => {
                     manifest.orientation = "landscape-primary";
                     manifest.theme_color = themeColor;
                     manifest.background_color = themeColor;
+                    manifest.scope = "/";
+                    manifest.categories = ["productivity"];
                 } else {
                     // Customer-facing PWA for custom domain
                     manifest.name = restaurant.name;
@@ -89,6 +95,8 @@ Deno.serve(async (req) => {
                     manifest.description = restaurant.description || `Order from ${restaurant.name}`;
                     manifest.start_url = `/Restaurant?id=${restaurantId}`;
                     manifest.theme_color = themeColor;
+                    manifest.scope = "/";
+                    manifest.categories = ["food"];
                 }
                 
                 const iconUrl = restaurant.logo_url || "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png";
