@@ -13,10 +13,10 @@ const cacheKey = (key) => `screen_cache_${CACHE_VERSION}_${key}`;
 function readCache(key) {
     try {
         const raw = localStorage.getItem(cacheKey(key));
-        if (!raw) return undefined;
+        if (!raw) return { data: undefined, ts: 0 };
         const { data, ts } = JSON.parse(raw);
-        return data;
-    } catch { return undefined; }
+        return { data, ts: ts || 0 };
+    } catch { return { data: undefined, ts: 0 }; }
 }
 
 function writeCache(key, data) {
