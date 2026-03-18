@@ -743,9 +743,10 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                 />
                             ) : item.media_type === 'video' ? (
                                 <video
+                                    ref={el => videoRefs.current[index] = el}
                                     src={item.media_url}
-                                    autoPlay={isActive}
                                     muted
+                                    playsInline
                                     loop={content.length === 1}
                                     onEnded={() => isActive && handleVideoEnd(item)}
                                     className="w-full h-full object-cover"
