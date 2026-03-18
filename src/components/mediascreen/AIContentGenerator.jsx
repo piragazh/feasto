@@ -544,13 +544,20 @@ Return a JSON screen ad plan with this exact structure:
                     {variations.length > 0 && (
                         <div className="grid grid-cols-3 gap-4">
                             {variations.map((v, i) => (
-                                <Card key={i} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setGeneratedUrl(v.url); setActiveTab('screen'); }}>
-                                    <div className={`${orientation === 'portrait' ? 'aspect-[9/16]' : 'aspect-video'} bg-gray-900`}>
+                                <Card key={i} className="overflow-hidden hover:shadow-lg transition-shadow">
+                                    <div className={`${orientation === 'portrait' ? 'aspect-[9/16]' : 'aspect-video'} bg-gray-900 cursor-pointer`} onClick={() => { setGeneratedUrl(v.url); setActiveTab('screen'); }}>
                                         <img src={v.url} alt={v.label} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className="p-2">
+                                    <div className="p-2 space-y-1">
                                         <p className="text-xs font-semibold text-center">{v.label}</p>
-                                        <Button size="sm" className="w-full mt-1" variant="outline">Use This</Button>
+                                        <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={async () => {
+                                            await base44.entities.MediaFile.create({ restaurant_id: restaurantId, file_url: v.url, file_name: `${v.label}.png`, file_type: 'image/png', file_size: 0 });
+                                            queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
+                                            toast.success('Added to Library!');
+                                        }}>
+                                            <Library className="h-3 w-3 mr-1" />Library
+                                        </Button>
+                                        <Button size="sm" className="w-full" variant="outline" onClick={() => { setGeneratedUrl(v.url); setActiveTab('screen'); }}>Use</Button>
                                     </div>
                                 </Card>
                             ))}
