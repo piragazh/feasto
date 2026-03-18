@@ -160,75 +160,92 @@ export default function MediaScreenManagement() {
 
     const activeNavItem = NAV_ITEMS.find(n => n.id === activeSection);
 
+    const SidebarContent = ({ onNavigate }) => (
+        <>
+            <div className="px-5 py-5 border-b border-gray-800">
+                <button
+                    onClick={() => navigate(createPageUrl('RestaurantDashboard'))}
+                    className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-5 text-sm"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Dashboard
+                </button>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-900/30">
+                        <Monitor className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-white font-bold text-sm leading-tight">Screen Studio</p>
+                        <p className="text-gray-500 text-xs truncate">{restaurant.name}</p>
+                    </div>
+                </div>
+            </div>
+            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+                <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-3 mb-2">Studio</p>
+                {NAV_ITEMS.map(item => {
+                    const Icon = item.icon;
+                    const isActive = activeSection === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => { setActiveSection(item.id); onNavigate?.(); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                isActive
+                                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-900/30'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                            }`}
+                        >
+                            <Icon className="h-4 w-4 flex-shrink-0" />
+                            {item.label}
+                        </button>
+                    );
+                })}
+            </nav>
+            <div className="px-5 py-4 border-t border-gray-800">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-400/50" />
+                    <span className="text-xs text-gray-500">Studio Online</span>
+                </div>
+            </div>
+        </>
+    );
+
     return (
         <div className="flex h-screen bg-gray-950 overflow-hidden">
-            {/* Sidebar */}
-            <aside className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col flex-shrink-0">
-                {/* Brand */}
-                <div className="px-5 py-5 border-b border-gray-800">
-                    <button
-                        onClick={() => navigate(createPageUrl('RestaurantDashboard'))}
-                        className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-5 text-sm"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Dashboard
-                    </button>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-900/30">
-                            <Monitor className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-white font-bold text-sm leading-tight">Screen Studio</p>
-                            <p className="text-gray-500 text-xs truncate">{restaurant.name}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Nav */}
-                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-3 mb-2">Studio</p>
-                    {NAV_ITEMS.map(item => {
-                        const Icon = item.icon;
-                        const isActive = activeSection === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => setActiveSection(item.id)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                                    isActive
-                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-900/30'
-                                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                                }`}
-                            >
-                                <Icon className="h-4 w-4 flex-shrink-0" />
-                                {item.label}
-                            </button>
-                        );
-                    })}
-                </nav>
-
-                {/* Footer */}
-                <div className="px-5 py-4 border-t border-gray-800">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-400/50" />
-                        <span className="text-xs text-gray-500">Studio Online</span>
-                    </div>
-                </div>
+            {/* Desktop Sidebar */}
+            <aside className="hidden md:flex w-64 bg-gray-900 border-r border-gray-800 flex-col flex-shrink-0">
+                <SidebarContent />
             </aside>
 
             {/* Main */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Top bar */}
-                <header className="h-14 bg-white border-b border-gray-200 px-6 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Screen Studio</span>
-                        <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-                        <span className="text-gray-900 font-semibold">{activeNavItem?.label || 'Overview'}</span>
+                <header className="h-14 bg-white border-b border-gray-200 px-4 md:px-6 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        {/* Mobile hamburger */}
+                        <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+                            <SheetTrigger asChild>
+                                <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 -ml-1 mr-1">
+                                    <Menu className="h-5 w-5" />
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="left" className="w-64 p-0 bg-gray-900 border-gray-800 [&>button]:hidden">
+                                <div className="flex flex-col h-full">
+                                    <SidebarContent onNavigate={() => setMobileSidebarOpen(false)} />
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-400 hidden sm:inline">Screen Studio</span>
+                            <ChevronRight className="h-3.5 w-3.5 text-gray-300 hidden sm:inline" />
+                            <span className="text-gray-900 font-semibold">{activeNavItem?.label || 'Overview'}</span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
                             <Wifi className="h-3.5 w-3.5 text-green-600" />
-                            <span className="text-xs font-semibold text-green-700">{restaurant.name}</span>
+                            <span className="text-xs font-semibold text-green-700 hidden sm:inline">{restaurant.name}</span>
+                            <span className="text-xs font-semibold text-green-700 sm:hidden">Online</span>
                         </div>
                     </div>
                 </header>
