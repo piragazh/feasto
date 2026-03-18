@@ -2,12 +2,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
     try {
-        const base44 = createClientFromRequest(req);
         const url = new URLSearchParams(req.url.split('?')[1]);
         const restaurantId = url.get('restaurant_id');
+        const mode = url.get('mode');
 
-        const mode = url.get('mode'); // 'dashboard' for restaurant dashboard PWA
-
+        // Default manifest
         let manifest = {
             "name": "MealDrop",
             "short_name": "MealDrop",
@@ -35,7 +34,7 @@ Deno.serve(async (req) => {
             ]
         };
 
-        // Handle mode without restaurant_id
+        // Tablet mode without restaurant ID
         if (!restaurantId && mode === 'tablet') {
             manifest.name = "MealDrop Tablet";
             manifest.short_name = "Tablet";
@@ -47,8 +46,9 @@ Deno.serve(async (req) => {
             manifest.categories = ["productivity"];
         }
 
-        // If restaurant ID provided, customize with restaurant details
+        // Customize with restaurant data if provided
         if (restaurantId) {
+            const base44 = createClientFromRequest(req);
             const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
             const restaurant = restaurants?.[0];
 
@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
             }
         }
 
-        return new Response(JSON.stringify(manifest), {
+        const manifestJson = JSON.stringify(manifest);
+        return new Response(manifestJson, {
             status: 200,
             headers: {
                 'Content-Type': 'application/manifest+json',
@@ -125,6 +126,30 @@ Deno.serve(async (req) => {
             }
         });
     } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+        console.error('[getManifest] Error:', error.message);
+        // Return fallback manifest even on error
+        const fallbackManifest = {
+            "name": "MealDrop",
+            "short_name": "MealDrop",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#f97316",
+            "icons": [
+                {
+                    "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
+                    "sizes": "192x192",
+                    "type": "image/png",
+                    "purpose": "any maskable"
+                }
+            ]
+        };
+        return new Response(JSON.stringify(fallbackManifest), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/manifest+json',
+                'Cache-Control': 'public, max-age=3600'
+            }
+        });
     }
 });
