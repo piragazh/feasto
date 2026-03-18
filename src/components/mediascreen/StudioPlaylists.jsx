@@ -354,14 +354,14 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                 {...provided.draggableProps}
                                                                 className={`bg-white rounded-xl border transition-all ${snapshot.isDragging ? 'shadow-xl border-orange-400 rotate-1' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'}`}
                                                             >
-                                                                <div className="flex items-center gap-3 p-4">
-                                                                    <div {...provided.dragHandleProps} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0">
+                                                                <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4">
+                                                                   <div {...provided.dragHandleProps} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0">
                                                                         <GripVertical className="h-5 w-5" />
-                                                                    </div>
-                                                                    <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
-                                                                        {index + 1}
-                                                                    </div>
-                                                                    <div className="w-24 h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
+                                                                   </div>
+                                                                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
+                                                                       {index + 1}
+                                                                   </div>
+                                                                   <div className="w-16 h-12 md:w-24 md:h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
                                                                         {item.media_type === 'widget' ? (
                                                                             (() => {
                                                                                 const meta = WIDGET_TYPE_META[item.widget_type] || {};
