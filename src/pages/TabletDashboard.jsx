@@ -1303,6 +1303,14 @@ export default function TabletDashboard() {
                         <Menu className="h-5 w-5 text-gray-600" />
                     </button>
                     <h1 className="text-lg font-semibold text-gray-800">{tabLabels[activeTab]}</h1>
+                    <div className="ml-auto">
+                        {!isInstalled && installPrompt && (
+                            <Button onClick={handleInstall} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                                <Download className="h-4 w-4" />
+                                Install App
+                            </Button>
+                        )}
+                    </div>
                 </header>
 
                 {/* Content */}
