@@ -221,6 +221,7 @@ export default function StudioWidgets({ restaurantId }) {
                             {widgetTypeInfo && React.createElement(widgetTypeInfo.icon, { className: 'h-5 w-5 text-orange-500' })}
                             {editing ? 'Edit' : 'New'} {widgetTypeInfo?.label} Widget
                         </DialogTitle>
+                        <DialogDescription>Configure the settings for this widget.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-5">
                         <div>
