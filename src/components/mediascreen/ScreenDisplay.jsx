@@ -611,72 +611,61 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         transformOrigin: 'center center',
     } : undefined;
 
-    const renderItemContent = (item, isActive, widgetType, widgetConf) => {
-        if (item.media_type === 'widget') {
-            return (
-                <WidgetRenderer
-                    widgetType={widgetType}
-                    config={widgetConf}
-                    restaurantId={restaurantId}
-                    className="w-full h-full"
-                />
-            );
-        }
-        if (item.media_type === 'video') {
-            return (
-                <video
-                    src={item.media_url}
-                    autoPlay={isActive}
-                    muted
-                    loop={content.length === 1}
-                    onEnded={() => isActive && handleVideoEnd(item)}
-                    className="w-full h-full object-cover"
-                />
-            );
-        }
-        return (
-            <img
-                src={item.media_url}
-                alt={item.title}
-                className="w-full h-full object-cover"
-            />
-        );
-    };
-
-    // Returns CSS transition styles for incoming/outgoing items based on transition type
-    const getTransitionStyles = (item, role) => {
+    // Get CSS style for each item based on its state (active / prev / inactive)
+    const getItemStyle = (index) => {
+        const isActive = index === safeIndex;
+        const isPrev = index === prevIndex;
+        const item = content[index];
         const transition = item?.transition || 'fade';
         const dur = `${TRANSITION_DURATION}ms ease-in-out`;
 
         if (transition === 'none') {
-            return {
-                incoming: { opacity: 1 },
-                outgoing: { opacity: 0 },
-            }[role];
+            if (isActive) return { opacity: 1, zIndex: 2, pointerEvents: 'auto' };
+            return { opacity: 0, zIndex: 1, pointerEvents: 'none' };
         }
 
         if (transition === 'fade') {
+            const opacity = isActive ? 1 : 0;
+            const z = isActive ? 2 : isPrev ? 1 : 0;
             return {
-                incoming: { opacity: isTransitioning ? 1 : 1, animation: `sd-fadeIn ${dur}`, transition: `opacity ${dur}` },
-                outgoing: { opacity: 0, transition: `opacity ${dur}` },
-            }[role];
+                opacity,
+                zIndex: z,
+                transition: `opacity ${dur}`,
+                pointerEvents: isActive ? 'auto' : 'none',
+            };
         }
 
         if (transition === 'slide') {
+            let translateX = '100%'; // offscreen right (inactive)
+            if (isActive) translateX = '0%';
+            else if (isPrev) translateX = '-100%';
             return {
-                incoming: { transform: 'translateX(0)', animation: `sd-slideIn ${dur}` },
-                outgoing: { transform: 'translateX(-100%)', transition: `transform ${dur}` },
-            }[role];
+                transform: `translateX(${translateX})`,
+                zIndex: isActive ? 2 : isPrev ? 1 : 0,
+                transition: (isActive || isPrev) ? `transform ${dur}` : 'none',
+                pointerEvents: isActive ? 'auto' : 'none',
+            };
         }
 
         if (transition === 'zoom') {
+            const opacity = isActive ? 1 : 0;
+            const scale = isActive ? 1 : isPrev ? 1.05 : 0.95;
             return {
-                incoming: { opacity: 1, transform: 'scale(1)', animation: `sd-zoomIn ${dur}` },
-                outgoing: { opacity: 0, transform: 'scale(1.05)', transition: `opacity ${dur}, transform ${dur}` },
-            }[role];
+                opacity,
+                transform: `scale(${scale})`,
+                zIndex: isActive ? 2 : isPrev ? 1 : 0,
+                transition: (isActive || isPrev) ? `opacity ${dur}, transform ${dur}` : 'none',
+                pointerEvents: isActive ? 'auto' : 'none',
+            };
         }
 
-        return role === 'incoming' ? { opacity: 1 } : { opacity: 0 };
+        // fallback: fade
+        return {
+            opacity: isActive ? 1 : 0,
+            zIndex: isActive ? 2 : 1,
+            transition: `opacity ${dur}`,
+            pointerEvents: isActive ? 'auto' : 'none',
+        };
     };
 
     return (
@@ -684,20 +673,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             className="h-screen w-screen bg-black relative overflow-hidden"
             style={rotationStyle}
         >
-            <style>{`
-                @keyframes sd-fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes sd-slideIn {
-                    from { transform: translateX(100%); }
-                    to { transform: translateX(0); }
-                }
-                @keyframes sd-zoomIn {
-                    from { opacity: 0; transform: scale(0.95); }
-                    to { opacity: 1; transform: scale(1); }
-                }
-            `}</style>
+            <style>{``}</style>
             <div className="absolute top-0 right-0 z-10 p-6">
                 <div className="flex items-center justify-end">
                     <div className="flex items-center gap-6 text-white">
