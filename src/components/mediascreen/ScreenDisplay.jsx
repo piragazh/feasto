@@ -611,6 +611,38 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         transformOrigin: 'center center',
     } : undefined;
 
+    const renderItemContent = (item, isActive, widgetType, widgetConf) => {
+        if (item.media_type === 'widget') {
+            return (
+                <WidgetRenderer
+                    widgetType={widgetType}
+                    config={widgetConf}
+                    restaurantId={restaurantId}
+                    className="w-full h-full"
+                />
+            );
+        }
+        if (item.media_type === 'video') {
+            return (
+                <video
+                    src={item.media_url}
+                    autoPlay={isActive}
+                    muted
+                    loop={content.length === 1}
+                    onEnded={() => isActive && handleVideoEnd(item)}
+                    className="w-full h-full object-cover"
+                />
+            );
+        }
+        return (
+            <img
+                src={item.media_url}
+                alt={item.title}
+                className="w-full h-full object-cover"
+            />
+        );
+    };
+
     // Returns CSS transition styles for incoming/outgoing items based on transition type
     const getTransitionStyles = (item, role) => {
         const transition = item?.transition || 'fade';
