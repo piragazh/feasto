@@ -57,6 +57,8 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
         { value: 'neon', label: 'Neon Night', desc: 'Dark background, neon accents, modern' },
     ];
 
+    const effectiveCategory = customCategory.trim() || selectedCategory;
+
     const buildScreenAdPrompt = () => {
         const items = itemsForCategory.slice(0, 8);
         const heroItems = items.filter(i => i.is_popular).slice(0, 2).length > 0
@@ -74,14 +76,16 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
             elegant: 'elegant premium dark restaurant branding, minimal layout, sophisticated typography',
             neon: 'neon night-club restaurant style, dark background with glowing neon accents, futuristic typography'
         };
+        const gifNote = outputType === 'gif' ? 'Design as a looping animated GIF frame — motion blur, glowing effects, dynamic energy implied in single frame.' : '';
 
         return `Create a ${orientationDesc} LED promotional screen ad for "${restaurantName}".
-
+${effectiveCategory ? `Category focus: ${effectiveCategory}` : ''}
 Style: ${styleMap[style]}
 Brand color: ${restaurantColor}
+${gifNote}
 
-HERO ITEMS (large, dominant): ${heroList}
-ALL MENU ITEMS on screen: ${itemList}
+HERO ITEMS (large, dominant): ${heroList || effectiveCategory || restaurantName}
+ALL MENU ITEMS on screen: ${itemList || effectiveCategory}
 ${promoOffer ? `PROMO: ${promoOffer} - make this DOMINANT with urgency (LIMITED TIME / TODAY ONLY)` : ''}
 ${websiteUrl ? `CTA: ORDER NOW - ${websiteUrl}` : 'CTA: ORDER NOW / SKIP THE QUEUE'}
 
