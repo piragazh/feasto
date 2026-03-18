@@ -699,52 +699,43 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             </div>
 
             <div className="h-full w-full relative">
-                {/* Render all items stacked — only the current one is visible. No unmounting = no black flash. */}
-                {content.map((item, index) => {
-                    const isActive = index === safeIndex;
+                {/* Outgoing item — fades/slides/zooms out */}
+                {prevIndex !== null && content[prevIndex] && (() => {
+                    const item = content[prevIndex];
                     const cfg = item.widget_config_id
                         ? widgetConfigs.find(w => w.id === item.widget_config_id)
                         : widgetConfigs.find(w => w.widget_type === item.widget_type && w.is_active);
                     const widgetType = item.widget_type || cfg?.widget_type;
                     const widgetConf = cfg ? (cfg.settings?.[widgetType] || {}) : {};
-
                     return (
                         <div
-                            key={item.id}
+                            key={`out-${item.id}`}
                             className="absolute inset-0 flex items-center justify-center"
-                            style={{
-                                opacity: isActive ? 1 : 0,
-                                transition: 'opacity 0.8s ease-in-out',
-                                zIndex: isActive ? 2 : 1,
-                                pointerEvents: isActive ? 'auto' : 'none',
-                            }}
+                            style={{ zIndex: 1, ...getTransitionStyles(item, 'outgoing') }}
                         >
-                            {item.media_type === 'widget' ? (
-                                <WidgetRenderer
-                                    widgetType={widgetType}
-                                    config={widgetConf}
-                                    restaurantId={restaurantId}
-                                    className="w-full h-full"
-                                />
-                            ) : item.media_type === 'video' ? (
-                                <video
-                                    src={item.media_url}
-                                    autoPlay={isActive}
-                                    muted
-                                    loop={content.length === 1}
-                                    onEnded={() => isActive && handleVideoEnd(item)}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <img
-                                    src={item.media_url}
-                                    alt={item.title}
-                                    className="w-full h-full object-cover"
-                                />
-                            )}
+                            {renderItemContent(item, false, widgetType, widgetConf)}
                         </div>
                     );
-                })}
+                })()}
+
+                {/* Incoming (current) item — fades/slides/zooms in */}
+                {content[safeIndex] && (() => {
+                    const item = content[safeIndex];
+                    const cfg = item.widget_config_id
+                        ? widgetConfigs.find(w => w.id === item.widget_config_id)
+                        : widgetConfigs.find(w => w.widget_type === item.widget_type && w.is_active);
+                    const widgetType = item.widget_type || cfg?.widget_type;
+                    const widgetConf = cfg ? (cfg.settings?.[widgetType] || {}) : {};
+                    return (
+                        <div
+                            key={`in-${item.id}-${safeIndex}`}
+                            className="absolute inset-0 flex items-center justify-center"
+                            style={{ zIndex: 2, ...getTransitionStyles(item, 'incoming') }}
+                        >
+                            {renderItemContent(item, true, widgetType, widgetConf)}
+                        </div>
+                    );
+                })()}
             </div>
 
             {content.length > 1 && (
