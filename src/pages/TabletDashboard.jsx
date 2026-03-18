@@ -1212,8 +1212,10 @@ export default function TabletDashboard() {
 
     const setupPWA = async () => {
         try {
+            // Try saved restaurant ID first, then URL param
+            const savedRestaurantId = sessionStorage.getItem('tablet_restaurant_id');
             const urlParams = new URLSearchParams(window.location.search);
-            const rid = urlParams.get('restaurant_id');
+            const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
             // Set manifest link
             let manifestLink = document.querySelector('link[rel="manifest"]');
@@ -1275,22 +1277,35 @@ export default function TabletDashboard() {
     const { data: restaurant } = useQuery({
         queryKey: ['tablet-restaurant', user?.email],
         queryFn: async () => {
+            // Check sessionStorage first for quick reload
+            const savedRestaurantId = sessionStorage.getItem('tablet_restaurant_id');
+            if (savedRestaurantId) {
+                const r = await base44.entities.Restaurant.filter({ id: savedRestaurantId });
+                if (r[0]) return r[0];
+            }
+
             // Check if user is a manager
             const managers = await base44.entities.RestaurantManager.filter({ user_email: user.email });
             if (managers.length > 0) {
-                const restaurants = await base44.entities.Restaurant.filter({ id: managers[0].restaurant_ids[0] });
+                const restaurantId = managers[0].restaurant_ids[0];
+                sessionStorage.setItem('tablet_restaurant_id', restaurantId);
+                const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
                 return restaurants[0] || null;
             }
             // Admin: show first restaurant or use URL param
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id');
             if (rid) {
+                sessionStorage.setItem('tablet_restaurant_id', rid);
                 const r = await base44.entities.Restaurant.filter({ id: rid });
                 return r[0] || null;
             }
             if (user.role === 'admin') {
                 const all = await base44.entities.Restaurant.list();
-                return all[0] || null;
+                if (all[0]) {
+                    sessionStorage.setItem('tablet_restaurant_id', all[0].id);
+                    return all[0];
+                }
             }
             return null;
         },
