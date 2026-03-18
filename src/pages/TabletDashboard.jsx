@@ -1372,8 +1372,14 @@ export default function TabletDashboard() {
                     </button>
                     <h1 className="text-lg font-semibold text-gray-800">{tabLabels[activeTab]}</h1>
                     <div className="ml-auto">
-                        {!isInstalled && canShowInstall && installPrompt && (
-                            <Button onClick={handleInstall} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                        {!isInstalled && (canShowInstall || installPrompt) && (
+                            <Button 
+                                onClick={handleInstall} 
+                                size="sm" 
+                                className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                                disabled={!installPrompt}
+                                title={installPrompt ? 'Install as PWA' : 'Waiting for install prompt...'}
+                            >
                                 <Download className="h-4 w-4" />
                                 Install App
                             </Button>
