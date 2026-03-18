@@ -386,6 +386,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         };
     }, [screen?.id, refetchScreen, isOnline]);
 
+    // Pre-cache all media assets for offline resilience
+    useMediaPrecache(content, wallContent, isOnline);
+
     // Clamp currentIndex if content shrinks after a refetch — use useEffect to avoid setState-during-render
     const safeIndex = content.length > 0 ? Math.min(currentIndex, content.length - 1) : 0;
 
