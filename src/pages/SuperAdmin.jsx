@@ -254,18 +254,22 @@ export default function SuperAdmin() {
                     {activeTab === 'bulk-price' && <BulkPriceAdjustment />}
                     {activeTab === 'backup-restore' && <BackupRestore />}
                     {activeTab === 'managers' && (
-                        <iframe 
-                            src={createPageUrl('ManageRestaurantManagers')} 
-                            className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
-                            title="Restaurant Managers"
-                        />
+                        <div className="w-full h-[calc(100vh-250px)] md:h-[calc(100vh-200px)] border-0 rounded-lg overflow-hidden">
+                            <iframe 
+                                src={createPageUrl('ManageRestaurantManagers')} 
+                                className="w-full h-full border-0"
+                                title="Restaurant Managers"
+                            />
+                        </div>
                     )}
                     {activeTab === 'admin-restaurants' && (
-                        <iframe 
-                            src={createPageUrl('AdminRestaurants')} 
-                            className="w-full h-[calc(100vh-200px)] border-0 rounded-lg"
-                            title="Admin Restaurants"
-                        />
+                        <div className="w-full h-[calc(100vh-250px)] md:h-[calc(100vh-200px)] border-0 rounded-lg overflow-hidden">
+                            <iframe 
+                                src={createPageUrl('AdminRestaurants')} 
+                                className="w-full h-full border-0"
+                                title="Admin Restaurants"
+                            />
+                        </div>
                     )}
                 </div>
             </div>
