@@ -457,6 +457,7 @@ export default function Layout({ children, currentPageName }) {
                                     size="icon"
                                     onClick={() => navigate(-1)}
                                     className="rounded-full mr-2"
+                                    aria-label="Go back to previous page"
                                 >
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
@@ -488,9 +489,9 @@ export default function Layout({ children, currentPageName }) {
 
                                     {cartCount > 0 && (
                                         <Link to={createPageUrl('Checkout')}>
-                                            <Button variant="outline" className="relative rounded-full">
+                                            <Button variant="outline" className="relative rounded-full" aria-label={`View cart with ${cartCount} items`}>
                                                 <ShoppingBag className="h-5 w-5" />
-                                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
+                                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center" aria-hidden="true">
                                                     {cartCount}
                                                 </span>
                                             </Button>
@@ -504,9 +505,11 @@ export default function Layout({ children, currentPageName }) {
                                             variant="ghost" 
                                             size="icon" 
                                             className="rounded-full h-11 w-11 md:h-9 md:w-9 touch-manipulation active:scale-95 transition-transform"
+                                            aria-label="Open menu"
+                                            aria-haspopup="true"
                                         >
-                                            <Menu className="h-6 w-6 md:hidden" />
-                                            <User className="h-5 w-5 hidden md:block" />
+                                            <Menu className="h-6 w-6 md:hidden" aria-hidden="true" />
+                                            <User className="h-5 w-5 hidden md:block" aria-hidden="true" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-56 z-[100]">
