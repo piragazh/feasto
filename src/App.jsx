@@ -72,7 +72,6 @@ function App() {
           <NavigationTracker />
           <AuthenticatedApp />
         </Router>
-        <Toaster />
       </QueryClientProvider>
     </AuthProvider>
   )
