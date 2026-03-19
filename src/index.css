@@ -112,7 +112,7 @@
   .tag,
   .chip,
   [data-small-touch-target="true"] {
-    @apply min-h-auto min-w-auto;
+    @apply min-h-0 min-w-0;
   }
 
   /* Input fields: ensure readable height on mobile */
