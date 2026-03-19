@@ -35,6 +35,8 @@ import { useMediaQuery } from '@/hooks/use-mobile';
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+    const isMobile = useMediaQuery('(max-width: 768px)');
 
     const { data: user, isLoading } = useQuery({
         queryKey: ['current-user'],
