@@ -47,8 +47,7 @@ const DropdownMenuSubContent = React.forwardRef(({ className, ...props }, ref) =
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName
 
 const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, children, ...props }, ref) => {
-  const [mobile, setMobile] = React.useState(false);
-  React.useEffect(() => { setMobile(isMobile()); }, []);
+  const mobile = isMobile();
 
   return (
     <DropdownMenuPrimitive.Portal>
@@ -59,7 +58,7 @@ const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, child
           "z-50 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           mobile
-            ? "fixed bottom-0 left-0 right-0 w-full max-h-[70vh] overflow-y-auto rounded-b-none rounded-t-2xl border-t pb-safe-or-4 min-w-0"
+            ? "fixed bottom-0 left-0 right-0 w-full max-h-[70vh] overflow-y-auto rounded-b-none rounded-t-2xl border-t pb-6 min-w-0"
             : "min-w-[8rem]",
           className
         )}
