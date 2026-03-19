@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import * as React from 'react';
+const { useState, useEffect } = React;
 
 export function useGeolocation() {
     const [location, setLocation] = useState(null);
