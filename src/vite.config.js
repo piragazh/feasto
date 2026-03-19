@@ -33,7 +33,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react/jsx-runtime'],
+    include: ['react', 'react-dom', 'react/jsx-runtime', '@base44/sdk', '@base44/sdk/dist/utils/axios-client'],
     force: true,
   },
 });
