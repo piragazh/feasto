@@ -52,9 +52,11 @@ const AuthenticatedApp = () => {
           key={path}
           path={`/${path}`}
           element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
+            <ReactSuspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName={path}>
+                <Page />
+              </LayoutWrapper>
+            </ReactSuspense>
           }
         />
       ))}
