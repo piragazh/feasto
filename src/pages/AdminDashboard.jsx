@@ -103,8 +103,8 @@ export default function AdminDashboard() {
                         <p className="text-sm sm:text-base text-gray-600 mt-1">Platform-wide performance overview</p>
                     </div>
                     <Link to={createPageUrl('AdminRestaurants')} className="w-full sm:w-auto">
-                        <Button className="bg-orange-500 hover:bg-orange-600 w-full sm:w-auto">
-                            <Building className="h-4 w-4 mr-2" />
+                        <Button className="bg-orange-500 hover:bg-orange-600 w-full sm:w-auto h-11" aria-label="Navigate to restaurant management">
+                            <Building className="h-4 w-4 mr-2" aria-hidden="true" />
                             Manage Restaurants
                         </Button>
                     </Link>
@@ -245,9 +245,10 @@ export default function AdminDashboard() {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
-                                                    className="h-7 text-xs"
+                                                    className="h-9 md:h-7 text-xs"
+                                                    aria-label={`View dashboard for ${restaurant.name}`}
                                                 >
-                                                    <LayoutDashboard className="h-3 w-3 mr-1" />
+                                                    <LayoutDashboard className="h-3 w-3 mr-1" aria-hidden="true" />
                                                     Dashboard
                                                 </Button>
                                             </td>
