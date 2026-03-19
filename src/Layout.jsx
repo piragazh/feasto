@@ -588,6 +588,9 @@ export default function Layout({ children, currentPageName }) {
                 {/* AI Chatbot Widget */}
                 {!['AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'RestaurantDashboard', 'POSDashboard', 'MediaScreen'].includes(currentPageName) && <ChatbotWidget />}
 
+                {/* PWA Install Banner */}
+                {!['POSDashboard', 'MediaScreen', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName) && <PWAInstallBanner />}
+
                 {/* Footer */}
                 {!hideFooter && (
                 <footer className="bg-gray-900 text-gray-300 border-t border-gray-800 mt-auto">
