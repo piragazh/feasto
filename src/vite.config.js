@@ -17,7 +17,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom'],
-    exclude: ['@base44/sdk'],
+    include: ['react', 'react-dom', '@base44/sdk'],
+    force: true,
   },
 });
