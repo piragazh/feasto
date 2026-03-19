@@ -39,17 +39,20 @@ export function usePWAInstall() {
             setInstallPrompt(e);
         };
 
-        window.addEventListener('pwaInstallPromptReady', onPromptReady);
-        window.addEventListener('beforeinstallprompt', onBeforeInstall);
-        window.addEventListener('appinstalled', () => {
+        const onAppInstalled = () => {
             setIsInstalled(true);
             setInstallPrompt(null);
             window.__pwaInstallPrompt = null;
-        });
+        };
+
+        window.addEventListener('pwaInstallPromptReady', onPromptReady);
+        window.addEventListener('beforeinstallprompt', onBeforeInstall);
+        window.addEventListener('appinstalled', onAppInstalled);
 
         return () => {
             window.removeEventListener('pwaInstallPromptReady', onPromptReady);
             window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+            window.removeEventListener('appinstalled', onAppInstalled);
         };
     }, []);
 
