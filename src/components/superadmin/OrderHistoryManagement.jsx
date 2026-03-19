@@ -502,7 +502,7 @@ export default function OrderHistoryManagement() {
                                                         <div key={key} className="text-sm text-gray-600 flex items-start gap-2">
                                                             <span className="text-gray-400">•</span>
                                                             <span>
-                                                                <strong className="text-gray-700">{key}:</strong> {value}
+                                                                <strong className="text-gray-700">{key}:</strong> {typeof value === 'object' ? JSON.stringify(value) : value}
                                                                 {item.itemQuantities?.[key] && ` (${item.itemQuantities[key]}x)`}
                                                             </span>
                                                         </div>
