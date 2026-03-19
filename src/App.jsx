@@ -8,6 +8,8 @@ import React, { Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { NavigationStackProvider } from '@/lib/NavigationStack';
+import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -47,35 +49,38 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Render the main app with lazy loading for all routes
+  // Render the main app with lazy loading and stack-based navigation
   return (
-    <Routes>
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
-        </LayoutWrapper>
-      } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <LayoutWrapper currentPageName={path}>
-                <Page />
-              </LayoutWrapper>
-            </Suspense>
-          }
-        />
-      ))}
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <NavigationStackProvider>
+      <StackNavigationAnimator>
+        <Routes>
+          <Route path="/" element={
+            <LayoutWrapper currentPageName={mainPageKey}>
+              <MainPage />
+            </LayoutWrapper>
+          } />
+          {Object.entries(Pages).map(([path, Page]) => (
+            <Route
+              key={path}
+              path={`/${path}`}
+              element={
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <LayoutWrapper currentPageName={path}>
+                    <Page />
+                  </LayoutWrapper>
+                </Suspense>
+              }
+            />
+          ))}
+          <Route path="*" element={<PageNotFound />} />
+        </Routes>
+      </StackNavigationAnimator>
+    </NavigationStackProvider>
   );
 };
 
 
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
