@@ -6,7 +6,8 @@
 // - Get help with orders, deliveries, and policies
 // - Escalate complex issues to human support
 
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
+const { useState, useEffect, useRef } = React;
 import { base44 } from '@/api/base44Client'; // SDK to call backend
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button"; // UI Components
