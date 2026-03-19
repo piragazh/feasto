@@ -1126,7 +1126,7 @@ function StatusBar({ restaurant }) {
             setNetwork(prev => ({ ...prev, online: navigator.onLine }));
             try {
                 const start = performance.now();
-                await fetch('/api/health', { method: 'GET' });
+                await fetch('/api/health', { method: 'HEAD' });
                 const latency = Math.round(performance.now() - start);
                 setNetwork(prev => ({ ...prev, latency, speed: latency < 100 ? 'good' : latency < 500 ? 'fair' : 'poor' }));
             } catch {
@@ -1181,109 +1181,87 @@ export default function TabletDashboard() {
     const queryClient = useQueryClient();
 
     useEffect(() => {
-        const initApp = async () => {
-            try {
-                const user = await base44.auth.me();
-                setUser(user);
-            } catch {
-                setUser(null);
+        base44.auth.me()
+            .then(u => setUser(u))
+            .catch(() => setUser(null))
+            .finally(() => setAuthLoading(false));
+
+        // Setup PWA manifest first
+        setupPWA().then(() => {
+            // Then listen for install prompt after manifest is ready
+            const handleBeforeInstallPrompt = (e) => {
+                e.preventDefault();
+                setInstallPrompt(e);
+                setCanShowInstall(true);
+                console.log('✅ Install prompt captured', e);
+            };
+
+            window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            
+            // Check if already installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                setIsInstalled(true);
+                console.log('✅ App already installed');
+            } else {
+                console.log('⏳ Waiting for install prompt...');
             }
 
-            // Set up PWA
-            initPWA();
-            setAuthLoading(false);
-        };
-
-        initApp();
+            return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        });
     }, []);
 
-    const initPWA = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const rid = urlParams.get('restaurant_id') || sessionStorage.getItem('tablet_restaurant_id');
+    const setupPWA = async () => {
+        try {
+            const savedRestaurantId = sessionStorage.getItem('tablet_restaurant_id');
+            const urlParams = new URLSearchParams(window.location.search);
+            const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
-        // Step 1: Set manifest link (must be before beforeinstallprompt listener)
-        let manifestLink = document.querySelector('link[rel="manifest"]');
-        if (!manifestLink) {
-            manifestLink = document.createElement('link');
-            manifestLink.rel = 'manifest';
-            document.head.appendChild(manifestLink);
+            let manifestUrl = `/getManifest?mode=tablet`;
+            if (rid) {
+                manifestUrl += `&restaurant_id=${rid}`;
+            }
+
+            let manifestLink = document.querySelector('link[rel="manifest"]');
+            if (!manifestLink) {
+                manifestLink = document.createElement('link');
+                manifestLink.rel = 'manifest';
+                document.head.appendChild(manifestLink);
+            }
+            manifestLink.href = manifestUrl;
+            console.log('✅ PWA Manifest linked:', manifestUrl);
+
+            if ('serviceWorker' in navigator) {
+                await navigator.serviceWorker.register('/sw.js');
+                console.log('✅ Service worker registered');
+            }
+        } catch (err) {
+            console.error('PWA setup error:', err);
         }
-
-        let manifestUrl = '/getManifest?mode=tablet';
-        if (rid) {
-            manifestUrl += `&restaurant_id=${rid}`;
-        }
-        manifestLink.href = manifestUrl;
-        console.log('[PWA] Manifest linked:', manifestUrl);
-
-        // Step 2: Register service worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('[PWA] Service worker registered:', reg.scope))
-                .catch(err => console.error('[PWA] Service worker registration failed:', err));
-        } else {
-            console.warn('[PWA] Service Worker not supported');
-        }
-
-        // Step 3: Listen for beforeinstallprompt (must come AFTER manifest is set)
-        window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('[PWA] beforeinstallprompt event fired ✅');
-            e.preventDefault();
-            setInstallPrompt(e);
-            setCanShowInstall(true);
-        });
-
-        // Step 4: Check if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            setIsInstalled(true);
-            console.log('[PWA] App already installed in standalone mode');
-        } else {
-            console.log('[PWA] Not in standalone mode, waiting for install prompt...');
-        }
-
-        // Step 5: Listen for app installed
-        window.addEventListener('appinstalled', () => {
-            console.log('[PWA] App installed successfully ✅');
-            setIsInstalled(true);
-            setCanShowInstall(false);
-        });
-
-        // Debug: Log browser support
-        console.log('[PWA] Browser supports:', {
-            serviceWorker: 'serviceWorker' in navigator,
-            beforeInstallPrompt: 'onbeforeinstallprompt' in window,
-            manifest: manifestLink ? 'yes' : 'no',
-            https: window.location.protocol === 'https:'
-        });
     };
 
     const handleInstall = async () => {
-        console.log('[PWA] Install button clicked. Prompt available:', !!installPrompt);
+        console.log('Install button clicked. Prompt available:', !!installPrompt);
         
         if (!installPrompt) {
-            console.warn('[PWA] No install prompt available');
+            console.warn('No install prompt available');
             toast.error('Install prompt not available. Try refreshing the page or check browser support.');
             return;
         }
         
         try {
-            console.log('[PWA] Calling prompt()...');
             await installPrompt.prompt();
-            console.log('[PWA] Prompt shown');
             const { outcome } = await installPrompt.userChoice;
-            console.log('[PWA] User choice:', outcome);
+            console.log('Install outcome:', outcome);
             
             if (outcome === 'accepted') {
                 setIsInstalled(true);
                 setCanShowInstall(false);
-                setInstallPrompt(null);
                 toast.success('App installed! Check your home screen.');
             } else {
-                console.log('[PWA] User declined install');
                 toast.info('Install cancelled.');
             }
         } catch (err) {
-            console.error('[PWA] Install error:', err);
+            console.error('Install error:', err);
             toast.error('Install failed: ' + err.message);
         }
     };

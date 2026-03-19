@@ -100,7 +100,22 @@ export default function Layout({ children, currentPageName }) {
             manifestLink.rel = 'manifest';
             document.head.appendChild(manifestLink);
         }
-        manifestLink.href = '/manifest.json';
+        
+        // For restaurant dashboard / POS, use restaurant-specific dashboard manifest
+        if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard' || currentPageName === 'TabletDashboard') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
+            const posMode = currentPageName === 'POSDashboard' ? 'pos' : currentPageName === 'TabletDashboard' ? 'tablet' : 'dashboard';
+            if (dashboardRestaurantId) {
+                manifestLink.href = `/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
+            } else {
+                manifestLink.href = `/getManifest?mode=${posMode}`;
+            }
+        } else if (customDomainRestaurantId) {
+            manifestLink.href = `/getManifest?restaurant_id=${customDomainRestaurantId}`;
+        } else {
+            manifestLink.href = `/getManifest`;
+        }
 
         // Add theme-color meta tag
         let themeColor = document.querySelector('meta[name="theme-color"]');
