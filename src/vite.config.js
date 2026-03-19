@@ -11,6 +11,7 @@ export default defineConfig({
     base44(),
     react(),
   ],
+  cacheDir: 'node_modules/.vite_fresh',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -23,6 +24,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react/jsx-runtime'],
-    force: true,
+    exclude: ['@base44/sdk'],
   },
 });
