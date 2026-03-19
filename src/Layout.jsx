@@ -57,7 +57,6 @@ import {
 import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
-import PWAInstallBanner from '@/components/pwa/PWAInstallBanner';
 import { Toaster } from 'sonner';
 
 export default function Layout({ children, currentPageName }) {
@@ -81,7 +80,7 @@ export default function Layout({ children, currentPageName }) {
         enabled: !!customDomainRestaurantId,
     });
 
-    // SEO Meta Tags
+    // SEO Meta Tags & PWA Manifest
     useEffect(() => {
         // Set favicon for custom domain
         if (customDomainRestaurant?.logo_url) {
@@ -94,10 +93,40 @@ export default function Layout({ children, currentPageName }) {
             favicon.href = customDomainRestaurant.logo_url;
         }
 
-        // Update theme-color for custom domain branding
+        // Add PWA manifest link
+        let manifestLink = document.querySelector('link[rel="manifest"]');
+        if (!manifestLink) {
+            manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            document.head.appendChild(manifestLink);
+        }
+        manifestLink.href = '/manifest.json';
+
+        // Add theme-color meta tag
         let themeColor = document.querySelector('meta[name="theme-color"]');
-        if (themeColor && customDomainRestaurant?.theme_primary_color) {
-            themeColor.content = customDomainRestaurant.theme_primary_color;
+        if (!themeColor) {
+            themeColor = document.createElement('meta');
+            themeColor.name = 'theme-color';
+            document.head.appendChild(themeColor);
+        }
+        themeColor.content = customDomainRestaurant?.theme_primary_color || '#f97316';
+
+        // Add apple-mobile-web-app-capable for iOS
+        let appleCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+        if (!appleCapable) {
+            appleCapable = document.createElement('meta');
+            appleCapable.name = 'apple-mobile-web-app-capable';
+            appleCapable.content = 'yes';
+            document.head.appendChild(appleCapable);
+        }
+
+        // Add apple-mobile-web-app-status-bar-style
+        let appleStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+        if (!appleStatusBar) {
+            appleStatusBar = document.createElement('meta');
+            appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
+            appleStatusBar.content = 'default';
+            document.head.appendChild(appleStatusBar);
         }
 
         // Set title and meta tags
@@ -587,9 +616,6 @@ export default function Layout({ children, currentPageName }) {
 
                 {/* AI Chatbot Widget */}
                 {!['AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'RestaurantDashboard', 'POSDashboard', 'MediaScreen'].includes(currentPageName) && <ChatbotWidget />}
-
-                {/* PWA Install Banner */}
-                {!['POSDashboard', 'MediaScreen', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName) && <PWAInstallBanner />}
 
                 {/* Footer */}
                 {!hideFooter && (

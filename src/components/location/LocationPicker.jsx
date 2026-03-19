@@ -1,5 +1,4 @@
-import * as React from 'react';
-const { useState, useRef, useEffect } = React;
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin, Loader2, Navigation } from 'lucide-react';

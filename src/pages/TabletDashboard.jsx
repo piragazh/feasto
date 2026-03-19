@@ -14,7 +14,6 @@ import {
     LogOut, Menu, X, ChevronRight, Search, Bluetooth, AlertCircle,
     MessageSquare, Send, Wifi, WifiOff, Zap, Download
 } from 'lucide-react';
-import { usePWAInstall } from '@/components/pwa/usePWAInstall';
 import { format } from 'date-fns';
 import { printerService } from '@/components/restaurant/PrinterService';
 
@@ -1176,25 +1175,117 @@ export default function TabletDashboard() {
     const [authLoading, setAuthLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('orders');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const { canInstall, isInstalled, isInstalling, promptInstall } = usePWAInstall();
+    const [installPrompt, setInstallPrompt] = useState(null);
+    const [isInstalled, setIsInstalled] = useState(false);
+    const [canShowInstall, setCanShowInstall] = useState(true);
     const queryClient = useQueryClient();
 
     useEffect(() => {
         const initApp = async () => {
             try {
-                const u = await base44.auth.me();
-                setUser(u);
+                const user = await base44.auth.me();
+                setUser(user);
             } catch {
                 setUser(null);
             }
+
+            // Set up PWA
+            initPWA();
             setAuthLoading(false);
         };
+
         initApp();
     }, []);
 
+    const initPWA = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const rid = urlParams.get('restaurant_id') || sessionStorage.getItem('tablet_restaurant_id');
+
+        // Step 1: Set manifest link (must be before beforeinstallprompt listener)
+        let manifestLink = document.querySelector('link[rel="manifest"]');
+        if (!manifestLink) {
+            manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            document.head.appendChild(manifestLink);
+        }
+
+        let manifestUrl = '/getManifest?mode=tablet';
+        if (rid) {
+            manifestUrl += `&restaurant_id=${rid}`;
+        }
+        manifestLink.href = manifestUrl;
+        console.log('[PWA] Manifest linked:', manifestUrl);
+
+        // Step 2: Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('[PWA] Service worker registered:', reg.scope))
+                .catch(err => console.error('[PWA] Service worker registration failed:', err));
+        } else {
+            console.warn('[PWA] Service Worker not supported');
+        }
+
+        // Step 3: Listen for beforeinstallprompt (must come AFTER manifest is set)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('[PWA] beforeinstallprompt event fired ✅');
+            e.preventDefault();
+            setInstallPrompt(e);
+            setCanShowInstall(true);
+        });
+
+        // Step 4: Check if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            setIsInstalled(true);
+            console.log('[PWA] App already installed in standalone mode');
+        } else {
+            console.log('[PWA] Not in standalone mode, waiting for install prompt...');
+        }
+
+        // Step 5: Listen for app installed
+        window.addEventListener('appinstalled', () => {
+            console.log('[PWA] App installed successfully ✅');
+            setIsInstalled(true);
+            setCanShowInstall(false);
+        });
+
+        // Debug: Log browser support
+        console.log('[PWA] Browser supports:', {
+            serviceWorker: 'serviceWorker' in navigator,
+            beforeInstallPrompt: 'onbeforeinstallprompt' in window,
+            manifest: manifestLink ? 'yes' : 'no',
+            https: window.location.protocol === 'https:'
+        });
+    };
+
     const handleInstall = async () => {
-        const success = await promptInstall();
-        if (success) toast.success('App installed! Check your home screen.');
+        console.log('[PWA] Install button clicked. Prompt available:', !!installPrompt);
+        
+        if (!installPrompt) {
+            console.warn('[PWA] No install prompt available');
+            toast.error('Install prompt not available. Try refreshing the page or check browser support.');
+            return;
+        }
+        
+        try {
+            console.log('[PWA] Calling prompt()...');
+            await installPrompt.prompt();
+            console.log('[PWA] Prompt shown');
+            const { outcome } = await installPrompt.userChoice;
+            console.log('[PWA] User choice:', outcome);
+            
+            if (outcome === 'accepted') {
+                setIsInstalled(true);
+                setCanShowInstall(false);
+                setInstallPrompt(null);
+                toast.success('App installed! Check your home screen.');
+            } else {
+                console.log('[PWA] User declined install');
+                toast.info('Install cancelled.');
+            }
+        } catch (err) {
+            console.error('[PWA] Install error:', err);
+            toast.error('Install failed: ' + err.message);
+        }
     };
 
     // Load restaurant for this user
@@ -1274,19 +1365,20 @@ export default function TabletDashboard() {
                     </button>
                     <h1 className="text-lg font-semibold text-gray-800">{tabLabels[activeTab]}</h1>
                     <div className="ml-auto flex items-center gap-3">
-                        {canInstall && (
+                        {!isInstalled && !installPrompt && (
+                            <span className="text-xs text-gray-500">PWA ready (Chrome/Edge to install)</span>
+                        )}
+                        {!isInstalled && (canShowInstall || installPrompt) && (
                             <Button 
                                 onClick={handleInstall} 
                                 size="sm" 
                                 className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
-                                disabled={isInstalling}
+                                disabled={!installPrompt}
+                                title={installPrompt ? 'Install as PWA' : 'Waiting for install prompt...'}
                             >
                                 <Download className="h-4 w-4" />
-                                {isInstalling ? 'Installing...' : 'Install App'}
+                                Install App
                             </Button>
-                        )}
-                        {isInstalled && (
-                            <span className="text-xs text-green-600 font-medium">✓ Installed</span>
                         )}
                     </div>
                 </header>

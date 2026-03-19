@@ -1,29 +1,42 @@
-import * as React from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-const DarkModeContext = React.createContext({
+const DarkModeContext = createContext({
     isDark: false,
     toggleDarkMode: () => {},
 });
 
-export const useDarkMode = () => React.useContext(DarkModeContext);
+export const useDarkMode = () => useContext(DarkModeContext);
 
 export function DarkModeProvider({ children }) {
-    const [isDark, setIsDark] = React.useState(false);
+    const [isDark, setIsDark] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
+        // Check system preference and localStorage
         const stored = localStorage.getItem('darkMode');
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
         const shouldBeDark = stored ? stored === 'true' : systemPrefersDark;
         setIsDark(shouldBeDark);
-        document.documentElement.classList.toggle('dark', shouldBeDark);
+        
+        if (shouldBeDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
 
+        // Listen to system preference changes
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const handler = (e) => {
             if (!localStorage.getItem('darkMode')) {
                 setIsDark(e.matches);
-                document.documentElement.classList.toggle('dark', e.matches);
+                if (e.matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
             }
         };
+
         mediaQuery.addEventListener('change', handler);
         return () => mediaQuery.removeEventListener('change', handler);
     }, []);
@@ -32,7 +45,11 @@ export function DarkModeProvider({ children }) {
         setIsDark(prev => {
             const newValue = !prev;
             localStorage.setItem('darkMode', String(newValue));
-            document.documentElement.classList.toggle('dark', newValue);
+            if (newValue) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
             return newValue;
         });
     };
