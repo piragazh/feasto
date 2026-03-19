@@ -206,31 +206,31 @@ export default function SuperAdmin() {
             </Sheet>
 
             {/* Main Content */}
-            <div className={`${sidebarOpen ? 'ml-64' : 'ml-20'} flex-1 transition-all duration-300`}>
+            <div className={`md:${sidebarOpen ? 'ml-64' : 'ml-20'} flex-1 transition-all duration-300 pt-20 md:pt-0`}>
                 {/* Top Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
-                    <div className="px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                    <div className="px-4 md:px-6 py-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
                             <button
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="hidden md:block p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                             >
-                                <Shield className="h-5 w-5 text-gray-600" />
+                                <Menu className="h-5 w-5 text-gray-600" />
                             </button>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
-                                <p className="text-sm text-gray-500">System Management & Control</p>
+                            <div className="min-w-0">
+                                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Super Admin</h1>
+                                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">System Management</p>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
-                            <p className="text-xs text-gray-500">Administrator</p>
+                        <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-medium text-gray-900 hidden sm:block">{user?.full_name}</p>
+                            <p className="text-xs text-gray-500 hidden sm:block">Admin</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Page Content */}
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
                     {activeTab === 'overview' && <SystemOverview />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
                     {activeTab === 'restaurants' && <RestaurantManagement />}
