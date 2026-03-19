@@ -12,7 +12,7 @@ const reactDomPath = path.resolve(__dirname, 'node_modules/react-dom');
 const reactSingleton = {
   name: 'react-singleton',
   enforce: 'pre',
-  resolveId(id) {
+  resolveId(id, importer) {
     if (id === 'react') return { id: path.join(reactPath, 'index.js') };
     if (id === 'react-dom') return { id: path.join(reactDomPath, 'index.js') };
     if (id === 'react/jsx-runtime') return { id: path.join(reactPath, 'jsx-runtime.js') };
