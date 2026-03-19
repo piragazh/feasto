@@ -30,13 +30,13 @@ import BulkPriceAdjustment from '@/components/superadmin/BulkPriceAdjustment';
 import BackupRestore from '@/components/superadmin/BackupRestore';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon } from 'lucide-react';
 import { createPageUrl } from '@/utils';
-import { useMediaQuery } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-    const isMobile = useMediaQuery('(max-width: 768px)');
+    const isMobile = useIsMobile();
 
     const { data: user, isLoading } = useQuery({
         queryKey: ['current-user'],
