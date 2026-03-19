@@ -48,8 +48,8 @@ export default function CustomerProfile() {
             <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 <div className="mb-6">
                     <Link to={createPageUrl('Home')}>
-                        <Button variant="ghost" className="mb-4">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
+                        <Button variant="ghost" className="mb-4 h-11 md:h-auto" aria-label="Back to home">
+                            <ArrowLeft className="h-5 w-5 mr-2" />
                             Back to Home
                         </Button>
                     </Link>
@@ -89,21 +89,23 @@ export default function CustomerProfile() {
                 <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
                     <CardContent className="pt-6">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Settings</h3>
-                        <div className="space-y-3">
+                        <div className="space-y-2 md:space-y-3">
                             <Button
                                 variant="outline"
                                 onClick={toggleDarkMode}
-                                className="w-full justify-start dark:border-gray-600"
+                                className="w-full justify-start h-11 md:h-10 dark:border-gray-600 px-4"
+                                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                             >
-                                {isDark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                                {isDark ? <Sun className="h-5 w-5 mr-3" /> : <Moon className="h-5 w-5 mr-3" />}
                                 {isDark ? 'Light Mode' : 'Dark Mode'}
                             </Button>
                             <Button
                                 variant="destructive"
                                 onClick={() => setShowDeleteDialog(true)}
-                                className="w-full justify-start"
+                                className="w-full justify-start h-11 md:h-10 px-4"
+                                aria-label="Delete your account permanently"
                             >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="h-5 w-5 mr-3" />
                                 Delete Account
                             </Button>
                         </div>
@@ -113,23 +115,23 @@ export default function CustomerProfile() {
                 {/* Profile Tabs */}
                 <Tabs defaultValue="orders">
                     <TabsList className="bg-white dark:bg-gray-800 dark:border-gray-700 mb-4 sm:mb-6 w-full grid grid-cols-2 sm:flex sm:w-auto">
-                        <TabsTrigger value="orders" className="text-xs sm:text-sm">
-                            <Package className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <TabsTrigger value="orders" className="text-xs sm:text-sm h-11 sm:h-auto" aria-label="Order history">
+                            <Package className="h-4 w-4 sm:h-4 sm:w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Order History</span>
                             <span className="sm:hidden">Orders</span>
                         </TabsTrigger>
-                        <TabsTrigger value="favorites" className="text-xs sm:text-sm">
-                            <Heart className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <TabsTrigger value="favorites" className="text-xs sm:text-sm h-11 sm:h-auto" aria-label="Favorite restaurants">
+                            <Heart className="h-4 w-4 sm:h-4 sm:w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Favorites</span>
                             <span className="sm:hidden">♥️</span>
                         </TabsTrigger>
-                        <TabsTrigger value="addresses" className="text-xs sm:text-sm">
-                            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <TabsTrigger value="addresses" className="text-xs sm:text-sm h-11 sm:h-auto" aria-label="Saved addresses">
+                            <MapPin className="h-4 w-4 sm:h-4 sm:w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Addresses</span>
                             <span className="sm:hidden">📍</span>
                         </TabsTrigger>
-                        <TabsTrigger value="loyalty" className="text-xs sm:text-sm">
-                            <Award className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <TabsTrigger value="loyalty" className="text-xs sm:text-sm h-11 sm:h-auto" aria-label="Loyalty rewards">
+                            <Award className="h-4 w-4 sm:h-4 sm:w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Rewards</span>
                             <span className="sm:hidden">🏆</span>
                         </TabsTrigger>
