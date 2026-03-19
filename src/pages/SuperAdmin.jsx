@@ -188,60 +188,22 @@ export default function SuperAdmin() {
         <div className="min-h-screen bg-gray-100 flex">
             {/* Desktop Sidebar */}
             <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 fixed h-screen shadow-lg z-40 flex-col`}>
-                {/* Logo */}
-                <div className="sticky top-0 bg-slate-950 p-4 border-b border-slate-700 flex items-center justify-between">
-                    <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
-                        <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <Shield className="h-6 w-6" />
-                        </div>
-                        {sidebarOpen && <span className="font-bold text-lg truncate">Admin</span>}
-                    </div>
-                </div>
-
-                {/* Menu Groups */}
-                <nav className="p-4 space-y-6">
-                    {menuGroups.map((group) => (
-                        <div key={group.title}>
-                            {sidebarOpen && (
-                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
-                                    {group.title}
-                                </p>
-                            )}
-                            <div className="space-y-1">
-                                {group.items.map((item) => {
-                                    const IconComponent = item.icon;
-                                    const isActive = activeTab === item.id;
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => setActiveTab(item.id)}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                                                isActive
-                                                    ? 'bg-orange-500 text-white shadow-lg'
-                                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                                            } ${!sidebarOpen && 'justify-center'}`}
-                                            title={!sidebarOpen ? item.label : ''}
-                                        >
-                                            <IconComponent className="h-5 w-5 flex-shrink-0" />
-                                            {sidebarOpen && <span className="text-sm font-medium truncate">{item.label}</span>}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
-                </nav>
-
-                {/* User Info */}
-                {sidebarOpen && (
-                    <div className="absolute bottom-0 w-full p-4 border-t border-slate-700 bg-slate-950">
-                        <div className="text-xs text-slate-400">
-                            <p className="truncate font-semibold">{user?.full_name}</p>
-                            <p className="truncate text-slate-500">{user?.email}</p>
-                        </div>
-                    </div>
-                )}
+                <SidebarContent />
             </div>
+
+            {/* Mobile Sheet Sidebar */}
+            <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+                <SheetTrigger asChild>
+                    <div className="md:hidden fixed top-20 left-4 z-30">
+                        <Button size="icon" variant="ghost" className="rounded-lg">
+                            <Menu className="h-6 w-6" />
+                        </Button>
+                    </div>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 bg-slate-900 text-white p-0 border-0">
+                    <SidebarContent />
+                </SheetContent>
+            </Sheet>
 
             {/* Main Content */}
             <div className={`${sidebarOpen ? 'ml-64' : 'ml-20'} flex-1 transition-all duration-300`}>
