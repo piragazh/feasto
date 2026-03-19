@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+const { useState } = React;
 import { base44 } from '@/api/base44Client';
 import { useMutation } from '@tanstack/react-query';
 import {
