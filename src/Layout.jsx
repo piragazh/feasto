@@ -57,6 +57,7 @@ import {
 import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
+import PWAInstallBanner from '@/components/pwa/PWAInstallBanner';
 import { Toaster } from 'sonner';
 
 export default function Layout({ children, currentPageName }) {
