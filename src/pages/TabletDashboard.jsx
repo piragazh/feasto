@@ -14,6 +14,7 @@ import {
     LogOut, Menu, X, ChevronRight, Search, Bluetooth, AlertCircle,
     MessageSquare, Send, Wifi, WifiOff, Zap, Download
 } from 'lucide-react';
+import { usePWAInstall } from '@/components/pwa/usePWAInstall';
 import { format } from 'date-fns';
 import { printerService } from '@/components/restaurant/PrinterService';
 
