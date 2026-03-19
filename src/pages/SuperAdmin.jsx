@@ -28,8 +28,9 @@ import GlobalScreenHealthMonitor from '@/components/superadmin/GlobalScreenHealt
 import SmsLogViewer from '@/components/superadmin/SmsLogViewer';
 import BulkPriceAdjustment from '@/components/superadmin/BulkPriceAdjustment';
 import BackupRestore from '@/components/superadmin/BackupRestore';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import { useMediaQuery } from '@/hooks/use-mobile';
 
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
