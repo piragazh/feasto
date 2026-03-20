@@ -206,6 +206,9 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                 <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-3">
                         <label className="text-sm font-medium">Time Period:</label>
+                        <Button onClick={downloadPDF} size="sm" variant="outline" className="flex items-center gap-1.5">
+                                <Download className="h-4 w-4" /> Download PDF
+                            </Button>
                         <Select value={dateRange} onValueChange={setDateRange}>
                             <SelectTrigger className="w-40">
                                 <SelectValue />
