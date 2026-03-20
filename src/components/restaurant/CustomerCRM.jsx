@@ -560,103 +560,14 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                 </DialogContent>
             </Dialog>
 
-            {/* Message Dialog */}
-            <Dialog open={messageDialog} onOpenChange={setMessageDialog}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Send Targeted Promotional Offer</DialogTitle>
-                        <DialogDescription>
-                            {targetSegment && `Sending to ${targetSegment.count} customers in ${
-                                targetSegment.segment === 'all' ? 'all segments' : segmentConfig[targetSegment.segment]?.label
-                            }`}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label>Offer Type</Label>
-                            <Select value={offerType} onValueChange={setOfferType}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="message">Message Only</SelectItem>
-                                    <SelectItem value="discount">
-                                        <div className="flex items-center gap-2">
-                                            <Percent className="h-4 w-4" />
-                                            Percentage Discount
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="freeDelivery">
-                                        <div className="flex items-center gap-2">
-                                            🚚 Free Delivery
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        
-                        {offerType !== 'message' && (
-                            <>
-                                <div>
-                                    <Label>Offer Title</Label>
-                                    <Input
-                                        placeholder="e.g., Special Weekend Offer!"
-                                        value={offerTitle}
-                                        onChange={(e) => setOfferTitle(e.target.value)}
-                                    />
-                                </div>
-                                
-                                {offerType === 'discount' && (
-                                    <div>
-                                        <Label>Discount Percentage</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="e.g., 15"
-                                            value={discountValue}
-                                            onChange={(e) => setDiscountValue(e.target.value)}
-                                            min="0"
-                                            max="100"
-                                        />
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        
-                        <div>
-                            <Label>Message</Label>
-                            <Textarea
-                                placeholder="Enter your promotional message..."
-                                value={messageContent}
-                                onChange={(e) => setMessageContent(e.target.value)}
-                                rows={6}
-                            />
-                        </div>
-                        
-                        {offerType !== 'message' && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-sm font-semibold text-blue-900 mb-1">Preview:</p>
-                                <p className="text-xs text-blue-700">
-                                    {offerTitle || 'Offer Title'} - {offerType === 'discount' ? `${discountValue || '0'}% off` : 'Free Delivery'}
-                                </p>
-                            </div>
-                        )}
-                        
-                        <div className="flex gap-2">
-                            <Button onClick={() => setMessageDialog(false)} variant="outline" className="flex-1">
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSendMessage}
-                                disabled={sendMessageMutation.isPending}
-                                className="flex-1 bg-orange-500 hover:bg-orange-600"
-                            >
-                                <Send className="h-4 w-4 mr-2" />
-                                {sendMessageMutation.isPending ? 'Sending...' : 'Send Offer'}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Campaign Dialog */}
+            <CRMCampaignDialog
+                open={campaignDialog}
+                onClose={() => setCampaignDialog(false)}
+                targetSegment={targetSegment}
+                segmentConfig={segmentConfig}
+                restaurantName={restaurantName}
+            />
         </div>
     );
 }
