@@ -8,30 +8,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Users, TrendingUp, DollarSign, Mail, Search, Filter, Send, Star, Percent, Calendar, Leaf, Phone, MapPin, Wand2, Loader2, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, TrendingUp, DollarSign, Mail, Search, Filter, Send, Star, Percent, Calendar, Leaf, Phone, MapPin, Wand2, Loader2, ChevronRight, MessageSquare, Smartphone } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import CRMCustomerProfile from './CRMCustomerProfile';
+import CRMCampaignDialog from './CRMCampaignDialog';
 
 export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restaurant' }) {
     const [selectedSegment, setSelectedSegment] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCustomer, setSelectedCustomer] = useState(null);
-    const [messageDialog, setMessageDialog] = useState(false);
-    const [messageContent, setMessageContent] = useState('');
+    const [campaignDialog, setCampaignDialog] = useState(false);
     const [targetSegment, setTargetSegment] = useState(null);
-    const [offerType, setOfferType] = useState('message');
-    const [discountValue, setDiscountValue] = useState('');
-    const [offerTitle, setOfferTitle] = useState('');
     const [advancedFilters, setAdvancedFilters] = useState({
         orderFrequency: 'all',
         spendingLevel: 'all',
@@ -249,72 +240,16 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         }).sort((a, b) => b.totalSpent - a.totalSpent);
     }, [customerAnalytics.customers, selectedSegment, searchQuery, advancedFilters]);
 
-    const sendMessageMutation = useMutation({
-        mutationFn: async ({ emails, message, offerData }) => {
-            // In production, this would send actual emails via the SendEmail integration
-            const subject = offerData?.title || `Special Offer from Restaurant`;
-            let body = message;
-            
-            if (offerData?.type === 'discount') {
-                body = `${offerData.title}\n\n${message}\n\nDiscount: ${offerData.value}% off\n\nUse this offer on your next order!`;
-            } else if (offerData?.type === 'freeDelivery') {
-                body = `${offerData.title}\n\n${message}\n\nEnjoy FREE DELIVERY on your next order!`;
-            }
-            
-            // Filter out empty/invalid emails before sending
-        const validEmails = emails.filter(e => e && e.includes('@'));
-        if (validEmails.length === 0) throw new Error('No valid email addresses to send to');
-        const promises = validEmails.map(email =>
-                base44.integrations.Core.SendEmail({ to: email, subject, body })
-            );
-        await Promise.all(promises);
-        },
-        onSuccess: (_, variables) => {
-            toast.success(`Offer sent to ${variables.emails.filter(e => e?.includes('@')).length} customers!`);
-            setMessageDialog(false);
-            setMessageContent('');
-            setTargetSegment(null);
-            setOfferType('message');
-            setDiscountValue('');
-            setOfferTitle('');
-        },
-    });
-
     const handleSendToSegment = (segment) => {
         const customers = customerAnalytics.customers.filter(c =>
-            (segment === 'all' ? true : c.segment === segment) && !!c.email
+            segment === 'all' ? true : c.segment === segment
         );
-        setTargetSegment({ segment, count: customers.length, emails: customers.map(c => c.email) });
-        setMessageDialog(true);
-    };
-
-    const handleSendMessage = () => {
-        if (!messageContent.trim()) {
-            toast.error('Please enter a message');
-            return;
-        }
-        
-        if (offerType !== 'message' && !offerTitle.trim()) {
-            toast.error('Please enter an offer title');
-            return;
-        }
-        
-        if (offerType === 'discount' && (!discountValue || discountValue <= 0)) {
-            toast.error('Please enter a valid discount percentage');
-            return;
-        }
-        
-        const offerData = offerType === 'message' ? null : {
-            type: offerType,
-            title: offerTitle,
-            value: discountValue
-        };
-        
-        sendMessageMutation.mutate({
-            emails: targetSegment.emails,
-            message: messageContent,
-            offerData
+        setTargetSegment({
+            segment,
+            count: customers.length,
+            recipients: customers.map(c => ({ email: c.email, phone: c.phone, name: c.guestName }))
         });
+        setCampaignDialog(true);
     };
 
     const segmentConfig = {
@@ -497,8 +432,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Mail className="h-5 w-5" />
-                        Targeted Communication
+                        <Send className="h-5 w-5" />
+                        Campaigns — Email · SMS · WhatsApp
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -508,8 +443,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                             variant="outline"
                             className="justify-start"
                         >
-                            <Mail className="h-4 w-4 mr-2" />
-                            Message All Customers
+                            <Send className="h-4 w-4 mr-2 text-orange-500" />
+                            Campaign — All Customers
                         </Button>
                         {Object.entries(segmentConfig).map(([key, config]) => (
                             <Button
@@ -519,7 +454,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                                 className="justify-start"
                                 disabled={customerAnalytics.segments[key] === 0}
                             >
-                                <Mail className="h-4 w-4 mr-2" />
+                                <Send className="h-4 w-4 mr-2 text-orange-500" />
                                 {config.label} ({customerAnalytics.segments[key]})
                             </Button>
                         ))}
@@ -619,103 +554,14 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                 </DialogContent>
             </Dialog>
 
-            {/* Message Dialog */}
-            <Dialog open={messageDialog} onOpenChange={setMessageDialog}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Send Targeted Promotional Offer</DialogTitle>
-                        <DialogDescription>
-                            {targetSegment && `Sending to ${targetSegment.count} customers in ${
-                                targetSegment.segment === 'all' ? 'all segments' : segmentConfig[targetSegment.segment]?.label
-                            }`}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label>Offer Type</Label>
-                            <Select value={offerType} onValueChange={setOfferType}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="message">Message Only</SelectItem>
-                                    <SelectItem value="discount">
-                                        <div className="flex items-center gap-2">
-                                            <Percent className="h-4 w-4" />
-                                            Percentage Discount
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="freeDelivery">
-                                        <div className="flex items-center gap-2">
-                                            🚚 Free Delivery
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        
-                        {offerType !== 'message' && (
-                            <>
-                                <div>
-                                    <Label>Offer Title</Label>
-                                    <Input
-                                        placeholder="e.g., Special Weekend Offer!"
-                                        value={offerTitle}
-                                        onChange={(e) => setOfferTitle(e.target.value)}
-                                    />
-                                </div>
-                                
-                                {offerType === 'discount' && (
-                                    <div>
-                                        <Label>Discount Percentage</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="e.g., 15"
-                                            value={discountValue}
-                                            onChange={(e) => setDiscountValue(e.target.value)}
-                                            min="0"
-                                            max="100"
-                                        />
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        
-                        <div>
-                            <Label>Message</Label>
-                            <Textarea
-                                placeholder="Enter your promotional message..."
-                                value={messageContent}
-                                onChange={(e) => setMessageContent(e.target.value)}
-                                rows={6}
-                            />
-                        </div>
-                        
-                        {offerType !== 'message' && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-sm font-semibold text-blue-900 mb-1">Preview:</p>
-                                <p className="text-xs text-blue-700">
-                                    {offerTitle || 'Offer Title'} - {offerType === 'discount' ? `${discountValue || '0'}% off` : 'Free Delivery'}
-                                </p>
-                            </div>
-                        )}
-                        
-                        <div className="flex gap-2">
-                            <Button onClick={() => setMessageDialog(false)} variant="outline" className="flex-1">
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSendMessage}
-                                disabled={sendMessageMutation.isPending}
-                                className="flex-1 bg-orange-500 hover:bg-orange-600"
-                            >
-                                <Send className="h-4 w-4 mr-2" />
-                                {sendMessageMutation.isPending ? 'Sending...' : 'Send Offer'}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Campaign Dialog */}
+            <CRMCampaignDialog
+                open={campaignDialog}
+                onClose={() => setCampaignDialog(false)}
+                targetSegment={targetSegment}
+                segmentConfig={segmentConfig}
+                restaurantName={restaurantName}
+            />
         </div>
     );
 }

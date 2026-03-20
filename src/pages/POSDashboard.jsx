@@ -303,43 +303,48 @@ export default function POSDashboard() {
                         </div>
 
                         {/* Theme toggle */}
-                        <button onClick={toggleTheme}
+                        <button 
+                            onClick={toggleTheme}
+                            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
-                            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                            {isDark ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
                         </button>
 
                         {maxPos > 1 && (
-                            <button onClick={() => setPosNumber(null)}
+                            <button 
+                                onClick={() => setPosNumber(null)}
+                                aria-label="Switch POS terminal"
                                 className={`flex items-center gap-1 ${t.textMuted} text-xs px-3 py-2 rounded-lg hover:${isDark ? 'bg-white/5' : 'bg-gray-100'} transition-colors`}>
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4" aria-hidden="true" />
                                 Switch
                             </button>
                         )}
 
-                                        {/* Customer Display button */}
+                        {/* Customer Display button */}
                         <button
-                            title="Open Customer Display"
                             onClick={() => {
                                 publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url });
                                 window.open(createPageUrl('CustomerDisplay'), '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
                             }}
+                            aria-label="Open customer display in new window"
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
-                            <ExternalLink className="h-4 w-4" />
+                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
                         </button>
 
                         {/* Kiosk button */}
                         <button
-                            title="Open Self-Order Kiosk"
                             onClick={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
+                            aria-label="Open self-order kiosk in new window"
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
-                            <TabletSmartphone className="h-4 w-4" />
+                            <TabletSmartphone className="h-4 w-4" aria-hidden="true" />
                         </button>
 
                         {activeStaffMember && (
-                            <button onClick={() => setShowStaffLogin(true)}
-                                title="Switch staff member"
+                            <button 
+                                onClick={() => setShowStaffLogin(true)}
+                                aria-label={`Switch staff member. Currently: ${activeStaffMember.full_name}`}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${t.iconBtn}`}>
-                                <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
+                                <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" aria-hidden="true">
                                     {activeStaffMember.full_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                                 </div>
                                 <span className={`text-xs font-semibold ${t.textMuted} hidden sm:block`}>
@@ -348,9 +353,11 @@ export default function POSDashboard() {
                             </button>
                         )}
 
-                        <button onClick={() => base44.auth.logout()}
+                        <button 
+                            onClick={() => base44.auth.logout()}
+                            aria-label="Sign out"
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
-                            <LogOut className="h-4 w-4" />
+                            <LogOut className="h-4 w-4" aria-hidden="true" />
                         </button>
                     </div>
                 </div>

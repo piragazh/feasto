@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, ShoppingBag, TrendingUp, Users, Star, Calendar as CalendarIcon, Award, CreditCard } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Users, Star, Calendar as CalendarIcon, Award, CreditCard, Download } from 'lucide-react';
+import { generateReportPDF } from '@/lib/generatePDF';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
 const COLORS = ['#FF6B35', '#004E89', '#F77F00', '#06A77D', '#9B5DE5', '#F15BB5'];
@@ -150,6 +151,41 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
         return { topCustomers, oneTime, returning };
     }, [filteredOrders]);
 
+    const downloadPDF = () => {
+        generateReportPDF({
+            title: 'Restaurant Analytics Report',
+            subtitle: `Period: ${dateRange === 'custom' ? `${customDateFrom ? format(customDateFrom, 'dd MMM yyyy') : ''} – ${customDateTo ? format(customDateTo, 'dd MMM yyyy') : ''}` : dateRange}`,
+            metrics: [
+                { label: 'Total Orders', value: metrics.totalOrders },
+                { label: 'Total Revenue', value: `£${metrics.totalRevenue.toFixed(2)}` },
+                { label: 'Avg Order Value', value: `£${metrics.avgOrderValue.toFixed(2)}` },
+                { label: 'Net Earnings', value: `£${metrics.earnings.toFixed(2)}` },
+                { label: 'Platform Commission', value: `£${metrics.totalCommission.toFixed(2)}` },
+                { label: 'Total Refunds', value: `£${metrics.totalRefunds.toFixed(2)}` },
+                { label: 'Returning Customers', value: customerStats.returning },
+                { label: 'One-Time Customers', value: customerStats.oneTime },
+            ],
+            tables: [
+                {
+                    title: 'Top Selling Items',
+                    headers: ['Item', 'Qty Sold', 'Revenue'],
+                    rows: popularItems.map(i => [i.name, i.count, `£${i.revenue.toFixed(2)}`]),
+                },
+                {
+                    title: 'Daily Revenue',
+                    headers: ['Date', 'Revenue', 'Orders'],
+                    rows: revenueByDay.map(d => [d.date, `£${d.revenue.toFixed(2)}`, d.orders]),
+                },
+                {
+                    title: 'Top Customers',
+                    headers: ['Customer', 'Orders', 'Total Spent'],
+                    rows: customerStats.topCustomers.map(c => [c.email, c.orderCount, `£${c.totalSpent.toFixed(2)}`]),
+                },
+            ],
+            filename: `analytics-report-${dateRange}.pdf`,
+        });
+    };
+
     const isLoading = ordersLoading || payoutsLoading;
 
     if (isLoading) {
@@ -170,6 +206,9 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                 <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-3">
                         <label className="text-sm font-medium">Time Period:</label>
+                        <Button onClick={downloadPDF} size="sm" variant="outline" className="flex items-center gap-1.5">
+                                <Download className="h-4 w-4" /> Download PDF
+                            </Button>
                         <Select value={dateRange} onValueChange={setDateRange}>
                             <SelectTrigger className="w-40">
                                 <SelectValue />

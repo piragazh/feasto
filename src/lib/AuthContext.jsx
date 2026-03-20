@@ -1,7 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
 
@@ -11,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   useEffect(() => {
     checkAppState();
@@ -22,22 +21,21 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
       
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
+      const headers = { 'X-App-Id': appParams.appId };
+      if (appParams.token) headers['Authorization'] = `Bearer ${appParams.token}`;
       
       try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
+        const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const err = new Error(data?.message || 'Failed to load app');
+          err.status = res.status;
+          err.data = data;
+          throw err;
+        }
+        const publicSettings = await res.json();
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check if user is authenticated
         if (appParams.token) {
           await checkUserAuth();
         } else {
@@ -48,7 +46,6 @@ export const AuthProvider = ({ children }) => {
       } catch (appError) {
         console.error('App state check failed:', appError);
         
-        // Handle app-level errors
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
           if (reason === 'auth_required') {
@@ -89,7 +86,6 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
       setUser(currentUser);
@@ -100,7 +96,6 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       
-      // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
         setAuthError({
           type: 'auth_required',
@@ -115,16 +110,13 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     
     if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
       base44.auth.logout(window.location.href);
     } else {
-      // Just remove the token without redirect
       base44.auth.logout();
     }
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
   };
 

@@ -1177,6 +1177,7 @@ export default function TabletDashboard() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [installPrompt, setInstallPrompt] = useState(null);
     const [isInstalled, setIsInstalled] = useState(false);
+    const [canShowInstall, setCanShowInstall] = useState(true);
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -1185,76 +1186,82 @@ export default function TabletDashboard() {
             .catch(() => setUser(null))
             .finally(() => setAuthLoading(false));
 
-        // Setup PWA manifest and service worker
-        setupPWA();
+        // Setup PWA manifest first
+        setupPWA().then(() => {
+            // Then listen for install prompt after manifest is ready
+            const handleBeforeInstallPrompt = (e) => {
+                e.preventDefault();
+                setInstallPrompt(e);
+                setCanShowInstall(true);
+                console.log('✅ Install prompt captured', e);
+            };
 
-        // Check if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            setIsInstalled(true);
-        }
+            window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            
+            // Check if already installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                setIsInstalled(true);
+                console.log('✅ App already installed');
+            } else {
+                console.log('⏳ Waiting for install prompt...');
+            }
 
-        // Use already-captured prompt or wait for it
-        if (window.__pwaInstallPrompt) {
-            setInstallPrompt(window.__pwaInstallPrompt);
-        }
-        const handler = () => { if (window.__pwaInstallPrompt) setInstallPrompt(window.__pwaInstallPrompt); };
-        window.addEventListener('pwaInstallPromptReady', handler);
-
-        return () => window.removeEventListener('pwaInstallPromptReady', handler);
+            return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        });
     }, []);
 
     const setupPWA = async () => {
         try {
+            const savedRestaurantId = sessionStorage.getItem('tablet_restaurant_id');
             const urlParams = new URLSearchParams(window.location.search);
-            const rid = urlParams.get('restaurant_id');
+            const rid = urlParams.get('restaurant_id') || savedRestaurantId;
 
-            // Set manifest link
+            let manifestUrl = `/getManifest?mode=tablet`;
+            if (rid) {
+                manifestUrl += `&restaurant_id=${rid}`;
+            }
+
             let manifestLink = document.querySelector('link[rel="manifest"]');
             if (!manifestLink) {
                 manifestLink = document.createElement('link');
                 manifestLink.rel = 'manifest';
                 document.head.appendChild(manifestLink);
             }
-            const manifestUrl = rid
-                ? `/.netlify/functions/getManifest?restaurant_id=${rid}&mode=tablet`
-                : `/.netlify/functions/getManifest?mode=tablet`;
             manifestLink.href = manifestUrl;
+            console.log('✅ PWA Manifest linked:', manifestUrl);
 
-            // Force fetch manifest to trigger browser PWA detection
-            try {
-                const response = await fetch(manifestUrl);
-                const manifest = await response.json();
-                console.log('✅ PWA Manifest loaded:', manifest.name);
-            } catch (err) {
-                console.warn('Failed to prefetch manifest:', err);
-            }
-
-            // Register service worker for offline support
             if ('serviceWorker' in navigator) {
-                try {
-                    await navigator.serviceWorker.register('/sw.js');
-                    console.log('✅ Service worker registered');
-                } catch (err) {
-                    console.log('Service worker registration failed:', err);
-                }
+                await navigator.serviceWorker.register('/sw.js');
+                console.log('✅ Service worker registered');
             }
         } catch (err) {
-            console.log('PWA setup error:', err);
+            console.error('PWA setup error:', err);
         }
     };
 
     const handleInstall = async () => {
-        if (!installPrompt) return;
+        console.log('Install button clicked. Prompt available:', !!installPrompt);
+        
+        if (!installPrompt) {
+            console.warn('No install prompt available');
+            toast.error('Install prompt not available. Try refreshing the page or check browser support.');
+            return;
+        }
+        
         try {
             await installPrompt.prompt();
             const { outcome } = await installPrompt.userChoice;
+            console.log('Install outcome:', outcome);
+            
             if (outcome === 'accepted') {
                 setIsInstalled(true);
-                setInstallPrompt(null);
-                window.__pwaInstallPrompt = null;
-                toast.success('App installed!');
+                setCanShowInstall(false);
+                toast.success('App installed! Check your home screen.');
+            } else {
+                toast.info('Install cancelled.');
             }
         } catch (err) {
+            console.error('Install error:', err);
             toast.error('Install failed: ' + err.message);
         }
     };
@@ -1263,22 +1270,35 @@ export default function TabletDashboard() {
     const { data: restaurant } = useQuery({
         queryKey: ['tablet-restaurant', user?.email],
         queryFn: async () => {
+            // Check sessionStorage first for quick reload
+            const savedRestaurantId = sessionStorage.getItem('tablet_restaurant_id');
+            if (savedRestaurantId) {
+                const r = await base44.entities.Restaurant.filter({ id: savedRestaurantId });
+                if (r[0]) return r[0];
+            }
+
             // Check if user is a manager
             const managers = await base44.entities.RestaurantManager.filter({ user_email: user.email });
             if (managers.length > 0) {
-                const restaurants = await base44.entities.Restaurant.filter({ id: managers[0].restaurant_ids[0] });
+                const restaurantId = managers[0].restaurant_ids[0];
+                sessionStorage.setItem('tablet_restaurant_id', restaurantId);
+                const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
                 return restaurants[0] || null;
             }
             // Admin: show first restaurant or use URL param
             const urlParams = new URLSearchParams(window.location.search);
             const rid = urlParams.get('restaurant_id');
             if (rid) {
+                sessionStorage.setItem('tablet_restaurant_id', rid);
                 const r = await base44.entities.Restaurant.filter({ id: rid });
                 return r[0] || null;
             }
             if (user.role === 'admin') {
                 const all = await base44.entities.Restaurant.list();
-                return all[0] || null;
+                if (all[0]) {
+                    sessionStorage.setItem('tablet_restaurant_id', all[0].id);
+                    return all[0];
+                }
             }
             return null;
         },
@@ -1322,9 +1342,18 @@ export default function TabletDashboard() {
                         <Menu className="h-5 w-5 text-gray-600" />
                     </button>
                     <h1 className="text-lg font-semibold text-gray-800">{tabLabels[activeTab]}</h1>
-                    <div className="ml-auto">
-                        {!isInstalled && installPrompt && (
-                            <Button onClick={handleInstall} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                    <div className="ml-auto flex items-center gap-3">
+                        {!isInstalled && !installPrompt && (
+                            <span className="text-xs text-gray-500">PWA ready (Chrome/Edge to install)</span>
+                        )}
+                        {!isInstalled && (canShowInstall || installPrompt) && (
+                            <Button 
+                                onClick={handleInstall} 
+                                size="sm" 
+                                className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                                disabled={!installPrompt}
+                                title={installPrompt ? 'Install as PWA' : 'Waiting for install prompt...'}
+                            >
                                 <Download className="h-4 w-4" />
                                 Install App
                             </Button>
