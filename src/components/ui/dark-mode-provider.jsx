@@ -1,4 +1,3 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const DarkModeContext = createContext({
