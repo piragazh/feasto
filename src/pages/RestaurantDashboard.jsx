@@ -146,8 +146,17 @@ export default function RestaurantDashboard() {
                 if (restaurantIdParam) {
                     const restaurantData = allRestaurants.find(r => r.id === restaurantIdParam);
                     if (restaurantData) {
-                        setRestaurant(restaurantData);
-                        return;
+                        // CRITICAL: Verify permission even for admin
+                        try {
+                            await base44.functions.invoke('enforceRestaurantPermissions', {
+                                restaurantId: restaurantIdParam
+                            });
+                            setRestaurant(restaurantData);
+                            return;
+                        } catch (permError) {
+                            toast.error('Access denied to this restaurant');
+                            return;
+                        }
                     }
                 }
                 
@@ -167,13 +176,24 @@ export default function RestaurantDashboard() {
                 // User is a restaurant manager
                 const manager = managerRecords[0];
                 if (manager.restaurant_ids && manager.restaurant_ids.length > 0) {
-                    // Load first assigned restaurant
-                    const allRestaurants = await base44.entities.Restaurant.list();
-                    const restaurantData = allRestaurants.find(r => r.id === manager.restaurant_ids[0]);
-                    if (restaurantData) {
-                        setRestaurant(restaurantData);
-                    } else {
-                        toast.error('Restaurant not found');
+                    // Load first assigned restaurant with permission check
+                    const restaurantId = restaurantIdParam || manager.restaurant_ids[0];
+                    
+                    // CRITICAL: Verify permission
+                    try {
+                        await base44.functions.invoke('enforceRestaurantPermissions', {
+                            restaurantId
+                        });
+                        
+                        const allRestaurants = await base44.entities.Restaurant.list();
+                        const restaurantData = allRestaurants.find(r => r.id === restaurantId);
+                        if (restaurantData) {
+                            setRestaurant(restaurantData);
+                        } else {
+                            toast.error('Restaurant not found');
+                        }
+                    } catch (permError) {
+                        toast.error('Access denied to this restaurant');
                     }
                 } else {
                     toast.error('No restaurant assigned to your account');
