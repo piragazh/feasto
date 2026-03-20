@@ -17,25 +17,39 @@ import { useAnnouncement } from '@/lib/aria-utils';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
+    const announce = useAnnouncement();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
-    const { data: restaurants = [] } = useQuery({
+    const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
         enabled: isAuthorized,
     });
 
-    const { data: orders = [] } = useQuery({
+    const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery({
         queryKey: ['all-orders'],
         queryFn: () => base44.entities.Order.list('-created_date', 100),
         enabled: isAuthorized,
     });
 
-    const { data: reviews = [] } = useQuery({
+    const { data: reviews = [], isLoading: reviewsLoading, error: reviewsError } = useQuery({
         queryKey: ['all-reviews'],
         queryFn: () => base44.entities.Review.list(),
         enabled: isAuthorized,
     });
+
+    // Announce load completions
+    useEffect(() => {
+        if (!restaurantsLoading && restaurants.length > 0) {
+            announce.status(`Loaded ${restaurants.length} restaurants`);
+        }
+    }, [restaurantsLoading, restaurants.length]);
+
+    useEffect(() => {
+        if (!ordersLoading && orders.length > 0) {
+            announce.status(`Loaded ${orders.length} orders`);
+        }
+    }, [ordersLoading, orders.length]);
 
     // Check authentication and admin role
     useEffect(() => {
