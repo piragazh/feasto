@@ -151,6 +151,41 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
         return { topCustomers, oneTime, returning };
     }, [filteredOrders]);
 
+    const downloadPDF = () => {
+        generateReportPDF({
+            title: 'Restaurant Analytics Report',
+            subtitle: `Period: ${dateRange === 'custom' ? `${customDateFrom ? format(customDateFrom, 'dd MMM yyyy') : ''} – ${customDateTo ? format(customDateTo, 'dd MMM yyyy') : ''}` : dateRange}`,
+            metrics: [
+                { label: 'Total Orders', value: metrics.totalOrders },
+                { label: 'Total Revenue', value: `£${metrics.totalRevenue.toFixed(2)}` },
+                { label: 'Avg Order Value', value: `£${metrics.avgOrderValue.toFixed(2)}` },
+                { label: 'Net Earnings', value: `£${metrics.earnings.toFixed(2)}` },
+                { label: 'Platform Commission', value: `£${metrics.totalCommission.toFixed(2)}` },
+                { label: 'Total Refunds', value: `£${metrics.totalRefunds.toFixed(2)}` },
+                { label: 'Returning Customers', value: customerStats.returning },
+                { label: 'One-Time Customers', value: customerStats.oneTime },
+            ],
+            tables: [
+                {
+                    title: 'Top Selling Items',
+                    headers: ['Item', 'Qty Sold', 'Revenue'],
+                    rows: popularItems.map(i => [i.name, i.count, `£${i.revenue.toFixed(2)}`]),
+                },
+                {
+                    title: 'Daily Revenue',
+                    headers: ['Date', 'Revenue', 'Orders'],
+                    rows: revenueByDay.map(d => [d.date, `£${d.revenue.toFixed(2)}`, d.orders]),
+                },
+                {
+                    title: 'Top Customers',
+                    headers: ['Customer', 'Orders', 'Total Spent'],
+                    rows: customerStats.topCustomers.map(c => [c.email, c.orderCount, `£${c.totalSpent.toFixed(2)}`]),
+                },
+            ],
+            filename: `analytics-report-${dateRange}.pdf`,
+        });
+    };
+
     const isLoading = ordersLoading || payoutsLoading;
 
     if (isLoading) {
