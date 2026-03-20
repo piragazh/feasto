@@ -640,6 +640,19 @@ export default function Checkout() {
             return;
         }
         
+        // CRITICAL SECURITY: Check rate limiting
+        try {
+            const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {});
+            if (!rateLimitResponse?.data?.allowed) {
+                toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
+                return;
+            }
+        } catch (error) {
+            console.error('Rate limit check failed:', error);
+            toast.error('Unable to process order. Please try again.');
+            return;
+        }
+        
         // ---- VALIDATION: Check Required Fields ----
 
         // For guest users, name and email are required
