@@ -27,12 +27,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
     const [selectedSegment, setSelectedSegment] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCustomer, setSelectedCustomer] = useState(null);
-    const [messageDialog, setMessageDialog] = useState(false);
-    const [messageContent, setMessageContent] = useState('');
+    const [campaignDialog, setCampaignDialog] = useState(false);
     const [targetSegment, setTargetSegment] = useState(null);
-    const [offerType, setOfferType] = useState('message');
-    const [discountValue, setDiscountValue] = useState('');
-    const [offerTitle, setOfferTitle] = useState('');
     const [advancedFilters, setAdvancedFilters] = useState({
         orderFrequency: 'all',
         spendingLevel: 'all',
