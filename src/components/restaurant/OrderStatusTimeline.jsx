@@ -32,7 +32,7 @@ export default function OrderStatusTimeline({ statusHistory }) {
                                 {format(new Date(entry.timestamp), 'MMM d, h:mm a')}
                             </p>
                             {entry.note && (
-                                <p className="text-xs text-gray-600 mt-1">{entry.note}</p>
+                                <SanitizedOrderNotes notes={entry.note} className="text-xs text-gray-600 mt-1" />
                             )}
                         </div>
                     </div>
