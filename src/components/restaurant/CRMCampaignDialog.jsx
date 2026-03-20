@@ -24,12 +24,20 @@ const AI_TEMPLATES = [
     { label: 'Upsell Bundle', goal: 'upsell', prompt: 'Write a promotional message about a food bundle deal — encouraging customers to add sides, drinks or desserts to their order.' },
 ];
 
-export default function CRMCampaignDialog({ open, onClose, targetSegment, segmentConfig, restaurantName }) {
+export default function CRMCampaignDialog({ open, onClose, targetSegment, segmentConfig, restaurantName, coupon }) {
     const [channel, setChannel] = useState('email');
-    const [offerType, setOfferType] = useState('message');
+    const [offerType, setOfferType] = useState(() => {
+        if (!coupon) return 'message';
+        if (coupon.discount_type === 'percentage') return 'discount';
+        if (coupon.discount_type === 'free_delivery') return 'freeDelivery';
+        if (coupon.discount_type === 'free_item') return 'freeItem';
+        if (coupon.discount_type === 'buy_one_get_one') return 'bogo';
+        if (coupon.discount_type === 'fixed') return 'fixedDiscount';
+        return 'message';
+    });
     const [subject, setSubject] = useState('');
     const [textBody, setTextBody] = useState('');
-    const [discountValue, setDiscountValue] = useState('');
+    const [discountValue, setDiscountValue] = useState(coupon?.discount_value?.toString() || '');
     const [aiLoading, setAiLoading] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [sending, setSending] = useState(false);
