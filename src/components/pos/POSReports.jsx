@@ -351,6 +351,9 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     <Button onClick={exportCSV} size="sm" className="bg-green-700 hover:bg-green-600 text-white h-9 px-3">
                         <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
                     </Button>
+                    <Button onClick={exportPDF} size="sm" className="bg-orange-600 hover:bg-orange-500 text-white h-9 px-3">
+                        <FileText className="h-3.5 w-3.5 mr-1.5" /> PDF
+                    </Button>
                     <Button onClick={printReport} disabled={isPrinting} size="sm"
                         className="bg-blue-700 hover:bg-blue-600 text-white h-9 px-3">
                         <Printer className="h-3.5 w-3.5 mr-1.5" />
