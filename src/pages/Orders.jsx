@@ -101,6 +101,11 @@ export default function Orders() {
                 throw new Error('You can only request refunds for your own orders');
             }
             
+            // CRITICAL SECURITY: Verify user owns this order
+            if (order.created_by !== user?.email) {
+                throw new Error('You can only request refunds for your own orders');
+            }
+            
             // Validate refund amount doesn't exceed order total
             if (refundAmount > order.total) {
                 throw new Error('Refund amount cannot exceed order total');
