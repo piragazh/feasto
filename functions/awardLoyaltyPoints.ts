@@ -87,9 +87,10 @@ Deno.serve(async (req) => {
         }
 
         // Calculate points server-side (prevents frontend manipulation)
+        // CRITICAL: Use actual total paid, not subtotal (includes all discounts)
         const multiplier = restaurant.loyalty_points_multiplier || 1;
-        const orderSubtotal = order.subtotal || 0;
-        const pointsToAward = Math.floor(orderSubtotal * pointsPerPound * multiplier);
+        const orderTotal = order.total || 0;
+        const pointsToAward = Math.floor(orderTotal * pointsPerPound * multiplier);
 
         // Create loyalty transaction record
         try {
