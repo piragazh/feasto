@@ -24,8 +24,17 @@ export const AuthProvider = ({ children }) => {
       const headers = { 'X-App-Id': appParams.appId };
       if (appParams.token) headers['Authorization'] = `Bearer ${appParams.token}`;
       
+      // Add 10-second timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       try {
-        const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
+        const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { 
+          headers,
+          signal: controller.signal 
+        });
+        clearTimeout(timeoutId);
+        
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           const err = new Error(data?.message || 'Failed to load app');
@@ -44,7 +53,21 @@ export const AuthProvider = ({ children }) => {
         }
         setIsLoadingPublicSettings(false);
       } catch (appError) {
+        clearTimeout(timeoutId);
         console.error('App state check failed:', appError);
+        
+        // Timeout or network error - proceed with fallback
+        if (appError.name === 'AbortError' || !appError.status) {
+          console.warn('App settings fetch timeout/network error, proceeding with fallback');
+          setAppPublicSettings(null);
+          setIsLoadingPublicSettings(false);
+          if (appParams.token) {
+            await checkUserAuth();
+          } else {
+            setIsLoadingAuth(false);
+          }
+          return;
+        }
         
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
