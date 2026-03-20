@@ -622,7 +622,7 @@ export default function Layout({ children, currentPageName }) {
                 </header>
             )}
 
-            <main className="min-h-screen">
+            <main id="main-content" className="min-h-screen">
                 {isFullScreenPage ? (
                     children
                 ) : (
