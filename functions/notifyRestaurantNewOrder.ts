@@ -46,6 +46,16 @@ Deno.serve(async (req) => {
             });
         }
 
+        // Check if WhatsApp alerts are enabled - use WhatsApp if enabled
+        if (restaurant.whatsapp_alerts_enabled) {
+            try {
+                const waResult = await base44.asServiceRole.functions.invoke('sendWhatsAppOrder', { order_id: orderId });
+                return Response.json({ success: true, channel: 'whatsapp', result: waResult });
+            } catch (waError) {
+                console.error('WhatsApp alert failed, falling back to SMS:', waError);
+            }
+        }
+
         // Check if SMS alerts are enabled
         if (!restaurant.sms_alerts_enabled) {
             console.log(`SMS alerts disabled for order ${orderId} at ${restaurantName}`);

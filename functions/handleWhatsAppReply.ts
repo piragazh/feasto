@@ -13,8 +13,9 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Twilio not configured' }, { status: 500 });
         }
 
-        // Verify Twilio signature (must be before creating base44 client)
-        const isValidRequest = twilio.validateRequest(authToken, signature, url, body);
+        // Verify Twilio signature - must pass parsed params object, not raw string
+        const parsedParams = Object.fromEntries(new URLSearchParams(body));
+        const isValidRequest = twilio.validateRequest(authToken, signature, url, parsedParams);
         if (!isValidRequest) {
             console.warn('Invalid Twilio signature attempt');
             return new Response('Unauthorized', { status: 403 });
