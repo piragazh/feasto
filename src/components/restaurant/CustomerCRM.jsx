@@ -438,8 +438,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Mail className="h-5 w-5" />
-                        Targeted Communication
+                        <Send className="h-5 w-5" />
+                        Campaigns — Email · SMS · WhatsApp
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -449,8 +449,8 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                             variant="outline"
                             className="justify-start"
                         >
-                            <Mail className="h-4 w-4 mr-2" />
-                            Message All Customers
+                            <Send className="h-4 w-4 mr-2 text-orange-500" />
+                            Campaign — All Customers
                         </Button>
                         {Object.entries(segmentConfig).map(([key, config]) => (
                             <Button
@@ -460,7 +460,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                                 className="justify-start"
                                 disabled={customerAnalytics.segments[key] === 0}
                             >
-                                <Mail className="h-4 w-4 mr-2" />
+                                <Send className="h-4 w-4 mr-2 text-orange-500" />
                                 {config.label} ({customerAnalytics.segments[key]})
                             </Button>
                         ))}
