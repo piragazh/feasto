@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import CRMCustomerProfile from './CRMCustomerProfile';
 import CRMCampaignDialog from './CRMCampaignDialog';
+import WinBackCampaignWorkflow from './WinBackCampaignWorkflow';
 
 export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restaurant' }) {
     const [selectedSegment, setSelectedSegment] = useState('all');
@@ -23,6 +24,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [campaignDialog, setCampaignDialog] = useState(false);
     const [targetSegment, setTargetSegment] = useState(null);
+    const [activeTab, setActiveTab] = useState('segments');
     const [advancedFilters, setAdvancedFilters] = useState({
         orderFrequency: 'all',
         spendingLevel: 'all',
@@ -266,7 +268,15 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
 
     return (
         <div className="space-y-6">
-            {/* Overview Cards */}
+            {/* Tab Navigation */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="segments">Customer Segments</TabsTrigger>
+                    <TabsTrigger value="winback">Win-Back Campaign</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="segments" className="space-y-6">
+                    {/* Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                     <CardContent className="pt-6">
@@ -554,14 +564,23 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                 </DialogContent>
             </Dialog>
 
-            {/* Campaign Dialog */}
-            <CRMCampaignDialog
-                open={campaignDialog}
-                onClose={() => setCampaignDialog(false)}
-                targetSegment={targetSegment}
-                segmentConfig={segmentConfig}
-                restaurantName={restaurantName}
-            />
+                    {/* Campaign Dialog */}
+                    <CRMCampaignDialog
+                        open={campaignDialog}
+                        onClose={() => setCampaignDialog(false)}
+                        targetSegment={targetSegment}
+                        segmentConfig={segmentConfig}
+                        restaurantName={restaurantName}
+                    />
+                </TabsContent>
+
+                <TabsContent value="winback">
+                    <WinBackCampaignWorkflow
+                        restaurantId={restaurantId}
+                        restaurantName={restaurantName}
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
