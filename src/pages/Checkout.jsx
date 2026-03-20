@@ -689,10 +689,17 @@ export default function Checkout() {
                 return;
             }
 
-            // Check if delivery is available
-            if (deliveryZoneInfo && deliveryZoneInfo.available === false) {
+            // CRITICAL: Check if delivery is explicitly unavailable (not just unchecked)
+            if (deliveryZoneInfo?.available === false) {
                 console.log('BLOCKED: Delivery not available to location');
                 toast.error('Delivery is not available to your location');
+                return;
+            }
+            
+            // CRITICAL: If zone check completed but no availability info, still block
+            if (zoneCheckComplete && !deliveryZoneInfo) {
+                console.log('BLOCKED: Delivery availability unknown after check');
+                toast.error('Unable to verify delivery to your location. Please try again.');
                 return;
             }
         }
@@ -872,11 +879,21 @@ export default function Checkout() {
                 orderData.guest_email = formData.guest_email;
             }
 
-            const newOrder = await base44.entities.Order.create(orderData);
+            // CRITICAL SECURITY: Use backend verification function instead of direct create
+            // This ensures payment is verified and restaurant is open
+            const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
+                orderData,
+                paymentIntentId: paymentIntentId || null
+            });
 
-            if (!newOrder || !newOrder.id) {
-                throw new Error('Order creation failed');
+            if (!verificationResponse?.data?.success || !verificationResponse?.data?.order_id) {
+                throw new Error(verificationResponse?.data?.error || 'Order creation failed');
             }
+
+            const newOrder = { 
+                id: verificationResponse.data.order_id,
+                order_number: verificationResponse.data.order_number 
+            };
 
             // Save phone and address for logged-in users (if opted in)
             if (!isGuest) {
