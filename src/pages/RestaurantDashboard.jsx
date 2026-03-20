@@ -479,10 +479,10 @@ export default function RestaurantDashboard() {
                 {/* ANALYTICS SECTION */}
                 {activeSection === 'analytics' && (
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4">
-                            <TabsTrigger value="analytics">Overview</TabsTrigger>
-                            <TabsTrigger value="order-analytics">Order Insights</TabsTrigger>
-                            <TabsTrigger value="driver-performance">Driver Performance</TabsTrigger>
+                        <TabsList className="mb-4 overflow-x-auto flex-wrap h-auto">
+                            <TabsTrigger value="analytics" className="text-xs sm:text-sm">Overview</TabsTrigger>
+                            <TabsTrigger value="order-analytics" className="text-xs sm:text-sm">Order Insights</TabsTrigger>
+                            <TabsTrigger value="driver-performance" className="text-xs sm:text-sm">Performance</TabsTrigger>
                         </TabsList>
                         <TabsContent value="analytics">
                             <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
