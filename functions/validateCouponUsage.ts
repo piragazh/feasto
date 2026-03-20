@@ -1,0 +1,110 @@
+/**
+ * Validate coupon hasn't exceeded usage limit
+ * CRITICAL: Prevents unlimited coupon usage
+ */
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+
+Deno.serve(async (req) => {
+    if (req.method !== 'POST') {
+        return new Response(JSON.stringify({ error: 'POST only' }), { status: 400 });
+    }
+
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+
+        const { couponId } = await req.json();
+
+        if (!couponId) {
+            return new Response(
+                JSON.stringify({ error: 'Coupon ID required' }),
+                { status: 400 }
+            );
+        }
+
+        // Fetch coupon
+        const coupons = await base44.asServiceRole.entities.Coupon.filter({
+            id: couponId
+        });
+
+        if (!coupons || coupons.length === 0) {
+            return new Response(
+                JSON.stringify({ error: 'Coupon not found' }),
+                { status: 404 }
+            );
+        }
+
+        const coupon = coupons[0];
+
+        // Check if coupon is expired
+        if (!coupon.is_active) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon is no longer active'
+                }),
+                { status: 400 }
+            );
+        }
+
+        // Check usage limit (CRITICAL)
+        if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon has reached its usage limit'
+                }),
+                { status: 400 }
+            );
+        }
+
+        // Check expiry dates
+        const now = new Date();
+        if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon is not yet valid'
+                }),
+                { status: 400 }
+            );
+        }
+
+        if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon has expired'
+                }),
+                { status: 400 }
+            );
+        }
+
+        return new Response(
+            JSON.stringify({ 
+                valid: true,
+                coupon: {
+                    id: coupon.id,
+                    code: coupon.code,
+                    discount_type: coupon.discount_type,
+                    discount_value: coupon.discount_value,
+                    maximum_discount: coupon.max_discount,
+                    minimum_order: coupon.minimum_order
+                }
+            }),
+            { status: 200 }
+        );
+
+    } catch (error) {
+        console.error('Coupon validation error:', error);
+        return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500 }
+        );
+    }
+});
