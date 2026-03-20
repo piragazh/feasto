@@ -246,72 +246,16 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         }).sort((a, b) => b.totalSpent - a.totalSpent);
     }, [customerAnalytics.customers, selectedSegment, searchQuery, advancedFilters]);
 
-    const sendMessageMutation = useMutation({
-        mutationFn: async ({ emails, message, offerData }) => {
-            // In production, this would send actual emails via the SendEmail integration
-            const subject = offerData?.title || `Special Offer from Restaurant`;
-            let body = message;
-            
-            if (offerData?.type === 'discount') {
-                body = `${offerData.title}\n\n${message}\n\nDiscount: ${offerData.value}% off\n\nUse this offer on your next order!`;
-            } else if (offerData?.type === 'freeDelivery') {
-                body = `${offerData.title}\n\n${message}\n\nEnjoy FREE DELIVERY on your next order!`;
-            }
-            
-            // Filter out empty/invalid emails before sending
-        const validEmails = emails.filter(e => e && e.includes('@'));
-        if (validEmails.length === 0) throw new Error('No valid email addresses to send to');
-        const promises = validEmails.map(email =>
-                base44.integrations.Core.SendEmail({ to: email, subject, body })
-            );
-        await Promise.all(promises);
-        },
-        onSuccess: (_, variables) => {
-            toast.success(`Offer sent to ${variables.emails.filter(e => e?.includes('@')).length} customers!`);
-            setMessageDialog(false);
-            setMessageContent('');
-            setTargetSegment(null);
-            setOfferType('message');
-            setDiscountValue('');
-            setOfferTitle('');
-        },
-    });
-
     const handleSendToSegment = (segment) => {
         const customers = customerAnalytics.customers.filter(c =>
-            (segment === 'all' ? true : c.segment === segment) && !!c.email
+            segment === 'all' ? true : c.segment === segment
         );
-        setTargetSegment({ segment, count: customers.length, emails: customers.map(c => c.email) });
-        setMessageDialog(true);
-    };
-
-    const handleSendMessage = () => {
-        if (!messageContent.trim()) {
-            toast.error('Please enter a message');
-            return;
-        }
-        
-        if (offerType !== 'message' && !offerTitle.trim()) {
-            toast.error('Please enter an offer title');
-            return;
-        }
-        
-        if (offerType === 'discount' && (!discountValue || discountValue <= 0)) {
-            toast.error('Please enter a valid discount percentage');
-            return;
-        }
-        
-        const offerData = offerType === 'message' ? null : {
-            type: offerType,
-            title: offerTitle,
-            value: discountValue
-        };
-        
-        sendMessageMutation.mutate({
-            emails: targetSegment.emails,
-            message: messageContent,
-            offerData
+        setTargetSegment({
+            segment,
+            count: customers.length,
+            recipients: customers.map(c => ({ email: c.email, phone: c.phone, name: c.guestName }))
         });
+        setCampaignDialog(true);
     };
 
     const segmentConfig = {
