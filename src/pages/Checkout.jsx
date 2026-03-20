@@ -858,6 +858,14 @@ export default function Checkout() {
             } catch (_) { /* use default 1 */ }
             const pointsToEarn = earnLoyalty ? Math.floor(total * pointsPerPoundSetting * pointsMultiplier) : 0;
 
+            // CRITICAL SECURITY: Sanitize order notes to prevent XSS
+            const sanitizeInput = (input) => {
+                if (!input || typeof input !== 'string') return '';
+                return String(input)
+                    .replace(/[<>]/g, '') // Remove angle brackets
+                    .slice(0, 500); // Cap length
+            };
+
             const orderData = {
                 order_number: orderNumber,
                 restaurant_id: restaurantId,
@@ -877,7 +885,7 @@ export default function Checkout() {
                 delivery_address: fullAddress,
                 delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
                 phone: formData.phone,
-                notes: formData.notes,
+                notes: sanitizeInput(formData.notes),
                 estimated_delivery: isScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
                 is_scheduled: isScheduled,
                 scheduled_for: isScheduled ? scheduledFor : null,
