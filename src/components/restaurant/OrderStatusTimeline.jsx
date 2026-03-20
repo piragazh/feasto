@@ -1,4 +1,5 @@
 import React from 'react';
+import SanitizedOrderNotes from '@/components/order/SanitizedOrderNotes';
 import { CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
