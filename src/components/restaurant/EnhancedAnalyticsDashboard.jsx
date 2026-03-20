@@ -318,9 +318,9 @@ Return as structured data.`;
     return (
         <div className="space-y-6">
             {/* Date Range Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
                 <Calendar className="h-5 w-5 text-gray-600" />
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-1">
                     {[7, 30, 90].map(days => (
                         <Button
                             key={days}
