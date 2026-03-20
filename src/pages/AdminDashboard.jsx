@@ -179,41 +179,50 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base sm:text-lg">Revenue by Restaurant (Top 10)</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={revenueByRestaurant}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip />
-                                    <Bar dataKey="revenue" fill="#f97316" name="Revenue (£)" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
+                <DataFetchWrapper
+                    isLoading={restaurantsLoading || ordersLoading}
+                    error={restaurantsError || ordersError}
+                    data={revenueByRestaurant}
+                    skeletonType="chart"
+                    errorMessage="Failed to load chart data"
+                    loadingMessage="Loading revenue charts..."
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base sm:text-lg">Revenue by Restaurant (Top 10)</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={revenueByRestaurant}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                        <YAxis tick={{ fontSize: 11 }} />
+                                        <Tooltip />
+                                        <Bar dataKey="revenue" fill="#f97316" name="Revenue (£)" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </CardContent>
+                        </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base sm:text-lg">Orders by Restaurant (Top 10)</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={revenueByRestaurant}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip />
-                                    <Bar dataKey="orders" fill="#3b82f6" name="Orders" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-                </div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base sm:text-lg">Orders by Restaurant (Top 10)</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={revenueByRestaurant}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                        <YAxis tick={{ fontSize: 11 }} />
+                                        <Tooltip />
+                                        <Bar dataKey="orders" fill="#3b82f6" name="Orders" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </DataFetchWrapper>
 
                 {/* Restaurant Performance Table */}
                 <Card>
