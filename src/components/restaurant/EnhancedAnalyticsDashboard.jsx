@@ -264,6 +264,37 @@ Return as structured data.`;
         }
     };
 
+    const downloadPDF = () => {
+        if (!kpis) return;
+        generateReportPDF({
+            title: 'Enhanced Analytics Report',
+            subtitle: `Last ${dateRange} days`,
+            metrics: [
+                { label: 'Total Revenue', value: `£${kpis.totalRevenue.toFixed(2)}` },
+                { label: 'Total Orders', value: kpis.totalOrders },
+                { label: 'Avg Order Value', value: `£${kpis.avgOrderValue.toFixed(2)}` },
+                { label: 'Unique Customers', value: kpis.uniqueCustomers },
+                { label: 'Growth Rate', value: `${kpis.growthRate}%` },
+                { label: 'Peak Hour', value: kpis.peakHour },
+                { label: 'Avg Order Frequency', value: kpis.avgOrderFrequency },
+                { label: 'Avg Customer LTV', value: `£${clvAnalysis.avgCLV}` },
+            ],
+            tables: [
+                {
+                    title: 'Top Menu Items',
+                    headers: ['Item', 'Qty Sold', 'Revenue'],
+                    rows: menuPerformance.map(i => [i.name, i.quantity, `£${i.revenue.toFixed(2)}`]),
+                },
+                {
+                    title: 'Daily Revenue',
+                    headers: ['Date', 'Revenue', 'Orders'],
+                    rows: dailyRevenue.map(d => [d.date, `£${d.revenue.toFixed(2)}`, d.orders]),
+                },
+            ],
+            filename: `enhanced-analytics-${dateRange}days.pdf`,
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
