@@ -147,6 +147,35 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
         ? `${startDate} to ${endDate}`
         : PRESETS.find(p => p.key === preset)?.label || '';
 
+    // ─── Export PDF ────────────────────────────────────────────────────────────
+    const exportPDF = () => {
+        generateReportPDF({
+            title: `POS Report – ${restaurant?.name || ''}`,
+            subtitle: reportLabel,
+            metrics: [
+                { label: 'Total Orders', value: filteredOrders.length },
+                { label: 'Total Revenue', value: `£${totalRevenue.toFixed(2)}` },
+                { label: 'Cash Revenue', value: `£${cashRevenue.toFixed(2)}` },
+                { label: 'Card Revenue', value: `£${cardRevenue.toFixed(2)}` },
+                { label: 'Average Order', value: `£${averageOrder.toFixed(2)}` },
+                { label: 'Peak Hour', value: peakHour },
+            ],
+            tables: [
+                {
+                    title: 'Top Menu Items',
+                    headers: ['Item', 'Qty', 'Revenue', 'Avg'],
+                    rows: menuItemsData.map(i => [i.name, i.count, `£${i.revenue.toFixed(2)}`, `£${(i.revenue / i.count).toFixed(2)}`]),
+                },
+                {
+                    title: 'Daily Sales',
+                    headers: ['Date', 'Revenue'],
+                    rows: salesData.map(d => [d.date, `£${d.total.toFixed(2)}`]),
+                },
+            ],
+            filename: `pos-report-${reportLabel.replace(/ /g, '-')}.pdf`,
+        });
+    };
+
     // ─── Export CSV ────────────────────────────────────────────────────────────
     const exportCSV = () => {
         const rows = [
