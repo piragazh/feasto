@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-    Mail, MessageSquare, Send, Wand2, Loader2, Percent, Smartphone, Eye, ChevronDown, ChevronUp
+    Mail, MessageSquare, Send, Wand2, Loader2, Percent, Smartphone, Eye, ChevronDown, ChevronUp, Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -123,6 +123,7 @@ Make it personal, action-oriented, and on-brand.`;
       </td></tr>
       <tr><td style="padding:32px;">
         ${offerBanner}
+        ${couponBadge}
         <div style="color:#333;font-size:15px;line-height:1.6;white-space:pre-line;">${textBody}</div>
         <div style="margin-top:28px;text-align:center;">
           <a href="#" style="background:#f97316;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;display:inline-block;">Order Now →</a>
