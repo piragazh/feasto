@@ -339,54 +339,54 @@ export default function RestaurantDashboard() {
                 {/* MAIN SECTION */}
                 {activeSection === 'main' && (
                     <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab('orders')}>
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center relative">
-                                            <ShoppingBag className="h-6 w-6 text-white" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            <Card className="cursor-pointer active:shadow-md sm:hover:shadow-lg transition-all touch-manipulation" onClick={() => setActiveTab('orders')}>
+                                <CardContent className="p-4 sm:p-6">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-lg sm:rounded-xl flex items-center justify-center relative flex-shrink-0">
+                                            <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                                             {pendingOrders.length > 0 && (
-                                                <span className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                                <span className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs">
                                                     {pendingOrders.length}
                                                 </span>
                                             )}
                                         </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg">Live Orders</h3>
-                                            <p className="text-sm text-gray-500">Manage incoming orders</p>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-semibold text-base sm:text-lg truncate">Live Orders</h3>
+                                            <p className="text-xs sm:text-sm text-gray-500 truncate">Manage orders</p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab('messages')}>
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center relative">
-                                            <MessageSquare className="h-6 w-6 text-white" />
+                            <Card className="cursor-pointer active:shadow-md sm:hover:shadow-lg transition-all touch-manipulation" onClick={() => setActiveTab('messages')}>
+                                <CardContent className="p-4 sm:p-6">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-lg sm:rounded-xl flex items-center justify-center relative flex-shrink-0">
+                                            <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                                             {unreadMessagesCount > 0 && (
-                                                <span className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                                <span className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs">
                                                     {unreadMessagesCount}
                                                 </span>
                                             )}
                                         </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg">Messages</h3>
-                                            <p className="text-sm text-gray-500">Customer & admin chats</p>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-semibold text-base sm:text-lg truncate">Messages</h3>
+                                            <p className="text-xs sm:text-sm text-gray-500 truncate">Chats & alerts</p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab('history')}>
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                                            <History className="h-6 w-6 text-white" />
+                            <Card className="cursor-pointer active:shadow-md sm:hover:shadow-lg transition-all touch-manipulation" onClick={() => setActiveTab('history')}>
+                                <CardContent className="p-4 sm:p-6">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <History className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                                         </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg">Order History</h3>
-                                            <p className="text-sm text-gray-500">View past orders</p>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-semibold text-base sm:text-lg truncate">Order History</h3>
+                                            <p className="text-xs sm:text-sm text-gray-500 truncate">View past</p>
                                         </div>
                                     </div>
                                 </CardContent>
