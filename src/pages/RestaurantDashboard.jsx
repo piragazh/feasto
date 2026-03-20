@@ -432,12 +432,12 @@ export default function RestaurantDashboard() {
                 {/* MARKETING SECTION */}
                 {activeSection === 'marketing' && (
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4">
-                            <TabsTrigger value="coupons">Coupons</TabsTrigger>
-                            <TabsTrigger value="promotions">Promotions</TabsTrigger>
-                            <TabsTrigger value="ai-marketing">AI Assistant</TabsTrigger>
+                        <TabsList className="mb-4 overflow-x-auto flex-wrap h-auto">
+                            <TabsTrigger value="coupons" className="text-xs sm:text-sm">Coupons</TabsTrigger>
+                            <TabsTrigger value="promotions" className="text-xs sm:text-sm">Promotions</TabsTrigger>
+                            <TabsTrigger value="ai-marketing" className="text-xs sm:text-sm">AI Assistant</TabsTrigger>
                             {restaurant?.media_screen_enabled && (
-                                <TabsTrigger value="media">Media Screens</TabsTrigger>
+                                <TabsTrigger value="media" className="text-xs sm:text-sm">Media</TabsTrigger>
                             )}
                         </TabsList>
                         <TabsContent value="coupons">
