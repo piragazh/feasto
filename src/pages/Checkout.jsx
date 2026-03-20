@@ -900,12 +900,23 @@ export default function Checkout() {
                 orderData.guest_email = formData.guest_email;
             }
 
-            // CRITICAL SECURITY: Use backend verification function instead of direct create
-            // This ensures payment is verified and restaurant is open
-            const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
-                orderData,
-                paymentIntentId: paymentIntentId || null
-            });
+            // CRITICAL SECURITY: Validate cart signature to prevent tampering
+             const cartSignatureValidation = await base44.functions.invoke('validateCartSignature', {
+                 cart: cart,
+                 restaurantId: restaurantId
+             });
+             if (!cartSignatureValidation?.data?.valid) {
+                 toast.error('Cart validation failed. Please refresh and try again.');
+                 setIsSubmitting(false);
+                 return;
+             }
+
+             // CRITICAL SECURITY: Use backend verification function instead of direct create
+             // This ensures payment is verified and restaurant is open
+             const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
+                 orderData,
+                 paymentIntentId: paymentIntentId || null
+             });
 
             if (!verificationResponse?.data?.success || !verificationResponse?.data?.order_id) {
                 throw new Error(verificationResponse?.data?.error || 'Order creation failed');
@@ -1569,7 +1580,23 @@ export default function Checkout() {
                                         restaurantId={restaurantId}
                                         subtotal={subtotal}
                                         cartItems={cart}
-                                        onCouponApply={setAppliedCoupons}
+                                        onCouponApply={(coupons) => {
+                                            // CRITICAL SECURITY: Validate coupon usage limits before applying
+                                            coupons.forEach(async (coupon) => {
+                                                try {
+                                                    const validationResult = await base44.functions.invoke('validateCouponUsage', {
+                                                        couponId: coupon.id
+                                                    });
+                                                    if (!validationResult?.data?.valid) {
+                                                        toast.error(`Coupon "${coupon.code}" is no longer valid: ${validationResult?.data?.error}`);
+                                                        return;
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Coupon validation failed:', error);
+                                                }
+                                            });
+                                            setAppliedCoupons(coupons);
+                                        }}
                                         onPromotionApply={setAppliedPromotions}
                                     />
                                 </CardContent>
