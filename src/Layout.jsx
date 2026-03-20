@@ -19,6 +19,7 @@ import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart 
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 import { Toaster } from 'sonner';
+import { addSkipLink } from '@/lib/a11y-utils';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
