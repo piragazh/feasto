@@ -94,10 +94,22 @@ Make it personal, action-oriented, and on-brand.`;
     };
 
     const buildHtmlEmail = () => {
+        const couponBadge = coupon
+            ? `<div style="border:2px dashed #f97316;border-radius:8px;padding:12px;text-align:center;margin:16px 0;background:#fff7ed;">
+                 <div style="font-size:12px;color:#9a3412;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Use Code</div>
+                 <div style="font-size:26px;font-weight:900;letter-spacing:4px;color:#ea580c;font-family:monospace;">${coupon.code}</div>
+               </div>`
+            : '';
         const offerBanner = offerType === 'discount'
             ? `<div style="background:#f97316;color:white;padding:16px;text-align:center;font-size:22px;font-weight:bold;border-radius:8px;margin:16px 0;">${discountValue}% OFF your next order!</div>`
+            : offerType === 'fixedDiscount'
+            ? `<div style="background:#f97316;color:white;padding:16px;text-align:center;font-size:22px;font-weight:bold;border-radius:8px;margin:16px 0;">£${discountValue} OFF your next order!</div>`
             : offerType === 'freeDelivery'
             ? `<div style="background:#10b981;color:white;padding:16px;text-align:center;font-size:22px;font-weight:bold;border-radius:8px;margin:16px 0;">🚚 FREE DELIVERY on your next order!</div>`
+            : offerType === 'freeItem'
+            ? `<div style="background:#ec4899;color:white;padding:16px;text-align:center;font-size:22px;font-weight:bold;border-radius:8px;margin:16px 0;">🎁 FREE ITEM with your next order!</div>`
+            : offerType === 'bogo'
+            ? `<div style="background:#7c3aed;color:white;padding:16px;text-align:center;font-size:22px;font-weight:bold;border-radius:8px;margin:16px 0;">🛍️ BUY ONE GET ONE FREE!</div>`
             : '';
 
         return `<!DOCTYPE html>
@@ -193,11 +205,20 @@ Make it personal, action-oriented, and on-brand.`;
                     </div>
 
                     {/* Offer Type */}
+                    {coupon && (
+                        <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
+                            <Tag className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                            <span className="text-orange-700 font-medium">Promoting coupon: <span className="font-mono font-bold">{coupon.code}</span></span>
+                        </div>
+                    )}
                     <div className="grid grid-cols-3 gap-2">
                         {[
-                            { key: 'message', label: 'Message' },
-                            { key: 'discount', label: `Discount %` },
+                            { key: 'message', label: '💬 Message Only' },
+                            { key: 'discount', label: '% Discount' },
+                            { key: 'fixedDiscount', label: '£ Off' },
                             { key: 'freeDelivery', label: '🚚 Free Delivery' },
+                            { key: 'freeItem', label: '🎁 Free Item' },
+                            { key: 'bogo', label: 'Buy 1 Get 1' },
                         ].map(o => (
                             <button
                                 key={o.key}
@@ -217,6 +238,18 @@ Make it personal, action-oriented, and on-brand.`;
                             <Input
                                 type="number" min="1" max="100"
                                 placeholder="e.g. 20"
+                                value={discountValue}
+                                onChange={e => setDiscountValue(e.target.value)}
+                                className="mt-1 w-40"
+                            />
+                        </div>
+                    )}
+                    {offerType === 'fixedDiscount' && (
+                        <div>
+                            <Label>Amount Off (£)</Label>
+                            <Input
+                                type="number" min="0" step="0.01"
+                                placeholder="e.g. 5.00"
                                 value={discountValue}
                                 onChange={e => setDiscountValue(e.target.value)}
                                 className="mt-1 w-40"
