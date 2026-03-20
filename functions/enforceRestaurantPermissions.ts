@@ -26,6 +26,8 @@ Deno.serve(async (req) => {
 
         // Admin users can access any restaurant
         if (user.role === 'admin') {
+            // Log admin access
+            console.log(`[AUDIT] Admin ${user.email} accessed restaurant ${restaurantId}`);
             return new Response(JSON.stringify({ allowed: true, role: 'admin' }));
         }
 
@@ -48,12 +50,14 @@ Deno.serve(async (req) => {
         );
 
         if (!hasAccess) {
+            console.error(`[SECURITY] Unauthorized access attempt by ${user.email} to restaurant ${restaurantId}`);
             return new Response(
                 JSON.stringify({ error: 'Access denied to this restaurant' }),
                 { status: 403 }
             );
         }
 
+        console.log(`[AUDIT] Manager ${user.email} accessed restaurant ${restaurantId}`);
         return new Response(JSON.stringify({ allowed: true, role: 'manager' }));
 
     } catch (error) {
