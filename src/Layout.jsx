@@ -402,7 +402,7 @@ export default function Layout({ children, currentPageName }) {
 
     return (
         <DarkModeProvider>
-        <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 5rem)' }}>
+        <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
             {/* Google Tag Manager Noscript */}
             {window.__gtmId && window.__gtmId !== 'undefined' && (
                 <noscript 
