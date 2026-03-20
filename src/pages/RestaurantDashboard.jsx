@@ -456,7 +456,7 @@ export default function RestaurantDashboard() {
                             )}
                         </TabsList>
                         <TabsContent value="coupons">
-                            <CouponsManagement restaurantId={restaurant.id} />
+                            <CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} />
                         </TabsContent>
                         <TabsContent value="promotions">
                             <PromotionManagement restaurantId={restaurant.id} />
