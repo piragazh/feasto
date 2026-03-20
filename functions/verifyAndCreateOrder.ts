@@ -52,9 +52,49 @@ Deno.serve(async (req) => {
                 );
             }
 
-            // NOTE: Full Stripe verification would happen here in production
-            // For now, we validate the format and require the intent ID
-            console.log('Payment intent provided:', paymentIntentId.substring(0, 10) + '...');
+            // CRITICAL: Verify payment actually succeeded with Stripe
+            const Stripe = await import('npm:stripe');
+            const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
+            
+            try {
+                const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                
+                // Payment must be succeeded
+                if (paymentIntent.status !== 'succeeded') {
+                    console.error(`Payment not succeeded for intent ${paymentIntentId}: status=${paymentIntent.status}`);
+                    return new Response(
+                        JSON.stringify({ 
+                            error: 'Payment not confirmed. Status: ' + paymentIntent.status,
+                            success: false 
+                        }),
+                        { status: 400 }
+                    );
+                }
+                
+                // Verify amount matches
+                const expectedAmountCents = Math.round(orderData.total * 100);
+                if (paymentIntent.amount !== expectedAmountCents) {
+                    console.error(`Payment amount mismatch: expected ${expectedAmountCents}, got ${paymentIntent.amount}`);
+                    return new Response(
+                        JSON.stringify({ 
+                            error: 'Payment amount does not match order total',
+                            success: false 
+                        }),
+                        { status: 400 }
+                    );
+                }
+                
+                console.log('✅ Payment verified:', paymentIntentId);
+            } catch (stripeError) {
+                console.error('Stripe verification failed:', stripeError);
+                return new Response(
+                    JSON.stringify({ 
+                        error: 'Unable to verify payment. Please try again.',
+                        success: false 
+                    }),
+                    { status: 500 }
+                );
+            }
         }
 
         // ============================================
