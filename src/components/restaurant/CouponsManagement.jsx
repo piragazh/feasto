@@ -105,13 +105,22 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!formData.code.trim()) { toast.error('Coupon code is required'); return; }
+        if (needsValue && !formData.discount_value) { toast.error('Please enter a discount value'); return; }
+        if (formData.discount_type === 'free_item' && !formData.free_item_name.trim()) { toast.error('Please enter the free item name'); return; }
+
         const data = {
-            ...formData,
             code: formData.code.toUpperCase(),
+            description: formData.description,
+            discount_type: formData.discount_type,
             discount_value: formData.discount_value ? parseFloat(formData.discount_value) : 0,
+            free_item_name: formData.free_item_name || null,
             minimum_order: formData.minimum_order ? parseFloat(formData.minimum_order) : null,
             max_discount: formData.max_discount ? parseFloat(formData.max_discount) : null,
+            valid_from: formData.valid_from || null,
+            valid_until: formData.valid_until || null,
             usage_limit: formData.usage_limit ? parseInt(formData.usage_limit) : null,
+            is_active: formData.is_active,
         };
         if (editingCoupon) {
             updateMutation.mutate({ id: editingCoupon.id, data });
