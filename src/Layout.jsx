@@ -230,6 +230,7 @@ export default function Layout({ children, currentPageName }) {
     useEffect(() => {
         initializeGTM();
         addSkipLink();
+        initializeLiveRegions();
         loadUser();
         updateCartCount();
         checkCustomDomain();
