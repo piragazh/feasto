@@ -11,6 +11,9 @@ import {
     Users, ArrowUpRight, BarChart3, LayoutDashboard 
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { DataFetchWrapper, DynamicListWrapper } from '@/components/dashboard/DataFetchWrapper';
+import { SkeletonStats, SkeletonChart } from '@/components/ui/skeleton-loader';
+import { useAnnouncement } from '@/lib/aria-utils';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
