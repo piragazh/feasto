@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -431,7 +432,7 @@ export default function RestaurantDashboard() {
                         <Tabs value={activeTab} onValueChange={setActiveTab}>
 
                             <TabsContent value="orders">
-                                <LiveOrders restaurantId={restaurant.id} onOrderUpdate={() => queryClient.invalidateQueries(['pending-orders', restaurant.id])} />
+                                <LiveOrders restaurantId={restaurant.id} onOrderUpdate={() => {}} />
                             </TabsContent>
                             <TabsContent value="messages">
                                 <RestaurantMessages restaurantId={restaurant.id} />
