@@ -58,17 +58,6 @@ const initializeGTM = () => {
     };
     document.head.insertBefore(script, document.head.firstChild);
 };
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuSeparator, 
-    DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart } from 'lucide-react';
-import NotificationBell from '@/components/notifications/NotificationBell';
-import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
-import { Toaster } from 'sonner';
 
 export default function Layout({ children, currentPageName }) {
     const location = useLocation();
