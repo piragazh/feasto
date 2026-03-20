@@ -7,8 +7,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
     TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, Clock, 
-    Target, BarChart3, LineChart, PieChart, Loader2, Calendar, Star, Zap
+    Target, BarChart3, LineChart, PieChart, Loader2, Calendar, Star, Zap, Download
 } from 'lucide-react';
+import { generateReportPDF } from '@/lib/generatePDF';
 import { LineChart as RechartsLine, Line, BarChart as RechartsBar, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
 import { toast } from 'sonner';

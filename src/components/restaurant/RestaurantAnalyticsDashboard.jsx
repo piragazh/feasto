@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, ShoppingBag, TrendingUp, Users, Star, Calendar as CalendarIcon, Award, CreditCard } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Users, Star, Calendar as CalendarIcon, Award, CreditCard, Download } from 'lucide-react';
+import { generateReportPDF } from '@/lib/generatePDF';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
 const COLORS = ['#FF6B35', '#004E89', '#F77F00', '#06A77D', '#9B5DE5', '#F15BB5'];
