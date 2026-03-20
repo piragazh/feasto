@@ -1,4 +1,4 @@
-import { forwardRef } from "react"
+import React, { forwardRef } from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
