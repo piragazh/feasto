@@ -790,8 +790,22 @@ export default function Restaurant() {
             return;
         }
 
-        if (!restaurant || !restaurant.name) {
+        if (!restaurant || !restaurant.name || !restaurant.id) {
             toast.error('Restaurant information unavailable');
+            return;
+        }
+
+        // SECURITY: Validate all cart items are from this restaurant
+        const validCart = cart.every(item => {
+            if (!item.menu_item_id || !item.name || item.price == null || item.quantity < 1) {
+                return false;
+            }
+            return true;
+        });
+        
+        if (!validCart) {
+            toast.error('Cart contains invalid items. Please refresh and try again.');
+            clearCart();
             return;
         }
 

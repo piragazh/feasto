@@ -88,8 +88,25 @@ export default function Orders() {
     });
 
     const refundRequestMutation = useMutation({
-        mutationFn: ({ orderId, refundType, refundedItems, refundAmount, reason, issueDescription }) =>
-            base44.entities.Order.update(orderId, {
+        mutationFn: async ({ orderId, refundType, refundedItems, refundAmount, reason, issueDescription }) => {
+            // CRITICAL SECURITY: Verify user owns this order
+            const order = orders.find(o => o.id === orderId);
+            if (!order) {
+                throw new Error('Order not found');
+            }
+            
+            // Backend will verify ownership again, but check here too
+            const user = await base44.auth.me();
+            if (order.created_by !== user.email) {
+                throw new Error('You can only request refunds for your own orders');
+            }
+            
+            // Validate refund amount doesn't exceed order total
+            if (refundAmount > order.total) {
+                throw new Error('Refund amount cannot exceed order total');
+            }
+            
+            return base44.entities.Order.update(orderId, {
                 status: 'refund_requested',
                 refund_request_type: refundType,
                 refund_requested_items: refundedItems,
@@ -97,12 +114,16 @@ export default function Orders() {
                 refund_request_reason: reason,
                 refund_request_description: issueDescription,
                 refund_request_date: new Date().toISOString()
-            }),
+            });
+        },
         onSuccess: () => {
-            queryClient.invalidateQueries(['orders']);
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
             toast.success('Refund request submitted! The restaurant will review it shortly.');
             setRefundingOrder(null);
         },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to request refund');
+        }
     });
 
     const reorderOrder = (order) => {

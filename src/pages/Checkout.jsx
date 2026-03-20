@@ -633,6 +633,13 @@ export default function Checkout() {
             return;
         }
         
+        // CRITICAL SECURITY: Validate payment method is actually set
+        if (!paymentMethod || (typeof paymentMethod !== 'string')) {
+            console.log('BLOCKED: Invalid payment method');
+            toast.error('Please select a payment method');
+            return;
+        }
+        
         // ---- VALIDATION: Check Required Fields ----
 
         // For guest users, name and email are required
@@ -757,6 +764,17 @@ export default function Checkout() {
                 return;
             }
             
+            // CRITICAL SECURITY: Backend MUST verify payment before accepting order
+            // This is a critical security check that MUST be enforced server-side
+            if (paymentIntentId) {
+                // Verify payment intent is well-formed (safety check only)
+                if (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+                    toast.error('❌ Invalid payment verification. Please try again.');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+            
             // CRITICAL: If paymentIntentId exists, this MUST be a card payment
             if (paymentIntentId) {
                 // Verify payment intent is valid
@@ -781,12 +799,22 @@ export default function Checkout() {
                 return;
             }
 
-            // Ensure we save the proper address string, not coordinates
-            const deliveryAddressString = orderType === 'delivery'
-                ? (typeof formData.delivery_address === 'string' && formData.delivery_address.trim() 
-                    ? formData.delivery_address.trim() 
-                    : 'Address not provided')
-                : restaurant?.address || 'Collection';
+            // Sanitize delivery address to prevent XSS
+             const sanitizeAddress = (addr) => {
+                 if (typeof addr !== 'string') return '';
+                 return String(addr)
+                     .trim()
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;')
+                     .replace(/"/g, '&quot;')
+                     .slice(0, 500); // Cap length
+             };
+
+             const deliveryAddressString = orderType === 'delivery'
+                 ? (typeof formData.delivery_address === 'string' && formData.delivery_address.trim() 
+                     ? sanitizeAddress(formData.delivery_address)
+                     : 'Address not provided')
+                 : sanitizeAddress(restaurant?.address || 'Collection');
             
             const fullAddress = orderType === 'delivery'
                 ? (isExistingAddress
@@ -1198,14 +1226,21 @@ export default function Checkout() {
                                                                 );
                                                                 const results = await response.json();
                                                                 if (results && results.length > 0) {
-                                                                    coords = {
-                                                                        lat: parseFloat(results[0].lat),
-                                                                        lng: parseFloat(results[0].lon)
-                                                                    };
-                                                                }
-                                                            } catch (error) {
-                                                                console.error('Geocoding saved address failed:', error);
-                                                            }
+                                                                            const lat = parseFloat(results[0].lat);
+                                                                            const lng = parseFloat(results[0].lon);
+                                                                            // Validate coordinates are within UK bounds
+                                                                            if (lat >= 49.8 && lat <= 58.7 && lng >= -8.6 && lng <= 1.8) {
+                                                                                coords = { lat, lng };
+                                                                            } else {
+                                                                                console.warn('Geocoded address outside UK');
+                                                                                toast.error('Address is outside our delivery area');
+                                                                                return;
+                                                                            }
+                                                                        }
+                                                                    } catch (error) {
+                                                                        console.error('Geocoding saved address failed:', error);
+                                                                        toast.error('Address lookup failed. Please try again.');
+                                                                    }
                                                         }
 
                                                         // Setting coordinates triggers the zone-check useEffect
