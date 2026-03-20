@@ -332,6 +332,9 @@ Return as structured data.`;
                         </Button>
                     ))}
                 </div>
+                <Button onClick={downloadPDF} size="sm" variant="outline" className="flex items-center gap-1.5 ml-auto">
+                    <Download className="h-4 w-4" /> Download PDF
+                </Button>
             </div>
 
             {/* KPI Cards */}
