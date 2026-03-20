@@ -686,7 +686,7 @@ export default function Layout({ children, currentPageName }) {
 
                 {/* Mobile Bottom Navigation */}
                 {showBottomNav && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 z-40 safe-area-bottom">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 z-40 fixed-bottom" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0.5rem))', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
                     <div className="flex items-center justify-around h-16 px-2">
                         <a 
                             href={homeUrl}
