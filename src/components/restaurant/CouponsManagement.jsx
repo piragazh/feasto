@@ -65,11 +65,13 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
     const createMutation = useMutation({
         mutationFn: (data) => base44.entities.Coupon.create({ ...data, restaurant_id: restaurantId }),
         onSuccess: () => { queryClient.invalidateQueries(['restaurant-coupons']); toast.success('Coupon created'); resetForm(); },
+        onError: (err) => toast.error('Failed to create coupon: ' + (err?.message || 'Unknown error')),
     });
 
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.Coupon.update(id, data),
         onSuccess: () => { queryClient.invalidateQueries(['restaurant-coupons']); toast.success('Coupon updated'); resetForm(); },
+        onError: (err) => toast.error('Failed to update coupon: ' + (err?.message || 'Unknown error')),
     });
 
     const deleteMutation = useMutation({
