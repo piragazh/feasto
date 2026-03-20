@@ -51,9 +51,9 @@ DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName
 
 const DropdownMenuContent = forwardRef(({ className, sideOffset = 4, children, ...props }, ref) => {
-  const [mounted, setMounted] = React.useState(false);
+  const [mounted, setMounted] = useState(false);
   
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
   }, []);
 
