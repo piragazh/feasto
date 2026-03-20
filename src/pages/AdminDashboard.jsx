@@ -128,51 +128,55 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-                    <Card>
-                        <CardContent className="pt-4 sm:pt-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs sm:text-sm text-gray-600">Total Revenue</span>
-                                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
-                            </div>
-                            <p className="text-2xl sm:text-3xl font-bold">£{totalRevenue.toFixed(2)}</p>
-                            <p className="text-xs text-gray-500 mt-1">All time</p>
-                        </CardContent>
-                    </Card>
+                {restaurantsLoading || ordersLoading ? (
+                    <SkeletonStats count={4} />
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                        <Card>
+                            <CardContent className="pt-4 sm:pt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs sm:text-sm text-gray-600">Total Revenue</span>
+                                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                                </div>
+                                <p className="text-2xl sm:text-3xl font-bold">£{totalRevenue.toFixed(2)}</p>
+                                <p className="text-xs text-gray-500 mt-1">All time</p>
+                            </CardContent>
+                        </Card>
 
-                    <Card>
-                        <CardContent className="pt-4 sm:pt-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs sm:text-sm text-gray-600">Total Orders</span>
-                                <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-                            </div>
-                            <p className="text-2xl sm:text-3xl font-bold">{totalOrders}</p>
-                            <p className="text-xs text-gray-500 mt-1">Completed orders</p>
-                        </CardContent>
-                    </Card>
+                        <Card>
+                            <CardContent className="pt-4 sm:pt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs sm:text-sm text-gray-600">Total Orders</span>
+                                    <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+                                </div>
+                                <p className="text-2xl sm:text-3xl font-bold">{totalOrders}</p>
+                                <p className="text-xs text-gray-500 mt-1">Completed orders</p>
+                            </CardContent>
+                        </Card>
 
-                    <Card>
-                        <CardContent className="pt-4 sm:pt-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs sm:text-sm text-gray-600">Avg Order Value</span>
-                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
-                            </div>
-                            <p className="text-2xl sm:text-3xl font-bold">£{avgOrderValue.toFixed(2)}</p>
-                            <p className="text-xs text-gray-500 mt-1">Per order</p>
-                        </CardContent>
-                    </Card>
+                        <Card>
+                            <CardContent className="pt-4 sm:pt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs sm:text-sm text-gray-600">Avg Order Value</span>
+                                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
+                                </div>
+                                <p className="text-2xl sm:text-3xl font-bold">£{avgOrderValue.toFixed(2)}</p>
+                                <p className="text-xs text-gray-500 mt-1">Per order</p>
+                            </CardContent>
+                        </Card>
 
-                    <Card>
-                        <CardContent className="pt-4 sm:pt-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs sm:text-sm text-gray-600">Restaurants</span>
-                                <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-                            </div>
-                            <p className="text-2xl sm:text-3xl font-bold">{restaurants.length}</p>
-                            <p className="text-xs text-gray-500 mt-1">Active restaurants</p>
-                        </CardContent>
-                    </Card>
-                </div>
+                        <Card>
+                            <CardContent className="pt-4 sm:pt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs sm:text-sm text-gray-600">Restaurants</span>
+                                    <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+                                </div>
+                                <p className="text-2xl sm:text-3xl font-bold">{restaurants.length}</p>
+                                <p className="text-xs text-gray-500 mt-1">Active restaurants</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
