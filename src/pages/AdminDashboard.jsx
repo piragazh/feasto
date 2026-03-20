@@ -225,70 +225,78 @@ export default function AdminDashboard() {
                 </DataFetchWrapper>
 
                 {/* Restaurant Performance Table */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base sm:text-lg">Restaurant Performance</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-0 sm:px-6">
-                        <div className="overflow-x-auto -mx-4 sm:mx-0">
-                            <table className="w-full min-w-[600px]">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Restaurant</th>
-                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Orders</th>
-                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Revenue</th>
-                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm hidden sm:table-cell">Avg Order</th>
-                                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Rating</th>
-                                        <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Status</th>
-                                        <th className="text-center py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {restaurantStats.map((restaurant) => (
-                                        <tr key={restaurant.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-2 sm:py-3 px-3 sm:px-4">
-                                                <div>
-                                                    <p className="font-semibold text-xs sm:text-sm">{restaurant.name}</p>
-                                                    <p className="text-xs text-gray-500">{restaurant.cuisine_type}</p>
-                                                </div>
-                                            </td>
-                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">{restaurant.orderCount}</td>
-                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">
-                                                £{restaurant.revenue.toFixed(2)}
-                                            </td>
-                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
-                                                £{restaurant.orderCount > 0 ? (restaurant.revenue / restaurant.orderCount).toFixed(2) : '0.00'}
-                                            </td>
-                                            <td className="text-right py-2 sm:py-3 px-2 sm:px-4">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
-                                                    <span className="text-xs sm:text-sm">{restaurant.avgRating > 0 ? restaurant.avgRating.toFixed(1) : 'N/A'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="text-right py-2 sm:py-3 px-3 sm:px-4">
-                                                <Badge variant={restaurant.is_open ? 'default' : 'secondary'} className="text-xs">
-                                                    {restaurant.is_open ? 'Open' : 'Closed'}
-                                                </Badge>
-                                            </td>
-                                            <td className="text-center py-2 sm:py-3 px-3 sm:px-4">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
-                                                    className="h-9 md:h-7 text-xs"
-                                                    aria-label={`View dashboard for ${restaurant.name}`}
-                                                >
-                                                    <LayoutDashboard className="h-3 w-3 mr-1" aria-hidden="true" />
-                                                    Dashboard
-                                                </Button>
-                                            </td>
+                <DynamicListWrapper
+                    isLoading={restaurantsLoading || ordersLoading}
+                    error={restaurantsError || ordersError}
+                    items={restaurantStats}
+                    itemLabel="restaurant"
+                    errorMessage="Failed to load restaurant data"
+                >
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base sm:text-lg">Restaurant Performance</CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-0 sm:px-6">
+                            <div className="overflow-x-auto -mx-4 sm:mx-0">
+                                <table className="w-full min-w-[600px]" role="table" aria-label="Restaurant performance metrics">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Restaurant</th>
+                                            <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Orders</th>
+                                            <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Revenue</th>
+                                            <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm hidden sm:table-cell">Avg Order</th>
+                                            <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">Rating</th>
+                                            <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Status</th>
+                                            <th className="text-center py-2 sm:py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm">Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
+                                    </thead>
+                                    <tbody aria-live="polite" aria-label="Restaurant data">
+                                        {restaurantStats.map((restaurant) => (
+                                            <tr key={restaurant.id} className="border-b hover:bg-gray-50">
+                                                <td className="py-2 sm:py-3 px-3 sm:px-4">
+                                                    <div>
+                                                        <p className="font-semibold text-xs sm:text-sm">{restaurant.name}</p>
+                                                        <p className="text-xs text-gray-500">{restaurant.cuisine_type}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">{restaurant.orderCount}</td>
+                                                <td className="text-right py-2 sm:py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">
+                                                    £{restaurant.revenue.toFixed(2)}
+                                                </td>
+                                                <td className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
+                                                    £{restaurant.orderCount > 0 ? (restaurant.revenue / restaurant.orderCount).toFixed(2) : '0.00'}
+                                                </td>
+                                                <td className="text-right py-2 sm:py-3 px-2 sm:px-4">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" aria-hidden="true" />
+                                                        <span className="text-xs sm:text-sm">{restaurant.avgRating > 0 ? restaurant.avgRating.toFixed(1) : 'N/A'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="text-right py-2 sm:py-3 px-3 sm:px-4">
+                                                    <Badge variant={restaurant.is_open ? 'default' : 'secondary'} className="text-xs">
+                                                        {restaurant.is_open ? 'Open' : 'Closed'}
+                                                    </Badge>
+                                                </td>
+                                                <td className="text-center py-2 sm:py-3 px-3 sm:px-4">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
+                                                        className="h-9 md:h-7 text-xs"
+                                                        aria-label={`View dashboard for ${restaurant.name}`}
+                                                    >
+                                                        <LayoutDashboard className="h-3 w-3 mr-1" aria-hidden="true" />
+                                                        Dashboard
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </DynamicListWrapper>
             </div>
         </div>
     );
