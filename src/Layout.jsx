@@ -228,6 +228,7 @@ export default function Layout({ children, currentPageName }) {
 
     useEffect(() => {
         initializeGTM();
+        addSkipLink();
         loadUser();
         updateCartCount();
         checkCustomDomain();
