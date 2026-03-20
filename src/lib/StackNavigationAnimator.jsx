@@ -35,7 +35,7 @@ export function StackNavigationAnimator({ children }) {
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="popLayout">
       <motion.div
         key={location.pathname}
         variants={variants}
@@ -43,7 +43,7 @@ export function StackNavigationAnimator({ children }) {
         animate="animate"
         exit="exit"
         transition={{
-          duration: 0.3,
+          duration: 0.25,
           ease: 'easeInOut',
         }}
       >
