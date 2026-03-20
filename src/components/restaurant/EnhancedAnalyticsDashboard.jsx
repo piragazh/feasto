@@ -7,9 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
     TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, Clock, 
-    Target, BarChart3, LineChart, PieChart, Loader2, Calendar, Star, Zap, Download
+    Target, BarChart3, LineChart, PieChart, Loader2, Calendar, Star, Zap
 } from 'lucide-react';
-import { generateReportPDF } from '@/lib/generatePDF';
 import { LineChart as RechartsLine, Line, BarChart as RechartsBar, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
 import { toast } from 'sonner';
@@ -264,37 +263,6 @@ Return as structured data.`;
         }
     };
 
-    const downloadPDF = () => {
-        if (!kpis) return;
-        generateReportPDF({
-            title: 'Enhanced Analytics Report',
-            subtitle: `Last ${dateRange} days`,
-            metrics: [
-                { label: 'Total Revenue', value: `£${kpis.totalRevenue.toFixed(2)}` },
-                { label: 'Total Orders', value: kpis.totalOrders },
-                { label: 'Avg Order Value', value: `£${kpis.avgOrderValue.toFixed(2)}` },
-                { label: 'Unique Customers', value: kpis.uniqueCustomers },
-                { label: 'Growth Rate', value: `${kpis.growthRate}%` },
-                { label: 'Peak Hour', value: kpis.peakHour },
-                { label: 'Avg Order Frequency', value: kpis.avgOrderFrequency },
-                { label: 'Avg Customer LTV', value: `£${clvAnalysis.avgCLV}` },
-            ],
-            tables: [
-                {
-                    title: 'Top Menu Items',
-                    headers: ['Item', 'Qty Sold', 'Revenue'],
-                    rows: menuPerformance.map(i => [i.name, i.quantity, `£${i.revenue.toFixed(2)}`]),
-                },
-                {
-                    title: 'Daily Revenue',
-                    headers: ['Date', 'Revenue', 'Orders'],
-                    rows: dailyRevenue.map(d => [d.date, `£${d.revenue.toFixed(2)}`, d.orders]),
-                },
-            ],
-            filename: `enhanced-analytics-${dateRange}days.pdf`,
-        });
-    };
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
@@ -318,9 +286,9 @@ Return as structured data.`;
     return (
         <div className="space-y-6">
             {/* Date Range Selector */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-gray-600" />
-                <div className="flex gap-2 flex-1">
+                <div className="flex gap-2">
                     {[7, 30, 90].map(days => (
                         <Button
                             key={days}
@@ -332,9 +300,6 @@ Return as structured data.`;
                         </Button>
                     ))}
                 </div>
-                <Button onClick={downloadPDF} size="sm" variant="outline" className="flex items-center gap-1.5 ml-auto">
-                    <Download className="h-4 w-4" /> Download PDF
-                </Button>
             </div>
 
             {/* KPI Cards */}

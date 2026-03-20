@@ -85,45 +85,4 @@
   body {
     @apply bg-background text-foreground;
   }
-
-  /* Global 44px touch target rule for all interactive elements */
-  /* Ensures WCAG 2.1 AA compliance across entire app */
-  button,
-  a[role="button"],
-  [role="button"],
-  input[type="checkbox"],
-  input[type="radio"],
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"],
-  input[type="file"],
-  textarea,
-  select,
-  [role="tab"],
-  [role="menuitem"],
-  [role="link"],
-  .interactive {
-    /* Minimum 44x44px touch target on mobile */
-    @apply min-h-[44px] min-w-[44px];
-  }
-
-  /* Exception: small UI elements like badges, tags */
-  .badge,
-  .tag,
-  .chip,
-  [data-small-touch-target="true"] {
-    @apply min-h-0 min-w-0;
-  }
-
-  /* Input fields: ensure readable height on mobile */
-  input:not([type="checkbox"]):not([type="radio"]),
-  textarea,
-  select {
-    @apply min-h-[44px];
-  }
-
-  /* Form labels: ensure clickable area */
-  label {
-    @apply cursor-pointer;
-  }
 }

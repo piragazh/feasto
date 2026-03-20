@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
@@ -107,14 +107,14 @@ export default function Layout({ children, currentPageName }) {
             const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
             const posMode = currentPageName === 'POSDashboard' ? 'pos' : currentPageName === 'TabletDashboard' ? 'tablet' : 'dashboard';
             if (dashboardRestaurantId) {
-                manifestLink.href = `/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
+                manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
             } else {
-                manifestLink.href = `/getManifest?mode=${posMode}`;
+                manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?mode=${posMode}`;
             }
         } else if (customDomainRestaurantId) {
-            manifestLink.href = `/getManifest?restaurant_id=${customDomainRestaurantId}`;
+            manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest?restaurant_id=${customDomainRestaurantId}`;
         } else {
-            manifestLink.href = `/getManifest`;
+            manifestLink.href = `${window.location.origin}/.netlify/functions/getManifest`;
         }
 
         // Add theme-color meta tag
@@ -457,7 +457,6 @@ export default function Layout({ children, currentPageName }) {
                                     size="icon"
                                     onClick={() => navigate(-1)}
                                     className="rounded-full mr-2"
-                                    aria-label="Go back to previous page"
                                 >
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
@@ -489,9 +488,9 @@ export default function Layout({ children, currentPageName }) {
 
                                     {cartCount > 0 && (
                                         <Link to={createPageUrl('Checkout')}>
-                                            <Button variant="outline" className="relative rounded-full" aria-label={`View cart with ${cartCount} items`}>
+                                            <Button variant="outline" className="relative rounded-full">
                                                 <ShoppingBag className="h-5 w-5" />
-                                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center" aria-hidden="true">
+                                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
                                                     {cartCount}
                                                 </span>
                                             </Button>
@@ -505,11 +504,9 @@ export default function Layout({ children, currentPageName }) {
                                             variant="ghost" 
                                             size="icon" 
                                             className="rounded-full h-11 w-11 md:h-9 md:w-9 touch-manipulation active:scale-95 transition-transform"
-                                            aria-label="Open menu"
-                                            aria-haspopup="true"
                                         >
-                                            <Menu className="h-6 w-6 md:hidden" aria-hidden="true" />
-                                            <User className="h-5 w-5 hidden md:block" aria-hidden="true" />
+                                            <Menu className="h-6 w-6 md:hidden" />
+                                            <User className="h-5 w-5 hidden md:block" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-56 z-[100]">
