@@ -5,13 +5,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 export default function RequestRefundDialog({ open, onClose, order, onSubmit }) {
-    const [refundType, setRefundType] = useState('partial'); // 'partial' or 'full'
-    const [selectedItems, setSelectedItems] = useState([]);
-    const [reason, setReason] = useState('');
-    const [issueDescription, setIssueDescription] = useState('');
+     const [refundType, setRefundType] = useState('partial'); // 'partial' or 'full'
+     const [selectedItems, setSelectedItems] = useState([]);
+     const [reason, setReason] = useState('');
+     const [issueDescription, setIssueDescription] = useState('');
+     const [isValidating, setIsValidating] = useState(false);
 
     const toggleItem = (itemIndex) => {
         setSelectedItems(prev => 
@@ -31,14 +34,34 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
         }, 0);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (refundType === 'partial' && selectedItems.length === 0) {
             return;
         }
         if (!reason || !issueDescription.trim()) {
             return;
         }
-        
+
+        // CRITICAL SECURITY: Validate refund request to prevent double refunds
+        setIsValidating(true);
+        try {
+            const validationResult = await base44.functions.invoke('validateRefundIdempotency', {
+                orderId: order?.id
+            });
+
+            if (!validationResult?.data?.canRefund) {
+                toast.error(validationResult?.data?.error || 'Unable to process refund');
+                setIsValidating(false);
+                return;
+            }
+        } catch (error) {
+            console.error('Refund validation failed:', error);
+            toast.error('Unable to validate refund. Please try again.');
+            setIsValidating(false);
+            return;
+        }
+        setIsValidating(false);
+
         onSubmit({
             orderId: order?.id,
             refundType,
@@ -47,7 +70,7 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
             reason,
             issueDescription
         });
-        
+
         // Reset form
         setRefundType('partial');
         setSelectedItems([]);
@@ -165,16 +188,24 @@ export default function RequestRefundDialog({ open, onClose, order, onSubmit }) 
                         Cancel
                     </Button>
                     <Button
-                        onClick={handleSubmit}
-                        disabled={
-                            (refundType === 'partial' && selectedItems.length === 0) ||
-                            !reason ||
-                            !issueDescription.trim()
-                        }
-                        className="bg-orange-500 hover:bg-orange-600"
-                    >
-                        Submit Refund Request
-                    </Button>
+                         onClick={handleSubmit}
+                         disabled={
+                             isValidating ||
+                             (refundType === 'partial' && selectedItems.length === 0) ||
+                             !reason ||
+                             !issueDescription.trim()
+                         }
+                         className="bg-orange-500 hover:bg-orange-600"
+                     >
+                         {isValidating ? (
+                             <>
+                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                 Validating...
+                             </>
+                         ) : (
+                             'Submit Refund Request'
+                         )}
+                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
