@@ -307,64 +307,29 @@ export default function RestaurantDashboard() {
 
             {/* Navigation Sections */}
             <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
-                <div className="bg-white rounded-lg shadow-sm p-2 mb-4">
-                    <div className="flex gap-2 overflow-x-auto">
-                        <Button
-                            variant={activeSection === 'main' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('main')}
-                            className="whitespace-nowrap"
-                        >
-                            <ShoppingBag className="h-4 w-4 mr-2" />
-                            Main
-                        </Button>
-                        <Button
-                            variant={activeSection === 'menu' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('menu')}
-                            className="whitespace-nowrap"
-                        >
-                            <UtensilsCrossed className="h-4 w-4 mr-2" />
-                            Menu & Deals
-                        </Button>
-                        <Button
-                            variant={activeSection === 'marketing' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('marketing')}
-                            className="whitespace-nowrap"
-                        >
-                            <Tag className="h-4 w-4 mr-2" />
-                            Marketing
-                        </Button>
-                        <Button
-                            variant={activeSection === 'analytics' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('analytics')}
-                            className="whitespace-nowrap"
-                        >
-                            <BarChart3 className="h-4 w-4 mr-2" />
-                            Analytics
-                        </Button>
-                        <Button
-                            variant={activeSection === 'payouts' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('payouts')}
-                            className="whitespace-nowrap"
-                        >
-                            <Award className="h-4 w-4 mr-2" />
-                            Payouts
-                        </Button>
-                        <Button
-                            variant={activeSection === 'operations' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('operations')}
-                            className="whitespace-nowrap"
-                        >
-                            <Users className="h-4 w-4 mr-2" />
-                            Operations
-                        </Button>
-                        <Button
-                            variant={activeSection === 'settings' ? 'default' : 'ghost'}
-                            onClick={() => setActiveSection('settings')}
-                            className="whitespace-nowrap"
-                        >
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                        </Button>
+                <div className="bg-white rounded-lg shadow-sm p-2 mb-4 overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-1 sm:gap-2 flex-nowrap">
+                        {[
+                            { id: 'main', label: 'Main', icon: ShoppingBag },
+                            { id: 'menu', label: 'Menu & Deals', icon: UtensilsCrossed },
+                            { id: 'marketing', label: 'Marketing', icon: Tag },
+                            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+                            { id: 'payouts', label: 'Payouts', icon: Award },
+                            { id: 'operations', label: 'Operations', icon: Users },
+                            { id: 'settings', label: 'Settings', icon: Settings }
+                        ].map(({ id, label, icon: Icon }) => (
+                            <Button
+                                key={id}
+                                variant={activeSection === id ? 'default' : 'ghost'}
+                                onClick={() => setActiveSection(id)}
+                                className="whitespace-nowrap text-xs sm:text-sm"
+                                size="sm"
+                            >
+                                <Icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                                <span className="hidden sm:inline">{label}</span>
+                                <span className="sm:hidden">{label.split(' ')[0]}</span>
+                            </Button>
+                        ))}
                     </div>
                 </div>
             </div>
