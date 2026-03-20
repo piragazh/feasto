@@ -13,7 +13,7 @@ import {
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DataFetchWrapper, DynamicListWrapper } from '@/components/dashboard/DataFetchWrapper';
 import { SkeletonStats, SkeletonChart } from '@/components/ui/skeleton-loader';
-import { useAnnouncement } from '@/lib/aria-utils';
+import { useAnnouncement } from '@/lib/aria-utils.jsx';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();

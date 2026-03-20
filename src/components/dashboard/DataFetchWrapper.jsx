@@ -1,6 +1,6 @@
 import React from 'react';
 import { SkeletonCard, SkeletonTable, SkeletonStats, SkeletonChart, SkeletonFormSection } from '@/components/ui/skeleton-loader';
-import { LiveRegion } from '@/lib/aria-utils';
+import { LiveRegion } from '@/lib/aria-utils.jsx';
 
 /**
  * Wrapper component for data-fetching views

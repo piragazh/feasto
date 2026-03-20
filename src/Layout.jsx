@@ -20,7 +20,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 import { Toaster } from 'sonner';
 import { addSkipLink } from '@/lib/a11y-utils';
-import { initializeLiveRegions } from '@/lib/aria-utils';
+import { initializeLiveRegions } from '@/lib/aria-utils.jsx';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
