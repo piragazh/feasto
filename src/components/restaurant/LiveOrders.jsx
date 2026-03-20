@@ -818,12 +818,22 @@ Provide only the time range (e.g., "25-30 min").`;
                                             )}
                                             
                                             {order.status === 'confirmed' && (
-                                                <Button
-                                                    onClick={() => handleStatusChange(order.id, 'preparing')}
-                                                    className="flex-1 bg-purple-600 hover:bg-purple-700"
-                                                >
-                                                    Start Preparing
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        onClick={() => handleStatusChange(order.id, 'preparing')}
+                                                        className="flex-1 bg-purple-600 hover:bg-purple-700"
+                                                    >
+                                                        Start Preparing
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => setRejectingOrder(order)}
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        title="Cancel this confirmed order"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </>
                                             )}
 
                                             {order.status === 'preparing' && (
