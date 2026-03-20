@@ -27,18 +27,28 @@ Deno.serve(async (req) => {
 
         const orderCount = Array.isArray(recentOrders) ? recentOrders.length : 0;
 
-        // CRITICAL: Max 5 orders per minute
-        if (orderCount >= 5) {
-            return new Response(
-                JSON.stringify({ 
-                    error: 'Too many orders. Please wait before placing another order.',
-                    retryAfter: 60
-                }),
-                { status: 429, headers: { 'Retry-After': '60' } }
-            );
-        }
+        // CRITICAL SECURITY: Max 5 orders per minute with dynamic retry calculation
+         if (orderCount >= 5) {
+             // Calculate precise retry-after based on oldest order
+             const oldestOrder = recentOrders.sort((a, b) => 
+                 new Date(a.created_date).getTime() - new Date(b.created_date).getTime()
+             )[0];
 
-        return new Response(JSON.stringify({ allowed: true, ordersThisMinute: orderCount }));
+             const oldestTime = new Date(oldestOrder.created_date).getTime();
+             const retryAfter = Math.max(1, Math.ceil((oldestTime + 60000 - Date.now()) / 1000));
+
+             return new Response(
+                 JSON.stringify({ 
+                     allowed: false,
+                     error: 'Too many orders. Please wait before placing another order.',
+                     retryAfter: retryAfter,
+                     ordersThisMinute: orderCount
+                 }),
+                 { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+             );
+         }
+
+         return new Response(JSON.stringify({ allowed: true, ordersThisMinute: orderCount }));
 
     } catch (error) {
         console.error('Rate limit check error:', error);
