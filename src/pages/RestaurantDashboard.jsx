@@ -411,10 +411,10 @@ export default function RestaurantDashboard() {
                 {/* MENU & DEALS SECTION */}
                 {activeSection === 'menu' && (
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4">
-                            <TabsTrigger value="menu">Menu Items</TabsTrigger>
-                            <TabsTrigger value="deals">Meal Deals</TabsTrigger>
-                            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                        <TabsList className="mb-4 overflow-x-auto flex-wrap h-auto">
+                            <TabsTrigger value="menu" className="text-xs sm:text-sm">Menu Items</TabsTrigger>
+                            <TabsTrigger value="deals" className="text-xs sm:text-sm">Meal Deals</TabsTrigger>
+                            <TabsTrigger value="reviews" className="text-xs sm:text-sm">Reviews</TabsTrigger>
                         </TabsList>
                         <TabsContent value="menu">
                             <MenuManagement restaurantId={restaurant.id} />
