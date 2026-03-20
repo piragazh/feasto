@@ -8,6 +8,17 @@ import { DarkModeProvider } from '@/components/ui/dark-mode-provider';
 import { ArrowLeft } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { PageTransition } from '@/components/ui/page-transition';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuSeparator, 
+    DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
+import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
+import { Toaster } from 'sonner';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
