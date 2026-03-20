@@ -79,11 +79,32 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* WCAG 2.1 AA - Focus visible styles for all interactive elements */
+  /* Provides clear visual indicator for keyboard navigation */
+  button,
+  a[role="button"],
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="file"],
+  textarea,
+  select,
+  [role="tab"],
+  [role="menuitem"],
+  [role="link"],
+  a,
+  .interactive {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
   }
 
   /* Global 44px touch target rule for all interactive elements */
@@ -113,6 +134,7 @@
   .chip,
   [data-small-touch-target="true"] {
     @apply min-h-0 min-w-0;
+    @apply focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-ring;
   }
 
   /* Input fields: ensure readable height on mobile */
@@ -120,10 +142,66 @@
   textarea,
   select {
     @apply min-h-[44px];
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
   }
 
   /* Form labels: ensure clickable area */
   label {
     @apply cursor-pointer;
+  }
+
+  /* Safe-area insets for notched devices */
+  /* Ensures content doesn't overlap with device notches, camera cutouts, or status bars */
+  header,
+  .header-safe-area {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  footer,
+  .footer-safe-area,
+  nav[role="navigation"] {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Fixed elements with safe-area support */
+  .fixed-top {
+    top: env(safe-area-inset-top, 0);
+  }
+
+  .fixed-bottom {
+    bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Modal and drawer safe-area support */
+  [role="dialog"],
+  .modal,
+  .drawer {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* All sides safe-area support */
+  .safe-area-all {
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Safe-area margins (alternative to padding) */
+  .safe-area-margin-top {
+    margin-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-margin-bottom {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-margin-left {
+    margin-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-margin-right {
+    margin-right: env(safe-area-inset-right);
   }
 }
