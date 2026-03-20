@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 
