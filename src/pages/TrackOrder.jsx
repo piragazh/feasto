@@ -83,35 +83,6 @@ export default function TrackOrder() {
 
                     return event.data;
                 });
-
-                // Show notification for status changes
-                if (oldStatus && newStatus !== oldStatus) {
-                    const statusMessages = {
-                        confirmed: '✅ Order confirmed! Your food is being prepared.',
-                        preparing: '👨‍🍳 Your order is being prepared.',
-                        out_for_delivery: '🚗 Your order is on the way!',
-                        delivered: '🎉 Your order has been delivered. Enjoy!',
-                        ready_for_collection: '✅ Your order is ready for collection!',
-                        collected: '✅ Order collected successfully!',
-                        cancelled: '❌ Order has been cancelled.'
-                    };
-
-                    const message = statusMessages[newStatus];
-                    if (message) {
-                        toast.success(message, { duration: 5000 });
-                        
-                        // Request notification permission and show browser notification
-                        if ('Notification' in window && Notification.permission === 'granted') {
-                            new Notification('Order Update', {
-                                body: message,
-                                icon: '/logo.png',
-                                badge: '/logo.png'
-                            });
-                        } else if ('Notification' in window && Notification.permission !== 'denied') {
-                            Notification.requestPermission();
-                        }
-                    }
-                }
             }
         });
 
