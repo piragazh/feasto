@@ -87,7 +87,7 @@ export default function TrackOrder() {
         });
 
         return () => unsubscribe();
-    }, [orderId, order?.status]);
+    }, [orderId]);
 
     const { data: driver } = useQuery({
         queryKey: ['driver-info', order?.driver_id],
