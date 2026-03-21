@@ -56,10 +56,33 @@ export default function TrackOrder() {
         const unsubscribe = base44.entities.Order.subscribe((event) => {
             if (event.id === orderId && event.type === 'update') {
                 const newStatus = event.data.status;
-                const oldStatus = order?.status;
 
-                // Update order data
-                setOrder(event.data);
+                // Update order data and check status change using functional update
+                setOrder(prev => {
+                    const oldStatus = prev?.status;
+
+                    if (oldStatus && newStatus !== oldStatus) {
+                        const statusMessages = {
+                            confirmed: '✅ Order confirmed! Your food is being prepared.',
+                            preparing: '👨‍🍳 Your order is being prepared.',
+                            out_for_delivery: '🚗 Your order is on the way!',
+                            delivered: '🎉 Your order has been delivered. Enjoy!',
+                            ready_for_collection: '✅ Your order is ready for collection!',
+                            collected: '✅ Order collected successfully!',
+                            cancelled: '❌ Order has been cancelled.'
+                        };
+
+                        const message = statusMessages[newStatus];
+                        if (message) {
+                            toast.success(message, { duration: 5000 });
+                            if ('Notification' in window && Notification.permission === 'granted') {
+                                new Notification('Order Update', { body: message, icon: '/logo.png' });
+                            }
+                        }
+                    }
+
+                    return event.data;
+                });
 
                 // Show notification for status changes
                 if (oldStatus && newStatus !== oldStatus) {

@@ -114,7 +114,7 @@ export default function CustomerProfile() {
 
                 {/* Profile Tabs */}
                 <Tabs defaultValue="orders">
-                    <TabsList className="bg-white dark:bg-gray-800 dark:border-gray-700 mb-4 sm:mb-6 w-full grid grid-cols-2 sm:flex sm:w-auto">
+                    <TabsList className="bg-white dark:bg-gray-800 dark:border-gray-700 mb-4 sm:mb-6 w-full grid grid-cols-4 sm:flex sm:w-auto">
                         <TabsTrigger value="orders" className="text-xs sm:text-sm h-11 sm:h-auto" aria-label="Order history">
                             <Package className="h-4 w-4 sm:h-4 sm:w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Order History</span>
