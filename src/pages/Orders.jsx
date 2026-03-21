@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -156,7 +156,7 @@ export default function Orders() {
     };
 
     // Get unique restaurants for filter
-    const restaurants = React.useMemo(() => {
+    const restaurants = useMemo(() => {
         const unique = new Set();
         orders.forEach(order => {
             if (order?.restaurant_name) {
@@ -167,7 +167,7 @@ export default function Orders() {
     }, [orders]);
 
     // Filter and sort orders
-    const filteredAndSortedOrders = React.useMemo(() => {
+    const filteredAndSortedOrders = useMemo(() => {
         let filtered = orders.filter(order => {
             // Status filter
             if (statusFilter !== 'all' && order?.status !== statusFilter) {
