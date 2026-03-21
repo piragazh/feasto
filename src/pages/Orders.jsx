@@ -27,8 +27,14 @@ const statusConfig = {
     confirmed: { label: 'Confirmed', icon: CheckCircle, color: 'bg-blue-100 text-blue-700' },
     preparing: { label: 'Preparing', icon: Package, color: 'bg-purple-100 text-purple-700' },
     out_for_delivery: { label: 'On the Way', icon: Bike, color: 'bg-orange-100 text-orange-700' },
+    ready_for_collection: { label: 'Ready to Collect', icon: CheckCircle, color: 'bg-teal-100 text-teal-700' },
     delivered: { label: 'Delivered', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
+    collected: { label: 'Collected', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
     cancelled: { label: 'Cancelled', icon: Clock, color: 'bg-red-100 text-red-700' },
+    refund_requested: { label: 'Refund Requested', icon: AlertCircle, color: 'bg-yellow-100 text-yellow-700' },
+    refund_rejected_by_restaurant: { label: 'Refund Rejected', icon: AlertCircle, color: 'bg-red-100 text-red-700' },
+    refund_under_platform_review: { label: 'Under Review', icon: AlertCircle, color: 'bg-orange-100 text-orange-700' },
+    refunded: { label: 'Refunded', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
 };
 
 export default function Orders() {
@@ -139,6 +145,7 @@ export default function Orders() {
         // Save order items to cart
         localStorage.setItem('cart', JSON.stringify(order.items));
         localStorage.setItem('cartRestaurantId', order.restaurant_id);
+        localStorage.setItem('cartRestaurantName', order.restaurant_name || '');
         
         toast.success('Items added to cart!');
         navigate(createPageUrl('Restaurant') + '?id=' + order.restaurant_id);

@@ -206,7 +206,7 @@ export default function SuperAdmin() {
             </Sheet>
 
             {/* Main Content */}
-            <div className={`md:${sidebarOpen ? 'ml-64' : 'ml-20'} flex-1 transition-all duration-300 pt-20 md:pt-0`}>
+            <div className={`${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} flex-1 transition-all duration-300 pt-20 md:pt-0`}>
                 {/* Top Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
                     <div className="px-4 md:px-6 py-4 flex items-center justify-between gap-4">
