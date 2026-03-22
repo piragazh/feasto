@@ -27,6 +27,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const queryClient = useQueryClient();
     const prevOrderIds = useRef(new Set());
     const restaurantRef = useRef(null);
+    const printOrderDetailsRef = useRef(null);
 
     // Load restaurant config once so auto-print can reference it
     useEffect(() => {
