@@ -841,17 +841,8 @@ export default function RestaurantSettings({ restaurantId }) {
                 </Card>
             )}
 
-            {activeSection === 'printing' && (
+            {activeSection === '__never__' && (
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Printer className="h-5 w-5" />
-                            Receipt Printer Configuration
-                        </CardTitle>
-                        <p className="text-sm text-gray-600">
-                            Configure receipt printing settings for your thermal printer
-                        </p>
-                    </CardHeader>
                     <CardContent className="space-y-6">
                         <BluetoothPrinterManager
                             selectedPrinter={restaurant?.printer_config?.bluetooth_printer}
