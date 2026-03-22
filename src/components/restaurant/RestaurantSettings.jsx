@@ -841,6 +841,80 @@ export default function RestaurantSettings({ restaurantId }) {
                 </Card>
             )}
 
+            {(activeSection === 'opening' || activeSection === 'delivery' || activeSection === 'collection') && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>
+                            {activeSection === 'opening' && 'Opening Hours'}
+                            {activeSection === 'delivery' && 'Delivery Hours'}
+                            {activeSection === 'collection' && 'Collection Hours'}
+                        </CardTitle>
+                        <p className="text-sm text-gray-600">
+                            {activeSection === 'opening' && 'Set your restaurant operating hours'}
+                            {activeSection === 'delivery' && 'Set when customers can place delivery orders (can differ from opening hours)'}
+                            {activeSection === 'collection' && 'Set when customers can collect orders'}
+                        </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {DAYS.map((day, idx) => {
+                            const hoursKey = activeSection === 'opening' ? 'opening_hours' : activeSection === 'delivery' ? 'delivery_hours' : 'collection_hours';
+                            const dayData = formData[hoursKey]?.[day] || {};
+
+                            return (
+                                <div key={day} className="border rounded-lg p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="capitalize font-semibold">{day}</Label>
+                                        <div className="flex items-center gap-3">
+                                            {idx === 0 && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => copyHoursToAll(activeSection, day)}
+                                                >
+                                                    Copy to All Days
+                                                </Button>
+                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <Switch
+                                                    checked={!dayData.closed}
+                                                    onCheckedChange={(checked) => updateDayHours(activeSection, day, 'closed', !checked)}
+                                                />
+                                                <span className="text-sm">{dayData.closed ? 'Closed' : 'Open'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {!dayData.closed && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label className="text-xs">Opening Time</Label>
+                                                <Input
+                                                    type="time"
+                                                    value={dayData.open || '09:00'}
+                                                    onChange={(e) => updateDayHours(activeSection, day, 'open', e.target.value)}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs">Closing Time</Label>
+                                                <Input
+                                                    type="time"
+                                                    value={dayData.close || '22:00'}
+                                                    onChange={(e) => updateDayHours(activeSection, day, 'close', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        <Button onClick={() => handleSaveHours(activeSection)} className="w-full" disabled={updateMutation.isPending}>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save {activeSection === 'opening' ? 'Opening' : activeSection === 'delivery' ? 'Delivery' : 'Collection'} Hours
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             {false && (
                 <Card>
                     <CardContent className="space-y-6">
