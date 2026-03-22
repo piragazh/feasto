@@ -88,7 +88,6 @@ export default function RestaurantSettings({ restaurantId }) {
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingCertificate, setUploadingCertificate] = useState(false);
     const [newKeyword, setNewKeyword] = useState('');
-    const [testPrinting, setTestPrinting] = useState(false);
 
     React.useEffect(() => {
         if (restaurant) {
