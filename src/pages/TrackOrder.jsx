@@ -11,6 +11,7 @@ import { ArrowLeft, MapPin, Clock, Phone, Package, CheckCircle, Loader2, Star } 
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import RateDriverDialog from '@/components/driver/RateDriverDialog';
+import GuestLoyaltyPoints from '@/components/tracking/GuestLoyaltyPoints';
 import LiveDriverTracking from '@/components/tracking/LiveDriverTracking';
 import DeliveryMilestoneNotifier from '@/components/tracking/DeliveryMilestoneNotifier';
 import 'leaflet/dist/leaflet.css';
@@ -366,6 +367,11 @@ export default function TrackOrder() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Loyalty Points - shown for all users after delivery */}
+                {(order.status === 'delivered' || order.status === 'collected') && (
+                    <GuestLoyaltyPoints order={order} />
+                )}
 
                 <RateDriverDialog
                     open={showRatingDialog}

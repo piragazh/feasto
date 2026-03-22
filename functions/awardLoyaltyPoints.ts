@@ -30,7 +30,9 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const { orderId } = await req.json();
+        const body = await req.json();
+        // Support both direct call { orderId } and entity automation payload { event: { entity_id } }
+        const orderId = body.orderId || body.event?.entity_id;
 
         if (!orderId) {
             return new Response(JSON.stringify({ error: 'Order ID required' }), { status: 400 });
