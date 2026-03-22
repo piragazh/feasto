@@ -2,6 +2,7 @@ import base44 from "@base44/vite-plugin"
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'url'
+import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,9 +17,13 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Force ALL packages (including @base44/sdk) to use the same React instance
+      'react': path.resolve('./node_modules/react'),
+      'react-dom': path.resolve('./node_modules/react-dom'),
+      'react/jsx-runtime': path.resolve('./node_modules/react/jsx-runtime'),
     },
   },
   optimizeDeps: {
@@ -30,6 +35,5 @@ export default defineConfig({
       'react-dom/client',
       '@base44/sdk',
     ],
-    exclude: [],
   },
 });
