@@ -919,8 +919,11 @@ export default function RestaurantSettings({ restaurantId }) {
                 <Card>
                     <CardContent>
                         <span />
-                            <Label className="text-base font-semibold mb-4 block">Receipt Settings</Label>
-                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {(activeSection === 'opening_DEAD'
 
                         <div className="grid md:grid-cols-2 gap-4">
                             <div>
