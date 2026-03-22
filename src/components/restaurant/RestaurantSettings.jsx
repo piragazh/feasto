@@ -919,8 +919,6 @@ export default function RestaurantSettings({ restaurantId }) {
                 <Card>
                     <CardContent>
                         <span />
-
-                        <div className="border-t pt-6">
                             <Label className="text-base font-semibold mb-4 block">Receipt Settings</Label>
                         </div>
 
