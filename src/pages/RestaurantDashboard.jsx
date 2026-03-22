@@ -1,37 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-    UtensilsCrossed, 
-    ShoppingBag, 
-    History, 
-    Settings, 
-    LogOut,
-    Bell,
-    MessageSquare,
-    BarChart3,
-    Users,
-    Tag,
-    Award,
-    Monitor,
-    TabletSmartphone
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+    UtensilsCrossed, ShoppingBag, History, Settings, LogOut,
+    Bell, MessageSquare, BarChart3, Users, Tag, Award,
+    Monitor, TabletSmartphone, ChevronDown, ChevronRight,
+    Menu, TrendingUp, Truck, UserCheck, RotateCcw,
+    GitBranch, PenLine, MapPin, Link2, Cpu, Smartphone,
+    MessageCircle, UsersRound, Palette, Star, Sparkles,
+    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling
 } from 'lucide-react';
-import LiveOrders from '@/components/restaurant/LiveOrders';
 
+import LiveOrders from '@/components/restaurant/LiveOrders';
 import MenuManagement from '@/components/restaurant/MenuManagement';
 import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
 import AIMealDealSuggestions from '@/components/restaurant/AIMealDealSuggestions';
 import CouponsManagement from '@/components/restaurant/CouponsManagement';
 import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
-
 import ReviewManagement from '@/components/restaurant/ReviewManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
-
 import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
 import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
 import DriverTracking from '@/components/restaurant/DriverTracking';
@@ -57,31 +50,171 @@ import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHis
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
+// ── Nav definition ──────────────────────────────────────────────────────────
+const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refundRequests) => [
+    {
+        id: 'main', label: 'Orders', icon: ShoppingBag,
+        items: [
+            { id: 'orders', label: 'Live Orders', icon: ShoppingBag, badge: pendingOrders.length },
+            { id: 'messages', label: 'Messages', icon: MessageSquare, badge: unreadMessagesCount },
+            { id: 'history', label: 'Order History', icon: History },
+        ]
+    },
+    {
+        id: 'menu', label: 'Menu & Deals', icon: UtensilsCrossed,
+        items: [
+            { id: 'menu', label: 'Menu Items', icon: UtensilsCrossed },
+            { id: 'deals', label: 'Meal Deals', icon: Package },
+            { id: 'reviews', label: 'Reviews', icon: Star },
+        ]
+    },
+    {
+        id: 'marketing', label: 'Marketing', icon: Tag,
+        items: [
+            { id: 'coupons', label: 'Coupons', icon: Tag },
+            { id: 'promotions', label: 'Promotions', icon: Sparkles },
+            { id: 'ai-marketing', label: 'AI Assistant', icon: Sparkles },
+            ...(restaurant?.media_screen_enabled ? [{ id: 'media', label: 'Media Screens', icon: Monitor }] : []),
+        ]
+    },
+    {
+        id: 'analytics', label: 'Analytics', icon: BarChart3,
+        items: [
+            { id: 'analytics', label: 'Overview', icon: BarChart3 },
+            { id: 'order-analytics', label: 'Order Insights', icon: TrendingUp },
+            { id: 'driver-performance', label: 'Driver Performance', icon: UserCheck },
+        ]
+    },
+    {
+        id: 'payouts', label: 'Payouts', icon: PoundSterling,
+        items: [
+            { id: 'payouts', label: 'Payout History', icon: PoundSterling },
+        ]
+    },
+    {
+        id: 'operations', label: 'Operations', icon: ChefHat,
+        items: [
+            { id: 'kds', label: 'Kitchen Display', icon: ChefHat },
+            { id: 'drivers', label: 'Driver Tracking', icon: Truck },
+            { id: 'driver-management', label: 'Manage Drivers', icon: Users },
+            { id: 'crm', label: 'CRM', icon: UsersRound },
+            { id: 'refunds', label: 'Refunds', icon: RotateCcw, badge: refundRequests.length },
+            { id: 'batching', label: 'Order Batching', icon: GitBranch },
+            { id: 'modifications', label: 'Modifications', icon: PenLine },
+        ]
+    },
+    {
+        id: 'settings', label: 'Settings', icon: Settings,
+        items: [
+            { id: 'settings', label: 'Restaurant Settings', icon: Settings },
+            { id: 'branding', label: 'Branding', icon: Palette },
+            { id: 'zones', label: 'Delivery Zones', icon: MapPin },
+            { id: 'integrations', label: 'Third-Party Orders', icon: Link2 },
+            { id: 'pos', label: 'POS Config', icon: Cpu },
+            { id: 'kiosk', label: 'Kiosk', icon: Smartphone },
+            { id: 'sms', label: 'SMS Notifications', icon: MessageCircle },
+            { id: 'staff', label: 'Staff', icon: UserCheck },
+        ]
+    },
+];
+
+// ── Sidebar Nav ─────────────────────────────────────────────────────────────
+function SidebarNav({ sections, activeSection, activeTab, onNavigate, collapsed, restaurant }) {
+    const [expanded, setExpanded] = useState(() => {
+        const init = {};
+        sections.forEach(s => { init[s.id] = s.id === activeSection; });
+        return init;
+    });
+
+    const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+    return (
+        <nav className="flex flex-col gap-0.5 px-2 py-3 overflow-y-auto flex-1">
+            {sections.map(section => {
+                const isActive = section.id === activeSection;
+                const isOpen = expanded[section.id];
+                const SIcon = section.icon;
+                const totalBadge = section.items.reduce((s, i) => s + (i.badge || 0), 0);
+
+                return (
+                    <div key={section.id}>
+                        {/* Section header */}
+                        <button
+                            onClick={() => { toggle(section.id); if (section.items.length === 1) onNavigate(section.id, section.items[0].id); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
+                                isActive ? 'bg-orange-500 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                            }`}
+                        >
+                            <SIcon className="h-4 w-4 flex-shrink-0" />
+                            {!collapsed && (
+                                <>
+                                    <span className="flex-1 text-left truncate">{section.label}</span>
+                                    {totalBadge > 0 && !isOpen && (
+                                        <span className="h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center flex-shrink-0">
+                                            {totalBadge}
+                                        </span>
+                                    )}
+                                    {section.items.length > 1 && (
+                                        isOpen ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 opacity-70" /> : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 opacity-70" />
+                                    )}
+                                </>
+                            )}
+                        </button>
+
+                        {/* Sub-items */}
+                        {!collapsed && isOpen && section.items.length > 1 && (
+                            <div className="ml-3 mt-0.5 mb-1 border-l border-white/10 pl-3 flex flex-col gap-0.5">
+                                {section.items.map(item => {
+                                    const IIcon = item.icon;
+                                    const isItemActive = activeSection === section.id && activeTab === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => onNavigate(section.id, item.id)}
+                                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-all ${
+                                                isItemActive ? 'bg-white/15 text-white' : 'text-slate-400 hover:bg-white/10 hover:text-slate-200'
+                                            }`}
+                                        >
+                                            <IIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                            <span className="flex-1 text-left truncate">{item.label}</span>
+                                            {item.badge > 0 && (
+                                                <span className="h-4 min-w-[16px] bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center px-1 flex-shrink-0">
+                                                    {item.badge}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </nav>
+    );
+}
+
+// ── Main component ──────────────────────────────────────────────────────────
 export default function RestaurantDashboard() {
     const [user, setUser] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
     const [activeTab, setActiveTab] = useState('orders');
     const [activeSection, setActiveSection] = useState('main');
     const [newOrdersCount, setNewOrdersCount] = useState(0);
-
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const { data: pendingOrders = [] } = useQuery({
         queryKey: ['pending-orders', restaurant?.id],
-        queryFn: () => base44.entities.Order.filter({ 
-            restaurant_id: restaurant.id, 
-            status: 'pending' 
-        }),
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurant.id, status: 'pending' }),
         enabled: !!restaurant?.id,
         refetchInterval: 30000,
     });
 
     const { data: refundRequests = [] } = useQuery({
         queryKey: ['refund-requests-count', restaurant?.id],
-        queryFn: () => base44.entities.Order.filter({ 
-            restaurant_id: restaurant.id, 
-            status: 'refund_requested' 
-        }),
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurant.id, status: 'refund_requested' }),
         enabled: !!restaurant?.id,
         refetchInterval: 60000,
     });
@@ -100,33 +233,17 @@ export default function RestaurantDashboard() {
         refetchInterval: 45000,
     });
 
-    const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(msg => !msg.is_read).length;
+    const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(m => !m.is_read).length;
 
-    useEffect(() => {
-        loadUserAndRestaurant();
-        requestNotificationPermission();
-    }, []);
+    useEffect(() => { loadUserAndRestaurant(); requestNotificationPermission(); }, []);
 
-    // Track dashboard activity every 5 minutes
     useEffect(() => {
         if (!restaurant?.id) return;
-
-        const trackActivity = async () => {
-            try {
-                await base44.functions.invoke('trackDashboardActivity', {
-                    restaurant_id: restaurant.id
-                });
-            } catch (error) {
-                console.error('Failed to track activity:', error);
-            }
+        const track = async () => {
+            try { await base44.functions.invoke('trackDashboardActivity', { restaurant_id: restaurant.id }); } catch {}
         };
-
-        // Track immediately on mount
-        trackActivity();
-
-        // Then track every 5 minutes
-        const interval = setInterval(trackActivity, 5 * 60 * 1000);
-
+        track();
+        const interval = setInterval(track, 5 * 60 * 1000);
         return () => clearInterval(interval);
     }, [restaurant?.id]);
 
@@ -134,73 +251,37 @@ export default function RestaurantDashboard() {
         try {
             const userData = await base44.auth.me();
             setUser(userData);
-            
-            // Check for restaurantId in URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             const restaurantIdParam = urlParams.get('restaurantId');
-            
-            // For admin users, load restaurant from URL param or first restaurant
+
             if (userData.role === 'admin') {
                 const allRestaurants = await base44.entities.Restaurant.list();
-                
                 if (restaurantIdParam) {
-                    const restaurantData = allRestaurants.find(r => r.id === restaurantIdParam);
-                    if (restaurantData) {
-                        // CRITICAL: Verify permission even for admin
+                    const r = allRestaurants.find(r => r.id === restaurantIdParam);
+                    if (r) {
                         try {
-                            await base44.functions.invoke('enforceRestaurantPermissions', {
-                                restaurantId: restaurantIdParam
-                            });
-                            setRestaurant(restaurantData);
-                            return;
-                        } catch (permError) {
-                            toast.error('Access denied to this restaurant');
-                            return;
-                        }
+                            await base44.functions.invoke('enforceRestaurantPermissions', { restaurantId: restaurantIdParam });
+                            setRestaurant(r); return;
+                        } catch { toast.error('Access denied to this restaurant'); return; }
                     }
                 }
-                
-                if (allRestaurants.length > 0) {
-                    setRestaurant(allRestaurants[0]);
-                }
+                if (allRestaurants.length > 0) setRestaurant(allRestaurants[0]);
                 return;
             }
-            
-            // Check if user is a restaurant manager
-            const managerRecords = await base44.entities.RestaurantManager.filter({ 
-                user_email: userData.email,
-                is_active: true 
-            });
-            
+
+            const managerRecords = await base44.entities.RestaurantManager.filter({ user_email: userData.email, is_active: true });
             if (managerRecords.length > 0) {
-                // User is a restaurant manager
                 const manager = managerRecords[0];
-                if (manager.restaurant_ids && manager.restaurant_ids.length > 0) {
-                    // Load first assigned restaurant with permission check
+                if (manager.restaurant_ids?.length > 0) {
                     const restaurantId = restaurantIdParam || manager.restaurant_ids[0];
-                    
-                    // CRITICAL: Verify permission
                     try {
-                        await base44.functions.invoke('enforceRestaurantPermissions', {
-                            restaurantId
-                        });
-                        
+                        await base44.functions.invoke('enforceRestaurantPermissions', { restaurantId });
                         const allRestaurants = await base44.entities.Restaurant.list();
-                        const restaurantData = allRestaurants.find(r => r.id === restaurantId);
-                        if (restaurantData) {
-                            setRestaurant(restaurantData);
-                        } else {
-                            toast.error('Restaurant not found');
-                        }
-                    } catch (permError) {
-                        toast.error('Access denied to this restaurant');
-                    }
-                } else {
-                    toast.error('No restaurant assigned to your account');
-                }
-            } else {
-                toast.error('No restaurant assigned to this account. Please contact admin.');
-            }
+                        const r = allRestaurants.find(r => r.id === restaurantId);
+                        if (r) setRestaurant(r); else toast.error('Restaurant not found');
+                    } catch { toast.error('Access denied to this restaurant'); }
+                } else { toast.error('No restaurant assigned to your account'); }
+            } else { toast.error('No restaurant assigned. Please contact admin.'); }
         } catch (e) {
             toast.error('Error loading restaurant dashboard');
             base44.auth.redirectToLogin();
@@ -208,387 +289,291 @@ export default function RestaurantDashboard() {
     };
 
     const requestNotificationPermission = async () => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            await Notification.requestPermission();
-        }
+        if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
     };
 
     useEffect(() => {
-        // Only trigger notifications if count increased AND not initial load
         if (newOrdersCount > 0 && pendingOrders.length > newOrdersCount) {
-            playNotificationSound();
-            showNotification('New Order!', `You have ${pendingOrders.length} pending orders`);
+            const audio = new Audio('/notification.mp3');
+            audio.volume = 0.8;
+            audio.play().catch(() => {});
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Order!', { body: `You have ${pendingOrders.length} pending orders`, icon: '/icon.png' });
+            }
         }
         setNewOrdersCount(pendingOrders.length);
     }, [pendingOrders.length]);
 
-    const playNotificationSound = () => {
-        // Play notification MP3 file (place your notification.mp3 in the public folder)
-        const audio = new Audio('/notification.mp3');
-        audio.volume = 0.8; // Adjust volume (0.0 to 1.0)
-        audio.play().catch((err) => {
-            console.log('Notification sound failed to play:', err);
-        });
+    const navigate = (section, tab) => {
+        setActiveSection(section);
+        setActiveTab(tab);
+        setMobileMenuOpen(false);
     };
 
-    const showNotification = (title, body) => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, { body, icon: '/icon.png' });
-        }
-    };
+    const navSections = buildNavSections(restaurant, pendingOrders, unreadMessagesCount, refundRequests);
 
     if (!user || !restaurant) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading dashboard...</p>
+                    <div className="w-14 h-14 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-white/60 text-sm">Loading dashboard...</p>
                 </div>
             </div>
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gray-50">
-            <NotificationSoundManager restaurantId={restaurant?.id} />
-            
-            {showOnboarding && (
-                <RestaurantOnboarding 
-                    restaurant={restaurant}
-                    onComplete={() => setShowOnboarding(false)}
-                />
+    const totalAlerts = pendingOrders.length + unreadMessagesCount + refundRequests.length;
+
+    // ── Sidebar inner (shared between desktop and mobile sheet) ──────────────
+    const SidebarContent = ({ onClose }) => (
+        <div className={`flex flex-col h-full bg-gradient-to-b from-slate-900 to-slate-800 ${onClose ? 'w-72' : sidebarCollapsed ? 'w-16' : 'w-60'} transition-all duration-200`}>
+            {/* Logo / restaurant info */}
+            <div className={`flex items-center gap-3 px-4 py-4 border-b border-white/10 ${sidebarCollapsed && !onClose ? 'justify-center' : ''}`}>
+                <div className="h-9 w-9 rounded-xl bg-orange-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {restaurant.logo_url
+                        ? <img src={restaurant.logo_url} alt={restaurant.name} className="h-full w-full object-cover" />
+                        : <UtensilsCrossed className="h-5 w-5 text-white" />
+                    }
+                </div>
+                {(!sidebarCollapsed || onClose) && (
+                    <div className="min-w-0 flex-1">
+                        <p className="text-white font-semibold text-sm truncate">{restaurant.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={`h-1.5 w-1.5 rounded-full ${restaurant.is_open ? 'bg-green-400' : 'bg-gray-400'}`} />
+                            <span className="text-xs text-slate-400">{restaurant.is_open ? 'Open' : 'Closed'}</span>
+                        </div>
+                    </div>
+                )}
+                {onClose && (
+                    <button onClick={onClose} className="text-slate-400 hover:text-white ml-auto">
+                        <X className="h-5 w-5" />
+                    </button>
+                )}
+            </div>
+
+            {/* Alert strip */}
+            {totalAlerts > 0 && (!sidebarCollapsed || onClose) && (
+                <div className="mx-3 mt-3 px-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-red-400 flex-shrink-0 animate-pulse" />
+                    <span className="text-xs text-red-300 font-medium">{totalAlerts} alert{totalAlerts !== 1 ? 's' : ''} need attention</span>
+                </div>
             )}
 
-            {/* Header */}
-            <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
-                                <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                            </div>
-                            <div className="min-w-0">
-                                <h1 className="text-base sm:text-2xl font-bold text-gray-900 truncate">{restaurant.name}</h1>
-                                <p className="text-xs sm:text-sm text-gray-500 truncate">{user.email}</p>
-                            </div>
+            {/* Nav */}
+            <SidebarNav
+                sections={navSections}
+                activeSection={activeSection}
+                activeTab={activeTab}
+                onNavigate={navigate}
+                collapsed={sidebarCollapsed && !onClose}
+                restaurant={restaurant}
+            />
+
+            {/* Bottom actions */}
+            <div className={`border-t border-white/10 p-3 space-y-1 ${sidebarCollapsed && !onClose ? 'flex flex-col items-center' : ''}`}>
+                {restaurant?.pos_enabled && (
+                    <button
+                        onClick={() => window.open(createPageUrl('POSDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-slate-400 hover:bg-white/10 hover:text-white transition-all"
+                    >
+                        <Cpu className="h-4 w-4 flex-shrink-0" />
+                        {(!sidebarCollapsed || onClose) && <span>Open POS</span>}
+                    </button>
+                )}
+                {restaurant?.pos_enabled && (
+                    <button
+                        onClick={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-slate-400 hover:bg-white/10 hover:text-white transition-all"
+                    >
+                        <TabletSmartphone className="h-4 w-4 flex-shrink-0" />
+                        {(!sidebarCollapsed || onClose) && <span>Open Kiosk</span>}
+                    </button>
+                )}
+                <button
+                    onClick={() => base44.auth.logout()}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all"
+                >
+                    <LogOut className="h-4 w-4 flex-shrink-0" />
+                    {(!sidebarCollapsed || onClose) && <span>Sign Out</span>}
+                </button>
+            </div>
+        </div>
+    );
+
+    // ── Content renderer ─────────────────────────────────────────────────────
+    const renderContent = () => {
+        if (activeSection === 'main') {
+            return (
+                <Tabs value={activeTab} onValueChange={t => setActiveTab(t)}>
+                    <TabsContent value="orders"><LiveOrders restaurantId={restaurant.id} onOrderUpdate={() => {}} /></TabsContent>
+                    <TabsContent value="messages"><RestaurantMessages restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="history"><PastOrders restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+        if (activeSection === 'menu') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="menu"><MenuManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="deals">
+                        <AIMealDealSuggestions restaurantId={restaurant.id} />
+                        <MealDealsManagement restaurantId={restaurant.id} />
+                    </TabsContent>
+                    <TabsContent value="reviews"><ReviewManagement restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+        if (activeSection === 'marketing') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="coupons"><CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
+                    <TabsContent value="promotions"><PromotionManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="ai-marketing"><AIMarketingAssistant restaurantId={restaurant.id} /></TabsContent>
+                    {restaurant?.media_screen_enabled && (
+                        <TabsContent value="media">
+                            <Card>
+                                <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Media Screen Management</CardTitle></CardHeader>
+                                <CardContent>
+                                    <p className="text-gray-600 mb-4">Manage promotional content, screens, and layouts for in-store displays.</p>
+                                    <Button onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}>
+                                        <Monitor className="h-4 w-4 mr-2" />Open Media Screen Manager
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )}
+                </Tabs>
+            );
+        }
+        if (activeSection === 'analytics') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="analytics"><EnhancedAnalyticsDashboard restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="order-analytics"><OrderAnalyticsDashboard restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="driver-performance"><DriverPerformance restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+        if (activeSection === 'payouts') {
+            return <RestaurantPayoutHistory restaurantId={restaurant.id} />;
+        }
+        if (activeSection === 'operations') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="kds"><KitchenDisplaySystem restaurant={restaurant} /></TabsContent>
+                    <TabsContent value="drivers"><DriverTracking restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="driver-management"><DriverManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="crm"><CustomerCRM restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
+                    <TabsContent value="refunds"><RefundManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="batching"><OrderBatching restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="modifications"><OrderModification restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+        if (activeSection === 'settings') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="settings"><RestaurantSettings restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="branding"><BrandingManager restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="zones">
+                        <DeliveryZoneManagement
+                            restaurantId={restaurant.id}
+                            restaurantLocation={restaurant.latitude && restaurant.longitude ? { lat: restaurant.latitude, lng: restaurant.longitude } : null}
+                        />
+                    </TabsContent>
+                    <TabsContent value="integrations"><ThirdPartyIntegrations restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="pos"><POSConfigurations restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="kiosk"><KioskSettings restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="sms"><SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} /></TabsContent>
+                    <TabsContent value="staff"><StaffManagement restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+    };
+
+    // ── Page title for breadcrumb ─────────────────────────────────────────────
+    const currentSection = navSections.find(s => s.id === activeSection);
+    const currentItem = currentSection?.items.find(i => i.id === activeTab);
+    const pageTitle = currentItem?.label || currentSection?.label || 'Dashboard';
+
+    return (
+        <div className="flex h-screen overflow-hidden bg-gray-50">
+            <NotificationSoundManager restaurantId={restaurant?.id} />
+
+            {showOnboarding && (
+                <RestaurantOnboarding restaurant={restaurant} onComplete={() => setShowOnboarding(false)} />
+            )}
+
+            {/* ── Desktop Sidebar ── */}
+            <aside className="hidden md:flex flex-col flex-shrink-0 overflow-hidden h-screen sticky top-0">
+                <SidebarContent />
+                {/* Collapse toggle */}
+                <button
+                    onClick={() => setSidebarCollapsed(c => !c)}
+                    className="absolute bottom-24 -right-3 z-10 h-6 w-6 bg-slate-700 border border-slate-600 rounded-full flex items-center justify-center text-slate-400 hover:text-white shadow hidden md:flex"
+                >
+                    {sidebarCollapsed ? <PanelLeft className="h-3 w-3" /> : <PanelLeftClose className="h-3 w-3" />}
+                </button>
+            </aside>
+
+            {/* ── Main area ── */}
+            <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                {/* Top bar */}
+                <header className="bg-white border-b shadow-sm flex-shrink-0 z-10">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                        {/* Mobile hamburger */}
+                        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                            <SheetTrigger asChild>
+                                <button className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 relative">
+                                    <Menu className="h-5 w-5" />
+                                    {totalAlerts > 0 && (
+                                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                                            {totalAlerts}
+                                        </span>
+                                    )}
+                                </button>
+                            </SheetTrigger>
+                            <SheetContent side="left" className="p-0 w-72 border-0">
+                                <SidebarContent onClose={() => setMobileMenuOpen(false)} />
+                            </SheetContent>
+                        </Sheet>
+
+                        {/* Breadcrumb */}
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="text-gray-400 text-sm hidden sm:block">{currentSection?.label}</span>
+                            <ChevronRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                            <h1 className="text-sm sm:text-base font-semibold text-gray-900 truncate">{pageTitle}</h1>
                         </div>
-                        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+
+                        {/* Right side badges */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             {pendingOrders.length > 0 && (
-                                <Badge className="bg-red-500 text-white px-2 sm:px-3 py-1 text-xs">
-                                    <Bell className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                    <span className="hidden sm:inline">{pendingOrders.length} New</span>
-                                    <span className="sm:hidden">{pendingOrders.length}</span>
-                                </Badge>
+                                <button onClick={() => navigate('main', 'orders')} className="flex items-center gap-1.5 bg-red-50 text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors">
+                                    <Bell className="h-3.5 w-3.5 animate-pulse" />
+                                    {pendingOrders.length} New
+                                </button>
                             )}
-                            {restaurant?.pos_enabled && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
-                                    className="hidden sm:flex items-center gap-2"
-                                    title="Open Self-Order Kiosk"
-                                >
-                                    <TabletSmartphone className="h-4 w-4" />
-                                    Kiosk
-                                </Button>
+                            {unreadMessagesCount > 0 && (
+                                <button onClick={() => navigate('main', 'messages')} className="flex items-center gap-1.5 bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors">
+                                    <MessageSquare className="h-3.5 w-3.5" />
+                                    {unreadMessagesCount}
+                                </button>
                             )}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => base44.auth.logout()}
-                                className="shrink-0"
-                            >
-                                <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-                            </Button>
+                            {refundRequests.length > 0 && (
+                                <button onClick={() => navigate('operations', 'refunds')} className="flex items-center gap-1.5 bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-100 transition-colors">
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    {refundRequests.length}
+                                </button>
+                            )}
                         </div>
                     </div>
-                </div>
-            </div>
+                </header>
 
-            {/* Navigation Sections */}
-            <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4">
-                <div className="bg-white rounded-lg shadow-sm p-2 mb-4 overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-1 sm:gap-2 flex-nowrap">
-                        {[
-                            { id: 'main', label: 'Main', icon: ShoppingBag },
-                            { id: 'menu', label: 'Menu & Deals', icon: UtensilsCrossed },
-                            { id: 'marketing', label: 'Marketing', icon: Tag },
-                            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                            { id: 'payouts', label: 'Payouts', icon: Award },
-                            { id: 'operations', label: 'Operations', icon: Users },
-                            { id: 'settings', label: 'Settings', icon: Settings }
-                        ].map(({ id, label, icon: Icon }) => (
-                            <Button
-                                key={id}
-                                variant={activeSection === id ? 'default' : 'ghost'}
-                                onClick={() => setActiveSection(id)}
-                                className="whitespace-nowrap text-xs sm:text-sm"
-                                size="sm"
-                            >
-                                <Icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
-                                <span className="hidden sm:inline">{label}</span>
-                                <span className="sm:hidden">{label.split(' ')[0]}</span>
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto p-3 sm:p-4">
-                {/* MAIN SECTION */}
-                {activeSection === 'main' && (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                            <Card className="cursor-pointer active:shadow-md sm:hover:shadow-lg transition-all touch-manipulation" onClick={() => setActiveTab('orders')}>
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="flex items-center gap-3 sm:gap-4">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-lg sm:rounded-xl flex items-center justify-center relative flex-shrink-0">
-                                            <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                                            {pendingOrders.length > 0 && (
-                                                <span className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs">
-                                                    {pendingOrders.length}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="font-semibold text-base sm:text-lg truncate">Live Orders</h3>
-                                            <p className="text-xs sm:text-sm text-gray-500 truncate">Manage orders</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="cursor-pointer active:shadow-md sm:hover:shadow-lg transition-all touch-manipulation" onClick={() => setActiveTab('messages')}>
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="flex items-center gap-3 sm:gap-4">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-lg sm:rounded-xl flex items-center justify-center relative flex-shrink-0">
-                                            <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                                            {unreadMessagesCount > 0 && (
-                                                <span className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs">
-                                                    {unreadMessagesCount}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="font-semibold text-base sm:text-lg truncate">Messages</h3>
-                                            <p className="text-xs sm:text-sm text-gray-500 truncate">Chats & alerts</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="cursor-pointer active:shadow-md sm:hover:shadow-lg transition-all touch-manipulation" onClick={() => setActiveTab('history')}>
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="flex items-center gap-3 sm:gap-4">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                                            <History className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="font-semibold text-base sm:text-lg truncate">Order History</h3>
-                                            <p className="text-xs sm:text-sm text-gray-500 truncate">View past</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <Tabs value={activeTab} onValueChange={setActiveTab}>
-
-                            <TabsContent value="orders">
-                                <LiveOrders restaurantId={restaurant.id} onOrderUpdate={() => {}} />
-                            </TabsContent>
-                            <TabsContent value="messages">
-                                <RestaurantMessages restaurantId={restaurant.id} />
-                            </TabsContent>
-                            <TabsContent value="history">
-                                <PastOrders restaurantId={restaurant.id} />
-                            </TabsContent>
-                        </Tabs>
-                    </div>
-                )}
-
-                {/* MENU & DEALS SECTION */}
-                {activeSection === 'menu' && (
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4 overflow-x-auto flex-wrap h-auto">
-                            <TabsTrigger value="menu" className="text-xs sm:text-sm">Menu Items</TabsTrigger>
-                            <TabsTrigger value="deals" className="text-xs sm:text-sm">Meal Deals</TabsTrigger>
-                            <TabsTrigger value="reviews" className="text-xs sm:text-sm">Reviews</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="menu">
-                            <MenuManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="deals">
-                            <AIMealDealSuggestions restaurantId={restaurant.id} />
-                            <MealDealsManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="reviews">
-                            <ReviewManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                    </Tabs>
-                )}
-
-                {/* MARKETING SECTION */}
-                {activeSection === 'marketing' && (
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4 overflow-x-auto flex-wrap h-auto">
-                            <TabsTrigger value="coupons" className="text-xs sm:text-sm">Coupons</TabsTrigger>
-                            <TabsTrigger value="promotions" className="text-xs sm:text-sm">Promotions</TabsTrigger>
-                            <TabsTrigger value="ai-marketing" className="text-xs sm:text-sm">AI Assistant</TabsTrigger>
-                            {restaurant?.media_screen_enabled && (
-                                <TabsTrigger value="media" className="text-xs sm:text-sm">Media</TabsTrigger>
-                            )}
-                        </TabsList>
-                        <TabsContent value="coupons">
-                            <CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} />
-                        </TabsContent>
-                        <TabsContent value="promotions">
-                            <PromotionManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="ai-marketing">
-                            <AIMarketingAssistant restaurantId={restaurant.id} />
-                        </TabsContent>
-                        {restaurant?.media_screen_enabled && (
-                            <TabsContent value="media">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Monitor className="h-5 w-5" />
-                                            Media Screen Management
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-gray-600 mb-4">
-                                            Manage promotional content, screens, and layouts for in-store displays.
-                                        </p>
-                                        <Button 
-                                            onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}
-                                            className="w-full sm:w-auto"
-                                        >
-                                            <Monitor className="h-4 w-4 mr-2" />
-                                            Open Media Screen Manager
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                        )}
-                    </Tabs>
-                )}
-
-                {/* ANALYTICS SECTION */}
-                {activeSection === 'analytics' && (
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4 overflow-x-auto flex-wrap h-auto">
-                            <TabsTrigger value="analytics" className="text-xs sm:text-sm">Overview</TabsTrigger>
-                            <TabsTrigger value="order-analytics" className="text-xs sm:text-sm">Order Insights</TabsTrigger>
-                            <TabsTrigger value="driver-performance" className="text-xs sm:text-sm">Performance</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="analytics">
-                            <EnhancedAnalyticsDashboard restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="order-analytics">
-                            <OrderAnalyticsDashboard restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="driver-performance">
-                            <DriverPerformance restaurantId={restaurant.id} />
-                        </TabsContent>
-                    </Tabs>
-                )}
-
-                {/* PAYOUTS SECTION */}
-                {activeSection === 'payouts' && (
-                    <RestaurantPayoutHistory restaurantId={restaurant.id} />
-                )}
-
-                {/* OPERATIONS SECTION */}
-                {activeSection === 'operations' && (
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4 flex-wrap">
-                            <TabsTrigger value="kds">Kitchen Display</TabsTrigger>
-                            <TabsTrigger value="drivers">Driver Tracking</TabsTrigger>
-                            <TabsTrigger value="driver-management">Manage Drivers</TabsTrigger>
-                            <TabsTrigger value="crm">CRM</TabsTrigger>
-                            <TabsTrigger value="refunds" className="relative">
-                                Refunds
-                                {refundRequests.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {refundRequests.length}
-                                    </span>
-                                )}
-                            </TabsTrigger>
-                            <TabsTrigger value="batching">Order Batching</TabsTrigger>
-                            <TabsTrigger value="modifications">Modifications</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="kds">
-                            <KitchenDisplaySystem restaurant={restaurant} />
-                        </TabsContent>
-                        <TabsContent value="drivers">
-                            <DriverTracking restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="driver-management">
-                            <DriverManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="crm">
-                            <CustomerCRM restaurantId={restaurant.id} restaurantName={restaurant.name} />
-                        </TabsContent>
-                        <TabsContent value="refunds">
-                            <RefundManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="batching">
-                            <OrderBatching restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="modifications">
-                            <OrderModification restaurantId={restaurant.id} />
-                        </TabsContent>
-                    </Tabs>
-                )}
-
-                {/* SETTINGS SECTION */}
-                {activeSection === 'settings' && (
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="mb-4 flex-wrap">
-                            <TabsTrigger value="settings">Restaurant Settings</TabsTrigger>
-                            <TabsTrigger value="branding">Branding</TabsTrigger>
-                            <TabsTrigger value="zones">Delivery Zones</TabsTrigger>
-                            <TabsTrigger value="integrations">Third-Party Orders</TabsTrigger>
-                            <TabsTrigger value="pos">POS Configurations</TabsTrigger>
-                            <TabsTrigger value="kiosk">Kiosk</TabsTrigger>
-                            <TabsTrigger value="sms">SMS Notifications</TabsTrigger>
-                            <TabsTrigger value="staff">Staff</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="settings">
-                            <RestaurantSettings restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="branding">
-                            <BrandingManager restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="zones">
-                            <DeliveryZoneManagement 
-                                restaurantId={restaurant.id}
-                                restaurantLocation={restaurant.latitude && restaurant.longitude ? {
-                                    lat: restaurant.latitude,
-                                    lng: restaurant.longitude
-                                } : null}
-                            />
-                        </TabsContent>
-                        <TabsContent value="integrations">
-                            <ThirdPartyIntegrations restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="pos">
-                            <POSConfigurations restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="kiosk">
-                            <KioskSettings restaurantId={restaurant.id} />
-                        </TabsContent>
-                        <TabsContent value="sms">
-                            <SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} />
-                        </TabsContent>
-                        <TabsContent value="staff">
-                            <StaffManagement restaurantId={restaurant.id} />
-                        </TabsContent>
-                    </Tabs>
-                )}
+                {/* Content */}
+                <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+                    {renderContent()}
+                </main>
             </div>
         </div>
     );
