@@ -7,13 +7,13 @@ import { fileURLToPath, URL } from 'url'
 export default defineConfig({
   logLevel: 'error',
   plugins: [
+    react(),
     base44({
       legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
       hmrNotifier: true,
       navigationNotifier: true,
       visualEditAgent: true
     }),
-    react(),
   ],
   resolve: {
     dedupe: ['react', 'react-dom'],
