@@ -1,9 +1,27 @@
 /**
- * Award loyalty points for completed orders
- * CRITICAL: This runs server-side to prevent tampering with points calculation
+ * Award loyalty points for completed orders.
+ * Works for both registered users (keyed by email) and guests (keyed by phone:PHONE).
+ * Called automatically via entity automation when order status → delivered/collected.
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+
+function normalizePhone(phone) {
+    // Strip all non-digits for consistent keying
+    return (phone || '').replace(/\D/g, '');
+}
+
+function getLoyaltyIdentifier(order) {
+    // Registered users: use email. Guests/anonymous: use phone:PHONE
+    if (order.created_by && order.created_by !== 'anonymous') {
+        return { type: 'email', key: order.created_by };
+    }
+    const phone = normalizePhone(order.phone);
+    if (phone) {
+        return { type: 'phone', key: `phone:${phone}` };
+    }
+    return null;
+}
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -12,120 +30,111 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-
-        if (!user) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-        }
-
         const { orderId } = await req.json();
 
         if (!orderId) {
             return new Response(JSON.stringify({ error: 'Order ID required' }), { status: 400 });
         }
 
-        // Fetch order details
         const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
-        if (!orders || orders.length === 0) {
-            return new Response(
-                JSON.stringify({ error: 'Order not found' }),
-                { status: 404 }
-            );
+        if (!orders?.length) {
+            return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404 });
         }
 
         const order = orders[0];
 
-        // CRITICAL SECURITY: Verify order belongs to authenticated user
-        if (order.created_by !== user.email) {
-            return new Response(
-                JSON.stringify({ error: 'Order does not belong to user' }),
-                { status: 403 }
-            );
+        // Only award for delivered or collected orders
+        if (order.status !== 'delivered' && order.status !== 'collected') {
+            return new Response(JSON.stringify({ error: 'Order not yet completed' }), { status: 400 });
         }
 
-        // CRITICAL: Check if already awarded
+        // Idempotency: already awarded
         if (order.loyalty_points_awarded) {
-            return new Response(
-                JSON.stringify({ error: 'Points already awarded for this order' }),
-                { status: 400 }
-            );
+            return new Response(JSON.stringify({ pointsAwarded: 0, message: 'Already awarded' }), { status: 200 });
         }
 
-        // Fetch restaurant to check loyalty settings
-        const restaurants = await base44.asServiceRole.entities.Restaurant.filter({
-            id: order.restaurant_id
-        });
-        
-        if (!restaurants || restaurants.length === 0) {
-            return new Response(
-                JSON.stringify({ error: 'Restaurant not found' }),
-                { status: 404 }
-            );
+        // Determine identifier
+        const identifier = getLoyaltyIdentifier(order);
+        if (!identifier) {
+            return new Response(JSON.stringify({ error: 'No identifier for loyalty (no email or phone)' }), { status: 400 });
         }
 
+        // Check restaurant loyalty settings
+        const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: order.restaurant_id });
+        if (!restaurants?.length) {
+            return new Response(JSON.stringify({ error: 'Restaurant not found' }), { status: 404 });
+        }
         const restaurant = restaurants[0];
 
-        // Check if restaurant has loyalty enabled
         if (restaurant.loyalty_program_enabled === false) {
-            return new Response(
-                JSON.stringify({ pointsAwarded: 0, message: 'Loyalty disabled' }),
-                { status: 200 }
-            );
+            await base44.asServiceRole.entities.Order.update(orderId, { loyalty_points_awarded: true });
+            return new Response(JSON.stringify({ pointsAwarded: 0, message: 'Loyalty disabled for this restaurant' }), { status: 200 });
         }
 
-        // Fetch system loyalty points setting
+        // Get points rate from system settings
         let pointsPerPound = 1;
         try {
-            const settings = await base44.asServiceRole.entities.SystemSettings.filter({
-                setting_key: 'loyalty_points_per_pound'
-            });
-            if (settings && settings[0]) {
-                pointsPerPound = parseFloat(settings[0].setting_value) || 1;
-            }
-        } catch (_) {
-            // Use default
-        }
+            const settings = await base44.asServiceRole.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' });
+            if (settings?.[0]) pointsPerPound = parseFloat(settings[0].setting_value) || 1;
+        } catch (_) {}
 
-        // Calculate points server-side (prevents frontend manipulation)
-        // CRITICAL: Use actual total paid, not subtotal (includes all discounts)
         const multiplier = restaurant.loyalty_points_multiplier || 1;
-        const orderTotal = order.total || 0;
-        const pointsToAward = Math.floor(orderTotal * pointsPerPound * multiplier);
+        const pointsToAward = Math.floor((order.total || 0) * pointsPerPound * multiplier);
 
-        // Create loyalty transaction record
-        try {
-            await base44.asServiceRole.entities.LoyaltyTransaction.create({
-                user_email: user.email,
-                order_id: orderId,
-                points: pointsToAward,
-                transaction_type: 'order',
-                created_date: new Date().toISOString()
+        // Find or create LoyaltyPoints record for this identifier
+        const existing = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: identifier.key });
+        
+        if (existing?.length) {
+            const record = existing[0];
+            const newEarned = (record.points_earned || 0) + pointsToAward;
+            const newTotal = (record.total_points || 0) + pointsToAward;
+            const newOrdersCount = (record.orders_count || 0) + 1;
+            const tier = newTotal >= 500 ? 'gold' : newTotal >= 200 ? 'silver' : 'bronze';
+            await base44.asServiceRole.entities.LoyaltyPoints.update(record.id, {
+                points_earned: newEarned,
+                total_points: newTotal,
+                orders_count: newOrdersCount,
+                tier,
+                phone: identifier.type === 'phone' ? normalizePhone(order.phone) : record.phone,
             });
-        } catch (err) {
-            console.error('Failed to create loyalty transaction:', err);
-            // Continue anyway - main record is order update
+        } else {
+            const tier = pointsToAward >= 500 ? 'gold' : pointsToAward >= 200 ? 'silver' : 'bronze';
+            await base44.asServiceRole.entities.LoyaltyPoints.create({
+                user_email: identifier.key,
+                phone: identifier.type === 'phone' ? normalizePhone(order.phone) : null,
+                points_earned: pointsToAward,
+                points_redeemed: 0,
+                total_points: pointsToAward,
+                orders_count: 1,
+                tier,
+            });
         }
 
-        // Mark order as having points awarded
-        await base44.asServiceRole.entities.Order.update(orderId, {
-            loyalty_points_awarded: true
+        // Create transaction record
+        await base44.asServiceRole.entities.LoyaltyTransaction.create({
+            user_email: identifier.key,
+            order_id: orderId,
+            points: pointsToAward,
+            transaction_type: 'earned',
+            restaurant_id: order.restaurant_id,
+            restaurant_name: order.restaurant_name || '',
+            description: `Earned ${pointsToAward} points from order at ${order.restaurant_name || 'restaurant'}`,
         });
 
-        return new Response(
-            JSON.stringify({ 
-                success: true,
-                pointsAwarded: pointsToAward,
-                multiplier: multiplier,
-                perPound: pointsPerPound
-            }),
-            { status: 200 }
-        );
+        // Mark order as awarded
+        await base44.asServiceRole.entities.Order.update(orderId, { loyalty_points_awarded: true });
+
+        console.log(`✅ Awarded ${pointsToAward} points to ${identifier.key} for order ${orderId}`);
+
+        return new Response(JSON.stringify({
+            success: true,
+            pointsAwarded: pointsToAward,
+            identifier: identifier.key,
+            identifierType: identifier.type,
+        }), { status: 200 });
 
     } catch (error) {
         console.error('Award loyalty points error:', error);
-        return new Response(
-            JSON.stringify({ error: 'Points award failed' }),
-            { status: 500 }
-        );
+        return new Response(JSON.stringify({ error: error.message || 'Points award failed' }), { status: 500 });
     }
 });
