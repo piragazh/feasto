@@ -841,7 +841,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 </Card>
             )}
 
-            {activeSection === '__never__' && (
+            {false && (
                 <Card>
                     <CardContent className="space-y-6">
                         <BluetoothPrinterManager
