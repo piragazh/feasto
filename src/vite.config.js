@@ -26,6 +26,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     force: true,
-    include: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client'],
+    include: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client', '@base44/sdk'],
   },
 });
