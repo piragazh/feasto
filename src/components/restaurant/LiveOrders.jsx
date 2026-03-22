@@ -279,6 +279,21 @@ Provide only the time range (e.g., "25-30 min").`;
     });
 
     const handleStatusChange = async (orderId, newStatus) => {
+        // When delivered/collected, record actual delivery time and free up driver
+        if (newStatus === 'delivered' || newStatus === 'collected') {
+            const order = allOrders.find(o => o.id === orderId);
+            if (order?.driver_id) {
+                base44.entities.Driver.update(order.driver_id, {
+                    current_order_id: null,
+                    is_available: true
+                }).catch(e => console.error('Failed to reset driver:', e));
+            }
+            updateOrderMutation.mutate({ orderId, status: newStatus, extraFields: { actual_delivery_time: new Date().toISOString() } });
+            const statusLabels = { delivered: 'Order delivered', collected: 'Order collected' };
+            toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
+            return;
+        }
+
         if (newStatus === 'out_for_delivery') {
             const drivers = await base44.entities.Driver.filter({ 
                 is_available: true,
