@@ -369,6 +369,10 @@ Provide only the time range (e.g., "25-30 min").`;
             }
         }
 
+        // Register ref so auto-print effect can call this
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        printOrderDetailsRef.current = printOrderDetails;
+
         // Browser print fallback
 
         const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
