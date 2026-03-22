@@ -20,6 +20,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'react': path.resolve('./node_modules/react'),
+      'react-dom': path.resolve('./node_modules/react-dom'),
     },
   },
   optimizeDeps: {
