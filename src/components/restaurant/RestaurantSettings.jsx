@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer, TestTube, Info } from 'lucide-react';
+import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
-import BluetoothPrinterManager from './BluetoothPrinterManager';
-import { printerService } from './PrinterService';
 import InfoSectionSettings from './InfoSectionSettings';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
