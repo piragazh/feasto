@@ -25,6 +25,25 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const queryClient = useQueryClient();
+    const prevOrderIds = useRef(new Set());
+    const restaurantRef = useRef(null);
+
+    // Load restaurant config once so auto-print can reference it
+    useEffect(() => {
+        base44.entities.Restaurant.filter({ id: restaurantId }).then(([r]) => {
+            if (r) {
+                restaurantRef.current = r;
+                // Auto-connect printers if configured
+                const cfg = r.printer_config || {};
+                if (cfg.bluetooth_printer?.id) {
+                    printerManager.printerA.tryAutoConnect().catch(() => {});
+                }
+                if (cfg.printer_b_config?.bluetooth_printer?.id) {
+                    printerManager.printerB.tryAutoConnect().catch(() => {});
+                }
+            }
+        }).catch(() => {});
+    }, [restaurantId]);
 
     const { data: allOrders = [], isLoading } = useQuery({
         queryKey: ['live-orders', restaurantId],
