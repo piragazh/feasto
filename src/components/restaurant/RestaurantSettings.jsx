@@ -349,13 +349,6 @@ export default function RestaurantSettings({ restaurantId }) {
                     </Button>
                 )}
                 <Button
-                    variant={activeSection === 'printing' ? 'default' : 'outline'}
-                    onClick={() => setActiveSection('printing')}
-                >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Printing
-                </Button>
-                <Button
                     variant={activeSection === 'info' ? 'default' : 'outline'}
                     onClick={() => setActiveSection('info')}
                 >
