@@ -502,6 +502,9 @@ Provide only the time range (e.g., "25-30 min").`;
 
 
 
+    // Keep ref always pointing to latest printOrderDetails
+    useEffect(() => { printOrderDetailsRef.current = printOrderDetails; });
+
     const getStatusColor = (status) => {
         const colors = {
             pending: 'bg-yellow-100 text-yellow-800',
