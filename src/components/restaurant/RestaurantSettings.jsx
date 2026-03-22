@@ -915,14 +915,6 @@ export default function RestaurantSettings({ restaurantId }) {
                 </Card>
             )}
 
-            {false && (
-                <Card>
-                    <CardContent>
-                        <span />
-                    </CardContent>
-                </Card>
-            )}
-
             {(activeSection === 'opening_DEAD'
 
                         <div className="grid md:grid-cols-2 gap-4">
