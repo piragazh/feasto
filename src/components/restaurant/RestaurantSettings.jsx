@@ -915,13 +915,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 </Card>
             )}
 
-            {(activeSection === 'opening_DEAD'
-
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <Label>Printer Width</Label>
-                                <select
-                                    value={formData.printer_config.printer_width}
+            {(false && null)}
                                     onChange={(e) => setFormData({
                                         ...formData,
                                         printer_config: { ...formData.printer_config, printer_width: e.target.value }
