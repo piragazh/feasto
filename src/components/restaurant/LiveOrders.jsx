@@ -500,6 +500,11 @@ Provide only the time range (e.g., "25-30 min").`;
         printWindow.print();
     };
 
+    // Helper for auto-print browser fallback
+    const _browserPrint = (order, restaurant, config) => {
+        printOrderDetails(order.id);
+    };
+
     const getStatusColor = (status) => {
         const colors = {
             pending: 'bg-yellow-100 text-yellow-800',
