@@ -158,8 +158,8 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     });
 
     const updateOrderMutation = useMutation({
-        mutationFn: async ({ orderId, status, rejection_reason, notify = true }) => {
-            const updateData = { status };
+        mutationFn: async ({ orderId, status, rejection_reason, notify = true, extraFields = {} }) => {
+            const updateData = { status, ...extraFields };
             if (rejection_reason) {
                 updateData.rejection_reason = rejection_reason;
             }
