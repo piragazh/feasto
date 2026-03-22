@@ -74,15 +74,14 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                     // Try Bluetooth first (Printer A), fallback to browser print
                     if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
                         printerManager.printerA.printReceipt(order, r, cfg).catch(() => {
-                            // Fallback: browser print
-                            _browserPrint(order, r, cfg);
+                            printOrderDetails(order.id);
                         });
                     } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
                         printerManager.printerB.printReceipt(order, r, { ...cfg, ...cfg.printer_b_config }).catch(() => {
-                            _browserPrint(order, r, cfg);
+                            printOrderDetails(order.id);
                         });
                     } else {
-                        _browserPrint(order, r, cfg);
+                        printOrderDetails(order.id);
                     }
                 });
             }
