@@ -330,10 +330,46 @@ Provide only the time range (e.g., "25-30 min").`;
         const order = allOrders.find(o => o.id === orderId);
         if (!order) return;
 
-        // Fetch restaurant printer config
-        const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
-        const restaurant = restaurants?.[0];
+        // Use cached restaurant or fetch fresh
+        let restaurant = restaurantRef.current;
+        if (!restaurant) {
+            const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+            restaurant = restaurants?.[0];
+            restaurantRef.current = restaurant;
+        }
         const config = restaurant?.printer_config || {};
+
+        // Try Bluetooth printer A first, then B, then browser print
+        if (config.bluetooth_printer?.id) {
+            if (!printerManager.printerA.isConnected()) {
+                await printerManager.printerA.tryAutoConnect();
+            }
+            if (printerManager.printerA.isConnected()) {
+                try {
+                    await printerManager.printerA.printReceipt(order, restaurant, config);
+                    toast.success('Printed via Bluetooth Printer A');
+                    return;
+                } catch (e) {
+                    toast.warning('Bluetooth print failed, falling back to browser print');
+                }
+            }
+        }
+        if (config.printer_b_config?.bluetooth_printer?.id) {
+            if (!printerManager.printerB.isConnected()) {
+                await printerManager.printerB.tryAutoConnect();
+            }
+            if (printerManager.printerB.isConnected()) {
+                try {
+                    await printerManager.printerB.printReceipt(order, restaurant, { ...config, ...config.printer_b_config });
+                    toast.success('Printed via Bluetooth Printer B');
+                    return;
+                } catch (e) {
+                    toast.warning('Bluetooth Printer B failed, falling back to browser print');
+                }
+            }
+        }
+
+        // Browser print fallback
 
         const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
         const baseFontSize = config.font_size === 'small' ? '28px' : config.font_size === 'large' ? '38px' : '32px';
