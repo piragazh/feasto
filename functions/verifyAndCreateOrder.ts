@@ -100,9 +100,14 @@ Deno.serve(async (req) => {
         // ============================================
         // Verify Restaurant Exists and Is Open
         // ============================================
-        const restaurants = await base44.asServiceRole.entities.Restaurant.filter({
-            id: orderData.restaurant_id
-        });
+        let restaurants;
+        try {
+            restaurants = await base44.asServiceRole.entities.Restaurant.filter({
+                id: orderData.restaurant_id
+            });
+        } catch (e) {
+            return new Response(JSON.stringify({ error: 'Restaurant not found or unavailable', success: false }), { status: 404 });
+        }
 
         if (!restaurants || restaurants.length === 0) {
             return new Response(

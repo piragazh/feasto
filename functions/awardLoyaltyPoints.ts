@@ -37,6 +37,10 @@ Deno.serve(async (req) => {
         if (!orderId) {
             return new Response(JSON.stringify({ error: 'Order ID required' }), { status: 400 });
         }
+        // Reject non-string IDs (e.g. numbers) before hitting the database
+        if (typeof orderId !== 'string') {
+            return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404 });
+        }
 
         const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
         if (!orders?.length) {

@@ -18,7 +18,8 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'phone or orderId required' }), { status: 400 });
         }
 
-        let normalizedPhone = (phone || '').replace(/\D/g, '');
+        // Coerce to string first to prevent crash if number is passed
+        let normalizedPhone = String(phone || '').replace(/\D/g, '');
 
         // If orderId provided, verify phone matches order (security check)
         if (orderId) {

@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
 
         const { amount, currency = 'gbp', metadata = {}, orderId } = await req.json();
 
-        if (!amount || amount <= 0) {
+        if (!amount || typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
             return Response.json({ error: 'Invalid amount' }, { status: 400 });
         }
 

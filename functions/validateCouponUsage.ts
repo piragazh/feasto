@@ -27,10 +27,19 @@ Deno.serve(async (req) => {
             );
         }
 
+        // Reject non-string IDs before hitting the database
+        if (typeof couponId !== 'string') {
+            return new Response(JSON.stringify({ error: 'Coupon not found' }), { status: 404 });
+        }
+
         // Fetch coupon
-        const coupons = await base44.asServiceRole.entities.Coupon.filter({
-            id: couponId
-        });
+        let coupons;
+        try {
+            coupons = await base44.asServiceRole.entities.Coupon.filter({ id: couponId });
+        } catch (e) {
+            // Invalid ID format from the DB layer
+            return new Response(JSON.stringify({ error: 'Coupon not found' }), { status: 404 });
+        }
 
         if (!coupons || coupons.length === 0) {
             return new Response(
