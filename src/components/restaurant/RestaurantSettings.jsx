@@ -917,20 +917,8 @@ export default function RestaurantSettings({ restaurantId }) {
 
             {false && (
                 <Card>
-                    <CardContent className="space-y-6">
-                        <BluetoothPrinterManager
-                            selectedPrinter={restaurant?.printer_config?.bluetooth_printer}
-                            onPrinterSelect={(printer) => {
-                                // Save printer inside printer_config
-                                const updatedConfig = {
-                                    ...restaurant?.printer_config,
-                                    bluetooth_printer: printer
-                                };
-                                updateMutation.mutate({ 
-                                    printer_config: updatedConfig
-                                });
-                            }}
-                        />
+                    <CardContent>
+                        <span />
 
                         <div className="border-t pt-6">
                             <Label className="text-base font-semibold mb-4 block">Receipt Settings</Label>
