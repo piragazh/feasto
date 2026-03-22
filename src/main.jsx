@@ -3,18 +3,11 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import '@/index.css'
 
-// Register Service Worker for PWA offline support
+// Unregister any stale service workers that may be caching old Vite chunks
+// (PWA manifests are handled dynamically via the getManifest backend function)
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then((registration) => {
-        console.log('Service Worker registered:', registration);
-        // Check for updates every hour
-        setInterval(() => registration.update(), 3600000);
-      })
-      .catch((error) => {
-        console.log('Service Worker registration failed:', error);
-      });
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => registration.unregister());
   });
 }
 
