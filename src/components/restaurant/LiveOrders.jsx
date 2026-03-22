@@ -60,6 +60,37 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         refetchInterval: 30000,
     });
 
+    // ── Auto-print new orders ──────────────────────────────────────────────
+    useEffect(() => {
+        if (!allOrders.length) return;
+        const newIds = new Set(allOrders.map(o => o.id));
+        const brandNew = allOrders.filter(o => o.status === 'pending' && !prevOrderIds.current.has(o.id));
+
+        if (brandNew.length > 0 && prevOrderIds.current.size > 0) {
+            const r = restaurantRef.current;
+            const cfg = r?.printer_config || {};
+            if (cfg.auto_print && r) {
+                brandNew.forEach(order => {
+                    // Try Bluetooth first (Printer A), fallback to browser print
+                    if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
+                        printerManager.printerA.printReceipt(order, r, cfg).catch(() => {
+                            // Fallback: browser print
+                            _browserPrint(order, r, cfg);
+                        });
+                    } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
+                        printerManager.printerB.printReceipt(order, r, { ...cfg, ...cfg.printer_b_config }).catch(() => {
+                            _browserPrint(order, r, cfg);
+                        });
+                    } else {
+                        _browserPrint(order, r, cfg);
+                    }
+                });
+            }
+        }
+
+        prevOrderIds.current = newIds;
+    }, [allOrders]);
+
     // Filter orders
     const orders = allOrders.filter(order => {
         if (searchQuery) {
