@@ -435,8 +435,8 @@ export default function Checkout() {
     const promotionDiscount = appliedPromotions.reduce((sum, p) => sum + (p.discount || 0), 0);
     const discount = couponDiscount + promotionDiscount;
 
-    // Final total = subtotal + delivery + surcharge - discount
-    const total = subtotal + deliveryFee + smallOrderSurcharge - discount;
+    // Final total = subtotal + delivery + surcharge - discount (floor at 0)
+    const total = Math.max(0, subtotal + deliveryFee + smallOrderSurcharge - discount);
 
     // Initialize payment intent when card payment is selected and form is valid
     useEffect(() => {
@@ -985,12 +985,16 @@ export default function Checkout() {
                 }
             }
 
-            // Increment coupon usage for all applied coupons
+            // Increment coupon usage — only after order is confirmed successful
+            // Re-validate each coupon server-side before incrementing to prevent race conditions
             for (const coupon of appliedCoupons) {
                 try {
-                    await base44.entities.Coupon.update(coupon.id, {
-                        usage_count: (coupon.usage_count || 0) + 1
-                    });
+                    const recheck = await base44.functions.invoke('validateCouponUsage', { couponId: coupon.id });
+                    if (recheck?.data?.valid) {
+                        await base44.entities.Coupon.update(coupon.id, {
+                            usage_count: (coupon.usage_count || 0) + 1
+                        });
+                    }
                 } catch (error) {
                     console.error('Failed to update coupon usage:', error);
                 }
