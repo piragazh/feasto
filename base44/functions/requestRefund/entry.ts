@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
             refund_request_date: new Date().toISOString()
         });
 
+        console.log(`[REFUND] Requested: order=${orderId} amount=£${safeAmount.toFixed(2)} type=${refundType} by=${user.email}`);
         return Response.json({ success: true });
 
     } catch (error) {
