@@ -7,7 +7,7 @@ import NumericKeypad from './NumericKeypad';
 import POSDiscountPanel from './POSDiscountPanel';
 import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
-import { printerService } from '@/components/restaurant/PrinterService';
+import { printWithCentralizedConfig, hasPrinterForChannel } from '@/lib/printUtils';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
