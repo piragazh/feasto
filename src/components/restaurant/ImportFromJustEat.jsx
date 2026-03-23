@@ -15,7 +15,55 @@ export default function ImportFromJustEat({ restaurantId }) {
     const [extractedItems, setExtractedItems] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
     const [isExtracting, setIsExtracting] = useState(false);
+    const [isEnhancing, setIsEnhancing] = useState(false);
     const queryClient = useQueryClient();
+
+    const enhanceWithAI = async (items) => {
+        setIsEnhancing(true);
+        try {
+            const response = await base44.integrations.Core.InvokeLLM({
+                prompt: `Enhance these menu items with better descriptions, identify dietary info, and improve categorization:
+
+Items: ${JSON.stringify(items, null, 2)}
+
+For each item, provide:
+1. Enhanced description (appetizing, concise, 2-3 sentences max) - if already good, keep it
+2. Corrected category (use standard categories like: Appetizers, Main Courses, Sides, Desserts, Beverages, Combos, etc.)
+3. Dietary flags: is_vegetarian (bool), is_spicy (bool)
+4. Popularity indicator: is_popular (bool) - true if it sounds like a signature dish
+
+Return JSON array with enhanced items.`,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        items: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    name: { type: "string" },
+                                    description: { type: "string" },
+                                    price: { type: "number" },
+                                    category: { type: "string" },
+                                    image_url: { type: "string" },
+                                    is_vegetarian: { type: "boolean" },
+                                    is_spicy: { type: "boolean" },
+                                    is_popular: { type: "boolean" }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            setIsEnhancing(false);
+            return response.items || items;
+        } catch (error) {
+            console.error('AI enhancement error:', error);
+            setIsEnhancing(false);
+            toast.warning('Could not enhance with AI, using original items');
+            return items;
+        }
+    };
 
     const importMutation = useMutation({
         mutationFn: async (items) => {
@@ -26,14 +74,17 @@ export default function ImportFromJustEat({ restaurantId }) {
                 price: item.price,
                 image_url: item.image_url || '',
                 category: item.category || 'Main',
-                is_available: true
+                is_available: true,
+                is_vegetarian: item.is_vegetarian || false,
+                is_spicy: item.is_spicy || false,
+                is_popular: item.is_popular || false
             }));
             
             await base44.entities.MenuItem.bulkCreate(menuItems);
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['menu-items']);
-            toast.success('Menu items imported successfully!');
+            toast.success('Menu items imported successfully with AI enhancements!');
             setIsOpen(false);
             setUrl('');
             setExtractedItems([]);
@@ -110,13 +161,15 @@ Make sure to extract EVERY menu item from ALL categories on the page.`,
         }
     };
 
-    const handleImport = () => {
+    const handleImport = async () => {
         if (selectedItems.length === 0) {
             toast.error('Please select items to import');
             return;
         }
         const itemsToImport = extractedItems.filter((_, idx) => selectedItems.includes(idx));
-        importMutation.mutate(itemsToImport);
+        const enhancedItems = await enhanceWithAI(itemsToImport);
+        setExtractedItems(enhancedItems);
+        importMutation.mutate(enhancedItems);
     };
 
     const toggleSelectItem = (idx) => {
@@ -211,13 +264,13 @@ Make sure to extract EVERY menu item from ALL categories on the page.`,
                                     </div>
                                     <Button 
                                         onClick={handleImport}
-                                        disabled={importMutation.isPending || selectedItems.length === 0}
+                                        disabled={importMutation.isPending || isEnhancing || selectedItems.length === 0}
                                         className="bg-green-600 hover:bg-green-700"
                                     >
-                                        {importMutation.isPending ? (
+                                        {importMutation.isPending || isEnhancing ? (
                                             <>
                                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                Importing...
+                                                {isEnhancing ? 'Enhancing with AI...' : 'Importing...'}
                                             </>
                                         ) : (
                                             <>
@@ -257,7 +310,12 @@ Make sure to extract EVERY menu item from ALL categories on the page.`,
                                                         {item.description && (
                                                             <p className="text-sm text-gray-600 mb-2">{item.description}</p>
                                                         )}
-                                                        <Badge variant="outline">{item.category}</Badge>
+                                                        <div className="flex flex-wrap gap-2 items-center">
+                                                            <Badge variant="outline">{item.category}</Badge>
+                                                            {item.is_popular && <Badge className="bg-yellow-100 text-yellow-800">Popular</Badge>}
+                                                            {item.is_vegetarian && <Badge className="bg-green-100 text-green-800">Vegetarian</Badge>}
+                                                            {item.is_spicy && <Badge className="bg-red-100 text-red-800">Spicy</Badge>}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </CardContent>
