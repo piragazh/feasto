@@ -47,7 +47,10 @@ export default function KioskPayment({
                 notes: 'Kiosk order',
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
-            onOrderPlaced({ ...order, order_number: orderNum });
+            const placedOrder = { ...order, order_number: orderNum };
+            // Auto-print via kiosk_order channel (silently — don't block on failure)
+            printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order').catch(() => {});
+            onOrderPlaced(placedOrder);
         } catch (err) {
             toast.error('Failed to place order. Please try again.');
             setStep('select');
