@@ -302,6 +302,7 @@ Deno.serve(async (req) => {
         });
 
         if (!newOrder || !newOrder.id) {
+            console.error('[ORDER] Entity create returned no ID for restaurant', orderData.restaurant_id);
             return new Response(
                 JSON.stringify({ 
                     error: 'Failed to create order',
@@ -310,6 +311,8 @@ Deno.serve(async (req) => {
                 { status: 500 }
             );
         }
+
+        console.log(`[ORDER] Created: id=${newOrder.id} num=${newOrder.order_number} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} type=${orderData.order_type} payment=${orderData.payment_method}`);
 
         return new Response(
             JSON.stringify({
@@ -322,10 +325,10 @@ Deno.serve(async (req) => {
         );
 
     } catch (error) {
-        console.error('Order creation error:', error);
+        console.error('[ORDER] verifyAndCreateOrder unhandled error:', error);
         return new Response(
             JSON.stringify({ 
-                error: error.message || 'Order creation failed',
+                error: 'Order creation failed. Please try again.',
                 success: false 
             }),
             { status: 500 }
