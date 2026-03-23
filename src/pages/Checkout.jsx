@@ -58,6 +58,7 @@ const initializeStripe = async () => {
 
 // Main Checkout Component
 export default function Checkout() {
+    useSEO({ title: 'Checkout', noindex: true });
     const navigate = useNavigate(); // Used to redirect after order placement
     
     // ============================================
