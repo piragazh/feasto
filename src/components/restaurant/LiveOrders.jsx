@@ -401,33 +401,55 @@ Provide only the time range (e.g., "25-30 min").`;
             restaurantRef.current = restaurant;
         }
         const config = restaurant?.printer_config || {};
+        const centralized = config.centralized_printers || [];
+        const channel = getOrderChannel(order);
+        const services = [printerManager.printerA, printerManager.printerB];
 
-        // Try Bluetooth printer A first, then B, then browser print
-        if (config.bluetooth_printer?.id) {
-            if (!printerManager.printerA.isConnected()) {
-                await printerManager.printerA.tryAutoConnect();
-            }
-            if (printerManager.printerA.isConnected()) {
-                try {
-                    await printerManager.printerA.printReceipt(order, restaurant, config);
-                    toast.success('Printed via Bluetooth Printer A');
-                    return;
-                } catch (e) {
-                    toast.warning('Bluetooth print failed, falling back to browser print');
+        // Try centralized printers first (channel-aware)
+        if (centralized.length > 0) {
+            const assignedPrinters = centralized.filter(p => (p.assigned_channels || []).includes(channel));
+            // If none assigned to this channel, try all printers
+            const printersToTry = assignedPrinters.length > 0 ? assignedPrinters : centralized;
+            for (const printerConfig of printersToTry) {
+                const slotIndex = centralized.indexOf(printerConfig);
+                const service = services[slotIndex] || printerManager.printerA;
+                if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
+                    if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+                    if (service.isConnected()) {
+                        try {
+                            await service.printReceipt(order, restaurant, { ...config, bluetooth_printer: printerConfig.bluetooth_printer });
+                            toast.success(`Printed via ${printerConfig.name || `Printer ${slotIndex + 1}`}`);
+                            return;
+                        } catch (e) {
+                            toast.warning(`${printerConfig.name || 'Bluetooth printer'} failed, trying next...`);
+                        }
+                    }
                 }
             }
-        }
-        if (config.printer_b_config?.bluetooth_printer?.id) {
-            if (!printerManager.printerB.isConnected()) {
-                await printerManager.printerB.tryAutoConnect();
+        } else {
+            // Legacy fallback
+            if (config.bluetooth_printer?.id) {
+                if (!printerManager.printerA.isConnected()) await printerManager.printerA.tryAutoConnect().catch(() => {});
+                if (printerManager.printerA.isConnected()) {
+                    try {
+                        await printerManager.printerA.printReceipt(order, restaurant, config);
+                        toast.success('Printed via Bluetooth Printer A');
+                        return;
+                    } catch (e) {
+                        toast.warning('Bluetooth print failed, falling back to browser print');
+                    }
+                }
             }
-            if (printerManager.printerB.isConnected()) {
-                try {
-                    await printerManager.printerB.printReceipt(order, restaurant, { ...config, ...config.printer_b_config });
-                    toast.success('Printed via Bluetooth Printer B');
-                    return;
-                } catch (e) {
-                    toast.warning('Bluetooth Printer B failed, falling back to browser print');
+            if (config.printer_b_config?.bluetooth_printer?.id) {
+                if (!printerManager.printerB.isConnected()) await printerManager.printerB.tryAutoConnect().catch(() => {});
+                if (printerManager.printerB.isConnected()) {
+                    try {
+                        await printerManager.printerB.printReceipt(order, restaurant, { ...config, ...config.printer_b_config });
+                        toast.success('Printed via Bluetooth Printer B');
+                        return;
+                    } catch (e) {
+                        toast.warning('Bluetooth Printer B failed, falling back to browser print');
+                    }
                 }
             }
         }
