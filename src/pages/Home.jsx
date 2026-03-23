@@ -25,14 +25,6 @@ export default function Home() {
     const [menuItemSearch, setMenuItemSearch] = useState('');
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
-    // Fetch menu items for advanced search with extended cache
-    const { data: allMenuItems = [] } = useQuery({
-        queryKey: ['allMenuItems'],
-        queryFn: () => base44.entities.MenuItem.list(),
-        staleTime: 15 * 60 * 1000, // Cache for 15 minutes
-        gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
-    });
-
     // Fetch restaurants with optimized caching
     const { data: restaurants = [], isLoading, refetch } = useQuery({
         queryKey: ['restaurants'],
@@ -94,34 +86,10 @@ export default function Home() {
         if (searchData.type === 'cuisine') {
             setSelectedCuisine(searchData.value);
             setSearchQuery('');
-            setMenuItemSearch('');
         } else {
             setSearchQuery(searchData.value);
-            // Check if search matches menu items
-            const matchingItems = allMenuItems.filter(item =>
-                item.name?.toLowerCase().includes(searchData.value.toLowerCase()) ||
-                item.description?.toLowerCase().includes(searchData.value.toLowerCase())
-            );
-            if (matchingItems.length > 0) {
-                setMenuItemSearch(searchData.value);
-            } else {
-                setMenuItemSearch('');
-            }
         }
     };
-
-    // Get restaurant IDs that have matching menu items
-    const restaurantsWithMatchingItems = React.useMemo(() => {
-        if (!menuItemSearch) return [];
-        return [...new Set(
-            allMenuItems
-                .filter(item =>
-                    item.name?.toLowerCase().includes(menuItemSearch.toLowerCase()) ||
-                    item.description?.toLowerCase().includes(menuItemSearch.toLowerCase())
-                )
-                .map(item => item.restaurant_id)
-        )];
-    }, [menuItemSearch, allMenuItems]);
 
     const filteredRestaurants = (restaurants || [])
         .filter(r => {
