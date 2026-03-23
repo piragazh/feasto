@@ -187,9 +187,9 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('Restaurant notification error:', error);
+        console.error('[NOTIFY] Restaurant notification error:', error);
         return Response.json({ 
-            error: error.message 
+            error: 'Failed to send notification. Please try again.' 
         }, { status: 500 });
     }
 });
