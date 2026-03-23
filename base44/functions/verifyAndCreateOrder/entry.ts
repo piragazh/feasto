@@ -167,6 +167,46 @@ Deno.serve(async (req) => {
             );
         }
 
+        // Check opening hours schedule (unless order is scheduled for a future time)
+        if (!orderData.is_scheduled) {
+            const now = new Date();
+            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = days[now.getDay()];
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+            const hoursMap = orderData.order_type === 'collection'
+                ? (restaurant.collection_hours || restaurant.opening_hours)
+                : (orderData.order_type === 'delivery'
+                    ? (restaurant.delivery_hours || restaurant.opening_hours)
+                    : restaurant.opening_hours);
+
+            const todayHours = hoursMap?.[dayName];
+
+            if (todayHours && todayHours.closed) {
+                return new Response(
+                    JSON.stringify({ error: 'Restaurant is not accepting orders today', success: false }),
+                    { status: 400 }
+                );
+            }
+
+            if (todayHours && todayHours.open && todayHours.close) {
+                const [openH, openM] = todayHours.open.split(':').map(Number);
+                const [closeH, closeM] = todayHours.close.split(':').map(Number);
+                const openMinutes = openH * 60 + openM;
+                const closeMinutes = closeH * 60 + closeM;
+
+                if (currentMinutes < openMinutes || currentMinutes >= closeMinutes) {
+                    return new Response(
+                        JSON.stringify({
+                            error: `Restaurant is currently closed. Hours: ${todayHours.open} - ${todayHours.close}`,
+                            success: false
+                        }),
+                        { status: 400 }
+                    );
+                }
+            }
+        }
+
         // ============================================
         // Verify Delivery Zone (if applicable)
         // ============================================
