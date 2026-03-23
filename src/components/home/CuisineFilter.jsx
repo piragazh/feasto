@@ -33,10 +33,11 @@ export default function CuisineFilter({ selectedCuisine, setSelectedCuisine }) {
                                 : 'bg-white text-gray-700 active:bg-gray-100 border border-gray-100'
                         }`}
                     >
-                        <span className="text-xl md:text-2xl">{cuisine.emoji}</span>
+                        <span className="text-xl md:text-2xl" aria-hidden="true">{cuisine.emoji}</span>
                         <span className="text-xs md:text-sm font-medium whitespace-nowrap">{cuisine.name}</span>
                     </motion.button>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
