@@ -946,11 +946,19 @@ CRITICAL REQUIREMENTS:
                                         {enhancingImage && <p className="text-xs text-gray-500">AI is enhancing image quality...</p>}
                                         {replacingBackground && <p className="text-xs text-gray-500">AI is replacing background to match theme color...</p>}
                                         {formData.image_url && (
-                                            <div className="space-y-1">
-                                                <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-32 w-32 object-cover rounded" />
-                                                {restaurant?.theme_primary_color && (
-                                                    <p className="text-xs text-gray-500">Theme color: <span className="inline-block w-3 h-3 rounded-full" style={{backgroundColor: restaurant.theme_primary_color}}></span> {restaurant.theme_primary_color}</p>
-                                                )}
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <img src={formData.image_url} alt={formData.name || 'Menu item preview'} className="h-32 w-32 object-cover rounded" />
+                                                    {restaurant?.theme_primary_color && (
+                                                        <p className="text-xs text-gray-500 mt-1">Theme color: <span className="inline-block w-3 h-3 rounded-full" style={{backgroundColor: restaurant.theme_primary_color}}></span> {restaurant.theme_primary_color}</p>
+                                                    )}
+                                                </div>
+                                                <AIFoodImageEnhancer
+                                                    imageUrl={formData.image_url}
+                                                    itemName={formData.name}
+                                                    onImageUpdate={(url) => setFormData({ ...formData, image_url: url, ai_generated_image: true })}
+                                                    disabled={generatingImage || replacingBackground || enhancingImage}
+                                                />
                                             </div>
                                         )}
                                     </div>
