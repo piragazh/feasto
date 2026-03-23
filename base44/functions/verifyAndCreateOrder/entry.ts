@@ -254,17 +254,37 @@ Deno.serve(async (req) => {
                 );
             }
 
-            const priceDiff = Math.abs(menuItem.price - cartItem.price);
-            if (priceDiff > 10) {
-                return new Response(
-                    JSON.stringify({ 
-                        error: `Price for ${cartItem.name} has changed significantly`,
-                        success: false 
-                    }),
-                    { status: 400 }
-                );
+            // SECURITY: Use server-side price — do not trust client-supplied price.
+            // Overwrite with the authoritative menu price before storing.
+            cartItem.price = menuItem.price;
+
+            const priceDiff = Math.abs(menuItem.price - (orderData.items.find(i => i.menu_item_id === cartItem.menu_item_id)?.price || 0));
+            if (priceDiff > 0.50) {
+                console.warn(`[SECURITY] Price mismatch for ${cartItem.name}: menu=${menuItem.price}, submitted=${cartItem.price}`);
             }
         }
+
+        // Re-derive subtotal and total from authoritative menu prices (not client values)
+        const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+        const deliveryFee = orderData.delivery_fee || 0;
+        const discount = orderData.discount || 0;
+        const serverTotal = Math.max(0, serverSubtotal + deliveryFee - discount);
+
+        // Reject if client total deviates by more than £0.50 (rounding tolerance)
+        if (Math.abs(serverTotal - orderData.total) > 0.50) {
+            console.error(`[SECURITY] Total mismatch: server=${serverTotal}, client=${orderData.total}`);
+            return new Response(
+                JSON.stringify({
+                    error: 'Order total does not match current menu prices. Please refresh and try again.',
+                    success: false
+                }),
+                { status: 400 }
+            );
+        }
+
+        // Use server-computed total for the stored order
+        orderData.total = serverTotal;
+        orderData.subtotal = serverSubtotal;
 
         // ============================================
         // All Validations Passed - Create Order
