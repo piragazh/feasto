@@ -27,12 +27,19 @@ export default function RefundManagement({ restaurantId }) {
     });
 
     const approveMutation = useMutation({
-        mutationFn: (orderId) => base44.entities.Order.update(orderId, {
-            status: 'refunded',
-            refund_amount: refundRequests.find(o => o.id === orderId)?.refund_requested_amount || 0,
-            refund_paid_by: 'restaurant',
-            refund_approved_date: new Date().toISOString()
-        }),
+        mutationFn: (orderId) => {
+            const order = refundRequests.find(o => o.id === orderId);
+            // Cap refund at original order total — never allow over-refund
+            const requestedAmount = order?.refund_requested_amount || 0;
+            const approvedAmount = Math.min(requestedAmount, order?.total || requestedAmount);
+            if (approvedAmount <= 0) throw new Error('Refund amount must be greater than zero');
+            return base44.entities.Order.update(orderId, {
+                status: 'refunded',
+                refund_amount: approvedAmount,
+                refund_paid_by: 'restaurant',
+                refund_approved_date: new Date().toISOString()
+            });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['refund-requests']);
             toast.success('Refund approved - Amount will be deducted from earnings');
