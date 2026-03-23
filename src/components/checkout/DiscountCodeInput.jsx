@@ -124,9 +124,20 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             if (coupon.max_discount && discount > coupon.max_discount) {
                 discount = coupon.max_discount;
             }
+        } else if (coupon.discount_type === 'fixed') {
+            discount = coupon.discount_value || 0;
+        } else if (coupon.discount_type === 'free_delivery') {
+            // Discount equals whatever delivery fee was passed (handled by parent via subtotal signal)
+            // We store a sentinel so parent can zero out the fee; fallback to discount_value
+            discount = coupon.free_delivery_amount || coupon.discount_value || 0;
+        } else if (coupon.discount_type === 'free_item') {
+            // Free item discount = price of the free item (stored as discount_value by restaurant)
+            discount = coupon.discount_value || 0;
         } else {
-            discount = coupon.discount_value;
+            discount = coupon.discount_value || 0;
         }
+        // Discount cannot exceed subtotal
+        discount = Math.min(discount, subtotal);
 
         const newCoupon = { ...coupon, discount };
         setAppliedCoupons(prev => {
