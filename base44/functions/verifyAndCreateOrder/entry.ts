@@ -76,7 +76,6 @@ Deno.serve(async (req) => {
             }
 
             // CRITICAL: Verify payment actually succeeded with Stripe
-            const Stripe = await import('npm:stripe');
             const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
             
             try {
