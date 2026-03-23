@@ -5,248 +5,215 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { 
-    TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, Clock, 
-    Target, BarChart3, LineChart, PieChart, Loader2, Calendar, Star, Zap, Download
+import {
+    TrendingUp, TrendingDown, PoundSterling, ShoppingBag, Users, Clock,
+    Target, BarChart3, Zap, Download, Calendar, Star,
+    CreditCard, Banknote, Percent, RefreshCw, Truck, PackageX, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { generateReportPDF } from '@/lib/generatePDF';
-import { LineChart as RechartsLine, Line, BarChart as RechartsBar, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
+import {
+    LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart
+} from 'recharts';
+import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
+const KPICard = ({ title, value, subtitle, icon: Icon, iconBg, trend, trendLabel, gradient }) => (
+    <Card className={`relative overflow-hidden border-0 shadow-md ${gradient}`}>
+        <CardContent className="pt-5 pb-4">
+            <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white/70 uppercase tracking-wide mb-1">{title}</p>
+                    <p className="text-2xl font-bold text-white truncate">{value}</p>
+                    {subtitle && <p className="text-xs text-white/60 mt-0.5">{subtitle}</p>}
+                    {trend !== undefined && (
+                        <div className="flex items-center gap-1 mt-2">
+                            {parseFloat(trend) >= 0
+                                ? <ArrowUpRight className="h-3.5 w-3.5 text-white/80" />
+                                : <ArrowDownRight className="h-3.5 w-3.5 text-white/60" />}
+                            <span className={`text-xs font-semibold ${parseFloat(trend) >= 0 ? 'text-white/90' : 'text-white/60'}`}>
+                                {trend}% {trendLabel || ''}
+                            </span>
+                        </div>
+                    )}
+                </div>
+                <div className={`p-2.5 rounded-xl ${iconBg}`}>
+                    <Icon className="h-5 w-5 text-white" />
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const StatRow = ({ label, value, valueClass = 'text-gray-900' }) => (
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+        <span className="text-sm text-gray-500">{label}</span>
+        <span className={`text-sm font-semibold ${valueClass}`}>{value}</span>
+    </div>
+);
+
 export default function EnhancedAnalyticsDashboard({ restaurantId }) {
-    const [dateRange, setDateRange] = useState(30); // Last 30 days
+    const [dateRange, setDateRange] = useState(30);
     const [forecastLoading, setForecastLoading] = useState(false);
     const [forecast, setForecast] = useState(null);
 
     const { data: orders = [], isLoading } = useQuery({
         queryKey: ['analytics-orders', restaurantId, dateRange],
-        queryFn: () => base44.entities.Order.filter({ 
+        queryFn: () => base44.entities.Order.filter({
             restaurant_id: restaurantId,
             status: { $in: ['delivered', 'collected'] }
         }, '-created_date', 500),
     });
 
-    const { data: menuItems = [] } = useQuery({
-        queryKey: ['menu-items', restaurantId],
-        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+    const { data: restaurant } = useQuery({
+        queryKey: ['analytics-restaurant', restaurantId],
+        queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0]),
     });
 
-    // Filter orders by date range
     const filteredOrders = useMemo(() => {
-        const cutoffDate = subDays(new Date(), dateRange);
-        return orders.filter(order => new Date(order.created_date) >= cutoffDate);
+        const cutoff = subDays(new Date(), dateRange);
+        return orders.filter(o => new Date(o.created_date) >= cutoff);
     }, [orders, dateRange]);
 
-    // KPI Calculations
     const kpis = useMemo(() => {
-        if (filteredOrders.length === 0) return null;
+        if (!filteredOrders.length) return null;
 
-        const totalRevenue = filteredOrders.reduce((sum, o) => sum + o.total, 0);
+        const commissionRate = (restaurant?.commission_rate ?? 15) / 100;
+
+        const totalRevenue = filteredOrders.reduce((s, o) => s + (o.total || 0), 0);
         const totalOrders = filteredOrders.length;
         const avgOrderValue = totalRevenue / totalOrders;
 
+        // Financials
+        const totalCommission = filteredOrders.reduce((s, o) => {
+            if (o.platform_commission_amount) return s + o.platform_commission_amount;
+            return s + (o.total || 0) * commissionRate;
+        }, 0);
+        const netEarnings = totalRevenue - totalCommission;
+
+        const totalDeliveryFees = filteredOrders.reduce((s, o) => s + (o.delivery_fee || 0), 0);
+        const totalDiscounts = filteredOrders.reduce((s, o) => s + (o.discount || 0), 0);
+
+        // Payment split
+        const cashOrders = filteredOrders.filter(o => o.payment_method === 'cash');
+        const cardOrders = filteredOrders.filter(o => o.payment_method !== 'cash');
+        const cashRevenue = cashOrders.reduce((s, o) => s + (o.total || 0), 0);
+        const cardRevenue = cardOrders.reduce((s, o) => s + (o.total || 0), 0);
+
+        // Daily averages
+        const dailyAvgRevenue = totalRevenue / dateRange;
+        const dailyAvgOrders = totalOrders / dateRange;
+        const dailyAvgProfit = netEarnings / dateRange;
+
         // Unique customers
-        const uniqueCustomers = new Set(
-            filteredOrders.map(o => o.created_by || o.guest_email).filter(Boolean)
-        );
+        const uniqueCustomers = new Set(filteredOrders.map(o => o.created_by || o.guest_email || o.phone).filter(Boolean));
 
-        // Customer order frequency
-        const customerOrders = {};
+        // Repeat customers
+        const customerOrderCounts = {};
         filteredOrders.forEach(o => {
-            const customer = o.created_by || o.guest_email;
-            if (customer) {
-                customerOrders[customer] = (customerOrders[customer] || 0) + 1;
-            }
+            const id = o.created_by || o.guest_email || o.phone;
+            if (id) customerOrderCounts[id] = (customerOrderCounts[id] || 0) + 1;
         });
-        const avgOrderFrequency = Object.values(customerOrders).reduce((sum, count) => sum + count, 0) / uniqueCustomers.size;
+        const repeatCustomers = Object.values(customerOrderCounts).filter(c => c > 1).length;
 
-        // Peak hours
+        // Peak hour
         const hourCounts = {};
         filteredOrders.forEach(o => {
-            const hour = new Date(o.created_date).getHours();
-            hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+            const h = new Date(o.created_date).getHours();
+            hourCounts[h] = (hourCounts[h] || 0) + 1;
         });
-        const peakHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
+        const peakHourEntry = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
 
-        // Growth rate (compare first half vs second half)
-        const midpoint = Math.floor(filteredOrders.length / 2);
-        const firstHalfRevenue = filteredOrders.slice(0, midpoint).reduce((sum, o) => sum + o.total, 0);
-        const secondHalfRevenue = filteredOrders.slice(midpoint).reduce((sum, o) => sum + o.total, 0);
-        const growthRate = ((secondHalfRevenue - firstHalfRevenue) / firstHalfRevenue) * 100;
+        // Growth rate (compare halves)
+        const mid = Math.floor(filteredOrders.length / 2);
+        const firstHalf = filteredOrders.slice(0, mid).reduce((s, o) => s + (o.total || 0), 0);
+        const secondHalf = filteredOrders.slice(mid).reduce((s, o) => s + (o.total || 0), 0);
+        const growthRate = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+
+        // Order types
+        const deliveryOrders = filteredOrders.filter(o => o.order_type === 'delivery').length;
+        const collectionOrders = filteredOrders.filter(o => o.order_type === 'collection').length;
 
         return {
-            totalRevenue,
-            totalOrders,
-            avgOrderValue,
-            uniqueCustomers: uniqueCustomers.size,
-            avgOrderFrequency: avgOrderFrequency.toFixed(1),
-            peakHour: peakHour ? `${peakHour[0]}:00 (${peakHour[1]} orders)` : 'N/A',
-            growthRate: growthRate.toFixed(1)
+            totalRevenue, totalOrders, avgOrderValue,
+            totalCommission, netEarnings,
+            totalDeliveryFees, totalDiscounts,
+            cashRevenue, cardRevenue, cashOrders: cashOrders.length, cardOrders: cardOrders.length,
+            dailyAvgRevenue, dailyAvgOrders, dailyAvgProfit,
+            uniqueCustomers: uniqueCustomers.size, repeatCustomers,
+            avgOrderFrequency: (totalOrders / uniqueCustomers.size).toFixed(1),
+            peakHour: peakHourEntry ? `${peakHourEntry[0]}:00` : 'N/A',
+            peakHourOrders: peakHourEntry ? peakHourEntry[1] : 0,
+            growthRate: growthRate.toFixed(1),
+            deliveryOrders, collectionOrders,
+            commissionRate: (commissionRate * 100).toFixed(0),
         };
-    }, [filteredOrders]);
+    }, [filteredOrders, restaurant]);
 
-    // Daily revenue trend
-    const dailyRevenue = useMemo(() => {
-        const days = eachDayOfInterval({
-            start: subDays(new Date(), dateRange),
-            end: new Date()
-        });
+    const dailyData = useMemo(() => {
+        const days = eachDayOfInterval({ start: subDays(new Date(), Math.min(dateRange, 60)), end: new Date() });
+        const commissionRate = (restaurant?.commission_rate ?? 15) / 100;
 
         return days.map(day => {
-            const dayOrders = filteredOrders.filter(o => 
-                format(new Date(o.created_date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-            );
+            const dayStr = format(day, 'yyyy-MM-dd');
+            const dayOrders = filteredOrders.filter(o => format(new Date(o.created_date), 'yyyy-MM-dd') === dayStr);
+            const revenue = dayOrders.reduce((s, o) => s + (o.total || 0), 0);
+            const commission = dayOrders.reduce((s, o) => s + (o.platform_commission_amount || (o.total || 0) * commissionRate), 0);
             return {
-                date: format(day, 'MMM dd'),
-                revenue: dayOrders.reduce((sum, o) => sum + o.total, 0),
-                orders: dayOrders.length
+                date: format(day, dateRange <= 7 ? 'EEE' : 'MMM dd'),
+                revenue: parseFloat(revenue.toFixed(2)),
+                profit: parseFloat((revenue - commission).toFixed(2)),
+                orders: dayOrders.length,
             };
         });
-    }, [filteredOrders, dateRange]);
+    }, [filteredOrders, dateRange, restaurant]);
 
-    // Menu item performance
     const menuPerformance = useMemo(() => {
-        const itemStats = {};
-
+        const stats = {};
         filteredOrders.forEach(order => {
             order.items?.forEach(item => {
-                if (!itemStats[item.menu_item_id]) {
-                    itemStats[item.menu_item_id] = {
-                        id: item.menu_item_id,
-                        name: item.name,
-                        quantity: 0,
-                        revenue: 0
-                    };
-                }
-                itemStats[item.menu_item_id].quantity += item.quantity;
-                itemStats[item.menu_item_id].revenue += item.price * item.quantity;
+                if (!stats[item.name]) stats[item.name] = { name: item.name, quantity: 0, revenue: 0 };
+                stats[item.name].quantity += item.quantity;
+                stats[item.name].revenue += (item.price || 0) * item.quantity;
             });
         });
-
-        return Object.values(itemStats)
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 10);
+        return Object.values(stats).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
     }, [filteredOrders]);
 
-    // Customer Lifetime Value
-    const clvAnalysis = useMemo(() => {
-        const customerData = {};
+    const orderTypeData = useMemo(() => [
+        { name: 'Delivery', value: kpis?.deliveryOrders || 0 },
+        { name: 'Collection', value: kpis?.collectionOrders || 0 },
+    ], [kpis]);
 
-        filteredOrders.forEach(order => {
-            const customer = order.created_by || order.guest_email;
-            if (!customer) return;
+    const paymentData = useMemo(() => [
+        { name: 'Card', value: parseFloat((kpis?.cardRevenue || 0).toFixed(2)) },
+        { name: 'Cash', value: parseFloat((kpis?.cashRevenue || 0).toFixed(2)) },
+    ], [kpis]);
 
-            if (!customerData[customer]) {
-                customerData[customer] = {
-                    totalSpent: 0,
-                    orderCount: 0,
-                    firstOrder: new Date(order.created_date),
-                    lastOrder: new Date(order.created_date)
-                };
-            }
-
-            customerData[customer].totalSpent += order.total;
-            customerData[customer].orderCount += 1;
-            
-            const orderDate = new Date(order.created_date);
-            if (orderDate < customerData[customer].firstOrder) {
-                customerData[customer].firstOrder = orderDate;
-            }
-            if (orderDate > customerData[customer].lastOrder) {
-                customerData[customer].lastOrder = orderDate;
-            }
-        });
-
-        const customerValues = Object.values(customerData).map(data => ({
-            ...data,
-            avgOrderValue: data.totalSpent / data.orderCount,
-            lifespanDays: Math.ceil((data.lastOrder - data.firstOrder) / (1000 * 60 * 60 * 24))
-        }));
-
-        const avgCLV = customerValues.reduce((sum, c) => sum + c.totalSpent, 0) / customerValues.length;
-        const avgLifespan = customerValues.reduce((sum, c) => sum + c.lifespanDays, 0) / customerValues.length;
-
-        // Segment customers
-        const segments = {
-            high: customerValues.filter(c => c.totalSpent > avgCLV * 1.5).length,
-            medium: customerValues.filter(c => c.totalSpent >= avgCLV * 0.5 && c.totalSpent <= avgCLV * 1.5).length,
-            low: customerValues.filter(c => c.totalSpent < avgCLV * 0.5).length
-        };
-
-        return {
-            avgCLV: avgCLV.toFixed(2),
-            avgLifespan: avgLifespan.toFixed(0),
-            totalCustomers: customerValues.length,
-            segments
-        };
-    }, [filteredOrders]);
-
-    // Order type distribution
-    const orderTypeData = useMemo(() => {
-        const delivery = filteredOrders.filter(o => o.order_type === 'delivery').length;
-        const collection = filteredOrders.filter(o => o.order_type === 'collection').length;
-        
-        return [
-            { name: 'Delivery', value: delivery },
-            { name: 'Collection', value: collection }
-        ];
-    }, [filteredOrders]);
-
-    // Peak hours chart data
     const peakHoursData = useMemo(() => {
-        const hourCounts = Array(24).fill(0);
-        filteredOrders.forEach(o => {
-            const hour = new Date(o.created_date).getHours();
-            hourCounts[hour]++;
-        });
-
-        return hourCounts.map((count, hour) => ({
-            hour: `${hour}:00`,
-            orders: count
-        }));
+        const counts = Array(24).fill(0);
+        filteredOrders.forEach(o => counts[new Date(o.created_date).getHours()]++);
+        return counts.map((count, h) => ({ hour: `${h}:00`, orders: count }));
     }, [filteredOrders]);
 
-    // Sales Forecasting with AI
-    const generateSalesForecast = async () => {
+    const generateForecast = async () => {
         setForecastLoading(true);
         try {
-            const recentRevenue = dailyRevenue.slice(-14).map(d => d.revenue);
-            const avgRevenue = recentRevenue.reduce((sum, r) => sum + r, 0) / recentRevenue.length;
-
-            const prompt = `As a data analyst, forecast restaurant sales for the next 7 days based on this data:
-
-Historical Revenue (last 14 days): ${recentRevenue.map(r => `£${r.toFixed(2)}`).join(', ')}
-Average Daily Revenue: £${avgRevenue.toFixed(2)}
-Total Orders (${dateRange} days): ${filteredOrders.length}
-Growth Trend: ${kpis.growthRate}%
-Peak Hour: ${kpis.peakHour}
-
-Provide:
-1. Daily revenue forecast for next 7 days
-2. Confidence level (High/Medium/Low)
-3. Key factors influencing the forecast
-4. Recommendations to optimize sales
-
-Return as structured data.`;
-
+            const recent = dailyData.slice(-14).map(d => d.revenue);
+            const avg = recent.reduce((s, r) => s + r, 0) / recent.length;
             const response = await base44.integrations.Core.InvokeLLM({
-                prompt,
+                prompt: `Forecast restaurant daily sales for next 7 days.
+Historical Revenue (last 14 days): ${recent.map(r => `£${r}`).join(', ')}
+Avg Daily: £${avg.toFixed(2)}, Total Orders (${dateRange}d): ${filteredOrders.length}, Growth: ${kpis.growthRate}%
+Return structured forecast.`,
                 response_json_schema: {
                     type: "object",
                     properties: {
                         daily_forecasts: {
                             type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    day: { type: "string" },
-                                    predicted_revenue: { type: "number" },
-                                    predicted_orders: { type: "number" }
-                                }
-                            }
+                            items: { type: "object", properties: { day: { type: "string" }, predicted_revenue: { type: "number" }, predicted_orders: { type: "number" } } }
                         },
                         confidence: { type: "string" },
                         factors: { type: "string" },
@@ -254,10 +221,9 @@ Return as structured data.`;
                     }
                 }
             });
-
             setForecast(response);
-            toast.success('Sales forecast generated!');
-        } catch (error) {
+            toast.success('Forecast generated!');
+        } catch {
             toast.error('Failed to generate forecast');
         } finally {
             setForecastLoading(false);
@@ -267,424 +233,407 @@ Return as structured data.`;
     const downloadPDF = () => {
         if (!kpis) return;
         generateReportPDF({
-            title: 'Enhanced Analytics Report',
-            subtitle: `Last ${dateRange} days`,
+            title: 'Analytics Report', subtitle: `Last ${dateRange} days`,
             metrics: [
                 { label: 'Total Revenue', value: `£${kpis.totalRevenue.toFixed(2)}` },
+                { label: 'Net Earnings (after commission)', value: `£${kpis.netEarnings.toFixed(2)}` },
+                { label: 'Commission Paid', value: `£${kpis.totalCommission.toFixed(2)}` },
                 { label: 'Total Orders', value: kpis.totalOrders },
                 { label: 'Avg Order Value', value: `£${kpis.avgOrderValue.toFixed(2)}` },
+                { label: 'Daily Avg Revenue', value: `£${kpis.dailyAvgRevenue.toFixed(2)}` },
+                { label: 'Daily Avg Profit', value: `£${kpis.dailyAvgProfit.toFixed(2)}` },
                 { label: 'Unique Customers', value: kpis.uniqueCustomers },
-                { label: 'Growth Rate', value: `${kpis.growthRate}%` },
-                { label: 'Peak Hour', value: kpis.peakHour },
-                { label: 'Avg Order Frequency', value: kpis.avgOrderFrequency },
-                { label: 'Avg Customer LTV', value: `£${clvAnalysis.avgCLV}` },
             ],
             tables: [
-                {
-                    title: 'Top Menu Items',
-                    headers: ['Item', 'Qty Sold', 'Revenue'],
-                    rows: menuPerformance.map(i => [i.name, i.quantity, `£${i.revenue.toFixed(2)}`]),
-                },
-                {
-                    title: 'Daily Revenue',
-                    headers: ['Date', 'Revenue', 'Orders'],
-                    rows: dailyRevenue.map(d => [d.date, `£${d.revenue.toFixed(2)}`, d.orders]),
-                },
+                { title: 'Top Menu Items', headers: ['Item', 'Qty Sold', 'Revenue'], rows: menuPerformance.map(i => [i.name, i.quantity, `£${i.revenue.toFixed(2)}`]) },
             ],
-            filename: `enhanced-analytics-${dateRange}days.pdf`,
+            filename: `analytics-${dateRange}days.pdf`,
         });
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+    if (isLoading) return (
+        <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+                <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-gray-500">Loading analytics...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (filteredOrders.length === 0) {
-        return (
-            <Card>
-                <CardContent className="py-12 text-center">
-                    <BarChart3 className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No Data Available</h3>
-                    <p className="text-gray-500">Complete some orders to see analytics</p>
-                </CardContent>
-            </Card>
-        );
-    }
+    if (!filteredOrders.length) return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                <BarChart3 className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-700">No Data Yet</h3>
+            <p className="text-sm text-gray-400 mt-1">Complete some orders to see analytics</p>
+        </div>
+    );
 
     return (
         <div className="space-y-6">
-            {/* Date Range Selector */}
-            <div className="flex items-center gap-2 flex-wrap">
-                <Calendar className="h-5 w-5 text-gray-600" />
-                <div className="flex gap-2 flex-1">
-                    {[7, 30, 90].map(days => (
-                        <Button
-                            key={days}
-                            variant={dateRange === days ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setDateRange(days)}
-                        >
-                            Last {days} days
-                        </Button>
-                    ))}
+            {/* Header */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900">Analytics Overview</h2>
+                    <p className="text-sm text-gray-500">Performance for the last {dateRange} days</p>
                 </div>
-                <Button onClick={downloadPDF} size="sm" variant="outline" className="flex items-center gap-1.5 ml-auto">
-                    <Download className="h-4 w-4" /> Download PDF
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                        {[7, 30, 90].map(d => (
+                            <button
+                                key={d}
+                                onClick={() => setDateRange(d)}
+                                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${
+                                    dateRange === d ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                {d}d
+                            </button>
+                        ))}
+                    </div>
+                    <Button onClick={downloadPDF} size="sm" variant="outline" className="gap-1.5">
+                        <Download className="h-4 w-4" /> PDF
+                    </Button>
+                </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Total Revenue</p>
-                                <p className="text-2xl font-bold text-gray-900">£{kpis.totalRevenue.toFixed(2)}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                    {parseFloat(kpis.growthRate) >= 0 ? (
-                                        <TrendingUp className="h-4 w-4 text-green-600" />
-                                    ) : (
-                                        <TrendingDown className="h-4 w-4 text-red-600" />
-                                    )}
-                                    <span className={`text-sm ${parseFloat(kpis.growthRate) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {kpis.growthRate}%
-                                    </span>
-                                </div>
-                            </div>
-                            <DollarSign className="h-12 w-12 text-green-100" />
+            {/* Primary KPI Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <KPICard
+                    title="Gross Revenue"
+                    value={`£${kpis.totalRevenue.toFixed(2)}`}
+                    subtitle={`${kpis.totalOrders} orders`}
+                    icon={PoundSterling}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-orange-500 to-orange-600"
+                    trend={kpis.growthRate}
+                    trendLabel="growth"
+                />
+                <KPICard
+                    title="Net Earnings"
+                    value={`£${kpis.netEarnings.toFixed(2)}`}
+                    subtitle={`After ${kpis.commissionRate}% commission`}
+                    icon={TrendingUp}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
+                />
+                <KPICard
+                    title="Commission Paid"
+                    value={`£${kpis.totalCommission.toFixed(2)}`}
+                    subtitle={`${kpis.commissionRate}% platform fee`}
+                    icon={Percent}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-rose-500 to-rose-600"
+                />
+                <KPICard
+                    title="Avg Order Value"
+                    value={`£${kpis.avgOrderValue.toFixed(2)}`}
+                    subtitle={`${kpis.uniqueCustomers} customers`}
+                    icon={ShoppingBag}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-violet-500 to-violet-600"
+                />
+            </div>
+
+            {/* Secondary KPI Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <KPICard
+                    title="Daily Avg Revenue"
+                    value={`£${kpis.dailyAvgRevenue.toFixed(2)}`}
+                    subtitle={`${kpis.dailyAvgOrders.toFixed(1)} orders/day`}
+                    icon={Calendar}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-sky-500 to-sky-600"
+                />
+                <KPICard
+                    title="Daily Avg Profit"
+                    value={`£${kpis.dailyAvgProfit.toFixed(2)}`}
+                    subtitle="After commission"
+                    icon={Target}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-teal-500 to-teal-600"
+                />
+                <KPICard
+                    title="Delivery Fees"
+                    value={`£${kpis.totalDeliveryFees.toFixed(2)}`}
+                    subtitle={`${kpis.deliveryOrders} delivery orders`}
+                    icon={Truck}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-amber-500 to-amber-600"
+                />
+                <KPICard
+                    title="Peak Hour"
+                    value={kpis.peakHour}
+                    subtitle={`${kpis.peakHourOrders} orders at peak`}
+                    icon={Clock}
+                    iconBg="bg-white/20"
+                    gradient="bg-gradient-to-br from-fuchsia-500 to-fuchsia-600"
+                />
+            </div>
+
+            {/* Financial Summary Card */}
+            <div className="grid lg:grid-cols-3 gap-4">
+                <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Revenue Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-0">
+                        <StatRow label="Gross Revenue" value={`£${kpis.totalRevenue.toFixed(2)}`} valueClass="text-gray-900" />
+                        <StatRow label="Delivery Fees Collected" value={`+£${kpis.totalDeliveryFees.toFixed(2)}`} valueClass="text-blue-600" />
+                        <StatRow label="Discounts Given" value={`-£${kpis.totalDiscounts.toFixed(2)}`} valueClass="text-red-500" />
+                        <StatRow label="Platform Commission" value={`-£${kpis.totalCommission.toFixed(2)}`} valueClass="text-red-500" />
+                        <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-gray-200">
+                            <span className="text-sm font-bold text-gray-700">Net Earnings</span>
+                            <span className="text-base font-bold text-emerald-600">£{kpis.netEarnings.toFixed(2)}</span>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Avg Order Value</p>
-                                <p className="text-2xl font-bold text-gray-900">£{kpis.avgOrderValue.toFixed(2)}</p>
-                                <p className="text-xs text-gray-500 mt-1">{kpis.totalOrders} orders</p>
+                <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Payment Methods</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-0">
+                        <StatRow label="Card Payments" value={`£${kpis.cardRevenue.toFixed(2)}`} valueClass="text-blue-600" />
+                        <StatRow label="Card Orders" value={kpis.cardOrders} />
+                        <StatRow label="Cash Payments" value={`£${kpis.cashRevenue.toFixed(2)}`} valueClass="text-green-600" />
+                        <StatRow label="Cash Orders" value={kpis.cashOrders} />
+                        <div className="mt-3">
+                            <div className="flex rounded-full overflow-hidden h-2.5 bg-gray-100">
+                                <div
+                                    className="bg-blue-500 transition-all"
+                                    style={{ width: `${kpis.totalRevenue > 0 ? (kpis.cardRevenue / kpis.totalRevenue) * 100 : 50}%` }}
+                                />
+                                <div className="bg-green-500 flex-1" />
                             </div>
-                            <ShoppingBag className="h-12 w-12 text-blue-100" />
+                            <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                <span>Card {kpis.totalRevenue > 0 ? ((kpis.cardRevenue / kpis.totalRevenue) * 100).toFixed(0) : 0}%</span>
+                                <span>Cash {kpis.totalRevenue > 0 ? ((kpis.cashRevenue / kpis.totalRevenue) * 100).toFixed(0) : 0}%</span>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Customers</p>
-                                <p className="text-2xl font-bold text-gray-900">{kpis.uniqueCustomers}</p>
-                                <p className="text-xs text-gray-500 mt-1">{kpis.avgOrderFrequency} avg orders</p>
-                            </div>
-                            <Users className="h-12 w-12 text-purple-100" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Peak Hour</p>
-                                <p className="text-xl font-bold text-gray-900">{kpis.peakHour.split(' ')[0]}</p>
-                                <p className="text-xs text-gray-500 mt-1">Most orders</p>
-                            </div>
-                            <Clock className="h-12 w-12 text-orange-100" />
-                        </div>
+                <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Customer Insights</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-0">
+                        <StatRow label="Unique Customers" value={kpis.uniqueCustomers} />
+                        <StatRow label="Repeat Customers" value={kpis.repeatCustomers} valueClass="text-emerald-600" />
+                        <StatRow label="Avg Orders/Customer" value={kpis.avgOrderFrequency} />
+                        <StatRow label="Delivery Orders" value={kpis.deliveryOrders} />
+                        <StatRow label="Collection Orders" value={kpis.collectionOrders} />
                     </CardContent>
                 </Card>
             </div>
 
-            <Tabs defaultValue="trends" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="trends">
-                        <LineChart className="h-4 w-4 mr-2" />
-                        Trends
-                    </TabsTrigger>
-                    <TabsTrigger value="menu">
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Menu
-                    </TabsTrigger>
-                    <TabsTrigger value="customers">
-                        <Users className="h-4 w-4 mr-2" />
-                        Customers
-                    </TabsTrigger>
-                    <TabsTrigger value="forecast">
-                        <Zap className="h-4 w-4 mr-2" />
-                        Forecast
-                    </TabsTrigger>
-                    <TabsTrigger value="hours">
-                        <Clock className="h-4 w-4 mr-2" />
-                        Hours
-                    </TabsTrigger>
+            {/* Charts Tabs */}
+            <Tabs defaultValue="revenue" className="w-full">
+                <TabsList className="flex flex-wrap h-auto gap-1 bg-gray-100 p-1">
+                    {[
+                        { value: 'revenue', label: 'Revenue & Profit' },
+                        { value: 'menu', label: 'Menu Items' },
+                        { value: 'distribution', label: 'Distribution' },
+                        { value: 'hours', label: 'Peak Hours' },
+                        { value: 'forecast', label: '🤖 AI Forecast' },
+                    ].map(tab => (
+                        <TabsTrigger key={tab.value} value={tab.value} className="text-xs px-3 py-1.5 rounded-md">
+                            {tab.label}
+                        </TabsTrigger>
+                    ))}
                 </TabsList>
 
-                <TabsContent value="trends" className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Revenue Trend</CardTitle>
+                {/* Revenue & Profit */}
+                <TabsContent value="revenue" className="space-y-4 mt-4">
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Revenue vs Net Profit (after commission)</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={300}>
-                                <RechartsLine data={dailyRevenue}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="date" />
-                                    <YAxis />
-                                    <Tooltip />
+                                <ComposedChart data={dailyData}>
+                                    <defs>
+                                        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
+                                            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `£${v}`} />
+                                    <Tooltip formatter={(v, n) => [`£${v}`, n]} />
                                     <Legend />
-                                    <Line type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} name="Revenue (£)" />
-                                    <Line type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={2} name="Orders" />
-                                </RechartsLine>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Order Type Distribution</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <RechartsPie>
-                                    <Pie
-                                        data={orderTypeData}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {orderTypeData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </RechartsPie>
+                                    <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#revGrad)" name="Revenue" />
+                                    <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#profitGrad)" name="Net Profit" />
+                                    <Bar dataKey="orders" fill="#e2e8f0" name="Orders" yAxisId={0} opacity={0.5} />
+                                </ComposedChart>
                             </ResponsiveContainer>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="menu" className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Top Performing Menu Items</CardTitle>
+                {/* Menu Items */}
+                <TabsContent value="menu" className="space-y-4 mt-4">
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Top 10 Items by Revenue</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <RechartsBar data={menuPerformance}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Bar dataKey="revenue" fill="#f97316" name="Revenue (£)" />
-                                    <Bar dataKey="quantity" fill="#3b82f6" name="Quantity Sold" />
-                                </RechartsBar>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Item Performance Details</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                {menuPerformance.map((item, index) => (
-                                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <Badge className="bg-orange-500">{index + 1}</Badge>
-                                            <div>
-                                                <p className="font-semibold text-gray-900">{item.name}</p>
-                                                <p className="text-sm text-gray-500">{item.quantity} sold</p>
+                            <div className="space-y-2">
+                                {menuPerformance.map((item, i) => {
+                                    const maxRevenue = menuPerformance[0]?.revenue || 1;
+                                    return (
+                                        <div key={item.name} className="flex items-center gap-3">
+                                            <span className="w-5 text-xs font-bold text-gray-400">{i + 1}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-sm font-medium text-gray-800 truncate">{item.name}</span>
+                                                    <div className="flex items-center gap-3 ml-2 flex-shrink-0">
+                                                        <span className="text-xs text-gray-400">{item.quantity} sold</span>
+                                                        <span className="text-sm font-bold text-emerald-600">£{item.revenue.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all"
+                                                        style={{ width: `${(item.revenue / maxRevenue) * 100}%` }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-lg font-bold text-green-600">£{item.revenue.toFixed(2)}</p>
-                                            <p className="text-xs text-gray-500">Revenue</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="customers" className="space-y-6">
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <Card>
-                            <CardContent className="pt-6">
-                                <Target className="h-10 w-10 text-green-500 mb-3" />
-                                <p className="text-sm text-gray-600">Avg Customer Lifetime Value</p>
-                                <p className="text-3xl font-bold text-gray-900">£{clvAnalysis.avgCLV}</p>
+                {/* Distribution */}
+                <TabsContent value="distribution" className="space-y-4 mt-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <Card className="shadow-sm">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base">Order Type Split</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={220}>
+                                    <PieChart>
+                                        <Pie data={orderTypeData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                            labelLine={false}>
+                                            {orderTypeData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardContent className="pt-6">
-                                <Clock className="h-10 w-10 text-blue-500 mb-3" />
-                                <p className="text-sm text-gray-600">Avg Customer Lifespan</p>
-                                <p className="text-3xl font-bold text-gray-900">{clvAnalysis.avgLifespan}</p>
-                                <p className="text-xs text-gray-500">days</p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="pt-6">
-                                <Users className="h-10 w-10 text-purple-500 mb-3" />
-                                <p className="text-sm text-gray-600">Total Customers</p>
-                                <p className="text-3xl font-bold text-gray-900">{clvAnalysis.totalCustomers}</p>
+                        <Card className="shadow-sm">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base">Revenue by Payment Method</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={220}>
+                                    <PieChart>
+                                        <Pie data={paymentData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                            labelLine={false}>
+                                            {paymentData.map((_, i) => <Cell key={i} fill={['#3b82f6', '#10b981'][i]} />)}
+                                        </Pie>
+                                        <Tooltip formatter={v => `£${v}`} />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </CardContent>
                         </Card>
                     </div>
+                </TabsContent>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Customer Segmentation</CardTitle>
+                {/* Peak Hours */}
+                <TabsContent value="hours" className="mt-4">
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Order Volume by Hour</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                                    <div className="flex items-center gap-3">
-                                        <Star className="h-6 w-6 text-green-600" />
-                                        <div>
-                                            <p className="font-semibold text-gray-900">High Value</p>
-                                            <p className="text-sm text-gray-600">Spent &gt; £{(parseFloat(clvAnalysis.avgCLV) * 1.5).toFixed(2)}</p>
-                                        </div>
-                                    </div>
-                                    <Badge className="bg-green-600 text-white text-lg px-4 py-2">
-                                        {clvAnalysis.segments.high} customers
-                                    </Badge>
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                                    <div className="flex items-center gap-3">
-                                        <Users className="h-6 w-6 text-blue-600" />
-                                        <div>
-                                            <p className="font-semibold text-gray-900">Medium Value</p>
-                                            <p className="text-sm text-gray-600">Regular customers</p>
-                                        </div>
-                                    </div>
-                                    <Badge className="bg-blue-600 text-white text-lg px-4 py-2">
-                                        {clvAnalysis.segments.medium} customers
-                                    </Badge>
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                        <Target className="h-6 w-6 text-gray-600" />
-                                        <div>
-                                            <p className="font-semibold text-gray-900">Low Value</p>
-                                            <p className="text-sm text-gray-600">Potential for growth</p>
-                                        </div>
-                                    </div>
-                                    <Badge className="bg-gray-600 text-white text-lg px-4 py-2">
-                                        {clvAnalysis.segments.low} customers
-                                    </Badge>
-                                </div>
-                            </div>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={peakHoursData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={1} />
+                                    <YAxis tick={{ fontSize: 11 }} />
+                                    <Tooltip />
+                                    <Bar dataKey="orders" name="Orders" radius={[3, 3, 0, 0]}>
+                                        {peakHoursData.map((entry, i) => (
+                                            <Cell key={i} fill={entry.orders === kpis.peakHourOrders ? '#f97316' : '#fed7aa'} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="forecast" className="space-y-6">
-                    <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+                {/* AI Forecast */}
+                <TabsContent value="forecast" className="mt-4">
+                    <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-50 to-purple-50">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Zap className="h-6 w-6 text-purple-600" />
-                                AI Sales Forecasting
+                            <CardTitle className="flex items-center gap-2 text-violet-800">
+                                <Zap className="h-5 w-5 text-violet-600" />
+                                AI Sales Forecast
                             </CardTitle>
-                            <p className="text-sm text-gray-600">Predict future sales based on historical data and trends</p>
+                            <p className="text-sm text-violet-600">7-day prediction based on your historical trends</p>
                         </CardHeader>
                         <CardContent>
                             {!forecast ? (
-                                <Button
-                                    onClick={generateSalesForecast}
-                                    disabled={forecastLoading}
-                                    className="bg-purple-600 hover:bg-purple-700"
-                                >
+                                <Button onClick={generateForecast} disabled={forecastLoading}
+                                    className="bg-violet-600 hover:bg-violet-700">
                                     {forecastLoading ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Generating Forecast...
-                                        </>
+                                        <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Analysing data...</>
                                     ) : (
-                                        <>
-                                            <Zap className="h-4 w-4 mr-2" />
-                                            Generate 7-Day Forecast
-                                        </>
+                                        <><Zap className="h-4 w-4 mr-2" />Generate 7-Day Forecast</>
                                     )}
                                 </Button>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <Badge className={`text-lg px-4 py-2 ${
-                                            forecast.confidence === 'High' ? 'bg-green-600' :
-                                            forecast.confidence === 'Medium' ? 'bg-yellow-600' : 'bg-red-600'
-                                        }`}>
+                                    <div className="flex items-center justify-between">
+                                        <Badge className={`${forecast.confidence === 'High' ? 'bg-emerald-600' : forecast.confidence === 'Medium' ? 'bg-amber-600' : 'bg-red-600'} text-white`}>
                                             {forecast.confidence} Confidence
                                         </Badge>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={generateSalesForecast}
-                                            disabled={forecastLoading}
-                                        >
-                                            Regenerate
+                                        <Button variant="outline" size="sm" onClick={generateForecast} disabled={forecastLoading}>
+                                            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
                                         </Button>
                                     </div>
-
                                     <div className="grid gap-2">
-                                        {forecast.daily_forecasts.map((day, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                        {forecast.daily_forecasts?.map((day, i) => (
+                                            <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-violet-100 shadow-sm">
                                                 <div>
-                                                    <p className="font-semibold text-gray-900">{day.day}</p>
-                                                    <p className="text-sm text-gray-500">{day.predicted_orders} predicted orders</p>
+                                                    <p className="font-semibold text-gray-800 text-sm">{day.day}</p>
+                                                    <p className="text-xs text-gray-400">{day.predicted_orders} predicted orders</p>
                                                 </div>
-                                                <p className="text-xl font-bold text-green-600">£{day.predicted_revenue.toFixed(2)}</p>
+                                                <p className="text-lg font-bold text-emerald-600">£{parseFloat(day.predicted_revenue).toFixed(2)}</p>
                                             </div>
                                         ))}
                                     </div>
-
-                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                        <p className="text-sm font-semibold text-blue-900 mb-2">Key Factors</p>
-                                        <p className="text-sm text-blue-800">{forecast.factors}</p>
-                                    </div>
-
-                                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                                        <p className="text-sm font-semibold text-green-900 mb-2">Recommendations</p>
-                                        <p className="text-sm text-green-800">{forecast.recommendations}</p>
-                                    </div>
+                                    {forecast.factors && (
+                                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                            <p className="text-xs font-bold text-blue-800 mb-1">Key Factors</p>
+                                            <p className="text-xs text-blue-700">{forecast.factors}</p>
+                                        </div>
+                                    )}
+                                    {forecast.recommendations && (
+                                        <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                                            <p className="text-xs font-bold text-emerald-800 mb-1">Recommendations</p>
+                                            <p className="text-xs text-emerald-700">{forecast.recommendations}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="hours" className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Order Volume by Hour</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <RechartsBar data={peakHoursData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="hour" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="orders" fill="#f97316" name="Orders" />
-                                </RechartsBar>
-                            </ResponsiveContainer>
                         </CardContent>
                     </Card>
                 </TabsContent>
