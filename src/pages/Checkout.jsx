@@ -33,6 +33,7 @@ import { toast } from 'sonner'; // Toast notifications
 import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
+import { useSEO } from '@/lib/useSEO';
 
 // Initialize Stripe - fetch public key from backend
 let stripePromise = null;
