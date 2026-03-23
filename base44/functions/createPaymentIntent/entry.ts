@@ -74,11 +74,13 @@ Deno.serve(async (req) => {
             { idempotencyKey: stripeIdempotencyKey }
         );
 
+        console.log(`[PAYMENT] PaymentIntent created: ${paymentIntent.id} amount=${Math.round(amount * 100)} user=${user?.email || 'guest'} order=${orderId || 'none'}`);
         return Response.json({
             clientSecret: paymentIntent.client_secret,
             paymentIntentId: paymentIntent.id
         });
     } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+        console.error('[PAYMENT] createPaymentIntent failed:', error.message);
+        return Response.json({ error: 'Payment initialisation failed. Please try again.' }, { status: 500 });
     }
 });
