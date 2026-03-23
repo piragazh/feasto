@@ -350,13 +350,14 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                                 ) : (
                                     <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />No printer assigned</p>
                                 )}
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                                </div>
+                                );
+                                })}
+                                </div>
+                                </CardContent>
+                                </Card>
 
-            {/* Printer slots */}
+                                {/* Printer slots */}
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
