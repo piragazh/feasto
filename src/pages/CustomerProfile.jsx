@@ -13,8 +13,10 @@ import AddressManager from '@/components/profile/AddressManager';
 import LoyaltyRewards from '@/components/profile/LoyaltyRewards';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { useDarkMode } from '@/components/ui/dark-mode-provider';
+import { useSEO } from '@/lib/useSEO';
 
 export default function CustomerProfile() {
+    useSEO({ title: 'My Profile', noindex: true });
     const [user, setUser] = useState(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const { isDark, toggleDarkMode } = useDarkMode();
