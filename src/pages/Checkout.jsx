@@ -852,12 +852,7 @@ export default function Checkout() {
             // Uses system loyalty_points_per_pound setting (fetched inline) × restaurant multiplier
             const earnLoyalty = restaurant?.loyalty_program_enabled !== false;
             const pointsMultiplier = restaurant?.loyalty_points_multiplier || 1;
-            let pointsPerPoundSetting = 1;
-            try {
-                const loyaltySetting = await base44.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' });
-                if (loyaltySetting?.[0]?.setting_value) pointsPerPoundSetting = parseFloat(loyaltySetting[0].setting_value) || 1;
-            } catch (_) { /* use default 1 */ }
-            const pointsToEarn = earnLoyalty ? Math.floor(total * pointsPerPoundSetting * pointsMultiplier) : 0;
+            const pointsToEarn = earnLoyalty ? Math.floor(total * pointsPerPound * pointsMultiplier) : 0;
 
             // CRITICAL SECURITY: Sanitize order notes to prevent XSS
             const sanitizeInput = (input) => {
