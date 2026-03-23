@@ -32,15 +32,18 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
         pr.canMakePayment().then(result => {
             if (result) {
                 console.log('✅ Express checkout available:', result);
+                setDebugInfo(`Available: Apple Pay=${!!result.applePay}, Google Pay=${!!result.googlePay}`);
                 setPaymentRequest(pr);
                 setCanMakePayment(true);
             } else {
-                console.log('❌ Express checkout not available');
+                console.log('❌ Express checkout not available on this device/browser');
+                setDebugInfo('Not available on this device (try Safari/Chrome on iOS/Android)');
                 setCanMakePayment(false);
                 setPaymentRequest(null);
             }
         }).catch((err) => {
             console.error('❌ Express checkout error:', err);
+            setDebugInfo(`Error: ${err?.message || 'Unknown'}`);
             setCanMakePayment(false);
             setPaymentRequest(null);
         });
