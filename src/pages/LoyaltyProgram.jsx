@@ -5,8 +5,10 @@ import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import LoyaltyDashboard from '@/components/loyalty/LoyaltyDashboard';
 import { ArrowLeft } from 'lucide-react';
+import { useSEO } from '@/lib/useSEO';
 
 export default function LoyaltyProgram() {
+    useSEO({ title: 'Loyalty Program', noindex: true });
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
