@@ -14,19 +14,22 @@ Deno.serve(async (req) => {
 
     console.log('Uber Eats webhook received:', JSON.stringify(body).slice(0, 500));
 
-    // Verify Uber Eats client secret — ALWAYS enforce when secret is configured
+    // Verify Uber Eats client secret — ALWAYS required, fail closed if not configured
     const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
-    if (clientSecret) {
-        const authHeader = req.headers.get('Authorization') || '';
-        const uberSig = req.headers.get('x-uber-signature') || '';
-        const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
+    if (!clientSecret) {
+        console.error('[SECURITY] UBER_EATS_CLIENT_SECRET not set — rejecting all webhook requests');
+        return Response.json({ error: 'Webhook not configured' }, { status: 503 });
+    }
 
-        const signatureValid = (providedSecret && providedSecret === clientSecret) ||
-                               (uberSig && uberSig === clientSecret);
-        if (!signatureValid) {
-            console.error('Uber Eats webhook: invalid or missing signature');
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    const authHeader = req.headers.get('Authorization') || '';
+    const uberSig = req.headers.get('x-uber-signature') || '';
+    const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
+
+    const signatureValid = (providedSecret && providedSecret === clientSecret) ||
+                           (uberSig && uberSig === clientSecret);
+    if (!signatureValid) {
+        console.error('Uber Eats webhook: invalid or missing signature');
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
