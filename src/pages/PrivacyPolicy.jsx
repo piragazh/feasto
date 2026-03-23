@@ -3,8 +3,13 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, Lock, Eye, Users, FileText, Mail } from 'lucide-react';
+import { useSEO } from '@/lib/useSEO';
 
 export default function PrivacyPolicy() {
+    useSEO({
+        title: 'Privacy Policy',
+        description: 'Learn how MealDrop collects, uses, and protects your personal data in accordance with UK GDPR and data protection laws.',
+    });
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white border-b sticky top-0 z-10">
