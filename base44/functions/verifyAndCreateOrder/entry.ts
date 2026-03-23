@@ -22,6 +22,18 @@ Deno.serve(async (req) => {
         // Allow guest orders
         const { orderData, paymentIntentId, idempotency_key } = await req.json();
 
+        // CRITICAL: Check IP-based rate limiting to prevent account farm attacks
+        const ipRateLimitResult = await base44.functions.invoke('ipBasedRateLimiting', {});
+        if (ipRateLimitResult?.data && !ipRateLimitResult.data.allowed) {
+            return new Response(
+                JSON.stringify({ 
+                    error: ipRateLimitResult.data.error || 'Too many orders. Please wait.',
+                    success: false 
+                }),
+                { status: 429, headers: { 'Retry-After': String(ipRateLimitResult.data.retryAfter || 60) } }
+            );
+        }
+
         if (!orderData || !orderData.restaurant_id) {
             return new Response(
                 JSON.stringify({ error: 'Invalid order data', success: false }),

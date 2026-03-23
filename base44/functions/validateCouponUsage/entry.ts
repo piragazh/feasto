@@ -50,6 +50,27 @@ Deno.serve(async (req) => {
 
         const coupon = coupons[0];
 
+        // CRITICAL: Check per-user coupon usage limit
+        // Prevents single user from draining entire coupon budget
+        if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
+            const userOrders = await base44.asServiceRole.entities.Order.filter({
+                created_by: user.email,
+                coupon_codes: { $includes: coupon.code }
+            });
+
+            const userUsageCount = Array.isArray(userOrders) ? userOrders.length : 0;
+            
+            if (userUsageCount >= coupon.per_customer_limit) {
+                return new Response(
+                    JSON.stringify({ 
+                        valid: false,
+                        error: `You have reached the usage limit for this coupon (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer)`
+                    }),
+                    { status: 400 }
+                );
+            }
+        }
+
         // Check if coupon is expired
         if (!coupon.is_active) {
             return new Response(
