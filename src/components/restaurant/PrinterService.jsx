@@ -430,6 +430,35 @@ export class PrinterService {
         await this.sendText('\n');
     }
 
+    // ── Test print ────────────────────────────────────────────────────────
+    async printTest(printerName = 'Printer') {
+        if (!this.isConnected()) throw new Error('Printer not connected');
+        const cmd = this.getCommands();
+        const now = new Date().toLocaleString();
+        await this.sendCommand(cmd.init);
+        await this.sendCommand(cmd.alignCenter);
+        await this.sendCommand(cmd.boldOn);
+        await this.sendCommand(cmd.doubleHeight);
+        await this.sendText('PRINTER TEST\n');
+        await this.sendCommand(cmd.normal);
+        await this.sendCommand(cmd.boldOff);
+        await this.sendText('================================\n');
+        await this.sendCommand(cmd.alignLeft);
+        await this.sendText(`Printer:  ${printerName}\n`);
+        await this.sendText(`Time:     ${now}\n`);
+        await this.sendText(`Command:  ${this.commandSet}\n`);
+        await this.sendText('================================\n');
+        await this.sendCommand(cmd.boldOn);
+        await this.sendText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcd\n');
+        await this.sendText('1234567890 !@#$%^&*()_+-=[]{}|\n');
+        await this.sendCommand(cmd.boldOff);
+        await this.sendText('================================\n');
+        await this.sendCommand(cmd.alignCenter);
+        await this.sendText('Printer is working correctly!\n\n\n');
+        await this.sendCommand(cmd.cut);
+        return true;
+    }
+
     disconnect() {
         this.stopHeartbeat();
         if (this.device && this._onDisconnect) {
