@@ -15,17 +15,24 @@ Deno.serve(async (req) => {
                 isAuthorized = true;
             }
         } catch (e) {
-            // Not authenticated - check if orderId provided for guest checkout
-            if (orderId) {
+            // Not authenticated - STRICT: only allow if orderId matches and `to` matches order.phone
+            if (orderId && to) {
                 try {
                     const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
                     if (orders.length > 0) {
                         const order = orders[0];
                         const orderAge = Date.now() - new Date(order.created_date).getTime();
-                        
-                        // Allow SMS for orders created in last 10 minutes
-                        if (orderAge < 10 * 60 * 1000) {
+
+                        // Normalize both phones for comparison
+                        const normalizePhone = (p) => (p || '').replace(/\D/g, '');
+                        const requestPhone = normalizePhone(to);
+                        const orderPhone = normalizePhone(order.phone);
+
+                        // Must: order < 10 min old AND destination phone matches order's phone
+                        if (orderAge < 10 * 60 * 1000 && requestPhone && orderPhone && requestPhone === orderPhone) {
                             isAuthorized = true;
+                        } else {
+                            console.error(`[SECURITY] SMS guest-auth failed: phone mismatch or stale order ${orderId}`);
                         }
                     }
                 } catch (orderError) {
