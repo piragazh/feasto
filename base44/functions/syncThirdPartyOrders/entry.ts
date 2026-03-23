@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
     try {
@@ -11,92 +11,89 @@ Deno.serve(async (req) => {
 
         const { restaurantId } = await req.json();
 
-        // Get restaurant and integrations
-        const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+        if (!restaurantId) {
+            return Response.json({ error: 'restaurantId required' }, { status: 400 });
+        }
+
+        // Access control: admin or restaurant manager only
+        if (user.role !== 'admin') {
+            const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+                user_email: user.email,
+                is_active: true
+            });
+            const hasAccess = managers.some(m => m.restaurant_ids?.includes(restaurantId));
+            if (!hasAccess) {
+                return Response.json({ error: 'Access denied' }, { status: 403 });
+            }
+        }
+
+        const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId });
         if (!restaurants || restaurants.length === 0) {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
         const integrations = restaurants[0].third_party_integrations || {};
-        let totalOrders = 0;
+        let totalCreated = 0;
+        let totalSkipped = 0;
+        const errors = [];
 
-        // For each enabled integration, fetch orders
         for (const [platform, config] of Object.entries(integrations)) {
             if (!config.enabled || !config.api_key) continue;
 
             try {
-                const orders = await fetchOrdersFromPlatform(platform, config.api_key, restaurantId);
-                totalOrders += orders.length;
+                const orders = await fetchOrdersFromPlatform(platform, config, restaurantId);
 
-                // Save orders to database
                 for (const order of orders) {
-                    await base44.entities.Order.create(order);
+                    if (!order.third_party_order_id) {
+                        console.warn(`[syncThirdPartyOrders] Skipping order with no third_party_order_id on ${platform}`);
+                        totalSkipped++;
+                        continue;
+                    }
+
+                    // DEDUP: skip if order already exists
+                    const existing = await base44.asServiceRole.entities.Order.filter({
+                        third_party_order_id: order.third_party_order_id
+                    });
+
+                    if (existing && existing.length > 0) {
+                        console.log(`[DEDUP] ${platform} order ${order.third_party_order_id} already exists, skipping`);
+                        totalSkipped++;
+                        continue;
+                    }
+
+                    // Validate order has items before creating
+                    if (!order.items || order.items.length === 0 || order.total <= 0) {
+                        console.warn(`[syncThirdPartyOrders] Skipping invalid order from ${platform}: no items or zero total`);
+                        totalSkipped++;
+                        continue;
+                    }
+
+                    await base44.asServiceRole.entities.Order.create(order);
+                    totalCreated++;
                 }
             } catch (e) {
                 console.error(`Error syncing ${platform}:`, e.message);
+                errors.push({ platform, error: e.message });
             }
         }
 
-        return Response.json({ 
+        return Response.json({
             success: true,
-            data: { totalOrders }
+            data: { totalCreated, totalSkipped, errors }
         });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
 
-async function fetchOrdersFromPlatform(platform, apiKey, restaurantId) {
-    // Mock implementation - replace with actual API calls
-    const orders = [];
-
-    if (platform === 'uber_eats') {
-        // Implement Uber Eats API integration
-        // GET https://api.uber.com/v2/eats/orders
-        orders.push({
-            restaurant_id: restaurantId,
-            restaurant_name: 'Third Party',
-            items: [],
-            subtotal: 0,
-            delivery_fee: 0,
-            total: 0,
-            status: 'pending',
-            order_type: 'delivery',
-            payment_method: 'card',
-            third_party_platform: 'uber_eats',
-            third_party_order_id: `UE-${Date.now()}`
-        });
-    } else if (platform === 'deliveroo') {
-        // Implement Deliveroo API integration
-        orders.push({
-            restaurant_id: restaurantId,
-            restaurant_name: 'Third Party',
-            items: [],
-            subtotal: 0,
-            delivery_fee: 0,
-            total: 0,
-            status: 'pending',
-            order_type: 'delivery',
-            payment_method: 'card',
-            third_party_platform: 'deliveroo',
-            third_party_order_id: `DR-${Date.now()}`
-        });
-    } else if (platform === 'just_eat') {
-        // Implement Just Eat API integration
-        orders.push({
-            restaurant_id: restaurantId,
-            restaurant_name: 'Third Party',
-            items: [],
-            subtotal: 0,
-            delivery_fee: 0,
-            total: 0,
-            status: 'pending',
-            order_type: 'delivery',
-            payment_method: 'card',
-            third_party_platform: 'just_eat',
-            third_party_order_id: `JE-${Date.now()}`
-        });
-    }
-
-    return orders;
+/**
+ * Fetch orders from a third-party platform.
+ * Replace each block with a real API call when credentials are available.
+ * Returns [] (empty) rather than mock ghost orders to avoid polluting production data.
+ */
+async function fetchOrdersFromPlatform(platform, config, restaurantId) {
+    // Real integrations are handled via webhooks (uberEatsWebhook etc.)
+    // This polling fallback returns empty until a real API call is implemented.
+    console.log(`[syncThirdPartyOrders] Polling ${platform} — no real API implemented, skipping`);
+    return [];
 }
