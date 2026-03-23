@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
             coupon_code: couponCode
         });
     } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+        console.error('redeemReward error:', error);
+        return Response.json({ error: 'Reward redemption failed. Please try again.' }, { status: 500 });
     }
 });
