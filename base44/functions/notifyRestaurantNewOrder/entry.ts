@@ -4,6 +4,13 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
+        // SECURITY: Require authenticated user (customer who just placed, manager, or admin)
+        let callerEmail = null;
+        try {
+            const user = await base44.auth.me();
+            if (user) callerEmail = user.email;
+        } catch (_) {}
+
         const { orderId, restaurantId, restaurantName } = await req.json();
 
         if (!orderId || !restaurantName || !restaurantId) {
