@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     Printer, Bluetooth, Usb, Wifi, Save, CheckCircle2,
     AlertCircle, Info, RefreshCw, Circle, ShoppingBag, Cpu,
-    TabletSmartphone, ArrowRight, Zap, Plus, Trash2
+    TabletSmartphone, ArrowRight, Zap, Plus, Trash2, FlaskConical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
