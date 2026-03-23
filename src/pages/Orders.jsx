@@ -137,18 +137,54 @@ export default function Orders() {
         }
     });
 
-    const reorderOrder = (order) => {
+    const [reordering, setReordering] = useState(null);
+
+    const reorderOrder = async (order) => {
         if (!order || !order.items || !order.restaurant_id) {
             toast.error('Unable to reorder this order');
             return;
         }
-        // Save order items to cart
-        localStorage.setItem('cart', JSON.stringify(order.items));
-        localStorage.setItem('cartRestaurantId', order.restaurant_id);
-        localStorage.setItem('cartRestaurantName', order.restaurant_name || '');
-        
-        toast.success('Items added to cart!');
-        navigate(createPageUrl('Restaurant') + '?id=' + order.restaurant_id);
+
+        setReordering(order.id);
+        try {
+            // Fetch current menu items to check availability
+            const menuItems = await base44.entities.MenuItem.filter({ restaurant_id: order.restaurant_id });
+            const menuMap = new Map(menuItems.map(item => [item.id, item]));
+
+            const availableItems = [];
+            const skippedItems = [];
+
+            for (const cartItem of order.items) {
+                const menuItem = menuMap.get(cartItem.menu_item_id);
+                if (!menuItem || menuItem.is_available === false) {
+                    skippedItems.push(cartItem.name);
+                } else {
+                    // Use current price from menu, keep original customisations/quantity
+                    availableItems.push({ ...cartItem, price: menuItem.price });
+                }
+            }
+
+            if (availableItems.length === 0) {
+                toast.error('None of the items from this order are available anymore.');
+                return;
+            }
+
+            localStorage.setItem('cart', JSON.stringify(availableItems));
+            localStorage.setItem('cartRestaurantId', order.restaurant_id);
+            localStorage.setItem('cartRestaurantName', order.restaurant_name || '');
+
+            if (skippedItems.length > 0) {
+                toast.warning(`Added ${availableItems.length} item(s) to cart. Skipped: ${skippedItems.join(', ')} (unavailable).`);
+            } else {
+                toast.success(`${availableItems.length} item(s) added to cart!`);
+            }
+
+            navigate(createPageUrl('Restaurant') + '?id=' + order.restaurant_id);
+        } catch (e) {
+            toast.error('Failed to check item availability. Please try again.');
+        } finally {
+            setReordering(null);
+        }
     };
 
     const handleRefundRequest = (refundData) => {
