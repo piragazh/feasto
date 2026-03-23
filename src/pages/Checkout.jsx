@@ -924,148 +924,7 @@ export default function Checkout() {
                 order_number: verificationResponse.data.order_number 
             };
 
-            // Save phone and address for logged-in users (if opted in)
-            if (!isGuest) {
-                try {
-                    const userData = await base44.auth.me();
-                    const updates = {};
-                    
-                    // Save phone if opted in and not already saved
-                    if (savePhone && formData.phone && formData.phone !== userData.phone) {
-                        updates.phone = formData.phone;
-                    }
-                    
-                    // Save address for delivery orders if opted in
-                    if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
-                        const currentAddresses = userData.saved_addresses || [];
-                        
-                        // Check if address already exists
-                        const addressExists = currentAddresses.some(addr => 
-                            addr.address === formData.delivery_address && addr.door_number === formData.door_number
-                        );
-                        
-                        if (!addressExists) {
-                            const newAddress = {
-                                label: addressLabel,
-                                address: formData.delivery_address,
-                                door_number: formData.door_number,
-                                coordinates: deliveryCoordinates,
-                                instructions: formData.notes || '',
-                                is_default: setAsDefault
-                            };
-                            
-                            // If setting as default, unmark all other addresses
-                            let updatedAddresses = currentAddresses;
-                            if (setAsDefault) {
-                                updatedAddresses = currentAddresses.map(addr => ({ ...addr, is_default: false }));
-                            }
-                            
-                            updates.saved_addresses = [...updatedAddresses, newAddress];
-                        }
-                    }
-                    
-                    // Update user if there are changes
-                    if (Object.keys(updates).length > 0) {
-                        await base44.auth.updateMe(updates);
-                    }
-                } catch (error) {
-                    console.error('Failed to save user data:', error);
-                }
-            }
-
-            // Update group order status if applicable
-            if (groupOrderId) {
-                try {
-                    await base44.entities.GroupOrder.update(groupOrderId, { status: 'placed' });
-                } catch (error) {
-                    console.error('Failed to update group order:', error);
-                }
-            }
-
-            // Increment coupon usage — only after order is confirmed successful
-            // Re-validate each coupon server-side before incrementing to prevent race conditions
-            for (const coupon of appliedCoupons) {
-                try {
-                    const recheck = await base44.functions.invoke('validateCouponUsage', { couponId: coupon.id });
-                    if (recheck?.data?.valid) {
-                        await base44.entities.Coupon.update(coupon.id, {
-                            usage_count: (coupon.usage_count || 0) + 1
-                        });
-                    }
-                } catch (error) {
-                    console.error('Failed to update coupon usage:', error);
-                }
-            }
-
-            // Increment promotion usage and update stats for all applied promotions
-            for (const promo of appliedPromotions) {
-                // Skip automatic BOGO promotions as they're not manual discount codes
-                if (promo.is_automatic) continue;
-                
-                try {
-                    await base44.entities.Promotion.update(promo.id, {
-                        usage_count: (promo.usage_count || 0) + 1,
-                        total_revenue_generated: (promo.total_revenue_generated || 0) + total,
-                        total_discount_given: (promo.total_discount_given || 0) + promo.discount
-                    });
-                } catch (error) {
-                    console.error('Failed to update promotion usage:', error);
-                }
-            }
-
-            // Send SMS confirmation to customer with order details (respecting restaurant SMS settings)
-            try {
-                // Check if restaurant wants confirmation SMS
-                const smsCheckResult = await base44.functions.invoke('shouldSendOrderStatusSms', {
-                    restaurantId: restaurantId,
-                    status: 'confirmed'
-                });
-
-                if (smsCheckResult?.data?.shouldSend) {
-                    const orderLabel = orderType === 'collection' && newOrder.order_number
-                        ? newOrder.order_number
-                        : `#${newOrder.id.slice(-6)}`;
-                    
-                    const itemsList = cart.slice(0, 3).map(item => 
-                        `${item.quantity}x ${item.name}`
-                    ).join('\n');
-                    
-                    const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
-
-                    const customerMessage = orderType === 'collection'
-                        ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min\n\nShow this number when collecting!`
-                        : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}\n\nYou'll receive SMS updates when your order is being prepared and dispatched.`;
-
-                    console.log('Sending customer SMS to:', formData.phone);
-                    const smsResult = await base44.functions.invoke('sendSMS', {
-                        to: formData.phone,
-                        message: customerMessage,
-                        orderId: newOrder.id
-                    });
-                    console.log('Customer SMS result:', smsResult);
-                }
-            } catch (smsError) {
-                console.error('Customer SMS check failed:', smsError);
-                // SMS check failed but order still placed - don't block user
-            }
-
-            // Notify restaurant of new order (SMS or WhatsApp based on restaurant preference)
-            try {
-                if (restaurant?.order_alert_channel === 'whatsapp' && restaurant?.whatsapp_alerts_enabled) {
-                    await base44.functions.invoke('sendWhatsAppOrder', {
-                        order_id: newOrder.id,
-                    });
-                } else {
-                    await base44.functions.invoke('notifyRestaurantNewOrder', {
-                        orderId: newOrder.id,
-                        restaurantId: restaurantId,
-                        restaurantName: restaurantName
-                    });
-                }
-            } catch (notifyError) {
-                // Notification failed but order still placed
-            }
-
+            // Clear cart & show success immediately — all post-order tasks run in parallel in background
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
             localStorage.removeItem('cartRestaurantName');
@@ -1075,6 +934,101 @@ export default function Checkout() {
             localStorage.removeItem('userAddress');
             localStorage.removeItem('userCoordinates');
             setOrderPlaced(true);
+
+            // Fire all post-order background tasks in parallel — none block the user
+            const backgroundTasks = [];
+
+            // Save user phone/address
+            if (!isGuest) {
+                backgroundTasks.push(
+                    base44.auth.me().then(userData => {
+                        const updates = {};
+                        if (savePhone && formData.phone && formData.phone !== userData.phone) {
+                            updates.phone = formData.phone;
+                        }
+                        if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
+                            const currentAddresses = userData.saved_addresses || [];
+                            const addressExists = currentAddresses.some(addr =>
+                                addr.address === formData.delivery_address && addr.door_number === formData.door_number
+                            );
+                            if (!addressExists) {
+                                const newAddress = {
+                                    label: addressLabel,
+                                    address: formData.delivery_address,
+                                    door_number: formData.door_number,
+                                    coordinates: deliveryCoordinates,
+                                    instructions: formData.notes || '',
+                                    is_default: setAsDefault
+                                };
+                                let updatedAddresses = setAsDefault
+                                    ? currentAddresses.map(addr => ({ ...addr, is_default: false }))
+                                    : currentAddresses;
+                                updates.saved_addresses = [...updatedAddresses, newAddress];
+                            }
+                        }
+                        if (Object.keys(updates).length > 0) return base44.auth.updateMe(updates);
+                    }).catch(e => console.error('Failed to save user data:', e))
+                );
+            }
+
+            // Update group order
+            if (groupOrderId) {
+                backgroundTasks.push(
+                    base44.entities.GroupOrder.update(groupOrderId, { status: 'placed' })
+                        .catch(e => console.error('Failed to update group order:', e))
+                );
+            }
+
+            // Increment coupon usage (parallel per coupon)
+            appliedCoupons.forEach(coupon => {
+                backgroundTasks.push(
+                    base44.functions.invoke('validateCouponUsage', { couponId: coupon.id })
+                        .then(recheck => {
+                            if (recheck?.data?.valid) {
+                                return base44.entities.Coupon.update(coupon.id, {
+                                    usage_count: (coupon.usage_count || 0) + 1
+                                });
+                            }
+                        }).catch(e => console.error('Failed to update coupon usage:', e))
+                );
+            });
+
+            // Increment promotion usage (parallel per promo)
+            appliedPromotions.filter(p => !p.is_automatic).forEach(promo => {
+                backgroundTasks.push(
+                    base44.entities.Promotion.update(promo.id, {
+                        usage_count: (promo.usage_count || 0) + 1,
+                        total_revenue_generated: (promo.total_revenue_generated || 0) + total,
+                        total_discount_given: (promo.total_discount_given || 0) + promo.discount
+                    }).catch(e => console.error('Failed to update promotion usage:', e))
+                );
+            });
+
+            // Send customer SMS
+            backgroundTasks.push(
+                base44.functions.invoke('shouldSendOrderStatusSms', { restaurantId, status: 'confirmed' })
+                    .then(smsCheckResult => {
+                        if (!smsCheckResult?.data?.shouldSend) return;
+                        const orderLabel = orderType === 'collection' && newOrder.order_number
+                            ? newOrder.order_number : `#${newOrder.id.slice(-6)}`;
+                        const itemsList = cart.slice(0, 3).map(item => `${item.quantity}x ${item.name}`).join('\n');
+                        const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
+                        const customerMessage = orderType === 'collection'
+                            ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min`
+                            : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}`;
+                        return base44.functions.invoke('sendSMS', { to: formData.phone, message: customerMessage, orderId: newOrder.id });
+                    }).catch(e => console.error('Customer SMS failed:', e))
+            );
+
+            // Notify restaurant
+            backgroundTasks.push(
+                (restaurant?.order_alert_channel === 'whatsapp' && restaurant?.whatsapp_alerts_enabled
+                    ? base44.functions.invoke('sendWhatsAppOrder', { order_id: newOrder.id })
+                    : base44.functions.invoke('notifyRestaurantNewOrder', { orderId: newOrder.id, restaurantId, restaurantName })
+                ).catch(() => {})
+            );
+
+            Promise.allSettled(backgroundTasks);
 
             setTimeout(() => {
                 navigate(createPageUrl('Orders'));
