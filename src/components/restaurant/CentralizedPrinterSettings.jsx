@@ -332,10 +332,12 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                 </CardHeader>
                 <CardContent>
                     <div className="grid sm:grid-cols-3 gap-3">
-                        {channelSummary.map(ch => (
+                        {channelSummary.map(ch => {
+                            const ChIcon = ch.icon;
+                            return (
                             <div key={ch.id} className={`rounded-xl p-4 border-2 ${ch.border} ${ch.bg}`}>
                                 <div className={`flex items-center gap-2 font-semibold text-sm mb-2 ${ch.color}`}>
-                                            {React.createElement(ch.icon, { className: "h-4 w-4" })}
+                                    <ChIcon className="h-4 w-4" />
                                     {ch.label}
                                 </div>
                                 {ch.assignedPrinters.length > 0 ? (
