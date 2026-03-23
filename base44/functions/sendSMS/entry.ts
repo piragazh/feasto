@@ -137,7 +137,9 @@ Deno.serve(async (req) => {
         }
 
         const result = await response.json();
-        console.log(`✅ SMS sent successfully to ${formattedPhone}, SID: ${result.sid}`);
+        // Mask phone for log: show only last 3 digits
+        const maskedPhone = formattedPhone.replace(/\d(?=\d{3})/g, '*');
+        console.log(`✅ SMS sent successfully to ${maskedPhone}, SID: ${result.sid}`);
 
         // Log the sent SMS
         await base44.asServiceRole.entities.SmsLog.create({
