@@ -22,7 +22,6 @@ export default function Home() {
     const [selectedCuisine, setSelectedCuisine] = useState('');
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
-    const [menuItemSearch, setMenuItemSearch] = useState('');
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
     // Fetch restaurants with optimized caching
@@ -98,8 +97,7 @@ export default function Home() {
                 r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 allCuisines.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
             const matchesCuisine = !selectedCuisine || allCuisines.includes(selectedCuisine);
-            const matchesMenuItem = !menuItemSearch || restaurantsWithMatchingItems.includes(r.id);
-            return matchesSearch && matchesCuisine && matchesMenuItem;
+            return matchesSearch && matchesCuisine;
         })
         .map(r => {
             if (userLocation && r.latitude && r.longitude) {
