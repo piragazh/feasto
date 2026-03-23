@@ -70,6 +70,7 @@ const CustomTooltip = ({ active, payload, label, prefix = '' }) => {
 };
 
 export default function AdminDashboard() {
+    useSEO({ title: 'Admin Dashboard', noindex: true });
     const navigate = useNavigate();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
