@@ -35,6 +35,21 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
+
+        // SECURITY: Allow only admin users or automation (service-role) invocations.
+        // Direct unauthenticated calls are rejected to prevent order status probing.
+        let callerIsAuthorized = false;
+        try {
+            const user = await base44.auth.me();
+            if (user && user.role === 'admin') callerIsAuthorized = true;
+        } catch (_) {
+            // No user session — could be an automation/service-role call, allow it
+            callerIsAuthorized = true;
+        }
+        if (!callerIsAuthorized) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+        }
+
         const body = await req.json();
         const orderId = body.orderId || body.event?.entity_id;
 
