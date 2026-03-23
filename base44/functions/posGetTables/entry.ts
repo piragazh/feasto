@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
     try {
@@ -13,6 +13,18 @@ Deno.serve(async (req) => {
 
         if (!restaurant_id) {
             return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+        }
+
+        // TENANT CHECK: verify caller has access to this restaurant
+        if (user.role !== 'admin') {
+            const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+                user_email: user.email,
+                is_active: true
+            });
+            const hasAccess = managers.some(m => m.restaurant_ids?.includes(restaurant_id));
+            if (!hasAccess) {
+                return Response.json({ error: 'Access denied to this restaurant' }, { status: 403 });
+            }
         }
 
         const tables = await base44.asServiceRole.entities.RestaurantTable.filter({ restaurant_id });
