@@ -81,6 +81,15 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                 </div>
                 <div className="flex items-center gap-2">
                     <PrinterStatusBadge service={service} label={`Printer ${index + 1}`} />
+                    <button
+                        onClick={handleTestPrint}
+                        disabled={testing}
+                        title="Print test page"
+                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-50 transition-colors"
+                    >
+                        {testing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
+                        Test
+                    </button>
                     {index > 0 && (
                         <button onClick={onRemove} className="text-gray-400 hover:text-red-500 transition-colors">
                             <Trash2 className="h-4 w-4" />
