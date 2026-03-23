@@ -1489,7 +1489,9 @@ export default function Checkout() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
+                                    <Label htmlFor="special_instructions" className="sr-only">Special Instructions</Label>
                                     <Textarea
+                                        id="special_instructions"
                                         placeholder="Any special requests? (e.g., no onions, extra sauce)"
                                         value={formData.notes}
                                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
