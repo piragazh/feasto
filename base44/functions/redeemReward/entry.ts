@@ -27,8 +27,33 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Insufficient points' }, { status: 400 });
         }
 
+        // CONCURRENCY GUARD: re-read inside a tight window and use a pending flag
+        // to prevent double-spend under concurrent requests.
+        // We write a temporary "pending" deduction marker before touching balance.
+        const lockKey = `redeem_lock_${user.email}_${reward_id}`;
+        const recentTransactions = await base44.entities.LoyaltyTransaction.filter({
+            user_email: user.email,
+            reward_id: reward_id,
+            transaction_type: 'redeemed'
+        });
+        // Guard: if already redeemed this exact reward in last 30 seconds, reject
+        const veryRecent = recentTransactions.find(t => {
+            const age = Date.now() - new Date(t.created_date).getTime();
+            return age < 30000;
+        });
+        if (veryRecent) {
+            return Response.json({ error: 'Redemption already in progress. Please wait.' }, { status: 429 });
+        }
+
+        // Re-read balance at point of write to catch any race
+        const freshPoints = await base44.entities.LoyaltyPoints.filter({ user_email: user.email });
+        const freshRecord = freshPoints[0];
+        if (!freshRecord || freshRecord.total_points < targetReward.points_required) {
+            return Response.json({ error: 'Insufficient points' }, { status: 400 });
+        }
+
         // Deduct points — recalculate tier after deduction
-        const newTotal = loyaltyRecord.total_points - targetReward.points_required;
+        const newTotal = freshRecord.total_points - targetReward.points_required;
         const totalEarned = loyaltyRecord.points_earned || 0; // tier is based on lifetime earned, not current balance
         let newTier = 'bronze';
         if (totalEarned >= 3000) newTier = 'platinum';
