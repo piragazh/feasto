@@ -48,6 +48,13 @@ Deno.serve(async (req) => {
     }
 
     try {
+        if (!CART_SIGNING_SECRET) {
+            return new Response(
+                JSON.stringify({ error: 'Cart validation unavailable — secret not configured', valid: false }),
+                { status: 503 }
+            );
+        }
+
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
 
