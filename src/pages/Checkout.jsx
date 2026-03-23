@@ -896,18 +896,7 @@ export default function Checkout() {
                 orderData.guest_email = formData.guest_email;
             }
 
-            // CRITICAL SECURITY: Validate cart signature to prevent tampering
-             const cartSignatureValidation = await base44.functions.invoke('validateCartSignature', {
-                 cart: cart,
-                 restaurantId: restaurantId
-             });
-             if (!cartSignatureValidation?.data?.valid) {
-                 toast.error('Cart validation failed. Please refresh and try again.');
-                 setIsSubmitting(false);
-                 return;
-             }
-
-             // CRITICAL SECURITY: Use backend verification function instead of direct create
+            // CRITICAL SECURITY: Use backend verification function instead of direct create
              // This ensures payment is verified and restaurant is open
              const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
                  orderData,
