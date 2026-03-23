@@ -95,37 +95,14 @@ export default function Orders() {
 
     const refundRequestMutation = useMutation({
         mutationFn: async ({ orderId, refundType, refundedItems, refundAmount, reason, issueDescription }) => {
-            // CRITICAL SECURITY: Verify user owns this order
-            const order = orders.find(o => o.id === orderId);
-            if (!order) {
-                throw new Error('Order not found');
-            }
-            
-            // Backend will verify ownership again, but check here too
-            const user = await base44.auth.me();
-            if (order.created_by !== user.email) {
-                throw new Error('You can only request refunds for your own orders');
-            }
-            
-            // CRITICAL SECURITY: Verify user owns this order
-            if (order.created_by !== user?.email) {
-                throw new Error('You can only request refunds for your own orders');
-            }
-            
-            // Validate refund amount doesn't exceed order total
-            if (refundAmount > order.total) {
-                throw new Error('Refund amount cannot exceed order total');
-            }
-            
-            return base44.entities.Order.update(orderId, {
-                status: 'refund_requested',
-                refund_request_type: refundType,
-                refund_requested_items: refundedItems,
-                refund_requested_amount: refundAmount,
-                refund_request_reason: reason,
-                refund_request_description: issueDescription,
-                refund_request_date: new Date().toISOString()
+            // SECURITY: Route through backend function that verifies ownership server-side
+            const response = await base44.functions.invoke('requestRefund', {
+                orderId, refundType, refundedItems, refundAmount, reason, issueDescription
             });
+            if (!response?.data?.success) {
+                throw new Error(response?.data?.error || 'Refund request failed');
+            }
+            return response.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['orders'] });
