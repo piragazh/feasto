@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
                 idempotency_key
             });
             if (existing && existing.length > 0) {
-                console.log(`[IDEMPOTENCY] Duplicate order request for key ${idempotency_key}, returning existing order ${existing[0].id}`);
+                console.log(`[ORDER] Duplicate request key=${idempotency_key} → existing order ${existing[0].id}`);
                 return new Response(
                     JSON.stringify({
                         success: true,
