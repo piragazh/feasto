@@ -179,21 +179,26 @@ Deno.serve(async (req) => {
                 is_active: true
             });
 
+            // Use proper ray-casting polygon containment (not bounding box)
+            const pointInPolygon = (point, polygon) => {
+                const [px, py] = point;
+                let inside = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                    const [xi, yi] = polygon[i];
+                    const [xj, yj] = polygon[j];
+                    const intersect = ((yi > py) !== (yj > py)) &&
+                        (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+                    if (intersect) inside = !inside;
+                }
+                return inside;
+            };
+
             let zoneFound = false;
             if (zones && zones.length > 0) {
                 for (const zone of zones) {
-                    if (zone.coordinates && Array.isArray(zone.coordinates)) {
-                        const bounds = zone.coordinates.reduce((acc, coord) => ({
-                            minLat: Math.min(acc.minLat || 90, coord.lat),
-                            maxLat: Math.max(acc.maxLat || -90, coord.lat),
-                            minLng: Math.min(acc.minLng || 180, coord.lng),
-                            maxLng: Math.max(acc.maxLng || -180, coord.lng)
-                        }), {});
-
-                        if (
-                            lat >= bounds.minLat && lat <= bounds.maxLat &&
-                            lng >= bounds.minLng && lng <= bounds.maxLng
-                        ) {
+                    if (zone.coordinates && Array.isArray(zone.coordinates) && zone.coordinates.length >= 3) {
+                        const polygon = zone.coordinates.map(c => [c.lng, c.lat]);
+                        if (pointInPolygon([lng, lat], polygon)) {
                             zoneFound = true;
                             break;
                         }
