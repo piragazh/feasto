@@ -916,7 +916,8 @@ export default function Checkout() {
              // This ensures payment is verified and restaurant is open
              const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
                  orderData,
-                 paymentIntentId: paymentIntentId || null
+                 paymentIntentId: paymentIntentId || null,
+                 idempotency_key: idempotencyKey
              });
 
             if (!verificationResponse?.data?.success || !verificationResponse?.data?.order_id) {
