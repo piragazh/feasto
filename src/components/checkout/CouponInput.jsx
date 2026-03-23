@@ -76,9 +76,15 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
                 if (coupon.max_discount && discount > coupon.max_discount) {
                     discount = coupon.max_discount;
                 }
+            } else if (coupon.discount_type === 'free_delivery') {
+                discount = coupon.free_delivery_amount || coupon.discount_value || 0;
+            } else if (coupon.discount_type === 'free_item') {
+                discount = coupon.discount_value || 0;
             } else {
-                discount = coupon.discount_value;
+                discount = coupon.discount_value || 0;
             }
+            // Discount cannot exceed subtotal
+            discount = Math.min(discount, subtotal);
 
             setAppliedCoupon({ ...coupon, discount });
             onCouponApply({ ...coupon, discount });
