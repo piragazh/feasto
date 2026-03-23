@@ -90,7 +90,7 @@ export default function Home() {
         }
     };
 
-    const filteredRestaurants = (restaurants || [])
+    const filteredRestaurants = useMemo(() => (restaurants || [])
         .filter(r => {
             const allCuisines = r.cuisine_types?.length ? r.cuisine_types : r.cuisine_type ? [r.cuisine_type] : [];
             const matchesSearch = !searchQuery || 
@@ -113,7 +113,7 @@ export default function Home() {
             if (sortBy === 'delivery_fee') return (a.delivery_fee || 0) - (b.delivery_fee || 0);
             if (sortBy === 'distance' && a.distance && b.distance) return a.distance - b.distance;
             return 0;
-        });
+        }), [restaurants, searchQuery, selectedCuisine, sortBy, userLocation]);
 
     // If on custom domain, render Restaurant page directly (SEO-friendly)
     if (customDomainRestaurantId || initialCustomDomainId) {
