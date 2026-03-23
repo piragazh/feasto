@@ -25,7 +25,12 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'orderId and refundAmount required' }, { status: 400 });
         }
 
-        const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+        let orders;
+        try {
+            orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+        } catch {
+            return Response.json({ error: 'Order not found' }, { status: 404 });
+        }
         if (!orders?.length) return Response.json({ error: 'Order not found' }, { status: 404 });
 
         const order = orders[0];
