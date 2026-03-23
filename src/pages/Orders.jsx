@@ -616,11 +616,15 @@ export default function Orders() {
                                                     {(order?.status === 'delivered' || order?.status === 'cancelled') && (
                                                         <div className="border-t pt-4 flex flex-col sm:flex-row gap-2">
                                                             <Button
-                                                                onClick={() => reorderOrder(order)}
-                                                                className="flex-1 bg-orange-500 hover:bg-orange-600"
+                                                               onClick={() => reorderOrder(order)}
+                                                               disabled={reordering === order.id}
+                                                               className="flex-1 bg-orange-500 hover:bg-orange-600"
                                                             >
-                                                                <RotateCcw className="h-4 w-4 mr-2" />
-                                                                Quick Reorder
+                                                                {reordering === order.id
+                                                                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    : <RotateCcw className="h-4 w-4 mr-2" />
+                                                                }
+                                                                {reordering === order.id ? 'Checking...' : 'Quick Reorder'}
                                                             </Button>
                                                             {order?.status === 'delivered' && !reviews.find(r => r.order_id === order?.id) && (
                                                                 <Button
