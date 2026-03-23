@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { ArrowLeft, CreditCard, Banknote, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { printWithCentralizedConfig } from '@/lib/printUtils';
 
 const PAYMENT_METHODS = [
     { id: 'card', label: 'Pay by Card', icon: CreditCard, description: 'Tap, insert or swipe your card' },
