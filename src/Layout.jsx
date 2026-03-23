@@ -24,8 +24,7 @@ import { initializeLiveRegions } from '@/lib/aria-utils.jsx';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
-    const gtmId = 'GTM-PJ3JPPSN';
-    console.log('GTM ID value:', gtmId);
+    const gtmId = import.meta.env.VITE_GTM_ID || 'GTM-PJ3JPPSN';
     
     // Store for later use
     window.__gtmId = gtmId;
