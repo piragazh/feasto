@@ -14,15 +14,17 @@ Deno.serve(async (req) => {
 
     console.log('Uber Eats webhook received:', JSON.stringify(body).slice(0, 500));
 
-    // Verify Uber Eats client secret if they send it in headers
+    // Verify Uber Eats client secret — ALWAYS enforce when secret is configured
     const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
-    const authHeader = req.headers.get('Authorization') || '';
-    const uberSig = req.headers.get('x-uber-signature') || '';
-    const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
+    if (clientSecret) {
+        const authHeader = req.headers.get('Authorization') || '';
+        const uberSig = req.headers.get('x-uber-signature') || '';
+        const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
 
-    if (clientSecret && (authHeader || uberSig)) {
-        if (providedSecret !== clientSecret && uberSig !== clientSecret) {
-            console.error('Uber Eats webhook: invalid signature');
+        const signatureValid = (providedSecret && providedSecret === clientSecret) ||
+                               (uberSig && uberSig === clientSecret);
+        if (!signatureValid) {
+            console.error('Uber Eats webhook: invalid or missing signature');
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
     }
