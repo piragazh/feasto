@@ -141,23 +141,19 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     };
 
     const printReceiptAfterPayment = async (orderData, finalPayments) => {
-        const config = restaurant?.printer_config;
-        // Skip silently if no bluetooth printer configured
-        if (!config?.bluetooth_printer?.id) return;
         try {
             const dominantMethod = finalPayments.length === 1 ? finalPayments[0].method : 'cash';
             const hasCash = finalPayments.find(p => p.method === 'cash');
             const changeAmt = Math.max(0, finalPayments.reduce((s, p) => s + p.amount, 0) - effectiveTotal);
-            const fakeOrder = {
+            const printOrder = {
                 ...orderData,
                 id: Date.now().toString(),
                 created_date: new Date().toISOString(),
                 payment_method: dominantMethod,
                 notes: hasCash && changeAmt > 0 ? `Change: £${changeAmt.toFixed(2)}` : orderData.notes,
             };
-            await printerService.printReceipt(fakeOrder, restaurant, config);
+            await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
         } catch (e) {
-            // silently fail — don't block payment completion
             console.warn('Auto-print failed:', e.message);
         }
     };
