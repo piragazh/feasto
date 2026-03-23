@@ -34,11 +34,31 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
+        // SECURITY: Verify item prices against menu (use pos_price if set, else standard price)
+        const menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: orderData.restaurant_id });
+        const menuMap = new Map(menuItems.map(i => [i.id, i]));
+
+        const verifiedItems = orderData.items.map(cartItem => {
+            const menuItem = menuMap.get(cartItem.menu_item_id);
+            if (menuItem) {
+                // Use server-side authoritative POS price
+                return { ...cartItem, price: menuItem.pos_price ?? menuItem.price };
+            }
+            return cartItem; // custom/ad-hoc POS items without a menu_item_id
+        });
+
+        const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * (i.quantity || 1)), 0);
+        const discount = orderData.discount || 0;
+        const serverTotal = Math.max(0, serverSubtotal - discount);
+
         // Strip any attempt to spoof created_by
         const { created_by: _cb, ...safeOrderData } = orderData;
 
         const order = await base44.asServiceRole.entities.Order.create({
             ...safeOrderData,
+            items: verifiedItems,
+            subtotal: serverSubtotal,
+            total: serverTotal,
             status: 'confirmed',
             payment_method: orderData.payment_method || 'cash',
             order_type: orderData.order_type || 'collection'
