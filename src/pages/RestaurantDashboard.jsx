@@ -13,7 +13,7 @@ import {
     Menu, TrendingUp, Truck, UserCheck, RotateCcw,
     GitBranch, PenLine, MapPin, Link2, Cpu, Smartphone,
     MessageCircle, UsersRound, Palette, Star, Sparkles,
-    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling
+    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer
 } from 'lucide-react';
 
 import LiveOrders from '@/components/restaurant/LiveOrders';
@@ -44,6 +44,7 @@ import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegratio
 import POSConfigurations from '@/components/restaurant/POSConfigurations';
 import StaffManagement from '@/components/restaurant/StaffManagement';
 import KioskSettings from '@/components/kiosk/KioskSettings';
+import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrinterSettings';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
 import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
@@ -110,6 +111,7 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'branding', label: 'Branding', icon: Palette },
             { id: 'zones', label: 'Delivery Zones', icon: MapPin },
             { id: 'integrations', label: 'Third-Party Orders', icon: Link2 },
+            { id: 'printers', label: 'Printer Config', icon: Printer },
             { id: 'pos', label: 'POS Config', icon: Cpu },
             { id: 'kiosk', label: 'Kiosk', icon: Smartphone },
             { id: 'sms', label: 'SMS Notifications', icon: MessageCircle },
@@ -483,6 +485,7 @@ export default function RestaurantDashboard() {
                         />
                     </TabsContent>
                     <TabsContent value="integrations"><ThirdPartyIntegrations restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="printers"><CentralizedPrinterSettings restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="pos"><POSConfigurations restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="kiosk"><KioskSettings restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="sms"><SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} /></TabsContent>
