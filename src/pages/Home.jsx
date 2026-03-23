@@ -167,7 +167,6 @@ export default function Home() {
                     </h2>
                     <p className="text-sm md:text-base text-gray-600">
                         {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
-                        {menuItemSearch && ` with "${menuItemSearch}"`}
                     </p>
                 </div>
 
