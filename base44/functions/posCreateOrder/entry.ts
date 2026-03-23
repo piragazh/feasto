@@ -64,8 +64,10 @@ Deno.serve(async (req) => {
             order_type: orderData.order_type || 'collection'
         });
 
+        console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} by=${user.email}`);
         return Response.json({ order });
     } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+        console.error('[POS] posCreateOrder error:', error);
+        return Response.json({ error: 'Order creation failed. Please try again.' }, { status: 500 });
     }
 });
