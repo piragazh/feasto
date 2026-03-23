@@ -28,12 +28,23 @@ export default function RefundManagement({ restaurantId }) {
     });
 
     const approveMutation = useMutation({
-        mutationFn: (orderId) => {
+        mutationFn: async (orderId) => {
             const order = refundRequests.find(o => o.id === orderId);
-            // Cap refund at original order total — never allow over-refund
             const requestedAmount = order?.refund_requested_amount || 0;
-            const approvedAmount = Math.min(requestedAmount, order?.total || requestedAmount);
-            if (approvedAmount <= 0) throw new Error('Refund amount must be greater than zero');
+
+            // Server-side validation: amount cap + item verification
+            const validation = await base44.functions.invoke('validateRefundAmount', {
+                orderId,
+                refundAmount: requestedAmount,
+                refundType: order?.refund_request_type,
+                refundItems: order?.refund_requested_items || []
+            });
+
+            if (!validation?.data?.valid) {
+                throw new Error(validation?.data?.error || 'Refund validation failed');
+            }
+
+            const approvedAmount = validation.data.approvedAmount;
             return base44.entities.Order.update(orderId, {
                 status: 'refunded',
                 refund_amount: approvedAmount,
