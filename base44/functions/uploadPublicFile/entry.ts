@@ -18,6 +18,28 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'No file provided' }, { status: 400 });
         }
 
+        // SECURITY: Allowlist safe file types only
+        const ALLOWED_TYPES = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+            'application/pdf',
+            'video/mp4', 'video/webm',
+            'audio/mpeg', 'audio/wav',
+            'text/plain', 'text/csv',
+            'application/json',
+        ];
+        const BLOCKED_EXTENSIONS = ['.html', '.htm', '.js', '.mjs', '.ts', '.php', '.py', '.sh', '.exe'];
+        const fileName = (file.name || '').toLowerCase();
+        const hasBlockedExt = BLOCKED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+        if (hasBlockedExt || (file.type && !ALLOWED_TYPES.includes(file.type))) {
+            return Response.json({ error: `File type not allowed: ${file.type || fileName}` }, { status: 400 });
+        }
+
+        // SECURITY: 50MB size limit
+        const MAX_SIZE = 50 * 1024 * 1024;
+        if (file.size && file.size > MAX_SIZE) {
+            return Response.json({ error: 'File too large (max 50MB)' }, { status: 400 });
+        }
+
         // Upload file to public folder
         const response = await base44.integrations.Core.UploadFile({
             file: file
