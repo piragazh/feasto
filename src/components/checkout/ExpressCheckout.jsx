@@ -25,17 +25,21 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
             },
             requestPayerName: true,
             requestPayerEmail: true,
+            requestPayerPhone: true,
         });
 
         pr.canMakePayment().then(result => {
             if (result) {
+                console.log('✅ Express checkout available:', result);
                 setPaymentRequest(pr);
                 setCanMakePayment(true);
             } else {
+                console.log('❌ Express checkout not available');
                 setCanMakePayment(false);
                 setPaymentRequest(null);
             }
-        }).catch(() => {
+        }).catch((err) => {
+            console.error('❌ Express checkout error:', err);
             setCanMakePayment(false);
             setPaymentRequest(null);
         });
@@ -43,11 +47,21 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
         pr.on('paymentmethod', async (ev) => {
             setIsProcessing(true);
             try {
-                const { error, paymentIntent } = await stripe.confirmCardPayment(
+                const { error, paymentIntent } = await stripe.confirmPayment({
+                    elements: undefined,
                     clientSecret,
-                    { payment_method: ev.paymentMethod.id },
-                    { handleActions: false }
-                );
+                    payment_method: ev.paymentMethod.id,
+                    redirect: 'if_required',
+                    confirmParams: {
+                        return_url: window.location.href,
+                        payment_method_data: {
+                            billing_details: {
+                                name: ev.payerName || undefined,
+                                email: ev.payerEmail || undefined,
+                            },
+                        },
+                    },
+                });
 
                 if (error) {
                     ev.complete('fail');
