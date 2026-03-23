@@ -93,6 +93,7 @@ export default function Checkout() {
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
+    const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Stable per-session key
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
