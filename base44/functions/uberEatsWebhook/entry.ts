@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -33,11 +33,13 @@ Deno.serve(async (req) => {
         const uberOrder = body.order || body;
         const uberOrderId = uberOrder.id || uberOrder.order_id || body.resource_id || `UE-${Date.now()}`;
 
-        // Deduplicate
+        // ── DEDUP: use a deterministic third_party_order_id ─────────────────
+        // Check BEFORE creating — rapid webhook retries from Uber Eats can race here.
+        // We also store third_party_order_id and rely on it as the dedup key.
         const existing = await base44.asServiceRole.entities.Order.filter({ third_party_order_id: uberOrderId });
         if (existing && existing.length > 0) {
-            console.log('Duplicate order, skipping:', uberOrderId);
-            return Response.json({ received: true, duplicate: true });
+            console.log(`[DEDUP] Duplicate Uber Eats order ${uberOrderId}, skipping creation`);
+            return Response.json({ received: true, duplicate: true, order_id: existing[0].id });
         }
 
         // Map items
@@ -88,12 +90,12 @@ Deno.serve(async (req) => {
                 ? `${uberOrder.eater.first_name || ''} ${uberOrder.eater.last_name || ''}`.trim()
                 : 'Uber Eats Customer',
             third_party_platform: 'uber_eats',
-            third_party_order_id: uberOrderId,
+            third_party_order_id: uberOrderId,  // dedup key — stored on create
             order_number: `UE-${String(uberOrderId).slice(-6).toUpperCase()}`,
         };
 
         const created = await base44.asServiceRole.entities.Order.create(mealDropOrder);
-        console.log('MealDrop order created:', created.id, 'from Uber Eats:', uberOrderId);
+        console.log(`✅ MealDrop order created: ${created.id} from Uber Eats: ${uberOrderId}`);
 
         return Response.json({ received: true, order_id: created.id });
     } catch (error) {

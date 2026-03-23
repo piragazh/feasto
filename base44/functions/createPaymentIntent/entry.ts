@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 import Stripe from 'npm:stripe';
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
@@ -7,7 +7,6 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         
-        // Allow both authenticated and guest users to create payment intents
         let user = null;
         try {
             user = await base44.auth.me();
@@ -15,7 +14,7 @@ Deno.serve(async (req) => {
             // Guest user - continue without authentication
         }
 
-        const { amount, currency = 'gbp', metadata = {}, orderId } = await req.json();
+        const { amount, currency = 'gbp', metadata = {}, orderId, idempotency_key } = await req.json();
 
         if (!amount || typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
             return Response.json({ error: 'Invalid amount' }, { status: 400 });
@@ -26,8 +25,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Amount exceeds maximum allowed (£500)' }, { status: 400 });
         }
 
-        // OPTIONAL: Validate amount against actual order if orderId provided
-        // (This is for post-order payment verification, but checkout creates payment BEFORE order)
+        // Validate amount against actual order if orderId provided
         if (orderId) {
             try {
                 const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
@@ -37,7 +35,6 @@ Deno.serve(async (req) => {
                 
                 const order = orders[0];
                 
-                // Verify amount matches order total (allow 0.01 difference for rounding)
                 if (Math.abs(order.total - amount) > 0.01) {
                     return Response.json({ 
                         error: 'Amount mismatch - payment amount does not match order total',
@@ -46,7 +43,6 @@ Deno.serve(async (req) => {
                     }, { status: 400 });
                 }
                 
-                // Verify order belongs to current user (if authenticated)
                 if (user && order.created_by !== user.email) {
                     return Response.json({ error: 'Unauthorized - order does not belong to you' }, { status: 403 });
                 }
@@ -56,20 +52,27 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Create a PaymentIntent with the order amount and currency
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(amount * 100), // Convert to pence
-            currency: currency,
-            automatic_payment_methods: {
-                enabled: true,
-                allow_redirects: 'never'
+        // Use idempotency key on Stripe to prevent double-charging on retries/double-clicks
+        // Falls back to a key derived from user+amount+orderId when not explicitly provided
+        const stripeIdempotencyKey = idempotency_key 
+            || `pi_${user?.email || 'guest'}_${orderId || 'noid'}_${Math.round(amount * 100)}`;
+
+        const paymentIntent = await stripe.paymentIntents.create(
+            {
+                amount: Math.round(amount * 100),
+                currency: currency,
+                automatic_payment_methods: {
+                    enabled: true,
+                    allow_redirects: 'never'
+                },
+                metadata: {
+                    user_email: user?.email || 'guest',
+                    order_id: orderId || 'none',
+                    ...metadata
+                }
             },
-            metadata: {
-                user_email: user?.email || 'guest',
-                order_id: orderId || 'none',
-                ...metadata
-            }
-        });
+            { idempotencyKey: stripeIdempotencyKey }
+        );
 
         return Response.json({
             clientSecret: paymentIntent.client_secret,
