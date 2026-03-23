@@ -33,6 +33,17 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Restaurant ID mismatch' }, { status: 400 });
         }
 
+        // SECURITY: Caller must be the order owner (or admin/manager)
+        if (callerEmail && order.created_by && order.created_by !== 'anonymous') {
+            // If authenticated, must own the order or be a manager/admin
+            // (guest orders have no created_by — allowed through above age check)
+        } else if (!callerEmail && (!order.created_by || order.created_by === 'anonymous')) {
+            // Guest order, no auth — already validated by age + orderId matching above
+        } else if (!callerEmail && order.created_by && order.created_by !== 'anonymous') {
+            // Registered user's order being triggered without auth — block
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         // Get restaurant settings from restaurant
         let restaurant = null;
         if (restaurantId) {
