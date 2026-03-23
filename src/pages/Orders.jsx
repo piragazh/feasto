@@ -39,6 +39,7 @@ const statusConfig = {
 };
 
 export default function Orders() {
+    useSEO({ title: 'My Orders', noindex: true });
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [reviewingOrder, setReviewingOrder] = useState(null);
