@@ -79,24 +79,65 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             const cfg = r?.printer_config || {};
             if (cfg.auto_print && r) {
                 brandNew.forEach(order => {
-                    // Try Bluetooth first (Printer A), fallback to browser print
-                    if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
-                        printerManager.printerA.printReceipt(order, r, cfg).catch(() => {
-                            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                        });
-                    } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
-                        printerManager.printerB.printReceipt(order, r, { ...cfg, ...cfg.printer_b_config }).catch(() => {
-                            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                        });
-                    } else {
-                        if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                    }
+                    autoPrintOrder(order, r, cfg);
                 });
             }
         }
 
         prevOrderIds.current = newIds;
     }, [allOrders]);
+
+    // Determine order channel for routing
+    const getOrderChannel = (order) => {
+        if (order.order_type === 'dine_in') return 'pos_order';
+        if (order.order_type === 'collection' || order.order_type === 'takeaway') return 'online_order';
+        // POS orders don't come through LiveOrders normally, so default to online_order
+        return 'online_order';
+    };
+
+    // Auto-print using centralized printer config with channel routing
+    const autoPrintOrder = async (order, restaurant, cfg) => {
+        const centralized = cfg.centralized_printers || [];
+        const channel = getOrderChannel(order);
+        const services = [printerManager.printerA, printerManager.printerB];
+
+        if (centralized.length > 0) {
+            // Find printers assigned to handle this order channel
+            const assignedPrinters = centralized.filter(p =>
+                (p.assigned_channels || []).includes(channel)
+            );
+            for (let i = 0; i < assignedPrinters.length; i++) {
+                const printerConfig = assignedPrinters[i];
+                // Find which slot index this printer is in
+                const slotIndex = centralized.indexOf(printerConfig);
+                const service = services[slotIndex] || printerManager.printerA;
+                if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
+                    if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+                    if (service.isConnected()) {
+                        service.printReceipt(order, restaurant, { ...cfg, bluetooth_printer: printerConfig.bluetooth_printer }).catch(() => {
+                            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                        });
+                        return;
+                    }
+                }
+            }
+            // No bluetooth connected — browser fallback
+            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+        } else {
+            // Legacy fallback
+            if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
+                printerManager.printerA.printReceipt(order, restaurant, cfg).catch(() => {
+                    if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                });
+            } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
+                printerManager.printerB.printReceipt(order, restaurant, { ...cfg, ...cfg.printer_b_config }).catch(() => {
+                    if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                });
+            } else {
+                if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+            }
+        }
+    };
 
     // Filter orders
     const orders = allOrders.filter(order => {
