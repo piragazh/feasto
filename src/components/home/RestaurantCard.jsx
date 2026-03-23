@@ -104,9 +104,11 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                     variant="ghost"
                     size="icon"
                     onClick={toggleFavorite}
+                    aria-label={isFavorite ? `Remove ${restaurant.name} from favourites` : `Add ${restaurant.name} to favourites`}
+                    aria-pressed={isFavorite}
                     className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white rounded-full shadow-md h-8 w-8 md:h-10 md:w-10"
                 >
-                    <Heart className={`h-4 w-4 md:h-5 md:w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+                    <Heart className={`h-4 w-4 md:h-5 md:w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} aria-hidden="true" />
                 </Button>
             )}
             <Link to={restaurantUrl}>
