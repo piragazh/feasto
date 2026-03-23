@@ -3,8 +3,13 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from 'lucide-react';
+import { useSEO } from '@/lib/useSEO';
 
 export default function TermsOfService() {
+    useSEO({
+        title: 'Terms of Service',
+        description: 'Read the MealDrop Terms of Service governing your use of our food delivery and restaurant ordering platform.',
+    });
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white border-b sticky top-0 z-10">
