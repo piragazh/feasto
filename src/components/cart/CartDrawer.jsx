@@ -226,23 +226,26 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                         : null;
                                                     removeFromCart(item.menu_item_id, customizationKey);
                                                 }}
+                                                aria-label={`Remove ${item.name} from cart`}
                                                 className="text-gray-400 hover:text-red-500 transition-colors"
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                <Trash2 className="h-4 w-4" aria-hidden="true" />
                                             </button>
-                                            <div className="flex items-center gap-2 bg-white rounded-full border px-1">
+                                            <div className="flex items-center gap-2 bg-white rounded-full border px-1" role="group" aria-label={`Quantity for ${item.name}`}>
                                                 <button
                                                     onClick={() => handleQuantityChange(item.menu_item_id, item.quantity - 1)}
+                                                    aria-label={`Decrease quantity of ${item.name}`}
                                                     className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
                                                 >
-                                                    <Minus className="h-3 w-3" />
+                                                    <Minus className="h-3 w-3" aria-hidden="true" />
                                                 </button>
-                                                <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                                                <span className="w-6 text-center font-medium text-sm" aria-live="polite" aria-atomic="true">{item.quantity}</span>
                                                 <button
                                                     onClick={() => handleQuantityChange(item.menu_item_id, item.quantity + 1)}
+                                                    aria-label={`Increase quantity of ${item.name}`}
                                                     className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
                                                 >
-                                                    <Plus className="h-3 w-3" />
+                                                    <Plus className="h-3 w-3" aria-hidden="true" />
                                                 </button>
                                             </div>
                                         </div>
