@@ -340,13 +340,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     ))}
                 </div>
 
-                {/* Reprint button — only show if printer configured */}
-                {restaurant?.printer_config?.bluetooth_printer?.id && (
+                {/* Reprint button — only show if a POS printer is configured */}
+                {hasPrinterForChannel(restaurant, 'pos_order') && (
                     <div className="mb-2">
                         <Button
                             size="sm"
                             onClick={async () => {
-                                const config = restaurant.printer_config;
                                 const orderData = {
                                     id: Date.now().toString(),
                                     created_date: new Date().toISOString(),
@@ -360,7 +359,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     notes: payments.length > 1 ? payments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : undefined,
                                 };
                                 try {
-                                    await printerService.printReceipt(orderData, restaurant, config);
+                                    await printWithCentralizedConfig(orderData, restaurant, 'pos_order');
                                     toast.success('Receipt printed');
                                 } catch (e) {
                                     toast.error('Print failed: ' + e.message);
