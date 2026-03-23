@@ -34,13 +34,20 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         base44.entities.Restaurant.filter({ id: restaurantId }).then(([r]) => {
             if (r) {
                 restaurantRef.current = r;
-                // Auto-connect printers if configured
+                // Auto-connect all configured bluetooth printers
                 const cfg = r.printer_config || {};
-                if (cfg.bluetooth_printer?.id) {
-                    printerManager.printerA.tryAutoConnect().catch(() => {});
-                }
-                if (cfg.printer_b_config?.bluetooth_printer?.id) {
-                    printerManager.printerB.tryAutoConnect().catch(() => {});
+                const centralized = cfg.centralized_printers || [];
+                const services = [printerManager.printerA, printerManager.printerB];
+                centralized.forEach((p, i) => {
+                    if (p.connection_type === 'bluetooth' && p.bluetooth_printer?.id && services[i]) {
+                        services[i].printerInfo = p.bluetooth_printer;
+                        services[i].tryAutoConnect().catch(() => {});
+                    }
+                });
+                // Legacy fallback
+                if (!centralized.length) {
+                    if (cfg.bluetooth_printer?.id) printerManager.printerA.tryAutoConnect().catch(() => {});
+                    if (cfg.printer_b_config?.bluetooth_printer?.id) printerManager.printerB.tryAutoConnect().catch(() => {});
                 }
             }
         }).catch(() => {});
