@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
                     );
                 }
                 
-                console.log('✅ Payment verified:', paymentIntentId);
+                console.log(`[PAYMENT] Verified intent=${paymentIntentId} amount=${paymentIntent.amount}`);
             } catch (stripeError) {
                 console.error('Stripe verification failed:', stripeError);
                 return new Response(
