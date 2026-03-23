@@ -136,7 +136,9 @@ export default function Home() {
                             searchQuery={searchQuery}
                             setSearchQuery={setSearchQuery}
                         />
+                        <label htmlFor="sort-by" className="sr-only">Sort restaurants by</label>
                         <select
+                            id="sort-by"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                             className="px-3 md:px-4 h-11 md:h-12 border rounded-xl bg-white text-sm md:text-base"
