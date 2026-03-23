@@ -67,6 +67,6 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error('Refund request error:', error);
-        return Response.json({ error: error.message }, { status: 500 });
+        return Response.json({ error: 'Refund request failed. Please try again.' }, { status: 500 });
     }
 });
