@@ -38,7 +38,13 @@ export default function BackupRestore() {
                 label: label.trim() || null,
             });
             const counts = res.data?.item_counts || {};
-            toast.success(`Backup created: ${counts.restaurants || 0} restaurants, ${counts.menuItems || 0} items, ${counts.promotions || 0} promotions`);
+            const summary = [
+                counts.restaurants ? `${counts.restaurants} restaurants` : '',
+                counts.menuItems ? `${counts.menuItems} items` : '',
+                counts.orders ? `${counts.orders} orders` : '',
+                counts.reviews ? `${counts.reviews} reviews` : '',
+            ].filter(Boolean).join(', ');
+            toast.success(`✓ Backup created: ${summary}`);
             setLabel('');
             queryClient.invalidateQueries({ queryKey: ['restaurant-backups'] });
         } catch (e) {
@@ -60,7 +66,13 @@ export default function BackupRestore() {
                 backup_id: backup.id,
             });
             const r = res.data?.restored || {};
-            toast.success(`Restored: ${r.restaurants || 0} restaurants, ${r.menuItems || 0} items, ${r.promotions || 0} promotions`);
+            const restored = [
+                r.restaurants ? `${r.restaurants} restaurants` : '',
+                r.menuItems ? `${r.menuItems} items` : '',
+                r.orders ? `${r.orders} orders (read-only)` : '',
+                r.errors?.length ? `⚠ ${r.errors.length} errors` : '',
+            ].filter(Boolean).join(', ');
+            toast.success(`✓ Restored: ${restored}`);
         } catch (e) {
             toast.error('Restore failed: ' + e.message);
         }
@@ -125,7 +137,10 @@ export default function BackupRestore() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <ShieldAlert className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        Backs up: Restaurant settings, Menu items, Promotions, Coupons, Meal Deals
+                        <div>
+                            <p className="font-medium text-gray-700">Backed up:</p>
+                            <p className="text-xs text-gray-600 mt-1">Restaurant settings, Menu items, Promotions, Coupons, Meal Deals, Orders (read-only), Reviews, Drivers</p>
+                        </div>
                     </div>
                     <Button
                         onClick={createBackup}
@@ -169,11 +184,9 @@ export default function BackupRestore() {
                                             </span>
                                             <span>by {backup.created_by}</span>
                                             {backup.item_counts && (
-                                                <span>
-                                                    {backup.item_counts.restaurants} restaurants ·{' '}
-                                                    {backup.item_counts.menuItems} items ·{' '}
-                                                    {backup.item_counts.promotions} promotions ·{' '}
-                                                    {backup.item_counts.coupons} coupons
+                                                <span className="text-xs space-y-1">
+                                                    <div>{backup.item_counts.restaurants || 0} restaurants · {backup.item_counts.menuItems || 0} items</div>
+                                                    <div>{backup.item_counts.orders || 0} orders · {backup.item_counts.reviews || 0} reviews</div>
                                                 </span>
                                             )}
                                         </div>
