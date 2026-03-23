@@ -258,6 +258,56 @@ Deno.serve(async (req) => {
         }
 
         // ============================================
+        // Enforce Minimum Order
+        // ============================================
+        if (orderData.order_type === 'delivery') {
+            const clientSubtotal = (orderData.items || []).reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+
+            // Check delivery zone minimum first
+            if (orderData.delivery_coordinates) {
+                const zones = await base44.asServiceRole.entities.DeliveryZone.filter({
+                    restaurant_id: orderData.restaurant_id,
+                    is_active: true
+                });
+                const pointInPolygon2 = (point, polygon) => {
+                    const [px, py] = point;
+                    let inside = false;
+                    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                        const [xi, yi] = polygon[i];
+                        const [xj, yj] = polygon[j];
+                        const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+                        if (intersect) inside = !inside;
+                    }
+                    return inside;
+                };
+                const lat = orderData.delivery_coordinates.lat;
+                const lng = orderData.delivery_coordinates.lng;
+                for (const zone of (zones || [])) {
+                    if (zone.coordinates?.length >= 3) {
+                        const polygon = zone.coordinates.map(c => [c.lng, c.lat]);
+                        if (pointInPolygon2([lng, lat], polygon) && zone.min_order_value > 0) {
+                            if (clientSubtotal < zone.min_order_value) {
+                                return new Response(
+                                    JSON.stringify({ error: `Minimum order for delivery to your area is £${zone.min_order_value.toFixed(2)}`, success: false }),
+                                    { status: 400 }
+                                );
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fall back to restaurant-level minimum
+            if (restaurant.minimum_order > 0 && clientSubtotal < restaurant.minimum_order) {
+                return new Response(
+                    JSON.stringify({ error: `Minimum order is £${restaurant.minimum_order.toFixed(2)}`, success: false }),
+                    { status: 400 }
+                );
+            }
+        }
+
+        // ============================================
         // Verify Cart Items Still Exist
         // ============================================
         if (!orderData.items || orderData.items.length === 0) {
