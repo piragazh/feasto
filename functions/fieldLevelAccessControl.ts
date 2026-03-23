@@ -77,13 +77,25 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
-        const { entityType, entity, isRestaurantManager, isRestaurantOwner } = await req.json();
+        const { entityType, entity } = await req.json();
 
         if (!entityType || !entity) {
             return new Response(
                 JSON.stringify({ error: 'Missing entityType or entity' }),
                 { status: 400 }
             );
+        }
+
+        // SECURITY: Verify manager status server-side — never trust client-supplied flags
+        let isRestaurantManager = false;
+        let isRestaurantOwner = false;
+        if (user.role !== 'admin') {
+            const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+                user_email: user.email,
+                is_active: true
+            });
+            isRestaurantManager = managers && managers.length > 0;
+            isRestaurantOwner = isRestaurantManager;
         }
 
         // Apply field-level filtering

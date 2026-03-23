@@ -42,7 +42,12 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404 });
         }
 
-        const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+        let orders;
+        try {
+            orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+        } catch (_) {
+            return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404 });
+        }
         if (!orders?.length) {
             return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404 });
         }
