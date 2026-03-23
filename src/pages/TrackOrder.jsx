@@ -36,6 +36,7 @@ const statusConfig = {
 };
 
 export default function TrackOrder() {
+    useSEO({ title: 'Track Order', noindex: true });
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('id');
     const [showRatingDialog, setShowRatingDialog] = useState(false);
