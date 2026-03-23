@@ -163,7 +163,7 @@ export default function Home() {
                 {/* Restaurants List */}
                 <div className="mb-4 md:mb-6">
                     <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                        {selectedCuisine || searchQuery || menuItemSearch ? 'Search Results' : 'All Restaurants'}
+                        {selectedCuisine || searchQuery ? 'Search Results' : 'All Restaurants'}
                     </h2>
                     <p className="text-sm md:text-base text-gray-600">
                         {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
