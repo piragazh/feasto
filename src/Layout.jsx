@@ -52,10 +52,10 @@ const initializeGTM = () => {
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${gtmId}`;
     script.onload = () => {
-        console.log('GTM script loaded successfully');
+        if (import.meta.env.DEV) console.log('GTM script loaded successfully');
     };
     script.onerror = () => {
-        console.error('Failed to load GTM script');
+        if (import.meta.env.DEV) console.error('Failed to load GTM script');
     };
     document.head.insertBefore(script, document.head.firstChild);
 };
