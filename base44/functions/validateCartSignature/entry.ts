@@ -5,7 +5,10 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
-const CART_SIGNING_SECRET = Deno.env.get('CART_SIGNING_SECRET') || 'default-dev-secret';
+const CART_SIGNING_SECRET = Deno.env.get('CART_SIGNING_SECRET');
+if (!CART_SIGNING_SECRET) {
+    console.error('[SECURITY] CART_SIGNING_SECRET is not set — cart validation disabled');
+}
 
 /**
  * Generate signature for cart data (used by frontend)
