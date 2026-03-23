@@ -29,26 +29,26 @@ export default function HeroSection({ searchQuery, setSearchQuery, onLocationCha
                     </p>
                     
                     <div className="bg-white rounded-2xl p-2 shadow-2xl shadow-orange-600/30">
-                        <div className="flex flex-col md:flex-row gap-2">
-                            <div className="flex-1">
-                                <LocationPicker 
-                                    onLocationSelect={onLocationChange}
-                                    className="[&>div]:border-0 [&>div]:bg-gray-50 [&>div]:rounded-xl [&>button]:h-12 [&>button]:rounded-xl"
-                                />
+                        <div className="flex flex-col gap-2">
+                            <LocationPicker 
+                                onLocationSelect={onLocationChange}
+                                className="[&>div]:border-0 [&>div]:bg-gray-50 [&>div]:rounded-xl [&>button]:h-12 [&>button]:rounded-xl"
+                            />
+                            <div className="flex gap-2">
+                                <div className="flex-1 relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
+                                    <Input
+                                        type="text"
+                                        placeholder="Search restaurants..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-12 h-12 border-0 bg-gray-50 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-orange-500"
+                                    />
+                                </div>
+                                <Button className="h-12 px-8 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] shadow-lg shrink-0">
+                                    Find Food
+                                </Button>
                             </div>
-                            <div className="flex-1 relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
-                                <Input
-                                    type="text"
-                                    placeholder="Search restaurants..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-12 h-12 border-0 bg-gray-50 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-orange-500"
-                                />
-                            </div>
-                            <Button className="h-12 px-8 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] shadow-lg">
-                                Find Food
-                            </Button>
                         </div>
                     </div>
                 </div>
