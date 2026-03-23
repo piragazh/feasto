@@ -362,7 +362,45 @@ Deno.serve(async (req) => {
         // Re-derive subtotal and total from authoritative menu prices (not client values)
         const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
         const deliveryFee = orderData.delivery_fee || 0;
-        const discount = orderData.discount || 0;
+
+        // Validate coupons server-side if any were applied
+        let verifiedDiscount = 0;
+        const clientDiscount = orderData.discount || 0;
+
+        if (clientDiscount > 0 && orderData.coupon_codes) {
+            const couponCodes = orderData.coupon_codes.split(',').map(c => c.trim()).filter(Boolean);
+            for (const code of couponCodes) {
+                const coupons = await base44.asServiceRole.entities.Coupon.filter({ code });
+                if (coupons?.length > 0) {
+                    const coupon = coupons[0];
+                    const now = new Date();
+                    const isActive = coupon.is_active;
+                    const notExpired = !coupon.valid_until || new Date(coupon.valid_until) >= now;
+                    const notYetStarted = coupon.valid_from && new Date(coupon.valid_from) > now;
+                    const withinUsage = !coupon.usage_limit || coupon.usage_count < coupon.usage_limit;
+                    const meetsMinimum = !coupon.minimum_order || serverSubtotal >= coupon.minimum_order;
+                    const forThisRestaurant = !coupon.restaurant_id || coupon.restaurant_id === orderData.restaurant_id;
+
+                    if (isActive && notExpired && !notYetStarted && withinUsage && meetsMinimum && forThisRestaurant) {
+                        let d = 0;
+                        if (coupon.discount_type === 'percentage') {
+                            d = (serverSubtotal * coupon.discount_value) / 100;
+                            if (coupon.max_discount) d = Math.min(d, coupon.max_discount);
+                        } else {
+                            d = coupon.discount_value || 0;
+                        }
+                        verifiedDiscount += d;
+                    }
+                }
+            }
+            // Cap discount at subtotal
+            verifiedDiscount = Math.min(verifiedDiscount, serverSubtotal);
+        } else {
+            // No coupons: allow promotion discount but cap it at 50% of subtotal as sanity check
+            verifiedDiscount = Math.min(clientDiscount, serverSubtotal * 0.5);
+        }
+
+        const discount = verifiedDiscount;
         const serverTotal = Math.max(0, serverSubtotal + deliveryFee - discount);
 
         // Reject if client total deviates by more than £0.50 (rounding tolerance)
