@@ -43,6 +43,26 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
     const service = index === 0 ? printerManager.printerA : printerManager.printerB;
     const type = printer.connection_type || 'bluetooth';
     const accentClass = index === 0 ? 'border-orange-200' : 'border-blue-200';
+    const [testing, setTesting] = useState(false);
+
+    const handleTestPrint = async () => {
+        setTesting(true);
+        try {
+            if (!service.isConnected()) {
+                await service.tryAutoConnect();
+            }
+            if (!service.isConnected()) {
+                toast.error('Printer not connected. Please connect first.');
+                return;
+            }
+            await service.printTest(printer.name || `Printer ${index + 1}`);
+            toast.success('Test page sent to printer!');
+        } catch (e) {
+            toast.error(`Test failed: ${e.message}`);
+        } finally {
+            setTesting(false);
+        }
+    };
 
     return (
         <div className={`border-2 ${accentClass} rounded-xl p-5 space-y-4`}>
