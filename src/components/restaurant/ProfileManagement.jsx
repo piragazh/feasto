@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Save, Upload, Plus, Trash2, Award, BookOpen, Share2, Image as ImageIcon } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
 import { toast } from 'sonner';
 
 export default function ProfileManagement({ restaurantId }) {
@@ -25,6 +26,7 @@ export default function ProfileManagement({ restaurantId }) {
     const [formData, setFormData] = useState({
         about_us: '',
         our_story: '',
+        is_halal: false,
         gallery_images: [],
         social_media: {
             facebook: '',
@@ -49,6 +51,7 @@ export default function ProfileManagement({ restaurantId }) {
             setFormData({
                 about_us: restaurant.about_us || '',
                 our_story: restaurant.our_story || '',
+                is_halal: restaurant.is_halal || false,
                 gallery_images: restaurant.gallery_images || [],
                 social_media: restaurant.social_media || {
                     facebook: '',
@@ -131,6 +134,7 @@ export default function ProfileManagement({ restaurantId }) {
         updateMutation.mutate({
             about_us: formData.about_us,
             our_story: formData.our_story,
+            is_halal: formData.is_halal,
             gallery_images: formData.gallery_images,
             social_media: formData.social_media,
             awards_certifications: formData.awards_certifications
@@ -143,6 +147,34 @@ export default function ProfileManagement({ restaurantId }) {
 
     return (
         <div className="space-y-6">
+            {/* Halal Certification */}
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-xl">☪️</div>
+                            <div>
+                                <p className="font-semibold text-gray-900">Halal Certified</p>
+                                <p className="text-sm text-gray-500">Display a Halal badge on your restaurant page</p>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={formData.is_halal}
+                            onCheckedChange={(checked) => setFormData({ ...formData, is_halal: checked })}
+                        />
+                    </div>
+                    {formData.is_halal && (
+                        <div className="mt-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                            <span className="text-2xl">☪️</span>
+                            <div>
+                                <p className="font-bold text-green-800 text-sm">HALAL</p>
+                                <p className="text-xs text-green-600">This badge will appear on your restaurant page</p>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* About Us */}
             <Card>
                 <CardHeader>

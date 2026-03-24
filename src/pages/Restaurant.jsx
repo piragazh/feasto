@@ -961,6 +961,11 @@ export default function Restaurant() {
                                     {restaurant.cuisine_type && (
                                         <Badge className="bg-white/20 backdrop-blur-sm text-white border border-white/30 text-xs">{restaurant.cuisine_type}</Badge>
                                     )}
+                                    {restaurant.is_halal && (
+                                        <Badge className="bg-green-600/90 text-white text-xs font-bold border border-green-400/40 flex items-center gap-1">
+                                            ☪️ Halal
+                                        </Badge>
+                                    )}
                                     {restaurant.special_offers && restaurant.special_offers.length > 0 && (
                                         <Badge className="bg-orange-500/90 text-white text-xs animate-pulse">
                                             🔥 Special Offer
