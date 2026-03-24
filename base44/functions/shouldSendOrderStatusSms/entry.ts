@@ -40,11 +40,14 @@ Deno.serve(async (req) => {
             'preparing': 'preparing',
             'out_for_delivery': 'out_for_delivery',
             'delivered': 'delivered',
-            'ready_for_collection': 'ready_for_collection'
+            'ready_for_collection': 'ready_for_collection',
+            'cancelled': 'cancelled'  // rejections always send if SMS is enabled
         };
 
+        // 'cancelled' always sends if master SMS toggle is on (no separate toggle needed)
         const settingKey = statusMap[status];
-        const shouldSend = smsSettings.enabled && (settingKey ? smsSettings[settingKey] : false);
+        const isCancellation = status === 'cancelled';
+        const shouldSend = smsSettings.enabled && (isCancellation ? true : (settingKey ? smsSettings[settingKey] : false));
 
         return Response.json({ 
             shouldSend,
