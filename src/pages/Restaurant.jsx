@@ -916,67 +916,75 @@ export default function Restaurant() {
                 `}</style>
             )}
             {/* Hero */}
-            <div className="relative h-72 md:h-80 -mx-4 md:mx-0">
+            <div className="relative h-64 md:h-80 -mx-4 md:mx-0">
                 <img
                     src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200'}
                     alt={restaurant.name}
-                    className="w-full h-full object-cover md:rounded-none"
+                    className="w-full h-full object-cover"
                     loading="eager"
                     fetchpriority="high"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                
+                {/* Stronger gradient on mobile for readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+
+                {/* Top action buttons */}
                 <div className="absolute top-4 left-4 md:left-8 flex gap-2 z-10">
                     <Link to={createPageUrl('Home')}>
-                        <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white shadow-lg">
+                        <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white shadow-lg h-10 w-10">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                     </Link>
                     <Button 
                         size="icon" 
                         variant="secondary" 
-                        className="rounded-full bg-white/90 hover:bg-white shadow-lg"
+                        className="rounded-full bg-white/90 hover:bg-white shadow-lg h-10 w-10"
                         onClick={() => setShowInfoDialog(true)}
                     >
                         <Info className="h-5 w-5" />
                     </Button>
                 </div>
-                
+
+                {/* Hero content */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
                     <div className="max-w-4xl mx-auto">
-                        <div className="flex items-start gap-4 mb-3">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Badge className="bg-white/90 text-gray-800">{restaurant.cuisine_type}</Badge>
-                                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
-                                        <Badge className="bg-orange-500 text-white animate-pulse">
-                                            Special Offers Available
-                                        </Badge>
-                                    )}
-                                </div>
-                                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{restaurant.name}</h1>
-                            </div>
+                        {/* Logo + name row */}
+                        <div className="flex items-end gap-3 mb-3">
                             {restaurant.logo_url && (
                                 <img 
                                     src={restaurant.logo_url} 
                                     alt={`${restaurant.name} logo`}
-                                    className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover bg-white border-2 border-white/20 shadow-lg"
+                                    className="w-14 h-14 md:w-20 md:h-20 rounded-2xl object-cover border-2 border-white/30 shadow-xl flex-shrink-0"
                                 />
                             )}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                    {restaurant.cuisine_type && (
+                                        <Badge className="bg-white/20 backdrop-blur-sm text-white border border-white/30 text-xs">{restaurant.cuisine_type}</Badge>
+                                    )}
+                                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                                        <Badge className="bg-orange-500/90 text-white text-xs animate-pulse">
+                                            🔥 Special Offer
+                                        </Badge>
+                                    )}
+                                </div>
+                                <h1 className="text-2xl md:text-4xl font-extrabold text-white leading-tight drop-shadow-lg">{restaurant.name}</h1>
+                            </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-4 text-white/90 clear-both">
-                            <div className="flex items-center gap-1">
-                                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                                <span className="font-semibold">{restaurant.rating?.toFixed(1) || '4.5'}</span>
-                                <span>({restaurant.review_count || 0} reviews)</span>
+
+                        {/* Stats pills */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                                <span className="text-white font-semibold text-sm">{restaurant.rating?.toFixed(1) || '4.5'}</span>
+                                <span className="text-white/70 text-xs">({restaurant.review_count || 0})</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{restaurant.delivery_time || '25-35 min'}</span>
+                            <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
+                                <Clock className="h-4 w-4 text-white/80 flex-shrink-0" />
+                                <span className="text-white text-sm">{restaurant.delivery_time || '25-35 min'}</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <Bike className="h-4 w-4" />
-                                <span>{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)} delivery` : 'Free delivery'}</span>
+                            <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
+                                <Bike className="h-4 w-4 text-white/80 flex-shrink-0" />
+                                <span className="text-white text-sm">{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free delivery'}</span>
                             </div>
                         </div>
                     </div>
