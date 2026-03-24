@@ -152,7 +152,7 @@ export default function ProfileManagement({ restaurantId }) {
                 <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-xl">☪️</div>
+                            <img src="https://media.base44.com/images/public/694f32ea1bcdfa212c621404/868686656_IMG_2995.jpg" alt="Halal" className="w-10 h-10 rounded-full object-cover" />
                             <div>
                                 <p className="font-semibold text-gray-900">Halal Certified</p>
                                 <p className="text-sm text-gray-500">Display a Halal badge on your restaurant page</p>
@@ -165,11 +165,8 @@ export default function ProfileManagement({ restaurantId }) {
                     </div>
                     {formData.is_halal && (
                         <div className="mt-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                            <span className="text-2xl">☪️</span>
-                            <div>
-                                <p className="font-bold text-green-800 text-sm">HALAL</p>
-                                <p className="text-xs text-green-600">This badge will appear on your restaurant page</p>
-                            </div>
+                            <img src="https://media.base44.com/images/public/694f32ea1bcdfa212c621404/868686656_IMG_2995.jpg" alt="Halal" className="w-10 h-10 rounded-full object-cover" />
+                            <p className="text-xs text-green-600">This badge will appear on your restaurant page</p>
                         </div>
                     )}
                 </CardContent>

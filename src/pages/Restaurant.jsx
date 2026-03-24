@@ -962,9 +962,11 @@ export default function Restaurant() {
                                         <Badge className="bg-white/20 backdrop-blur-sm text-white border border-white/30 text-xs">{restaurant.cuisine_type}</Badge>
                                     )}
                                     {restaurant.is_halal && (
-                                        <Badge className="bg-green-600/90 text-white text-xs font-bold border border-green-400/40 flex items-center gap-1">
-                                            ☪️ Halal
-                                        </Badge>
+                                        <img
+                                            src="https://media.base44.com/images/public/694f32ea1bcdfa212c621404/868686656_IMG_2995.jpg"
+                                            alt="Halal Certified"
+                                            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                                        />
                                     )}
                                     {restaurant.special_offers && restaurant.special_offers.length > 0 && (
                                         <Badge className="bg-orange-500/90 text-white text-xs animate-pulse">
