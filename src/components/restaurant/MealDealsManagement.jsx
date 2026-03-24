@@ -381,19 +381,25 @@ export default function MealDealsManagement({ restaurantId }) {
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <Label className="text-xs">How many?</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            max="10"
-                                                            value={rule.quantity}
-                                                            onChange={(e) => {
-                                                                const newRules = [...formData.category_rules];
-                                                                newRules[idx].quantity = parseInt(e.target.value) || 1;
-                                                                setFormData({ ...formData, category_rules: newRules });
-                                                            }}
-                                                            placeholder="e.g. 2"
-                                                        />
+                                                       <Label className="text-xs">How many?</Label>
+                                                       <Input
+                                                           type="number"
+                                                           min="1"
+                                                           value={rule.quantity}
+                                                           onChange={(e) => {
+                                                               const newRules = [...formData.category_rules];
+                                                               newRules[idx].quantity = e.target.value === '' ? '' : parseInt(e.target.value);
+                                                               setFormData({ ...formData, category_rules: newRules });
+                                                           }}
+                                                           onBlur={(e) => {
+                                                               if (!e.target.value || parseInt(e.target.value) < 1) {
+                                                                   const newRules = [...formData.category_rules];
+                                                                   newRules[idx].quantity = 1;
+                                                                   setFormData({ ...formData, category_rules: newRules });
+                                                               }
+                                                           }}
+                                                           placeholder="e.g. 2"
+                                                       />
                                                     </div>
                                                 </div>
                                                 <div>
@@ -473,16 +479,23 @@ export default function MealDealsManagement({ restaurantId }) {
                                                 ))}
                                             </select>
                                             <Input
-                                                type="number"
-                                                min="1"
-                                                value={item.quantity}
-                                                onChange={(e) => {
-                                                    const newItems = [...formData.items];
-                                                    newItems[idx].quantity = parseInt(e.target.value) || 1;
-                                                    setFormData({ ...formData, items: newItems });
-                                                }}
-                                                className="w-16"
-                                                placeholder="Qty"
+                                               type="number"
+                                               min="1"
+                                               value={item.quantity}
+                                               onChange={(e) => {
+                                                   const newItems = [...formData.items];
+                                                   newItems[idx].quantity = e.target.value === '' ? '' : parseInt(e.target.value);
+                                                   setFormData({ ...formData, items: newItems });
+                                               }}
+                                               onBlur={(e) => {
+                                                   if (!e.target.value || parseInt(e.target.value) < 1) {
+                                                       const newItems = [...formData.items];
+                                                       newItems[idx].quantity = 1;
+                                                       setFormData({ ...formData, items: newItems });
+                                                   }
+                                               }}
+                                               className="w-16"
+                                               placeholder="Qty"
                                             />
                                             <Button
                                                 type="button"
