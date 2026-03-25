@@ -241,12 +241,13 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             const order = allOrders.find(o => o.id === orderId);
             if (!order?.phone) return;
 
-            // Check restaurant SMS settings before sending
-            const smsCheck = await base44.functions.invoke('shouldSendOrderStatusSms', {
+            // Check which channels are enabled for this status
+            const checkResult = await base44.functions.invoke('shouldSendOrderStatusNotification', {
                 restaurantId,
                 status
             });
-            if (!smsCheck?.data?.shouldSend) return;
+            const { shouldSendSms, shouldSendWhatsApp } = checkResult?.data || {};
+            if (!shouldSendSms && !shouldSendWhatsApp) return;
 
             const orderLabel = order.order_type === 'collection' && order.order_number 
                 ? order.order_number 
@@ -264,16 +265,30 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
             const message = statusMessages[status] || `Order ${orderLabel} status updated.`;
             
-            await base44.functions.invoke('sendSMS', {
-                to: order.phone,
-                message,
-                orderId: order.id,
-                restaurantId,
-                restaurantName: order.restaurant_name || undefined,
-                smsType: 'customer_notification',
-            });
+            // Send via WhatsApp if enabled
+            if (shouldSendWhatsApp) {
+                await base44.functions.invoke('sendWhatsAppCustomer', {
+                    to: order.phone,
+                    message,
+                    orderId: order.id,
+                    restaurantId,
+                    restaurantName: order.restaurant_name || undefined,
+                });
+            }
+
+            // Send via SMS if enabled
+            if (shouldSendSms) {
+                await base44.functions.invoke('sendSMS', {
+                    to: order.phone,
+                    message,
+                    orderId: order.id,
+                    restaurantId,
+                    restaurantName: order.restaurant_name || undefined,
+                    smsType: 'customer_notification',
+                });
+            }
         } catch (error) {
-            console.error('SMS notification error:', error);
+            console.error('Customer notification error:', error);
         }
     };
 
@@ -339,7 +354,7 @@ Provide only the time range (e.g., "25-30 min").`;
             }
             updateOrderMutation.mutate({ orderId, status: newStatus, extraFields: { actual_delivery_time: new Date().toISOString() } });
             const statusLabels = { delivered: 'Order delivered', collected: 'Order collected' };
-            toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
+            toast.success(`${statusLabels[newStatus]} - Customer notified`);
             return;
         }
 

@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer, TestTube, Info } from 'lucide-react';
+import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer, TestTube, Info, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 import BluetoothPrinterManager from './BluetoothPrinterManager';
 import { printerService } from './PrinterService';
 import InfoSectionSettings from './InfoSectionSettings';
+import SmsNotificationSettings from './SmsNotificationSettings';
+import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -365,6 +367,13 @@ export default function RestaurantSettings({ restaurantId }) {
                     <Info className="h-4 w-4 mr-2" />
                     Info Section
                 </Button>
+                <Button
+                    variant={activeSection === 'notifications' ? 'default' : 'outline'}
+                    onClick={() => setActiveSection('notifications')}
+                >
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notifications
+                </Button>
             </div>
 
             {activeSection === 'profile' && (
@@ -373,6 +382,23 @@ export default function RestaurantSettings({ restaurantId }) {
 
             {activeSection === 'info' && (
                 <InfoSectionSettings restaurantId={restaurantId} initialData={restaurant} />
+            )}
+
+            {activeSection === 'notifications' && (
+                <div className="space-y-6">
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        <strong>💡 Tip:</strong> You can enable both SMS and WhatsApp independently for different status updates. 
+                        If both are enabled for the same status, the customer will receive notifications on both channels.
+                    </div>
+                    <SmsNotificationSettings
+                        restaurantId={restaurantId}
+                        currentSettings={restaurant?.sms_notification_settings}
+                    />
+                    <WhatsAppNotificationSettings
+                        restaurantId={restaurantId}
+                        currentSettings={restaurant?.whatsapp_notification_settings}
+                    />
+                </div>
             )}
 
             {activeSection === 'general' && (
