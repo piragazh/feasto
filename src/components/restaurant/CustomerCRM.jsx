@@ -571,6 +571,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                         targetSegment={targetSegment}
                         segmentConfig={segmentConfig}
                         restaurantName={restaurantName}
+                        restaurantId={restaurantId}
                     />
                 </TabsContent>
 

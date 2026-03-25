@@ -24,7 +24,7 @@ const AI_TEMPLATES = [
     { label: 'Upsell Bundle', goal: 'upsell', prompt: 'Write a promotional message about a food bundle deal — encouraging customers to add sides, drinks or desserts to their order.' },
 ];
 
-export default function CRMCampaignDialog({ open, onClose, targetSegment, segmentConfig, restaurantName, coupon }) {
+export default function CRMCampaignDialog({ open, onClose, targetSegment, segmentConfig, restaurantName, coupon, restaurantId }) {
     const [channel, setChannel] = useState('email');
     const [offerType, setOfferType] = useState(() => {
         if (!coupon) return 'message';
@@ -150,6 +150,7 @@ Make it personal, action-oriented, and on-brand.`;
                 subject,
                 htmlBody: channel === 'email' ? buildHtmlEmail() : undefined,
                 textBody,
+                restaurant_id: restaurantId,
             });
 
             toast.success(`✅ Sent to ${result.data?.sent || 0} customers${result.data?.failed > 0 ? `, ${result.data.failed} failed` : ''}`);
