@@ -56,8 +56,7 @@ Deno.serve(async (req) => {
 
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-        // Use dedicated WhatsApp number if set, otherwise fall back to Twilio sandbox
-        const twilioPhone = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || '+14155238886';
+        const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER');
 
         if (!accountSid || !authToken || !twilioPhone) {
             // Simulate — log without sending
