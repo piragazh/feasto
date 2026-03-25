@@ -85,12 +85,36 @@ Deno.serve(async (req) => {
                 if (data.error_code) {
                     results.failed++;
                     results.errors.push({ contact: r.phone, error: data.message });
+                    await base44.asServiceRole.entities.SmsLog.create({
+                        restaurant_id,
+                        to: r.phone,
+                        message: textBody,
+                        status: 'failed',
+                        error_details: `${data.error_code}: ${data.message}`,
+                        type: 'other'
+                    });
                 } else {
                     results.sent++;
+                    await base44.asServiceRole.entities.SmsLog.create({
+                        restaurant_id,
+                        to: r.phone,
+                        message: textBody,
+                        status: 'sent',
+                        message_sid: data.sid,
+                        type: 'other'
+                    });
                 }
             } catch (e) {
                 results.failed++;
                 results.errors.push({ contact: r.phone, error: e.message });
+                await base44.asServiceRole.entities.SmsLog.create({
+                    restaurant_id,
+                    to: r.phone,
+                    message: textBody,
+                    status: 'failed',
+                    error_details: e.message,
+                    type: 'other'
+                });
             }
         }
     } else {
