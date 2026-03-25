@@ -68,7 +68,14 @@ export default function Layout({ children, currentPageName }) {
     const [customDomainChecked, setCustomDomainChecked] = useState(false);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
-    const [isCheckingDomain, setIsCheckingDomain] = useState(true);
+    // Only show domain-check spinner on actual custom domains, not on platform domains
+    const isPlatformDomain = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname.includes('base44') ||
+        /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) ||
+        window.location.hostname.includes('127.0.0.1')
+    );
+    const [isCheckingDomain, setIsCheckingDomain] = useState(!isPlatformDomain);
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
@@ -310,21 +317,31 @@ export default function Layout({ children, currentPageName }) {
                 return;
             }
 
-            // Fetch all restaurants to check for custom domain match
-            const restaurants = await base44.entities.Restaurant.list();
+            // Check sessionStorage cache first to avoid fetching all restaurants
+            const cached = sessionStorage.getItem('customDomainRestaurantId');
+            const cachedDomain = sessionStorage.getItem('customDomainCheckedFor');
+            if (cached && cachedDomain === currentDomain) {
+                setCustomDomainRestaurantId(cached);
+                setCustomDomainChecked(true);
+                setIsCheckingDomain(false);
+                return;
+            }
 
-            const domainRestaurant = restaurants.find(r => 
-                r.custom_domain && 
-                r.domain_verified && 
-                r.custom_domain.toLowerCase() === currentDomain.toLowerCase()
-            );
+            // Fetch only restaurants with custom domains (filter server-side)
+            const restaurants = await base44.entities.Restaurant.filter({
+                custom_domain: currentDomain,
+                domain_verified: true
+            });
+
+            const domainRestaurant = restaurants?.[0] || null;
 
             if (domainRestaurant) {
                 setCustomDomainRestaurantId(domainRestaurant.id);
-                // Store in sessionStorage BEFORE anything renders
                 sessionStorage.setItem('customDomainRestaurantId', domainRestaurant.id);
+                sessionStorage.setItem('customDomainCheckedFor', currentDomain);
             } else {
                 sessionStorage.removeItem('customDomainRestaurantId');
+                sessionStorage.setItem('customDomainCheckedFor', currentDomain);
             }
 
             setCustomDomainChecked(true);
