@@ -16,7 +16,8 @@ import { useRealtimeETA } from '@/components/tracking/ETACalculator';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverActiveDelivery({ order, driver, onComplete }) {
-    const [currentLocation, setCurrentLocation] = useState(driver?.current_location || null);
+    // Use parent-tracked location (from watchPosition in DriverApp) — no duplicate GPS calls
+    const currentLocation = driver?.current_location || null;
     const [showChat, setShowChat] = useState(false);
     const [messageText, setMessageText] = useState('');
     const [showProofDialog, setShowProofDialog] = useState(false);
@@ -35,36 +36,11 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
         order.id
     );
 
+    // Push driver location into the order record so restaurant/customer can see it
     useEffect(() => {
-        // Update driver location every 10 seconds
-        const locationInterval = setInterval(() => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const newLocation = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-                        setCurrentLocation(newLocation);
-                        
-                        // Update driver location in database
-                        base44.entities.Driver.update(driver.id, {
-                            current_location: newLocation
-                        });
-                        
-                        // Update order with driver location
-                        base44.entities.Order.update(order.id, {
-                            driver_location: newLocation
-                        });
-                    },
-                    (error) => console.error('Location error:', error),
-                    { enableHighAccuracy: true }
-                );
-            }
-        }, 10000);
-
-        return () => clearInterval(locationInterval);
-    }, [driver.id, order.id]);
+        if (!currentLocation || !order?.id) return;
+        base44.entities.Order.update(order.id, { driver_location: currentLocation }).catch(() => {});
+    }, [currentLocation?.lat, currentLocation?.lng, order?.id]);
 
     const { data: messages = [] } = useQuery({
         queryKey: ['driver-messages', order.id],
@@ -314,20 +290,25 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="space-y-2">
-                        <Button
-                            onClick={openNavigation}
-                            variant="outline"
-                            className="w-full"
-                        >
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button onClick={openNavigation} variant="outline" className="col-span-2">
                             <Navigation className="h-4 w-4 mr-2" />
-                            Open Navigation
+                            Open Navigation in Maps
                         </Button>
+                        
+                        {order.phone && (
+                            <a href={`tel:${order.phone}`} className="contents">
+                                <Button variant="outline" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
+                                    <Phone className="h-4 w-4 mr-2" />
+                                    Call Customer
+                                </Button>
+                            </a>
+                        )}
                         
                         <Button
                             onClick={() => setShowChat(true)}
                             variant="outline"
-                            className="w-full"
+                            className={`w-full border-indigo-300 text-indigo-700 hover:bg-indigo-50 ${!order.phone ? 'col-span-2' : ''}`}
                         >
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Message Restaurant
@@ -335,7 +316,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                         
                         <Button
                             onClick={() => setShowProofDialog(true)}
-                            className="w-full bg-green-600 hover:bg-green-700"
+                            className="w-full bg-green-600 hover:bg-green-700 col-span-2"
                         >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Complete Delivery

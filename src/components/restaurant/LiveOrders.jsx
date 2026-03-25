@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
+import DriverLocationMap from '@/components/driver/DriverLocationMap';
 
 export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [rejectingOrder, setRejectingOrder] = useState(null);
@@ -970,6 +971,21 @@ Provide only the time range (e.g., "25-30 min").`;
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* Live driver map for out_for_delivery orders */}
+                                        {order.status === 'out_for_delivery' && (
+                                            <div className="mt-2">
+                                                <p className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse inline-block" />
+                                                    Live Driver Location
+                                                </p>
+                                                <DriverLocationMap
+                                                    driverLocation={order.driver_location}
+                                                    deliveryCoords={order.delivery_coordinates}
+                                                    height="180px"
+                                                />
+                                            </div>
+                                        )}
 
                                         <Separator />
 

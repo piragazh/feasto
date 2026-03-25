@@ -83,71 +83,87 @@ export default function DriverCommunication({ driverId }) {
         );
     }
 
+    const QUICK_REPLIES = [
+        "I've picked up the order, on my way!",
+        "Running slightly late, approx 5 mins.",
+        "Order is ready for pickup.",
+        "I'm outside the restaurant.",
+    ];
+
     return (
-        <Card className="h-[600px] flex flex-col overflow-hidden">
-            <CardHeader className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+        <Card className="flex flex-col overflow-hidden" style={{ height: '560px' }}>
+            <CardHeader className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-2">
-                            <MessageSquare className="h-5 w-5 text-blue-600" />
-                            <CardTitle className="text-blue-900">{selectedOrder.restaurant_name}</CardTitle>
+                            <MessageSquare className="h-4 w-4 text-blue-600" />
+                            <CardTitle className="text-blue-900 text-base">{selectedOrder.restaurant_name}</CardTitle>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">Order #{selectedOrder.id.slice(-6)}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Order #{selectedOrder.id.slice(-6)}</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedOrder(null)}>
-                        Back
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedOrder(null)}>Back</Button>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 p-4 overflow-y-auto bg-gray-50 space-y-3">
-                    {messages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-                                <MessageSquare className="h-8 w-8 text-blue-500" />
-                            </div>
-                            <p className="text-gray-600 font-medium">No messages yet</p>
-                            <p className="text-sm text-gray-500 mt-1">Start the conversation with the restaurant</p>
-                        </div>
-                    ) : (
-                        messages.map((msg) => (
-                            <div
-                                key={msg.id}
-                                className={`flex ${msg.sender_type === 'driver' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div
-                                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
-                                        msg.sender_type === 'driver'
-                                            ? 'bg-blue-500 text-white rounded-br-sm'
-                                            : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
-                                    }`}
-                                >
-                                    <p className="text-sm leading-relaxed">{msg.message}</p>
-                                    <p className={`text-xs mt-1.5 ${msg.sender_type === 'driver' ? 'text-blue-100' : 'text-gray-500'}`}>
-                                        {format(new Date(msg.created_date), 'h:mm a')}
-                                    </p>
-                                </div>
-                            </div>
-                        ))
-                    )}
 
-                <div className="border-t bg-white p-4 mt-auto">
-                    <div className="flex gap-2">
-                        <Textarea
-                            placeholder="Type a message..."
-                            value={messageText}
-                            onChange={(e) => setMessageText(e.target.value)}
-                            className="flex-1 min-h-[60px] resize-none rounded-xl border-gray-300 focus:border-blue-500"
-                        />
-                        <Button 
-                            onClick={handleSendMessage} 
-                            disabled={!messageText.trim()}
-                            className="bg-blue-500 hover:bg-blue-600 rounded-xl h-[60px] px-4"
-                        >
-                            <Send className="h-5 w-5" />
-                        </Button>
+            {/* Message list */}
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
+                {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                            <MessageSquare className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <p className="text-gray-600 text-sm font-medium">No messages yet</p>
+                        <p className="text-xs text-gray-500 mt-1">Use quick replies or type a message</p>
                     </div>
+                ) : (
+                    messages.map((msg) => (
+                        <div key={msg.id} className={`flex ${msg.sender_type === 'driver' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[78%] rounded-2xl px-3 py-2 shadow-sm text-sm ${
+                                msg.sender_type === 'driver'
+                                    ? 'bg-blue-500 text-white rounded-br-sm'
+                                    : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
+                            }`}>
+                                <p className="leading-relaxed">{msg.message}</p>
+                                <p className={`text-xs mt-1 ${msg.sender_type === 'driver' ? 'text-blue-100' : 'text-gray-400'}`}>
+                                    {format(new Date(msg.created_date), 'h:mm a')}
+                                </p>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Quick replies + input — fixed at bottom */}
+            <div className="border-t bg-white px-3 pt-2 pb-3 flex-shrink-0 space-y-2">
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                    {QUICK_REPLIES.map((r) => (
+                        <button
+                            key={r}
+                            onClick={() => setMessageText(r)}
+                            className="text-xs bg-gray-100 hover:bg-blue-50 text-gray-700 hover:text-blue-700 px-2.5 py-1.5 rounded-full whitespace-nowrap flex-shrink-0 transition-colors border border-gray-200 hover:border-blue-300"
+                        >
+                            {r}
+                        </button>
+                    ))}
                 </div>
-            </CardContent>
+                <div className="flex gap-2">
+                    <Textarea
+                        placeholder="Type a message..."
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                        className="flex-1 min-h-[52px] max-h-[100px] resize-none rounded-xl text-sm"
+                        rows={2}
+                    />
+                    <Button
+                        onClick={handleSendMessage}
+                        disabled={!messageText.trim() || sendMessageMutation.isPending}
+                        className="bg-blue-500 hover:bg-blue-600 rounded-xl h-[52px] px-4 flex-shrink-0"
+                    >
+                        <Send className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
         </Card>
     );
 }

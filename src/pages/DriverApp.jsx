@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
@@ -26,11 +26,43 @@ export default function DriverApp() {
     const [driver, setDriver] = useState(null);
     const [messagingOrder, setMessagingOrder] = useState(null);
     const [customerMessage, setCustomerMessage] = useState('');
+    const [gpsActive, setGpsActive] = useState(false);
+    const locationWatchRef = React.useRef(null);
     const queryClient = useQueryClient();
 
     useEffect(() => {
         loadDriverData();
+        return () => {
+            if (locationWatchRef.current) navigator.geolocation.clearWatch(locationWatchRef.current);
+        };
     }, []);
+
+    // Start continuous GPS tracking as soon as driver is loaded and online
+    useEffect(() => {
+        if (!driver || driver === 'not_found' || !driver.id || !driver.is_available) {
+            if (locationWatchRef.current) {
+                navigator.geolocation.clearWatch(locationWatchRef.current);
+                locationWatchRef.current = null;
+                setGpsActive(false);
+            }
+            return;
+        }
+
+        if (locationWatchRef.current) return; // already watching
+
+        if (!navigator.geolocation) return;
+
+        locationWatchRef.current = navigator.geolocation.watchPosition(
+            (position) => {
+                const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+                setGpsActive(true);
+                setDriver(prev => prev && prev !== 'not_found' ? { ...prev, current_location: loc } : prev);
+                base44.entities.Driver.update(driver.id, { current_location: loc }).catch(() => {});
+            },
+            (err) => { console.error('GPS error:', err); setGpsActive(false); },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+    }, [driver?.id, driver?.is_available]);
 
     const loadDriverData = async () => {
         try {
@@ -264,6 +296,12 @@ export default function DriverApp() {
                         </div>
                         
                         <div className="flex items-center gap-3">
+                            {driver.is_available && (
+                                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${gpsActive ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${gpsActive ? 'bg-green-300 animate-pulse' : 'bg-yellow-300'}`} />
+                                    {gpsActive ? 'GPS' : 'No GPS'}
+                                </div>
+                            )}
                             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
                                 <span className="text-sm font-medium">
                                     {driver.is_available ? 'Online' : 'Offline'}

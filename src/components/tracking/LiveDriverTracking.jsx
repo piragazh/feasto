@@ -3,9 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapContainer, TileLayer, Marker, Polyline, Circle } from 'react-leaflet';
-import { Navigation, MapPin, Clock, User, Phone, Bike, Star, Zap } from 'lucide-react';
+import { Navigation, MapPin, Clock, Phone, Bike, Star, Zap } from 'lucide-react';
 import { useRealtimeETA } from '@/components/tracking/ETACalculator';
+import DriverLocationMap from '@/components/driver/DriverLocationMap';
 import 'leaflet/dist/leaflet.css';
 
 export default function LiveDriverTracking({ order }) {
@@ -157,54 +157,16 @@ export default function LiveDriverTracking({ order }) {
                 </div>
 
                 {/* Live Map */}
-                <div className="h-80 rounded-lg overflow-hidden border-2 border-gray-200">
-                    <MapContainer 
-                        center={[driverLocation.lat, driverLocation.lng]} 
-                        zoom={14} 
-                        style={{ height: '100%', width: '100%' }}
-                    >
-                        <TileLayer 
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        />
-                        
-                        {/* Driver location with animation */}
-                        <Marker position={[driverLocation.lat, driverLocation.lng]}>
-                        </Marker>
-                        <Circle
-                            center={[driverLocation.lat, driverLocation.lng]}
-                            radius={100}
-                            pathOptions={{ color: 'orange', fillColor: 'orange', fillOpacity: 0.2 }}
-                        />
-                        
-                        {/* Delivery destination */}
-                        <Marker position={[deliveryCoords.lat, deliveryCoords.lng]}>
-                        </Marker>
-                        <Circle
-                            center={[deliveryCoords.lat, deliveryCoords.lng]}
-                            radius={50}
-                            pathOptions={{ color: 'green', fillColor: 'green', fillOpacity: 0.2 }}
-                        />
-                        
-                        {/* Route line */}
-                        <Polyline 
-                            positions={[
-                                [driverLocation.lat, driverLocation.lng],
-                                [deliveryCoords.lat, deliveryCoords.lng]
-                            ]} 
-                            pathOptions={{ 
-                                color: 'orange',
-                                weight: 3,
-                                dashArray: '10, 10'
-                            }}
-                        />
-                    </MapContainer>
-                </div>
+                <DriverLocationMap
+                    driverLocation={driverLocation}
+                    deliveryCoords={deliveryCoords}
+                    height="280px"
+                />
 
                 {/* Status indicator */}
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>Location updates every 5 seconds</span>
+                    <span>Location updates automatically</span>
                 </div>
 
                 {/* Privacy note */}
