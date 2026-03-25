@@ -916,13 +916,14 @@ export default function Restaurant() {
                 `}</style>
             )}
             {/* Hero */}
-            <div className="relative h-64 md:h-80 -mx-4 md:mx-0">
+            <div className="relative h-56 sm:h-72 md:h-80 -mx-4 md:mx-0">
                 <img
                     src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200'}
                     alt={restaurant.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-center"
                     loading="eager"
                     fetchpriority="high"
+                    style={{ objectPosition: 'center 30%' }}
                 />
                 {/* Stronger gradient on mobile for readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
