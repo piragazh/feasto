@@ -33,7 +33,8 @@ import ManagerOperatorAnalytics from '@/components/superadmin/ManagerOperatorAna
 import OfflineTemporalAnalytics from '@/components/superadmin/OfflineTemporalAnalytics';
 import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
 import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock } from 'lucide-react';
+import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -65,6 +66,7 @@ export default function SuperAdmin() {
             title: 'Core Management',
             items: [
                 { id: 'overview', label: 'Dashboard', icon: Activity },
+                { id: 'risk-digest', label: 'Risk Digest', icon: AlertCircle },
                 { id: 'orders', label: 'Order History', icon: Store },
                 { id: 'restaurants', label: 'Restaurants', icon: Store },
                 { id: 'messages', label: 'Messages', icon: MessageSquare },
@@ -242,6 +244,7 @@ export default function SuperAdmin() {
                 {/* Page Content */}
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
                     {activeTab === 'overview' && <SystemOverview />}
+                    {activeTab === 'risk-digest' && <OfflineRiskDigest />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
                     {activeTab === 'restaurants' && <RestaurantManagement />}
                     {activeTab === 'messages' && <MessagingCenter />}
