@@ -11,9 +11,12 @@
  * corresponding inline copy in the Deno handler, and vice versa:
  *   - functions/verifyAndCreateOrder  → recomputeSubtotal, computeAndVerifyTotal,
  *                                        validateCoupon, checkPerCustomerLimit,
+ *                                        normalizeEmail, normalizePhone,
+ *                                        guestCompositeFingerprint,
  *                                        capPromotionDiscount
  *   - functions/orderVelocityThrottle → basketFingerprint, checkPerUserBurst,
- *                                        checkPlatformBurst
+ *                                        checkPlatformBurst, normalizePhone,
+ *                                        guestCompositeFingerprint
  *   - functions/enforceRateLimiting   → checkPerUserBurst
  *
  * Architecture note: Deno functions cannot import from src/lib/ (separate
@@ -218,6 +221,86 @@ export async function resolveCouponDiscount(couponCodesString, serverSubtotal, r
  */
 export function capPromotionDiscount(clientDiscount, serverSubtotal) {
     return Math.min(Math.max(0, clientDiscount), serverSubtotal * 0.5);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GUEST IDENTITY NORMALISATION
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Guest identity is inherently weak — we cannot verify these signals.
+// These helpers produce consistent keys for best-effort abuse detection only.
+// They do NOT constitute identity verification.
+//
+// SYNC RULE: Keep in sync with inline copies in functions/verifyAndCreateOrder
+// and functions/orderVelocityThrottle.
+
+/**
+ * Normalise an email address for consistent matching.
+ * Lowercases, trims whitespace. Does NOT strip dots or plus-alias tricks
+ * to avoid false positives (foo+a@gmail.com is a real separate inbox for
+ * most providers and may be legitimately different users).
+ *
+ * @param {string|null|undefined} email
+ * @returns {string|null}
+ */
+export function normalizeEmail(email) {
+    if (!email || typeof email !== 'string') return null;
+    return email.trim().toLowerCase() || null;
+}
+
+/**
+ * Normalise a UK phone number to digits-only E.164-ish form.
+ * Strips all non-digit characters, converts leading 07 → 447.
+ * This makes 07123456789, +447123456789, and 07123 456789 all identical.
+ *
+ * @param {string|null|undefined} phone
+ * @returns {string|null}
+ */
+export function normalizePhone(phone) {
+    if (!phone || typeof phone !== 'string') return null;
+    // Strip all non-digit characters
+    let digits = phone.replace(/\D/g, '');
+    if (!digits) return null;
+    // Convert 07... → 447...
+    if (digits.startsWith('07') && digits.length === 11) {
+        digits = '44' + digits.slice(1);
+    }
+    // Must be 12 digits (44 + 10) after normalisation
+    return digits.length >= 10 ? digits : null;
+}
+
+/**
+ * Build a best-effort composite fingerprint for a guest user.
+ *
+ * Strategy:
+ *   - Primary:   normalised phone (harder to rotate than email, tied to real device)
+ *   - Secondary: normalised email (easy to rotate but still a signal)
+ *   - Scope:     restaurant_id (prevents cross-restaurant false positives)
+ *
+ * Returns an object with individual components so callers can choose
+ * which to use for different levels of enforcement.
+ *
+ * IMPORTANT: These signals are self-reported and unverified. Use for
+ * best-effort abuse detection only. Authenticated users are enforced
+ * via platform-set created_by, which is authoritative.
+ *
+ * @param {{ guest_email?: string, phone?: string, restaurant_id?: string }} orderData
+ * @returns {{ phone: string|null, email: string|null, phoneKey: string|null, emailKey: string|null }}
+ */
+export function guestCompositeFingerprint(orderData) {
+    const phone = normalizePhone(orderData?.phone);
+    const email = normalizeEmail(orderData?.guest_email);
+    const rid = orderData?.restaurant_id || '';
+
+    return {
+        phone,
+        email,
+        // Scoped keys for DB queries
+        phoneKey: phone ? `${phone}::${rid}` : null,
+        emailKey: email ? `${email}::${rid}` : null,
+        // Combined key for logging/fingerprinting
+        compositeKey: phone && email ? `${phone}|${email}::${rid}` : (phone ? `phone:${phone}::${rid}` : (email ? `email:${email}::${rid}` : null)),
+    };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

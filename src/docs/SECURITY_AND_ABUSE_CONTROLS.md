@@ -27,10 +27,31 @@ This document states what protections actually exist, what their limitations are
 **One coupon code per order. No stacking.**
 
 - If `coupon_codes` contains more than one code (comma-separated), the order is rejected with HTTP 400
-- A single code is validated for: active status, date range, global usage limit, per-user limit (`per_customer_limit`), minimum order, restaurant scope
+- A single code is validated for: active status, date range (`valid_from`, `valid_until`, `expires_at`), global usage limit, per-user limit (`per_customer_limit`), minimum order, restaurant scope
 - Invalid or unrecognised codes are rejected — the order does not proceed silently
 - Promotion discounts (auto-applied, no code) are capped at 50% of subtotal as a sanity check
 - Promotions and a single coupon can co-exist; they are computed independently and applied sequentially
+
+### Coupon per-customer enforcement strategy
+
+| User type | Identity signal | Strength | How queried |
+|---|---|---|---|
+| Authenticated | `created_by` (platform-set) | **Strong** — cannot be spoofed | `created_by + coupon_code` |
+| Guest | `guest_email` (normalised) | **Weak** — self-reported, easy to rotate | `guest_email + coupon_code` |
+| Guest | `phone` (normalised) | **Medium** — harder to rotate, tied to SMS | `phone + coupon_code` |
+
+For guests both signals are queried independently. The **maximum** usage count across both signals is used. This means:
+- Rotating email alone does NOT bypass the limit if the phone matches a prior order
+- Rotating phone alone does NOT bypass the limit if the email matches a prior order
+- Rotating BOTH email AND phone bypasses per-customer limits — this is an accepted, unavoidable limitation
+
+**Policy is best-effort for guests. It is not claimed to be identity verification.**
+
+### Guest coupon abuse throttle
+
+A secondary control detects high-frequency coupon activity from a single phone number:
+- If the normalised phone has submitted ≥ 3 orders with a coupon code in the last hour → HTTP 429
+- This catches rotating-email abuse where the phone stays constant
 
 ---
 
@@ -40,11 +61,20 @@ Enforced by `orderVelocityThrottle`, called from `verifyAndCreateOrder`.
 
 | Control | Signal | Threshold | Window |
 |---|---|---|---|
-| Per-user burst | `user.email` or `guest_email` | 5 orders | 60 seconds |
+| Per-user burst (auth) | `user.email` | 5 orders | 60 seconds |
+| Guest phone burst | normalised `phone` (guests only) | 5 orders | 60 seconds |
 | Platform circuit breaker | All orders (global count) | 30 orders | 60 seconds |
-| Duplicate basket guard | Email + restaurant + sorted item fingerprint | 1 duplicate | 90 seconds |
+| Duplicate basket guard | actor ID + restaurant + sorted item fingerprint | 1 duplicate | 90 seconds |
 
-All three controls return HTTP 429 with a `Retry-After` header.
+All controls return HTTP 429 with a `Retry-After` header.
+
+### Guest signal normalisation
+
+Both `email` and `phone` are normalised server-side before any comparison:
+- **Email**: lowercased, trimmed. Plus-aliases and dots preserved (not stripped) to avoid false positives.
+- **Phone**: all non-digit characters stripped; UK `07xxx` prefix converted to `447xxx` (E.164-ish). `07123 456789`, `+447123456789`, and `07123-456-789` all produce the same key.
+
+Normalisation functions are pure, tested (`lib/__tests__/guest-identity.test.js`), and mirrored in both `verifyAndCreateOrder` and `orderVelocityThrottle`.
 
 ### What is NOT provided: true per-IP rate limiting
 
@@ -180,23 +210,26 @@ All permission checks are enforced server-side. The UI gates are supplementary o
   stripped from the client payload entirely — server always computes these
 - The approved `discount_reason_code` is persisted on the Order for auditability
 
-### verifyAndCreateOrder — online checkout coupon hardening (2026-03-26)
+### verifyAndCreateOrder — online checkout coupon hardening (2026-03-26, updated 2026-03-26)
 
 **Online checkout coupon policy (authoritative path):**
 
 | Check | Before | After |
 |---|---|---|
 | Per-customer limit (auth) | ❌ Missing | ✅ Enforced via `created_by` + `coupon_code` query |
-| Per-customer limit (guest) | ❌ Missing | ⚠️ Weak — enforced via `guest_email` (self-reported) |
+| Per-customer limit (guest) | ❌ Missing | ⚠️ Best-effort — dual-signal: `guest_email` + `phone` (both normalised) |
+| Guest coupon abuse throttle | ❌ None | ✅ ≥3 coupon orders per phone in 1 hour → 429 |
 | `expires_at` (reward coupons) | ❌ Not checked | ✅ Checked |
 | `coupon_code` field written to Order | ❌ `coupon_codes` (wrong plural) | ✅ `coupon_code` (correct singular) |
 | `usage_count` increment | ❌ Client-side race | ✅ Server-side after order created |
+| Email normalisation | ❌ None | ✅ Lowercased + trimmed |
+| Phone normalisation | ❌ None | ✅ Digits-only, `07` → `447` |
 
 **Customer identifier strategy:**
 - Authenticated: `created_by` (platform-set, cannot be spoofed)
-- Guest: `guest_email` from orderData (weak — self-reported, not verified)
+- Guest: `guest_email` (normalised) + `phone` (normalised) — both queried independently, MAX taken
 
-**Guest checkout limitation:** A guest can bypass `per_customer_limit` by using a different email. This is a known, accepted limitation. There is no strong identity anchor for unauthenticated users on this platform.
+**Remaining guest limitation:** A guest who rotates BOTH email AND phone on each order can still bypass `per_customer_limit`. This is an accepted, unavoidable limitation with no strong identity anchor available. The abuse throttle (3 coupon orders/hr per phone) raises the cost of this evasion.
 
 ### validateCouponUsage — per-customer limit fix (2026-03-26)
 **BUG FOUND AND FIXED.**
@@ -250,3 +283,9 @@ All permission checks are enforced server-side. The UI gates are supplementary o
 | Online checkout expires_at check | ✅ NEW — reward coupon expiry now checked |
 | Online checkout coupon_code field written | ✅ FIXED — now writes correct singular field |
 | Online checkout usage_count increment | ✅ MOVED TO SERVER — was client-side race |
+| Guest coupon dual-signal (email+phone) | ✅ NEW — both queried independently, MAX taken |
+| Guest phone coupon abuse throttle | ✅ NEW — ≥3 coupon orders/hr per phone → 429 |
+| Guest phone velocity burst | ✅ NEW — 5 orders/60s per normalised phone in throttle |
+| Email normalisation (guest) | ✅ NEW — lowercase+trim before all comparisons |
+| Phone normalisation (guest) | ✅ NEW — digits-only, 07→447, consistent across formats |
+| Guest dual-signal full evasion (rotate both) | ❌ Accepted limitation — no strong identity anchor available |

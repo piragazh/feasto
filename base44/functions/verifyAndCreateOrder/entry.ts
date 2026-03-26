@@ -397,10 +397,33 @@ Deno.serve(async (req) => {
         let verifiedDiscount = 0;
         const clientDiscount = orderData.discount || 0;
 
+        // ── GUEST IDENTITY NORMALISATION ───────────────────────────────────────
+        // Mirrors the pure functions in src/lib/order-logic.js.
+        // SYNC RULE: Keep in sync with normalizeEmail / normalizePhone /
+        // guestCompositeFingerprint in lib/order-logic.js.
+        //
+        // Guest identity is WEAK and SELF-REPORTED. These signals cannot be
+        // verified. They provide best-effort abuse mitigation only.
+        // Authenticated users are enforced via platform-set created_by.
+        const _normalizeEmail = (email) => {
+            if (!email || typeof email !== 'string') return null;
+            return email.trim().toLowerCase() || null;
+        };
+        const _normalizePhone = (phone) => {
+            if (!phone || typeof phone !== 'string') return null;
+            let digits = phone.replace(/\D/g, '');
+            if (!digits) return null;
+            if (digits.startsWith('07') && digits.length === 11) digits = '44' + digits.slice(1);
+            return digits.length >= 10 ? digits : null;
+        };
+
+        const normalizedGuestEmail = _normalizeEmail(orderData.guest_email);
+        const normalizedPhone = _normalizePhone(orderData.phone);
+
         // Resolve the customer identifier for per-customer limit checks.
         // For authenticated users, created_by is set by the platform (trustworthy).
         // For guests, we use guest_email (weak but best available signal).
-        const customerIdentifier = user?.email || orderData.guest_email || null;
+        const customerIdentifier = user?.email || normalizedGuestEmail || null;
 
         // Normalise coupon input: the frontend sends coupon_codes (plural, comma-separated string).
         // The Order entity stores coupon_code (singular string). We read from coupon_codes but
@@ -478,39 +501,84 @@ Deno.serve(async (req) => {
                 // ── A (per-customer): Per-customer usage limit ──────────────
                 // CRITICAL: This was MISSING in the original implementation.
                 // Uses coupon_code (singular, the correct Order field) — NOT coupon_codes.
-                if (coupon.per_customer_limit && coupon.per_customer_limit > 0 && customerIdentifier) {
-                    // Check authenticated orders (created_by is platform-set, authoritative)
-                    const authOrders = await base44.asServiceRole.entities.Order.filter({
-                        created_by: customerIdentifier,
-                        coupon_code: coupon.code
-                    });
-                    let customerUsageCount = Array.isArray(authOrders) ? authOrders.length : 0;
-
-                    // For guests: also check guest_email if the identifier is an email
-                    // that might be stored as guest_email on older orders
-                    if (!user?.email && orderData.guest_email) {
-                        const guestOrders = await base44.asServiceRole.entities.Order.filter({
-                            guest_email: orderData.guest_email,
+                //
+                // GUEST STRATEGY:
+                //   We query by BOTH guest_email AND phone independently, then take the MAX.
+                //   Phone is a stronger signal (harder to rotate than email, tied to SMS delivery).
+                //   Neither signal is verified, but checking both raises the cost of evasion:
+                //   an abuser must rotate BOTH phone AND email to bypass all signals.
+                //
+                // LIMITATION: A guest who provides a fresh phone AND fresh email on each order
+                // can still bypass per-customer limits. This is an accepted limitation.
+                // Authenticated users are enforced via platform-set created_by (authoritative).
+                if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
+                    if (user?.email) {
+                        // Authenticated: use platform-set created_by (authoritative, cannot be spoofed)
+                        const authOrders = await base44.asServiceRole.entities.Order.filter({
+                            created_by: user.email,
                             coupon_code: coupon.code
                         });
-                        const guestCount = Array.isArray(guestOrders) ? guestOrders.length : 0;
-                        customerUsageCount = Math.max(customerUsageCount, guestCount);
-                    }
+                        const authCount = Array.isArray(authOrders) ? authOrders.length : 0;
+                        if (authCount >= coupon.per_customer_limit) {
+                            console.warn(`[COUPON] Per-customer limit hit (auth): email=${user.email} code=${code} used=${authCount} limit=${coupon.per_customer_limit}`);
+                            return new Response(
+                                JSON.stringify({ error: `You have already used this coupon the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`, success: false }),
+                                { status: 400 }
+                            );
+                        }
+                    } else {
+                        // Guest: check both email and phone independently (best-effort)
+                        let guestUsageCount = 0;
 
-                    if (customerUsageCount >= coupon.per_customer_limit) {
-                        console.warn(`[COUPON] Per-customer limit hit: identifier=${customerIdentifier} code=${code} used=${customerUsageCount} limit=${coupon.per_customer_limit}`);
-                        return new Response(
-                            JSON.stringify({
-                                error: `You have already used this coupon the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`,
-                                success: false
-                            }),
-                            { status: 400 }
-                        );
+                        if (normalizedGuestEmail) {
+                            const byEmail = await base44.asServiceRole.entities.Order.filter({
+                                guest_email: normalizedGuestEmail,
+                                coupon_code: coupon.code
+                            });
+                            guestUsageCount = Math.max(guestUsageCount, Array.isArray(byEmail) ? byEmail.length : 0);
+                        }
+
+                        if (normalizedPhone) {
+                            const byPhone = await base44.asServiceRole.entities.Order.filter({
+                                phone: normalizedPhone,
+                                coupon_code: coupon.code
+                            });
+                            guestUsageCount = Math.max(guestUsageCount, Array.isArray(byPhone) ? byPhone.length : 0);
+                        }
+
+                        if (guestUsageCount >= coupon.per_customer_limit) {
+                            console.warn(`[COUPON] Per-customer limit hit (guest): email=${normalizedGuestEmail} phone=${normalizedPhone} code=${code} used=${guestUsageCount} limit=${coupon.per_customer_limit}`);
+                            return new Response(
+                                JSON.stringify({ error: `You have already used this coupon the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`, success: false }),
+                                { status: 400 }
+                            );
+                        }
+
+                        // ── Guest coupon abuse throttle ─────────────────────────────
+                        // Secondary check: if a single phone number has used ANY coupon
+                        // 3+ times in the last hour across guest orders, flag as suspicious.
+                        // This catches rotating-email abuse where phone stays constant.
+                        if (normalizedPhone) {
+                            const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString();
+                            const recentPhoneOrders = await base44.asServiceRole.entities.Order.filter({
+                                phone: normalizedPhone,
+                                created_date: { $gt: oneHourAgo }
+                            });
+                            const recentWithCoupon = (recentPhoneOrders || []).filter(o => o.coupon_code);
+                            if (recentWithCoupon.length >= 3) {
+                                console.warn(`[COUPON] Guest phone coupon abuse throttle: phone=${normalizedPhone} coupon_orders_last_hour=${recentWithCoupon.length}`);
+                                return new Response(
+                                    JSON.stringify({ error: 'Too many coupon uses from this phone number. Please try again later or sign in to your account.', success: false }),
+                                    { status: 429 }
+                                );
+                            }
+                        }
+
+                        if (!normalizedGuestEmail && !normalizedPhone) {
+                            // No usable identity signal at all — log and allow (very edge case)
+                            console.warn(`[COUPON] Per-customer limit cannot be enforced: no guest identity for code=${code}`);
+                        }
                     }
-                } else if (coupon.per_customer_limit && coupon.per_customer_limit > 0 && !customerIdentifier) {
-                    // No identifier at all — cannot enforce per-customer limit. Log and allow
-                    // (guest with no email; very edge case since guest_email is required by the form).
-                    console.warn(`[COUPON] Per-customer limit cannot be enforced: no customer identifier for code=${code}`);
                 }
 
                 // ── Compute discount ────────────────────────────────────────

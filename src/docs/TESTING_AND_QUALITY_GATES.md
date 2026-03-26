@@ -29,7 +29,8 @@ npm run smoke:payment   # createPaymentIntent guard rails (no real Stripe call)
 | File | What it tests |
 |---|---|
 | `order-total-integrity.test.js` | `recomputeSubtotal`, `computeAndVerifyTotal` |
-| `coupon-policy.test.js` | `validateCoupon`, `resolveCouponDiscount` |
+| `coupon-policy.test.js` | `validateCoupon`, `checkPerCustomerLimit`, `resolveCouponDiscount` |
+| `guest-identity.test.js` | `normalizeEmail`, `normalizePhone`, `guestCompositeFingerprint`, guest dual-signal coupon blocking, guest phone coupon throttle |
 | `promotion-discount-interaction.test.js` | `capPromotionDiscount`, coupon+promo combos |
 | `abuse-controls.test.js` | `basketFingerprint`, `checkPerUserBurst`, `checkPlatformBurst` |
 | `error-handling.test.js` | Error message safety — no internal details leaked |
@@ -58,6 +59,9 @@ Use the backend smoke tests (`npm run smoke`) for handler wiring — see `script
 | `computeAndVerifyTotal` | `functions/verifyAndCreateOrder` |
 | `validateCoupon` | `functions/verifyAndCreateOrder` |
 | `capPromotionDiscount` | `functions/verifyAndCreateOrder` |
+| `normalizeEmail` | `functions/verifyAndCreateOrder` (inline `_normalizeEmail`) |
+| `normalizePhone` | `functions/verifyAndCreateOrder` (inline `_normalizePhone`), `functions/orderVelocityThrottle` |
+| `guestCompositeFingerprint` | Concept mirrored; individual signals used inline in both handlers |
 | `basketFingerprint` | `functions/orderVelocityThrottle` |
 | `checkPerUserBurst` | `functions/orderVelocityThrottle`, `functions/enforceRateLimiting` |
 | `checkPlatformBurst` | `functions/orderVelocityThrottle` |
@@ -196,3 +200,5 @@ Run: `npm run smoke:moneycontrols`
 - **Smoke tests are manual** — not wired into CI (would require staging secrets in CI). Run them before production deploys.
 - **`awardLoyaltyPoints` not smoke-tested** — it requires a completed order entity in the right status; a future smoke fixture could enable this.
 - **`orderVelocityThrottle` not smoke-tested directly** — it is called internally by `verifyAndCreateOrder`. The happy-path smoke test exercises it transitively.
+- **Guest dual-signal full evasion** — a guest who rotates both email AND phone bypasses per-customer coupon limits. This is an accepted limitation. No strong identity anchor for guests is available at the application layer.
+- **`normalizeEmail` / `normalizePhone` / `guestCompositeFingerprint` mirror drift** — these functions are inlined in Deno handlers rather than exported, so `check-mirror-sync.js` does not currently catch drift for them. Manual review required when changing these functions.
