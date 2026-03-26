@@ -1,0 +1,134 @@
+{
+  "name": "TerminalTransaction",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Reference to the Order (if created). Null for test transactions or failed pre-order attempts."
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant where transaction occurred"
+    },
+    "terminal_provider": {
+      "type": "string",
+      "enum": [
+        "stripe",
+        "ingenico",
+        "square",
+        "mock"
+      ],
+      "description": "Payment terminal provider"
+    },
+    "reader_id": {
+      "type": "string",
+      "description": "Hardware reader identifier (e.g., Stripe reader serial)"
+    },
+    "reader_label": {
+      "type": "string",
+      "description": "Human-readable reader name (e.g., 'Kitchen Terminal 1')"
+    },
+    "transaction_id": {
+      "type": "string",
+      "description": "Provider's transaction/payment intent ID for reconciliation"
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Amount in cents (GBP) to avoid float precision issues"
+    },
+    "currency": {
+      "type": "string",
+      "default": "GBP",
+      "description": "ISO currency code"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "initiated",
+        "awaiting_card",
+        "processing",
+        "authorized",
+        "declined",
+        "failed",
+        "timeout",
+        "cancelled"
+      ],
+      "description": "Final status of transaction"
+    },
+    "initiated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When card reader was asked to process"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When terminal returned final status (null if still processing)"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "How long from initiated to completed (for performance tracking)"
+    },
+    "failure_reason": {
+      "type": "string",
+      "enum": [
+        "card_declined",
+        "card_error",
+        "insufficient_funds",
+        "expired_card",
+        "lost_card",
+        "stolen_card",
+        "reader_timeout",
+        "reader_disconnect",
+        "network_error",
+        "user_cancelled",
+        "invalid_amount",
+        "configuration_error",
+        "other"
+      ],
+      "description": "Structured failure category (if status is not authorized)"
+    },
+    "error_code": {
+      "type": "string",
+      "description": "Provider-specific error code (e.g., 'decline_code' from Stripe)"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Human-readable error message from provider"
+    },
+    "operator_email": {
+      "type": "string",
+      "description": "POS operator (staff member) who initiated this transaction"
+    },
+    "operator_name": {
+      "type": "string",
+      "description": "Staff name snapshot for audit readability"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes (e.g., 'Retry after customer swiped twice')"
+    },
+    "reconciled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this transaction has been reconciled against the order"
+    },
+    "reconciled_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When reconciliation occurred"
+    },
+    "reconciliation_note": {
+      "type": "string",
+      "description": "Outcome of reconciliation (e.g., 'matched_to_order', 'orphaned_no_order', 'duplicate_auth')"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "terminal_provider",
+    "transaction_id",
+    "amount_cents",
+    "status",
+    "initiated_at"
+  ]
+}

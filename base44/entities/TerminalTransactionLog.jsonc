@@ -1,0 +1,64 @@
+{
+  "name": "TerminalTransactionLog",
+  "type": "object",
+  "properties": {
+    "terminal_transaction_id": {
+      "type": "string",
+      "description": "Reference to TerminalTransaction record"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Reference to Order (if applicable)"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant ID"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "initiated",
+        "state_change",
+        "error",
+        "retry",
+        "cancelled",
+        "reconciliation_check",
+        "duplicate_detection"
+      ],
+      "description": "Type of log event"
+    },
+    "state_before": {
+      "type": "string",
+      "description": "Terminal state before event"
+    },
+    "state_after": {
+      "type": "string",
+      "description": "Terminal state after event"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable log message"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Provider-specific metadata (error codes, amounts, etc.)",
+      "additionalProperties": true
+    },
+    "logged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this event was logged"
+    },
+    "operator_email": {
+      "type": "string",
+      "description": "POS operator who triggered this event"
+    }
+  },
+  "required": [
+    "terminal_transaction_id",
+    "restaurant_id",
+    "event_type",
+    "message",
+    "logged_at"
+  ]
+}
