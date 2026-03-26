@@ -32,6 +32,7 @@ import OfflineReviewPortfolio from '@/components/superadmin/OfflineReviewPortfol
 import ManagerOperatorAnalytics from '@/components/superadmin/ManagerOperatorAnalytics';
 import OfflineTemporalAnalytics from '@/components/superadmin/OfflineTemporalAnalytics';
 import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
+import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -90,6 +91,7 @@ export default function SuperAdmin() {
                 { id: 'operator-analytics', label: 'Operator Analytics', icon: Users },
                 { id: 'manager-analytics', label: 'Manager Analytics', icon: Users },
                 { id: 'temporal-analytics', label: 'Temporal Analytics', icon: Clock },
+                { id: 'shift-windows', label: 'Shift Window Analytics', icon: Clock },
                 { id: 'bulk-price', label: 'Bulk Price Adjust', icon: DollarSign },
                 { id: 'backup-restore', label: 'Backup & Restore', icon: Settings },
             ]
@@ -262,6 +264,7 @@ export default function SuperAdmin() {
                     {activeTab === 'operator-analytics' && <OperatorAnalytics />}
                     {activeTab === 'manager-analytics' && <ManagerOperatorAnalytics mode="superadmin" />}
                     {activeTab === 'temporal-analytics' && <OfflineTemporalAnalytics />}
+                    {activeTab === 'shift-windows' && <ShiftWindowAnalytics />}
                     {activeTab === 'sms-log' && <SmsLogViewer />}
                     {activeTab === 'bulk-price' && <BulkPriceAdjustment />}
                     {activeTab === 'backup-restore' && <BackupRestore />}
