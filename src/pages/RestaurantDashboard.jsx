@@ -14,43 +14,42 @@ import {
     MessageCircle, UsersRound, Palette, Star, Sparkles,
     ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff
 } from 'lucide-react';
-
-// Test: lazy import all heavy components
-const LiveOrders = ({ restaurantId, onOrderUpdate }) => null;
-const MenuManagement = ({ restaurantId }) => null;
-const MealDealsManagement = ({ restaurantId }) => null;
-const AIMealDealSuggestions = ({ restaurantId }) => null;
-const CouponsManagement = ({ restaurantId, restaurantName }) => null;
-const PastOrders = ({ restaurantId }) => null;
-const RestaurantMessages = ({ restaurantId }) => null;
-const ReviewManagement = ({ restaurantId }) => null;
-const RestaurantOnboarding = ({ restaurant, onComplete }) => null;
-const EnhancedAnalyticsDashboard = ({ restaurantId }) => null;
-const OrderAnalyticsDashboard = ({ restaurantId }) => null;
-const DriverTracking = ({ restaurantId }) => null;
-const DriverManagement = ({ restaurantId }) => null;
-const DriverPerformance = ({ restaurantId }) => null;
-const CustomerCRM = ({ restaurantId, restaurantName }) => null;
-const RefundManagement = ({ restaurantId }) => null;
-const PromotionManagement = ({ restaurantId }) => null;
-const OrderBatching = ({ restaurantId }) => null;
-const OrderModification = ({ restaurantId }) => null;
-const OfflineOrdersReview = ({ restaurantId }) => null;
-const DeliveryZoneManagement = ({ restaurantId, restaurantLocation }) => null;
-const RestaurantSettings = ({ restaurantId }) => null;
-const AIMarketingAssistant = ({ restaurantId }) => null;
-const NotificationSoundManager = ({ restaurantId }) => null;
-const BrandingManager = ({ restaurantId }) => null;
-const ThirdPartyIntegrations = ({ restaurantId }) => null;
-const POSConfigurations = ({ restaurantId }) => null;
-const StaffManagement = ({ restaurantId }) => null;
-const KioskSettings = ({ restaurantId }) => null;
-const CentralizedPrinterSettings = ({ restaurantId }) => null;
-const KitchenDisplaySystem = ({ restaurant }) => null;
-const SmsNotificationSettings = ({ restaurantId, currentSettings }) => null;
-const RestaurantPayoutHistory = ({ restaurantId }) => null;
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
+
+import LiveOrders from '@/components/restaurant/LiveOrders';
+import MenuManagement from '@/components/restaurant/MenuManagement';
+import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
+import AIMealDealSuggestions from '@/components/restaurant/AIMealDealSuggestions';
+import CouponsManagement from '@/components/restaurant/CouponsManagement';
+import PastOrders from '@/components/restaurant/PastOrders';
+import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
+import ReviewManagement from '@/components/restaurant/ReviewManagement';
+import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
+import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
+import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
+import DriverTracking from '@/components/restaurant/DriverTracking';
+import DriverManagement from '@/components/restaurant/DriverManagement';
+import DriverPerformance from '@/components/restaurant/DriverPerformance';
+import CustomerCRM from '@/components/restaurant/CustomerCRM';
+import RefundManagement from '@/components/restaurant/RefundManagement';
+import PromotionManagement from '@/components/restaurant/PromotionManagement';
+import OrderBatching from '@/components/restaurant/OrderBatching';
+import OrderModification from '@/components/restaurant/OrderModification';
+import OfflineOrdersReview from '@/components/restaurant/OfflineOrdersReview';
+import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
+import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
+import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
+import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
+import BrandingManager from '@/components/restaurant/BrandingManager';
+import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
+import POSConfigurations from '@/components/restaurant/POSConfigurations';
+import StaffManagement from '@/components/restaurant/StaffManagement';
+import KioskSettings from '@/components/kiosk/KioskSettings';
+import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrinterSettings';
+import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
+import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
+import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
 
 // ── Nav definition ──────────────────────────────────────────────────────────
 const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refundRequests, unresolvedOfflineReviewCount) => [
@@ -181,7 +180,7 @@ function SidebarNav({ sections, activeSection, activeTab, onNavigate, collapsed,
                                         >
                                             <IIcon className="h-3.5 w-3.5 flex-shrink-0" />
                                             <span className="flex-1 text-left truncate">{item.label}</span>
-                                            {item.badge > 0 && (
+                                            {(item.badge || 0) > 0 && (
                                                 <span className="h-4 min-w-[16px] bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center px-1 flex-shrink-0">
                                                     {item.badge}
                                                 </span>
