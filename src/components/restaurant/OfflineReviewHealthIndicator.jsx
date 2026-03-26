@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, AlertTriangle, CheckCircle2, Clock, TrendingUp, ChevronRight } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Clock, TrendingUp, ChevronRight, Zap } from 'lucide-react';
 import { detectAnomalies } from '@/lib/offline-review-anomaly-rules';
+import { enrichAnomaliesWithScoring } from '@/lib/offline-review-severity-scoring';
 
 /**
  * Offline Review Health Indicator
@@ -61,9 +62,9 @@ export default function OfflineReviewHealthIndicator({ orders = [] }) {
         }
     });
 
-    // Detect anomalies
+    // Detect anomalies and enrich with severity scoring
     const anomalyData = useMemo(() => {
-        return detectAnomalies({
+        const detected = detectAnomalies({
             totalOrders: orders.length,
             flaggedCount: flagged.length,
             unresolvedCount: unreviewed.length,
@@ -74,6 +75,7 @@ export default function OfflineReviewHealthIndicator({ orders = [] }) {
             reviews: flagged,
             abuseSuspiciousCodes
         });
+        return enrichAnomaliesWithScoring(detected);
     }, [orders]);
 
     const avgReviewAge = unreviewed.length > 0
@@ -157,36 +159,81 @@ export default function OfflineReviewHealthIndicator({ orders = [] }) {
             </div>
 
             {/* ─────────────────────────────────────────────────────────────────────── */}
-            {/* ANOMALY ALERTS */}
+            {/* OVERALL STATUS BANNER */}
+            {/* ─────────────────────────────────────────────────────────────────────── */}
+            {anomalyData.status && anomalyData.status !== 'ok' && (
+                <Card className={`border-2 ${
+                    anomalyData.status === 'critical' ? 'border-red-400 bg-red-50' :
+                    anomalyData.status === 'risk' ? 'border-orange-400 bg-orange-50' :
+                    'border-yellow-400 bg-yellow-50'
+                }`}>
+                    <CardContent className="pt-4">
+                        <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${
+                                anomalyData.status === 'critical' ? 'bg-red-100' :
+                                anomalyData.status === 'risk' ? 'bg-orange-100' :
+                                'bg-yellow-100'
+                            }`}>
+                                {anomalyData.status === 'critical' ? (
+                                    <AlertCircle className="h-5 w-5 text-red-600" />
+                                ) : anomalyData.status === 'risk' ? (
+                                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                                ) : (
+                                    <Clock className="h-5 w-5 text-yellow-600" />
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <p className={`text-sm font-bold ${
+                                    anomalyData.status === 'critical' ? 'text-red-900' :
+                                    anomalyData.status === 'risk' ? 'text-orange-900' :
+                                    'text-yellow-900'
+                                }`}>
+                                    {anomalyData.status.toUpperCase()}: {anomalyData.description}
+                                </p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                    Risk score: {anomalyData.totalScore} ({anomalyData.anomalies.filter(a => a.severity !== 'info').length} issues)
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* ─────────────────────────────────────────────────────────────────────── */}
+            {/* PRIORITISED ANOMALY ALERTS (HIGH → MEDIUM → LOW → INFO) */}
             {/* ─────────────────────────────────────────────────────────────────────── */}
             {anomalyData.anomalies.length > 0 && (
                 <div className="space-y-2">
                     {anomalyData.anomalies.map((anomaly, idx) => {
-                        const Icon = anomaly.severity === 'critical' ? AlertCircle : AlertTriangle;
-                        const bgClass = anomaly.severity === 'critical'
-                            ? 'bg-red-50 border-red-200'
-                            : anomaly.severity === 'warning'
-                            ? 'bg-yellow-50 border-yellow-200'
-                            : 'bg-blue-50 border-blue-200';
-                        const iconClass = anomaly.severity === 'critical'
-                            ? 'text-red-600'
-                            : anomaly.severity === 'warning'
-                            ? 'text-yellow-600'
-                            : 'text-blue-600';
+                        const severityConfig = {
+                            'high': { icon: AlertCircle, bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-900', badge: 'bg-red-100 text-red-800' },
+                            'medium': { icon: AlertTriangle, bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-900', badge: 'bg-orange-100 text-orange-800' },
+                            'low': { icon: Clock, bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-900', badge: 'bg-yellow-100 text-yellow-800' },
+                            'info': { icon: Zap, bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-800' }
+                        };
+                        
+                        const config = severityConfig[anomaly.severity] || severityConfig.info;
+                        const Icon = config.icon;
 
                         return (
-                            <Card key={idx} className={`border ${bgClass}`}>
+                            <Card key={idx} className={`border ${config.bg} ${config.border}`}>
                                 <CardContent className="pt-4">
                                     <div className="flex gap-3">
-                                        <Icon className={`h-5 w-5 ${iconClass} flex-shrink-0 mt-0.5`} />
+                                        <Icon className={`h-5 w-5 ${config.text} flex-shrink-0 mt-0.5`} />
                                         <div className="flex-1 min-w-0">
-                                            <p className={`text-sm font-medium ${
-                                                anomaly.severity === 'critical' ? 'text-red-900' :
-                                                anomaly.severity === 'warning' ? 'text-yellow-900' :
-                                                'text-blue-900'
-                                            }`}>
-                                                {anomaly.message}
-                                            </p>
+                                            <div className="flex items-start justify-between gap-2 mb-1">
+                                                <p className={`text-sm font-medium ${config.text}`}>
+                                                    {anomaly.message}
+                                                </p>
+                                                <Badge className={`text-xs flex-shrink-0 ${config.badge}`}>
+                                                    {anomaly.severity.toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                            {anomaly.nextAction && (
+                                                <p className={`text-xs ${config.text} opacity-80 italic`}>
+                                                    → {anomaly.nextAction}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>
