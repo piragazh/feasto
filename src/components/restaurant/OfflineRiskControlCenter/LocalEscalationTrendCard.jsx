@@ -5,7 +5,7 @@
  * Calculated from local orders; no portfolio comparison.
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown } from 'lucide-react';

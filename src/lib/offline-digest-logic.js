@@ -3,7 +3,12 @@
  * 
  * Deterministic digest generation for operational awareness.
  * Surfaces critical, worsening, and actionable signals only.
+ * 
+ * Uses canonical thresholds from offline-risk-constants.js
  */
+
+import { RISK_THRESHOLDS } from './offline-risk-constants.js';
+import { calculateFlaggedRate, calculateEscalationRate } from './offline-risk-calculations.js';
 
 /**
  * Generate portfolio-level digest (SuperAdmin)
@@ -19,7 +24,7 @@ export function generatePortfolioDigest(orders = [], restaurants = [], portfolio
   const day7d = 7 * day24h;
 
   // ──────────────────────────────────────────────────────────────
-  // 1. OVERDUE FLAGGED ORDERS
+  // 1. OVERDUE FLAGGED ORDERS (using canonical threshold)
   // ──────────────────────────────────────────────────────────────
   const overdueOrders = orders
     .filter(o => o.offline_created && o.needs_review && o.offline_review_status === 'new')
@@ -28,7 +33,7 @@ export function generatePortfolioDigest(orders = [], restaurants = [], portfolio
       const ageMinutes = Math.round((now - syncedAt) / (1000 * 60));
       return { ...o, ageMinutes };
     })
-    .filter(o => o.ageMinutes > 240) // 4+ hours
+    .filter(o => o.ageMinutes > RISK_THRESHOLDS.OVERDUE_MINUTES)
     .sort((a, b) => b.ageMinutes - a.ageMinutes)
     .slice(0, 10);
 
@@ -56,12 +61,11 @@ export function generatePortfolioDigest(orders = [], restaurants = [], portfolio
   const last24h = orders.filter(o => new Date(o.offline_synced_at) > new Date(now - day24h) && o.offline_created);
   const last7d = orders.filter(o => new Date(o.offline_synced_at) > new Date(now - day7d) && o.offline_created);
 
-  const escalation24h = last24h.length > 0
-    ? Math.round((last24h.filter(o => o.offline_review_status === 'escalated').length / last24h.length) * 100)
-    : 0;
-  const escalation7d = last7d.length > 5
-    ? Math.round((last7d.filter(o => o.offline_review_status === 'escalated').length / last7d.length) * 100)
-    : 0;
+  const escalated24h = last24h.filter(o => o.offline_review_status === 'escalated').length;
+  const escalated7d = last7d.filter(o => o.offline_review_status === 'escalated').length;
+  
+  const escalation24h = calculateEscalationRate(escalated24h, last24h.length);
+  const escalation7d = calculateEscalationRate(escalated7d, last7d.length);
 
   const worsening = {
     escalation_up: escalation24h > escalation7d + 10,
@@ -93,8 +97,8 @@ export function generatePortfolioDigest(orders = [], restaurants = [], portfolio
   const totalEscalated = orders.filter(o => o.offline_created && o.offline_review_status === 'escalated').length;
   const totalOverdue = overdueOrders.length;
 
-  const flaggedRate = totalOffline > 0 ? Math.round((totalFlagged / totalOffline) * 100) : 0;
-  const escalationRate = totalFlagged > 0 ? Math.round((totalEscalated / totalFlagged) * 100) : 0;
+  const flaggedRate = calculateFlaggedRate(totalFlagged, totalOffline);
+  const escalationRate = calculateEscalationRate(totalEscalated, totalFlagged);
 
   return {
     generated_at: now.toISOString(),
@@ -128,7 +132,7 @@ export function generatePortfolioDigest(orders = [], restaurants = [], portfolio
       escalation_24h: worsening.escalation_24h,
       escalation_7d: worsening.escalation_7d,
       delta_points: worsening.delta,
-      flagged_rate_24h: Math.round((last24h.filter(o => o.needs_review).length / Math.max(last24h.length, 1)) * 100),
+      flagged_rate_24h: flaggedRate24h,
       operator_outliers: operatorOutliers.map(o => ({
         operator_email: o.operator_email,
         flagged_rate: o.flagged_rate,
@@ -190,9 +194,10 @@ export function generateRestaurantDigest(restaurantId, orders = [], restaurant =
     }
   });
 
-  const avgFlaggedRate = restaurantOrders.length > 0
-    ? Math.round((restaurantOrders.filter(o => o.needs_review).length / restaurantOrders.length) * 100)
-    : 0;
+  const avgFlaggedRate = calculateFlaggedRate(
+    restaurantOrders.filter(o => o.needs_review).length,
+    restaurantOrders.length
+  );
 
   const operatorOutliers = Object.values(operatorStats)
     .filter(op => op.total >= 3)
@@ -232,6 +237,7 @@ export function generateRestaurantDigest(restaurantId, orders = [], restaurant =
   const last24h = restaurantOrders.filter(o => new Date(o.offline_synced_at) > new Date(now - day24h));
   const flaggedLast24h = last24h.filter(o => o.needs_review).length;
   const escalatedLast24h = last24h.filter(o => o.offline_review_status === 'escalated').length;
+  const flaggedRate24h = calculateFlaggedRate(flaggedLast24h, last24h.length);
 
   return {
     generated_at: now.toISOString(),
@@ -275,7 +281,7 @@ export function generateRestaurantDigest(restaurantId, orders = [], restaurant =
       total_offline: restaurantOrders.length,
       flagged_24h: flaggedLast24h,
       escalated_24h: escalatedLast24h,
-      flagged_rate_24h: last24h.length > 0 ? Math.round((flaggedLast24h / last24h.length) * 100) : 0
+      flagged_rate_24h: flaggedRate24h
     }
   };
 }
