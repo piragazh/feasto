@@ -1,0 +1,57 @@
+{
+  "name": "EngagementEvent",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of user who triggered event"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "manager",
+        "superadmin"
+      ],
+      "description": "User role when event was triggered"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant ID (null for SuperAdmin portfolio views)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "view_control_center",
+        "view_overview",
+        "view_digest",
+        "acknowledge_digest",
+        "review_action"
+      ],
+      "description": "Type of engagement event"
+    },
+    "event_subtype": {
+      "type": "string",
+      "enum": [
+        "resolve",
+        "escalate",
+        "acknowledge"
+      ],
+      "description": "Additional context for review_action and acknowledge events (e.g., 'resolve' vs 'escalate')"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Browser session ID to prevent duplicate 'view' events on page reload"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event occurred"
+    }
+  },
+  "required": [
+    "user_email",
+    "role",
+    "event_type",
+    "timestamp"
+  ]
+}

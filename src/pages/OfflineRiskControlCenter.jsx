@@ -10,6 +10,7 @@ import LatestSnapshotCard from '@/components/superadmin/OfflineRiskControlCenter
 import QuickNavigationPanel from '@/components/superadmin/OfflineRiskControlCenter/QuickNavigationPanel';
 import FreshnessIndicator from '@/components/superadmin/OfflineRiskControlCenter/FreshnessIndicator';
 import { generatePortfolioDigest } from '@/lib/offline-digest-logic';
+import { trackPageView } from '@/lib/engagement-tracking';
 
 export default function OfflineRiskControlCenter() {
   const [lastRefreshedAt, setLastRefreshedAt] = useState(new Date());
@@ -115,6 +116,11 @@ export default function OfflineRiskControlCenter() {
 
     return () => clearInterval(interval);
   }, [autoRefreshEnabled]);
+
+  // Track page view on mount
+  useEffect(() => {
+    trackPageView('view_control_center');
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">

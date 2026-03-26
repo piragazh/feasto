@@ -17,6 +17,7 @@ import LatestSnapshotCard from '@/components/superadmin/OfflineRiskControlCenter
 import LocalQuickNavigationPanel from '@/components/restaurant/OfflineRiskControlCenter/LocalQuickNavigationPanel';
 import FreshnessIndicator from '@/components/superadmin/OfflineRiskControlCenter/FreshnessIndicator';
 import { generateRestaurantDigest } from '@/lib/offline-digest-logic';
+import { trackPageView } from '@/lib/engagement-tracking';
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from 'lucide-react';
 
@@ -117,6 +118,13 @@ export default function RestaurantOfflineRiskOverview() {
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [autoRefreshEnabled]);
+
+  // Track page view on mount
+  useEffect(() => {
+    if (scopedRestaurantId) {
+      trackPageView('view_overview', scopedRestaurantId);
+    }
+  }, [scopedRestaurantId]);
 
   // Loading state
   if (userLoading || managerLoading) {
