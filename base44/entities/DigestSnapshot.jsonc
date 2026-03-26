@@ -1,0 +1,96 @@
+{
+  "name": "DigestSnapshot",
+  "type": "object",
+  "properties": {
+    "snapshot_id": {
+      "type": "string",
+      "description": "Unique snapshot identifier (snap-YYYYMMDD-NNN)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When snapshot was generated"
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "portfolio",
+        "restaurant"
+      ],
+      "description": "Portfolio-level (SuperAdmin) or restaurant-level (Manager)"
+    },
+    "scope_id": {
+      "type": "string",
+      "description": "Restaurant ID if scope=restaurant, null if portfolio"
+    },
+    "digest_version": {
+      "type": "number",
+      "default": 1,
+      "description": "Digest schema version for compatibility"
+    },
+    "digest_hash": {
+      "type": "string",
+      "description": "SHA256 hash of snapshot_data (for dedup)"
+    },
+    "critical_item_count": {
+      "type": "number",
+      "description": "Number of critical items in digest"
+    },
+    "worsening_item_count": {
+      "type": "number",
+      "description": "Number of worsening/watch items in digest"
+    },
+    "plaintext_summary": {
+      "type": "string",
+      "description": "Plaintext export of digest (email-ready)"
+    },
+    "snapshot_data": {
+      "type": "object",
+      "description": "Full digest object (critical_now, watch_worsening, summary_metrics)"
+    },
+    "acknowledged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether snapshot has been reviewed/acknowledged"
+    },
+    "acknowledged_by": {
+      "type": "string",
+      "description": "Email of user who acknowledged"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When acknowledged"
+    },
+    "acknowledged_note": {
+      "type": "string",
+      "description": "Optional note from acknowledger"
+    },
+    "recurring_concern": {
+      "type": "boolean",
+      "default": false,
+      "description": "Flagged as recurring issue to monitor"
+    },
+    "action_taken": {
+      "type": "string",
+      "enum": [
+        "contacted_manager",
+        "escalated",
+        "no_action",
+        null
+      ],
+      "description": "What action was taken after review"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Email of user/system that created snapshot"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "timestamp",
+    "scope",
+    "digest_hash",
+    "snapshot_data"
+  ]
+}

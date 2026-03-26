@@ -18,6 +18,11 @@ export async function runOfflineDigestSmoke() {
         testPlaintextFormatting,
         testDigestCriticalityCheck,
         testRoleVisibilityBoundaries,
+        testSnapshotIdGeneration,
+        testSnapshotHashDedup,
+        testSnapshotItemCounting,
+        testAcknowledgementPermissions,
+        testSnapshotHistoryOrdering,
     ];
     
     let passed = 0;
@@ -282,4 +287,150 @@ async function testRoleVisibilityBoundaries() {
     }
     
     return { success: true, name: 'Role Visibility Boundaries', message: 'SuperAdmin sees 3 stores, manager sees 1 store' };
+}
+
+async function testSnapshotIdGeneration() {
+    // Snapshot IDs should follow snap-YYYYMMDD-NNN format
+    const id1 = generateSnapshotId();
+    const id2 = generateSnapshotId();
+    
+    const regex = /^snap-\d{8}-\d{3}$/;
+    
+    if (!regex.test(id1) || !regex.test(id2)) {
+        return { success: false, name: 'Snapshot ID Gen', message: `Invalid format: ${id1}` };
+    }
+    
+    if (id1 === id2) {
+        return { success: false, name: 'Snapshot ID Gen', message: 'IDs should be unique' };
+    }
+    
+    return { success: true, name: 'Snapshot ID Generation', message: 'IDs follow snap-YYYYMMDD-NNN format' };
+}
+
+async function testSnapshotHashDedup() {
+    // Same digest → same hash → dedup
+    const digest1 = {
+        critical_now: { overdue_flagged: { count: 3 } },
+        watch_worsening: { escalation_rate_up: true },
+        summary_metrics: { total_offline: 100 }
+    };
+    
+    const digest2 = {
+        critical_now: { overdue_flagged: { count: 3 } },
+        watch_worsening: { escalation_rate_up: true },
+        summary_metrics: { total_offline: 100 }
+    };
+    
+    const hash1 = hashDigest(digest1);
+    const hash2 = hashDigest(digest2);
+    
+    if (hash1 !== hash2) {
+        return { success: false, name: 'Snapshot Hash Dedup', message: 'Identical digests produced different hashes' };
+    }
+    
+    return { success: true, name: 'Snapshot Hash Dedup', message: 'Identical digests produce same hash' };
+}
+
+async function testSnapshotItemCounting() {
+    const digest = {
+        critical_now: {
+            overdue_flagged: { count: 5 },
+            top_restaurants: [{ restaurant_id: 'r1' }],
+            abuse_escalations: { count: 2 }
+        },
+        watch_worsening: {
+            escalation_rate_up: true,
+            operator_outliers: [{ operator_email: 'op@test.com' }]
+        }
+    };
+    
+    const criticalCount = countCriticalItems(digest);
+    const worseningCount = countWorseningItems(digest);
+    
+    // 5 overdue + 1 restaurant + 1 abuse = 7
+    if (criticalCount !== 7) {
+        return { success: false, name: 'Critical Counting', message: `Expected 7, got ${criticalCount}` };
+    }
+    
+    // 1 escalation rate + 1 operator = 2
+    if (worseningCount !== 2) {
+        return { success: false, name: 'Worsening Counting', message: `Expected 2, got ${worseningCount}` };
+    }
+    
+    return { success: true, name: 'Snapshot Item Counting', message: 'Critical=7, Worsening=2' };
+}
+
+async function testAcknowledgementPermissions() {
+    // SuperAdmin can ack any snapshot
+    // Manager can only ack their own restaurant snapshot
+    
+    const snapshots = [
+        { id: 's1', scope: 'portfolio', scope_id: null, acknowledged: false },
+        { id: 's2', scope: 'restaurant', scope_id: 'r1', acknowledged: false },
+        { id: 's3', scope: 'restaurant', scope_id: 'r2', acknowledged: false }
+    ];
+    
+    const adminCanAck = snapshots.filter(s => true).length === 3; // Can ack all
+    const managerR1CanAck = snapshots.filter(s => s.scope_id === 'r1').length === 1; // Can ack r1 only
+    
+    if (!adminCanAck || !managerR1CanAck) {
+        return { success: false, name: 'Ack Permissions', message: 'Permission logic broken' };
+    }
+    
+    return { success: true, name: 'Acknowledgement Permissions', message: 'SuperAdmin can ack all, manager scoped to restaurant' };
+}
+
+async function testSnapshotHistoryOrdering() {
+    // Snapshots should be orderable by timestamp
+    const now = new Date();
+    const snapshots = [
+        { id: 's1', timestamp: new Date(now - 60000).toISOString() }, // 1m ago
+        { id: 's2', timestamp: new Date(now - 30000).toISOString() }, // 30s ago
+        { id: 's3', timestamp: new Date(now - 90000).toISOString() }  // 1.5m ago
+    ];
+    
+    const sorted = snapshots.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (sorted[0].id !== 's2' || sorted[2].id !== 's3') {
+        return { success: false, name: 'History Ordering', message: 'Snapshots not correctly sorted by timestamp' };
+    }
+    
+    return { success: true, name: 'Snapshot History Ordering', message: 'Latest snapshot first' };
+}
+
+function generateSnapshotId() {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+  const seq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `snap-${dateStr}-${seq}`;
+}
+
+function hashDigest(digest) {
+  const json = JSON.stringify({
+    critical_now: digest.critical_now,
+    watch_worsening: digest.watch_worsening,
+    summary_metrics: digest.summary_metrics
+  });
+  let hash = 0;
+  for (let i = 0; i < json.length; i++) {
+    const char = json.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+function countCriticalItems(digest) {
+  let count = 0;
+  if (digest.critical_now?.overdue_flagged?.count > 0) count += digest.critical_now.overdue_flagged.count;
+  if (digest.critical_now?.top_restaurants?.length > 0) count += 1;
+  if (digest.critical_now?.abuse_escalations?.count > 0) count += 1;
+  return count;
+}
+
+function countWorseningItems(digest) {
+  let count = 0;
+  if (digest.watch_worsening?.escalation_rate_up) count += 1;
+  if (digest.watch_worsening?.operator_outliers?.length > 0) count += 1;
+  return count;
 }

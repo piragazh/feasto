@@ -5,18 +5,40 @@
  * Read-only summary for operational awareness.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Clock, TrendingUp, Copy, Eye } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AlertTriangle, Clock, TrendingUp, Copy, Eye, History } from 'lucide-react';
 import { generatePortfolioDigest, formatDigestAsPlaintext, isDigestCritical } from '@/lib/offline-digest-logic';
+import DigestSnapshotHistory from './DigestSnapshotHistory';
 
 export default function OfflineRiskDigest() {
     const [period, setPeriod] = useState('24h');
     const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+    const [activeTab, setActiveTab] = useState('current');
+
+    // Auto-snapshot digest when component mounts
+    useEffect(() => {
+        const snapshot = async () => {
+            try {
+                if (digest && plaintext) {
+                    await base44.functions.invoke('createDigestSnapshot', {
+                        digest,
+                        scope: 'portfolio',
+                        scope_id: null,
+                        plaintext
+                    });
+                }
+            } catch (e) {
+                // Silently fail - snapshot is optional
+            }
+        };
+        snapshot();
+    }, [digest]);
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
@@ -91,10 +113,13 @@ export default function OfflineRiskDigest() {
         return generatePortfolioDigest(orders, restaurants, portfolioAnalytics, operatorAnalytics);
     }, [orders, restaurants, portfolioAnalytics, operatorAnalytics]);
 
+    const plaintext = useMemo(() => {
+        return formatDigestAsPlaintext(digest);
+    }, [digest]);
+
     const isCritical = isDigestCritical(digest);
 
     const handleCopyToClipboard = () => {
-        const plaintext = formatDigestAsPlaintext(digest);
         navigator.clipboard.writeText(plaintext);
         setCopiedToClipboard(true);
         setTimeout(() => setCopiedToClipboard(false), 2000);
@@ -102,8 +127,16 @@ export default function OfflineRiskDigest() {
 
     return (
         <div className="space-y-4">
-            {/* Header + Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Tabs: Current vs History */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="current">Current Digest</TabsTrigger>
+                    <TabsTrigger value="history">History</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="current" className="space-y-4">
+                    {/* Header + Controls */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-lg font-bold text-gray-900">Offline Risk Digest</h2>
                     <p className="text-xs text-gray-500 mt-1">Portfolio summary for operational awareness</p>
@@ -266,10 +299,25 @@ export default function OfflineRiskDigest() {
                 </Card>
             )}
 
-            {/* Footer Note */}
-            <div className="text-xs text-gray-500 text-center p-3 bg-gray-50 rounded">
-                ℹ️ Digest is a summary signal layer. Items require human investigation. Not proof.
-            </div>
+                    {/* Footer Note */}
+                    <div className="text-xs text-gray-500 text-center p-3 bg-gray-50 rounded">
+                        ℹ️ Digest is a summary signal layer. Items require human investigation. Not proof.
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="history">
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader>
+                            <CardTitle className="text-sm flex items-center gap-2">
+                                <History className="h-4 w-4" /> Recent Digest Snapshots
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <DigestSnapshotHistory scope="portfolio" scopeId={null} />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
