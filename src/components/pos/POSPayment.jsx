@@ -10,7 +10,7 @@ import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel } from '@/lib/printUtils';
 import { TerminalService } from '@/lib/terminal-service';
-import { MockTerminalProvider } from '@/lib/providers/mock-terminal-provider';
+import { createTerminalProvider } from '@/lib/providers/terminal-provider-factory';
 import { TERMINAL_STATES } from '@/lib/terminal-state-machine';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -99,7 +99,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     // Initialize terminal service on mount
     useEffect(() => {
         (async () => {
-            const provider = new MockTerminalProvider();
+            // Create provider based on restaurant config
+            const providerConfig = {
+                terminal_provider: restaurant?.printer_config?.card_terminal?.provider || 'mock',
+                terminal_config: restaurant?.printer_config?.card_terminal?.stripe_config || {}
+            };
+            const provider = createTerminalProvider(providerConfig);
             const service = new TerminalService(provider);
             
             // Initialize provider
