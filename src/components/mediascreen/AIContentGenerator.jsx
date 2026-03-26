@@ -291,7 +291,7 @@ Return a JSON screen ad plan with this exact structure:
     };
 
     return (
-        <React.Fragment>
+        <>
         <CanvasEditor
             open={showCanvasEditor}
             onClose={() => setShowCanvasEditor(false)}
@@ -709,6 +709,6 @@ Return a JSON screen ad plan with this exact structure:
                 </TabsContent>
             </Tabs>
         </div>
-        </React.Fragment>
+        </>
     );
 }
