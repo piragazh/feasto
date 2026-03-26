@@ -53,8 +53,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     // Coupon state — separate from manual discount; validated server-side via posValidateCoupon
     // POLICY: coupon and manual discount are mutually exclusive.
+    // OFFLINE: Coupons are blocked offline to prevent bypass of limit enforcement
     const [coupon, setCoupon] = useState(null);
     const [couponDialogOpen, setCouponDialogOpen] = useState(false);
+    const isOffline = !navigator.onLine;
     const handleApplyCoupon = (result) => {
         // Applying a coupon clears any active manual discount
         if (discount) {
@@ -431,6 +433,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             <AlertCircle className="h-3.5 w-3.5 shrink-0 text-orange-400" />
                             <span>Manual discount applied — remove it to add a coupon</span>
                         </div>
+                    ) : isOffline ? (
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                            <span>Coupons unavailable offline. Full price applies.</span>
+                        </div>
                     ) : (
                         <button
                             onClick={() => setCouponDialogOpen(true)}
@@ -696,17 +703,19 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Coupon picker dialog */}
-            <ApplyPromotionDialog
-                open={couponDialogOpen}
-                onClose={() => setCouponDialogOpen(false)}
-                onApplyCoupon={handleApplyCoupon}
-                restaurantId={restaurantId}
-                cartSubtotal={cartSubtotal}
-                customerPhone={window.__phoneOrderDetails?.phone || null}
-                customerEmail={null}
-                hasManualDiscount={!!discount}
-            />
+            {/* Coupon picker dialog — disabled offline */}
+            {!isOffline && (
+                <ApplyPromotionDialog
+                    open={couponDialogOpen}
+                    onClose={() => setCouponDialogOpen(false)}
+                    onApplyCoupon={handleApplyCoupon}
+                    restaurantId={restaurantId}
+                    cartSubtotal={cartSubtotal}
+                    customerPhone={window.__phoneOrderDetails?.phone || null}
+                    customerEmail={null}
+                    hasManualDiscount={!!discount}
+                />
+            )}
 
             {/* Terminal failed screen */}
             <AlertDialog open={terminalStep === 'failed'}>

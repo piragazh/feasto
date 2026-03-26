@@ -1,0 +1,326 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "Unique order number for collection orders (e.g., C-1234)"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Client-supplied key to prevent duplicate order creation on double-submit"
+    },
+    "payment_intent_id": {
+      "type": "string",
+      "description": "Stripe PaymentIntent ID \u2014 used as dedup key to prevent double-payment creating two orders"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "driver_id": {
+      "type": "string",
+      "description": "Assigned driver ID"
+    },
+    "driver_location": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        }
+      },
+      "description": "Real-time driver location"
+    },
+    "delivery_coordinates": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        }
+      },
+      "description": "Delivery destination coordinates"
+    },
+    "optimized_route": {
+      "type": "object",
+      "description": "AI-optimized delivery route"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "menu_item_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "customizations": {
+            "type": "object",
+            "description": "Customer's customization choices (e.g., size, toppings, extras)"
+          },
+          "itemQuantities": {
+            "type": "object",
+            "description": "Quantities for multiple-choice customizations"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "delivery_fee": {
+      "type": "number"
+    },
+    "small_order_surcharge": {
+      "type": "number",
+      "default": 0,
+      "description": "Surcharge added when order is below minimum (delivery only)"
+    },
+    "discount": {
+      "type": "number"
+    },
+    "discount_reason_code": {
+      "type": "string",
+      "description": "Reason code for manual discount (e.g., loyalty_gesture, damage_compensation)"
+    },
+    "coupon_code": {
+      "type": "string"
+    },
+    "total": {
+      "type": "number"
+    },
+    "platform_commission_amount": {
+      "type": "number",
+      "description": "Commission taken by platform"
+    },
+    "restaurant_earnings": {
+      "type": "number",
+      "description": "Amount restaurant receives (total - commission)"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "cash",
+        "card",
+        "apple_pay",
+        "google_pay"
+      ],
+      "default": "cash"
+    },
+    "order_type": {
+      "type": "string",
+      "enum": [
+        "delivery",
+        "collection",
+        "takeaway",
+        "dine_in"
+      ],
+      "default": "delivery",
+      "description": "Whether order is for delivery, collection, takeaway, or dine-in"
+    },
+    "table_id": {
+      "type": "string",
+      "description": "Table ID for dine-in orders"
+    },
+    "table_number": {
+      "type": "string",
+      "description": "Human-readable table number for dine-in orders (e.g., Table 5)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "preparing",
+        "out_for_delivery",
+        "ready_for_collection",
+        "delivered",
+        "collected",
+        "cancelled",
+        "refund_requested",
+        "refund_rejected_by_restaurant",
+        "refund_under_platform_review",
+        "refunded"
+      ],
+      "default": "pending"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "refund_request_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refund_request_reason": {
+      "type": "string"
+    },
+    "refund_request_description": {
+      "type": "string"
+    },
+    "refund_request_type": {
+      "type": "string",
+      "enum": [
+        "full",
+        "partial"
+      ]
+    },
+    "refund_requested_amount": {
+      "type": "number"
+    },
+    "refund_requested_items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "refund_rejection_reason": {
+      "type": "string"
+    },
+    "refund_rejected_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refund_approved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refund_amount": {
+      "type": "number"
+    },
+    "refund_paid_by": {
+      "type": "string",
+      "enum": [
+        "restaurant",
+        "platform"
+      ],
+      "description": "Who covers the refund cost"
+    },
+    "platform_override_reason": {
+      "type": "string"
+    },
+    "platform_override_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "platform_override_by": {
+      "type": "string"
+    },
+    "status_history": {
+      "type": "array",
+      "description": "Track all status changes",
+      "items": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "delivery_address": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "estimated_delivery": {
+      "type": "string"
+    },
+    "actual_delivery_time": {
+      "type": "string"
+    },
+    "scheduled_for": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_scheduled": {
+      "type": "boolean",
+      "default": false
+    },
+    "group_order_id": {
+      "type": "string"
+    },
+    "is_group_order": {
+      "type": "boolean",
+      "default": false
+    },
+    "group_order_host": {
+      "type": "string"
+    },
+    "guest_name": {
+      "type": "string"
+    },
+    "guest_email": {
+      "type": "string"
+    },
+    "loyalty_points_earned": {
+      "type": "number",
+      "default": 0
+    },
+    "loyalty_points_awarded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether loyalty points have been credited \u2014 also acts as optimistic-lock flag for concurrent award calls"
+    },
+    "third_party_platform": {
+      "type": "string"
+    },
+    "third_party_order_id": {
+      "type": "string",
+      "description": "External platform order ID (e.g. Uber Eats) \u2014 dedup key for webhook retries"
+    },
+    "offline_created": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if order originated from offline POS mode and synced later"
+    },
+    "offline_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the order was created in offline mode (local timestamp)"
+    },
+    "offline_synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the offline order was synced to server"
+    },
+    "needs_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if offline sync validation flagged issues (discount capped, coupon rejected, etc.)"
+    },
+    "sync_validation_notes": {
+      "type": "string",
+      "description": "Details of any validation issues found during offline sync (for audit trail)"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "items",
+    "total"
+  ]
+}

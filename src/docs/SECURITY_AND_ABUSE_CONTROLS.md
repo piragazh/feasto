@@ -327,6 +327,78 @@ For counter walk-in orders where no customer phone or email is captured:
 
 ---
 
+---
+
+## Offline POS Mode
+
+**Last reviewed: 2026-03-26**
+
+Offline POS orders currently **bypass all real-time validation** during local creation. To prevent offline mode from becoming a compliance loophole, the following hardening has been implemented:
+
+### Offline Policy (Hardened)
+
+| Action | Offline | Enforcement | Audit Trail |
+|---|---|---|---|
+| Full-price order | ✅ Allowed | UI allows; syncs directly | offline_created=true |
+| Manual discount | ❌ Blocked (safest) or ⚠️ Capped+flagged | UI disabled; if allowed, max £10 admin-only, capped on sync | needs_review=true on sync if applied |
+| Coupon application | ❌ Blocked entirely | Coupon dialog disabled; message shown | N/A — not allowed offline |
+| Coupon limit enforcement | ✅ Re-validated on sync | Sync calls `syncOfflineOrder` which re-validates all coupon rules | sync_validation_notes populated |
+| Discount threshold cap | ✅ Re-validated on sync | Manager ≤20%/£20 enforced on sync, not offline | needs_review=true if capped |
+| Menu price recompute | ✅ Re-validated on sync | Prices re-fetched from live menu on sync | order.items.price updated |
+
+### Offline Safe Actions
+
+- ✅ Create full-price orders
+- ✅ Record cash/card payment
+- ✅ Update existing order statuses (preparing, ready, etc.)
+- ✅ Capture customer details (phone, name, address)
+
+### Offline Blocked Actions
+
+- ❌ Apply coupons (requires real-time limit validation)
+- ❌ Apply manual discounts (manager threshold cannot be enforced offline)
+- ❌ Edit menu prices
+- ❌ Approve refunds
+
+### Offline Metadata & Audit
+
+Every offline-originated order is recorded with:
+- `offline_created: true` — identifies offline source
+- `offline_created_at` — local creation timestamp
+- `offline_synced_at` — server sync timestamp
+- `needs_review: boolean` — flagged if sync revalidation found issues
+- `sync_validation_notes: string` — audit details (e.g., "discount capped from £50 to £20")
+
+### Sync Revalidation (New: `syncOfflineOrder`)
+
+When an offline order syncs, `syncOfflineOrder` function re-validates:
+1. **Discount:** Manager threshold enforced; reason code required; invalid discount zeroed
+2. **Coupon:** All checks re-run (active, date range, minimum spend, global limit, per-customer limit)
+3. **Prices:** Items re-priced from live menu database
+4. **Mutual exclusion:** Coupon and discount enforced as exclusive
+5. **Result:** If any validation fails, order marked `needs_review=true` with detailed notes
+
+Orders that fail validation are **never auto-adjusted**; staff receive a clear audit trail and must manually review or approve.
+
+### Why Coupons Are Blocked Offline
+
+- Cannot verify real-time coupon limits (global usage_limit, per_customer_limit) without server round-trip
+- Cannot enforce coupon usage_count increment atomically
+- Cannot prevent double-redemption within the offline window
+- **Simplest safe policy:** block entirely offline; enforce on sync
+
+### Known Offline Limitations (Documented)
+
+| Limitation | Mitigation |
+|---|---|
+| Cannot enforce manager discount threshold offline | Sync re-validates; order flagged if exceeded |
+| Cannot verify coupon per-customer limit offline | Sync re-validates; coupon rejected if limit exceeded |
+| Cannot sync if menu prices have changed | Sync re-prices items from live menu; total recalculated |
+| Cannot sync if coupon became inactive | Sync re-validates coupon status; rejected if inactive |
+| Manager cannot see live order count offline | Cache order count before going offline; update on reconnect |
+
+---
+
 ## Summary scorecard
 
 | Area | Status |

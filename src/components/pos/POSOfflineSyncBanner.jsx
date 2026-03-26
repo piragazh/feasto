@@ -44,11 +44,19 @@ export async function triggerSync(restaurantId) {
 
             for (const order of forRestaurant) {
                 try {
-                    const { offline_id, synced: _s, created_at, ...orderData } = order;
-                    await base44.entities.Order.create(orderData);
-                    await markOrderSynced(offline_id);
-                    synced++;
-                } catch {
+                    const { offline_id, synced: _s, ...orderData } = order;
+                    // Route through syncOfflineOrder for re-validation
+                    const syncResult = await base44.functions.invoke('syncOfflineOrder', orderData);
+                    if (syncResult.data?.order) {
+                        await markOrderSynced(offline_id);
+                        synced++;
+                        // Log validation issues if flagged for review
+                        if (syncResult.data?.needs_review) {
+                            console.warn(`[OFFLINE-SYNC-BANNER] Order ${syncResult.data.order.id} flagged for review: ${syncResult.data.validation_notes}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`[OFFLINE-SYNC-BANNER] Sync failed for order ${order.offline_id}:`, error.message);
                     failed++;
                 }
             }
