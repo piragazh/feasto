@@ -1,5 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+/** Mirrors order-logic.js: normalizePhone */
+function _normalizePhone(phone) {
+    if (!phone || typeof phone !== 'string') return null;
+    let digits = phone.replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.startsWith('07') && digits.length === 11) {
+        digits = '44' + digits.slice(1);
+    }
+    return digits.length >= 10 ? digits : null;
+}
+
+/** Mirrors order-logic.js: normalizeEmail */
+function _normalizeEmail(email) {
+    if (!email || typeof email !== 'string') return null;
+    return email.trim().toLowerCase() || null;
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -81,7 +98,108 @@ Deno.serve(async (req) => {
             }
         }
 
-        const serverTotal = Math.max(0, serverSubtotal - approvedDiscount);
+        // ── Coupon validation (server-side) ─────────────────────────────────────
+        // Coupons are separate from manual discounts. A coupon_code may be provided
+        // from the POS coupon picker. If supplied, we re-validate it here to prevent
+        // the client from forging approval. Manual discount and coupon are mutually
+        // composable but coupon takes priority for identity-scoped limits.
+        let approvedCouponDiscount = 0;
+        let approvedCouponCode = null;
+        let approvedCouponId = null;
+
+        const rawCouponCode = typeof orderData.coupon_code === 'string' ? orderData.coupon_code.trim().toUpperCase() : null;
+
+        if (rawCouponCode) {
+            // One coupon only — if more than one comma-separated code, reject
+            if (rawCouponCode.includes(',')) {
+                return Response.json({ error: 'Only one coupon code per order is allowed' }, { status: 400 });
+            }
+
+            // Fetch coupon for server-side re-validation
+            const coupons = await base44.asServiceRole.entities.Coupon.filter({ code: rawCouponCode });
+            const coupon = coupons?.[0];
+
+            if (!coupon || !coupon.is_active) {
+                return Response.json({ error: `Coupon "${rawCouponCode}" is not valid` }, { status: 400 });
+            }
+
+            // Restaurant scope
+            if (coupon.restaurant_id && coupon.restaurant_id !== orderData.restaurant_id) {
+                return Response.json({ error: `Coupon "${rawCouponCode}" is not valid for this restaurant` }, { status: 400 });
+            }
+
+            // Date range
+            const now = new Date();
+            if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+                return Response.json({ error: `Coupon "${rawCouponCode}" is not yet valid` }, { status: 400 });
+            }
+            if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+                return Response.json({ error: `Coupon "${rawCouponCode}" has expired` }, { status: 400 });
+            }
+            if (coupon.expires_at && new Date(coupon.expires_at) < now) {
+                return Response.json({ error: `Coupon "${rawCouponCode}" has expired` }, { status: 400 });
+            }
+
+            // Minimum spend (against server-computed subtotal)
+            if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
+                return Response.json({
+                    error: `Minimum order of £${coupon.minimum_order.toFixed(2)} required for coupon "${rawCouponCode}"`,
+                }, { status: 400 });
+            }
+
+            // Global usage_limit
+            if (coupon.usage_limit && (coupon.usage_count || 0) >= coupon.usage_limit) {
+                return Response.json({ error: `Coupon "${rawCouponCode}" has reached its usage limit` }, { status: 400 });
+            }
+
+            // Per-customer limit (when customer identity available via phone order)
+            const perCustomerLimit = coupon.per_customer_limit ?? 1;
+            if (perCustomerLimit > 0) {
+                const normalizedPhone = _normalizePhone(orderData.phone || orderData.guest_phone);
+                const normalizedEmail = _normalizeEmail(orderData.guest_email);
+
+                if (normalizedPhone || normalizedEmail) {
+                    let customerUsageCount = 0;
+                    if (normalizedPhone) {
+                        const phoneOrders = await base44.asServiceRole.entities.Order.filter({
+                            coupon_code: rawCouponCode,
+                            phone: normalizedPhone,
+                        });
+                        customerUsageCount = Math.max(customerUsageCount, phoneOrders?.length || 0);
+                    }
+                    if (normalizedEmail) {
+                        const emailOrders = await base44.asServiceRole.entities.Order.filter({
+                            coupon_code: rawCouponCode,
+                            guest_email: normalizedEmail,
+                        });
+                        customerUsageCount = Math.max(customerUsageCount, emailOrders?.length || 0);
+                    }
+                    if (customerUsageCount >= perCustomerLimit) {
+                        return Response.json({
+                            error: `Coupon "${rawCouponCode}" has already been used the maximum number of times for this customer`,
+                        }, { status: 400 });
+                    }
+                }
+                // No identity → global limit only (walk-in POS limitation — documented)
+            }
+
+            // Compute coupon discount amount
+            if (coupon.discount_type === 'percentage') {
+                const pct = Math.min(coupon.discount_value || 0, 100);
+                approvedCouponDiscount = (serverSubtotal * pct) / 100;
+                if (coupon.max_discount) approvedCouponDiscount = Math.min(approvedCouponDiscount, coupon.max_discount);
+            } else if (coupon.discount_type === 'fixed') {
+                approvedCouponDiscount = coupon.discount_value || 0;
+            }
+            // free_delivery / free_item / bogo: 0 monetary discount from coupon; caller handles non-monetary aspects
+            approvedCouponDiscount = parseFloat(Math.min(approvedCouponDiscount, serverSubtotal).toFixed(2));
+            approvedCouponCode = rawCouponCode;
+            approvedCouponId = coupon.id;
+        }
+
+        // Total discount = manual discount + coupon discount (both server-approved)
+        const totalDiscount = approvedDiscount + approvedCouponDiscount;
+        const serverTotal = Math.max(0, serverSubtotal - totalDiscount);
 
         // Strip any attempt to spoof created_by or inject financial fields directly
         const {
@@ -91,6 +209,7 @@ Deno.serve(async (req) => {
             subtotal: _s,
             platform_commission_amount: _pc,
             restaurant_earnings: _re,
+            coupon_code: _cc,  // strip client value — we write the server-validated one
             ...safeOrderData
         } = orderData;
 
@@ -98,15 +217,32 @@ Deno.serve(async (req) => {
             ...safeOrderData,
             items: verifiedItems,
             subtotal: serverSubtotal,
-            discount: approvedDiscount,
+            discount: totalDiscount,
             discount_reason_code: approvedDiscount > 0 ? discountReasonCode : undefined,
+            coupon_code: approvedCouponCode || undefined,
             total: serverTotal,
             status: 'confirmed',
             payment_method: orderData.payment_method || 'cash',
             order_type: orderData.order_type || 'collection'
         });
 
-        console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} by=${user.email}`);
+        // Increment coupon usage_count server-side after order is persisted
+        if (approvedCouponId) {
+            try {
+                const freshCoupons = await base44.asServiceRole.entities.Coupon.filter({ id: approvedCouponId });
+                const freshCoupon = freshCoupons?.[0];
+                if (freshCoupon) {
+                    await base44.asServiceRole.entities.Coupon.update(approvedCouponId, {
+                        usage_count: (freshCoupon.usage_count || 0) + 1,
+                    });
+                }
+            } catch (couponErr) {
+                // Non-fatal: order is already created. Log for manual reconciliation.
+                console.error(`[POS-COUPON] Failed to increment usage_count for coupon ${approvedCouponId} on order ${order.id}:`, couponErr.message);
+            }
+        }
+
+        console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} coupon=${approvedCouponCode || 'none'} by=${user.email}`);
         return Response.json({ order });
     } catch (error) {
         console.error('[POS] posCreateOrder error:', error);

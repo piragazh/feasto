@@ -251,6 +251,58 @@ All permission checks are enforced server-side. The UI gates are supplementary o
 
 ---
 
+---
+
+## POS coupon enforcement
+
+**Last reviewed: 2026-03-26**
+
+POS coupon handling uses a dedicated server path separate from online checkout (`verifyAndCreateOrder`). The policies are consistent where customer identity allows; differences are documented honestly.
+
+### POS coupon path
+
+1. **`posGetCoupons`** — returns only coupons that pass: `is_active`, restaurant scope, date range (`valid_from`, `valid_until`, `expires_at`), and global `usage_limit`. Expired or maxed-out coupons are not shown to staff.
+
+2. **`posValidateCoupon`** — server validates on apply (before order creation): active, scope, date range, minimum spend, global limit, per-customer limit (when identity available). Returns `{ valid, discount_amount }`.
+
+3. **`posCreateOrder`** — re-validates the coupon code server-side at order creation time (independent of client state), writes `coupon_code` to the Order entity, and increments `usage_count` after persisting the order.
+
+### POS coupon policy rules
+
+| Rule | Enforced? | Where |
+|---|---|---|
+| Active status | ✅ | posGetCoupons + posValidateCoupon + posCreateOrder |
+| Date range / expires_at | ✅ | posGetCoupons + posValidateCoupon + posCreateOrder |
+| Restaurant scope | ✅ | posGetCoupons + posValidateCoupon + posCreateOrder |
+| Minimum spend | ✅ | posValidateCoupon + posCreateOrder |
+| Global usage_limit | ✅ | posGetCoupons + posValidateCoupon + posCreateOrder |
+| Per-customer limit (phone order) | ✅ | posValidateCoupon + posCreateOrder |
+| Per-customer limit (walk-in, no identity) | ⚠️ Only global limit | Documented limitation |
+| One coupon per order | ✅ | posCreateOrder (comma-separated → 400) |
+| coupon_code written to Order | ✅ | posCreateOrder |
+| usage_count incremented server-side | ✅ | posCreateOrder (after order persisted) |
+| Manual discount remains separate | ✅ | posApplyDiscount / POSDiscountPanel (unchanged) |
+
+### POS vs online checkout: differences
+
+| Aspect | Online checkout | POS |
+|---|---|---|
+| Auth identity | `created_by` (platform-set) or guest phone/email | Staff user auth; customer identity optional |
+| Per-customer coupon limit | Enforced: auth = `created_by`; guest = phone+email dual signal | Enforced when phone/email captured (phone orders); walk-in has no identity |
+| Velocity throttle (coupon abuse) | ✅ guest phone throttle (3/hr) | ❌ N/A — staff-facing, not public endpoint |
+| usage_count increment | posCreateOrder / verifyAndCreateOrder (both server-side) | posCreateOrder (server-side) |
+| Audit | verifyAndCreateOrder console log | posCreateOrder console log |
+
+### Walk-in POS identity limitation (accepted)
+
+For counter walk-in orders where no customer phone or email is captured:
+- **Per-customer coupon limits cannot be enforced** — there is no identity to query against
+- Only the **global `usage_limit`** acts as a hard cap
+- This is an accepted, documented limitation. The mitigation is to set `usage_limit` on coupons that need hard caps.
+- If a restaurant captures customer phone (e.g. loyalty programme integration), per-customer limits will apply automatically.
+
+---
+
 ## Summary scorecard
 
 | Area | Status |
@@ -289,3 +341,14 @@ All permission checks are enforced server-side. The UI gates are supplementary o
 | Email normalisation (guest) | ✅ NEW — lowercase+trim before all comparisons |
 | Phone normalisation (guest) | ✅ NEW — digits-only, 07→447, consistent across formats |
 | Guest dual-signal full evasion (rotate both) | ❌ Accepted limitation — no strong identity anchor available |
+| POS coupon date range / expiry enforcement | ✅ NEW — posGetCoupons + posValidateCoupon + posCreateOrder |
+| POS coupon restaurant scope enforcement | ✅ NEW — posGetCoupons + posValidateCoupon + posCreateOrder |
+| POS coupon minimum spend enforcement | ✅ NEW — posValidateCoupon + posCreateOrder |
+| POS global usage_limit enforcement | ✅ NEW — all three layers |
+| POS per-customer limit (phone orders) | ✅ NEW — posValidateCoupon + posCreateOrder |
+| POS per-customer limit (walk-in, no identity) | ❌ Accepted — no customer identity; global limit applies |
+| POS coupon_code written to Order | ✅ NEW — was never written; now written by posCreateOrder |
+| POS usage_count increment (server-side) | ✅ NEW — was client-side / missing; now in posCreateOrder |
+| POS one-coupon-per-order enforcement | ✅ NEW — posCreateOrder rejects comma-separated codes |
+| POS manual discount path separation | ✅ Unchanged — posApplyDiscount / POSDiscountPanel |
+| POS coupon stacking with manual discount | ✅ Both applied server-side independently |

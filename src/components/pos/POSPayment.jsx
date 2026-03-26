@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff, CheckCircle, XCircle, Loader2, Monitor, FileText } from 'lucide-react';
+import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff, CheckCircle, XCircle, Loader2, Monitor, FileText, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
 import POSDiscountPanel from './POSDiscountPanel';
+import ApplyPromotionDialog from './ApplyPromotionDialog';
 import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel } from '@/lib/printUtils';
@@ -50,9 +51,18 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const handleApplyDiscount = (d) => { setDiscount(d); if (onApplyDiscount) onApplyDiscount(d); };
     const handleRemoveDiscount = () => { setDiscount(null); if (onRemoveDiscount) onRemoveDiscount(); };
 
+    // Coupon state — separate from manual discount; validated server-side via posValidateCoupon
+    const [coupon, setCoupon] = useState(null);
+    const [couponDialogOpen, setCouponDialogOpen] = useState(false);
+    const handleApplyCoupon = (result) => setCoupon(result);
+    const handleRemoveCoupon = () => setCoupon(null);
+
     const cartSubtotal = cart.reduce((s, i) => s + (i.pos_price != null ? i.pos_price : i.price) * i.quantity, 0);
     // Recompute effective total from cartSubtotal to avoid stale prop
-    const effectiveTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
+    // Both manual discount and coupon discount are applied
+    const couponDiscountAmount = coupon?.discount_amount || 0;
+    const manualDiscountAmount = discount?.amount || 0;
+    const effectiveTotal = Math.max(0, cartSubtotal - manualDiscountAmount - couponDiscountAmount);
 
     // Card terminal config from restaurant
     const cardTerminal = restaurant?.printer_config?.card_terminal;
@@ -86,12 +96,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             logoUrl: restaurant?.logo_url,
             items: cart,
             subtotal: cartSubtotal,
-            discount,
+            discount: (manualDiscountAmount > 0 || couponDiscountAmount > 0)
+                ? { amount: manualDiscountAmount + couponDiscountAmount }
+                : null,
             total: effectiveTotal,
             remaining,
             paymentMethod: activeMethod,
         });
-    }, [cart, discount, effectiveTotal, remaining, activeMethod]);
+    }, [cart, discount, coupon, effectiveTotal, remaining, activeMethod]);
 
     const createOrder = async (paymentSummary) => {
         if (!restaurantId) return;
@@ -119,7 +131,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             })),
             subtotal: cartSubtotal,
             delivery_fee: 0,
+            // Manual discount — server re-validates in posCreateOrder
             discount: discount?.amount || 0,
+            discount_reason_code: discount?.reason_code || undefined,
+            // Coupon — server re-validates + increments usage_count in posCreateOrder
+            coupon_code: coupon?.coupon_code || undefined,
             total: effectiveTotal,
             status: 'confirmed',
             order_type: isPhoneOrder ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection'),
@@ -131,12 +147,13 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         };
 
         if (!navigator.onLine) {
-            // Save to IndexedDB for later sync
+            // Save to IndexedDB for later sync (offline path — coupon limits won't be enforced until sync)
             await savePendingOrder(orderData);
             return { offline: true };
         }
 
-        await base44.entities.Order.create(orderData);
+        // Route through posCreateOrder — server validates coupon, writes coupon_code, increments usage_count
+        await base44.functions.invoke('posCreateOrder', orderData);
         return { offline: false };
     };
 
@@ -189,7 +206,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 items: cart.map(i => ({ menu_item_id: i.menu_item_id || i.id, name: i.name, price: i.price, quantity: i.quantity, customizations: i.customizations || {} })),
                 subtotal: cartSubtotal,
                 delivery_fee: 0,
-                discount: discount?.amount || 0,
+                discount: manualDiscountAmount + couponDiscountAmount,
+                coupon_code: coupon?.coupon_code || undefined,
                 total: effectiveTotal,
                 status: 'confirmed',
                 order_type: (() => { const p = window.__phoneOrderDetails || {}; const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return isPh ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection'); })(),
@@ -379,11 +397,45 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         discount={discount}
                         onApply={handleApplyDiscount}
                         onRemove={handleRemoveDiscount}
+                        restaurantId={restaurantId}
                         t={t}
                         isDark={isDark}
                     />
+
+                    {/* Coupon section — server-validated */}
+                    {coupon ? (
+                        <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200'}`}>
+                            <div className="flex items-center gap-2">
+                                <Tag className="h-3.5 w-3.5 text-green-500" />
+                                <span className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                                    {coupon.coupon_code}
+                                </span>
+                                <span className={`text-xs ${isDark ? 'text-green-300' : 'text-green-600'}`}>
+                                    −£{coupon.discount_amount.toFixed(2)}
+                                </span>
+                            </div>
+                            <button onClick={handleRemoveCoupon} className="text-red-400 hover:text-red-300 transition-colors">
+                                <XCircle className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setCouponDialogOpen(true)}
+                            className={`w-full flex items-center justify-center gap-2 h-9 rounded-xl text-xs font-semibold border transition-colors ${
+                                isDark
+                                    ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-orange-400'
+                                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-orange-500'
+                            }`}
+                        >
+                            <Tag className="h-3.5 w-3.5" />
+                            Add Coupon
+                        </button>
+                    )}
+
                     <div className={`${t.totalBox} p-3 rounded-xl`}>
-                        <p className={`${t.totalTxt} text-xs`}>Total{discount ? ` (was £${cartSubtotal.toFixed(2)})` : ''}</p>
+                        <p className={`${t.totalTxt} text-xs`}>
+                            Total{(manualDiscountAmount > 0 || couponDiscountAmount > 0) ? ` (was £${cartSubtotal.toFixed(2)})` : ''}
+                        </p>
                         <p className={`${t.totalAmt} text-3xl font-bold`}>£{effectiveTotal.toFixed(2)}</p>
                     </div>
 
@@ -630,6 +682,17 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Coupon picker dialog */}
+            <ApplyPromotionDialog
+                open={couponDialogOpen}
+                onClose={() => setCouponDialogOpen(false)}
+                onApplyCoupon={handleApplyCoupon}
+                restaurantId={restaurantId}
+                cartSubtotal={cartSubtotal}
+                customerPhone={window.__phoneOrderDetails?.phone || null}
+                customerEmail={null}
+            />
 
             {/* Terminal failed screen */}
             <AlertDialog open={terminalStep === 'failed'}>

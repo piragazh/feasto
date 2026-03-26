@@ -1,229 +1,205 @@
+/**
+ * ApplyPromotionDialog — POS coupon picker
+ *
+ * Coupon path (hardened):
+ *   - Fetches eligible coupons from posGetCoupons (server pre-filtered)
+ *   - On Apply: calls posValidateCoupon server-side — validates dates, scope,
+ *     minimum spend, global limit, per-customer limit (if phone available)
+ *   - Returns a validated coupon object to the parent (POSPayment/POSOrderEntry)
+ *   - Parent passes coupon_code to posCreateOrder which re-validates + persists
+ *   - usage_count is incremented server-side in posCreateOrder only
+ *
+ * Manual discount path (unchanged):
+ *   - Uses POSDiscountPanel → posApplyDiscount — separate control, requires reason_code
+ *
+ * What this component does NOT do:
+ *   - Direct entity writes (Order.update) — removed
+ *   - Client-side coupon math as the authoritative total — server owns it
+ */
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Tag, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
-export default function ApplyPromotionDialog({ order, open, onClose, onUpdate, restaurantId }) {
-    const [discountAmount, setDiscountAmount] = useState(0);
-    const [discountType, setDiscountType] = useState('fixed');
-    const [promoCode, setPromoCode] = useState('');
-    const [appliedDiscount, setAppliedDiscount] = useState(null);
+export default function ApplyPromotionDialog({
+    open,
+    onClose,
+    onApplyCoupon,  // (couponResult) => void  — called with server-validated coupon
+    restaurantId,
+    cartSubtotal,
+    customerPhone = null,   // optional — from phone order details
+    customerEmail = null,   // optional
+}) {
+    const [manualCode, setManualCode] = useState('');
+    const [validating, setValidating] = useState(null); // coupon id being validated
+    const [error, setError] = useState(null);
 
-    const { data: promotions = [] } = useQuery({
-        queryKey: ['promotions', restaurantId],
-        queryFn: () => base44.entities.Promotion.filter({ restaurant_id: restaurantId, is_active: true }),
+    // Fetch pre-filtered eligible coupons from server
+    const { data: coupons = [], isLoading } = useQuery({
+        queryKey: ['pos-eligible-coupons', restaurantId],
+        queryFn: async () => {
+            const res = await base44.functions.invoke('posGetCoupons', { restaurant_id: restaurantId });
+            return res?.data?.coupons || [];
+        },
         enabled: !!restaurantId && open,
+        staleTime: 30_000, // 30s — short enough to catch usage_limit changes
     });
 
-    const { data: coupons = [] } = useQuery({
-        queryKey: ['coupons', restaurantId],
-        queryFn: () => base44.entities.Coupon.filter({ restaurant_id: restaurantId, is_active: true }),
-        enabled: !!restaurantId && open,
-    });
+    const validateAndApply = async (couponCode) => {
+        const code = couponCode.trim().toUpperCase();
+        if (!code) return;
 
-    const calculateDiscount = (type, value) => {
-        if (type === 'fixed') {
-            return Math.min(value, order.subtotal || order.total);
-        }
-        return Math.min((order.subtotal || order.total) * (value / 100), (order.subtotal || order.total));
-    };
-
-    const handleApplyCustomDiscount = () => {
-        if (discountAmount <= 0) {
-            toast.error('Discount amount must be greater than 0');
-            return;
-        }
-        const finalDiscount = calculateDiscount(discountType, discountAmount);
-        setAppliedDiscount({ type: discountType, value: discountAmount, amount: finalDiscount });
-        toast.success(`Discount of £${finalDiscount.toFixed(2)} applied`);
-    };
-
-    const handleApplyPromotion = (promo) => {
-        let discountValue = promo.discount_value;
-        const finalDiscount = calculateDiscount(promo.promotion_type.includes('percentage') ? 'percentage' : 'fixed', discountValue);
-        setAppliedDiscount({ type: promo.promotion_type, value: discountValue, amount: finalDiscount, promoName: promo.name });
-        toast.success(`${promo.name} applied!`);
-    };
-
-    const handleApplyCoupon = (coupon) => {
-        if (coupon.minimum_order && (order.subtotal || order.total) < coupon.minimum_order) {
-            toast.error(`Minimum order of £${coupon.minimum_order} required`);
-            return;
-        }
-        let discountValue = coupon.discount_value;
-        const finalDiscount = calculateDiscount(coupon.discount_type === 'percentage' ? 'percentage' : 'fixed', discountValue);
-        setAppliedDiscount({ type: coupon.discount_type, value: discountValue, amount: finalDiscount, code: coupon.code });
-        toast.success(`Coupon ${coupon.code} applied!`);
-    };
-
-    const handleSaveDiscount = async () => {
-        if (!appliedDiscount) {
-            toast.error('No discount to apply');
-            return;
-        }
+        setValidating(code);
+        setError(null);
 
         try {
-            const currentDiscount = order.discount || 0;
-            await base44.entities.Order.update(order.id, {
-                discount: currentDiscount + appliedDiscount.amount,
-                total: Math.max(0, (order.total || 0) - appliedDiscount.amount)
+            const res = await base44.functions.invoke('posValidateCoupon', {
+                restaurant_id: restaurantId,
+                coupon_code: code,
+                subtotal: cartSubtotal,
+                customer_phone: customerPhone || undefined,
+                customer_email: customerEmail || undefined,
             });
-            toast.success('Discount applied to order');
-            onUpdate();
-            setAppliedDiscount(null);
-            setDiscountAmount(0);
-            setPromoCode('');
+
+            const result = res?.data;
+
+            if (!result?.valid) {
+                setError(result?.error || 'Coupon is not valid');
+                toast.error(result?.error || 'Coupon is not valid');
+                return;
+            }
+
+            toast.success(`Coupon ${result.coupon_code} applied — £${result.discount_amount.toFixed(2)} off`);
+            onApplyCoupon(result);
+            setManualCode('');
+            setError(null);
             onClose();
-        } catch (error) {
-            toast.error('Failed to apply discount');
+
+        } catch (err) {
+            const msg = err?.message || 'Failed to validate coupon';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setValidating(null);
         }
     };
+
+    const handleManualApply = () => validateAndApply(manualCode);
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="bg-gray-800 border-gray-700 max-w-2xl">
+            <DialogContent className="bg-gray-800 border-gray-700 max-w-lg">
                 <DialogHeader>
-                    <DialogTitle className="text-white">Apply Discount - Order #{order?.id.slice(0, 8)}</DialogTitle>
+                    <DialogTitle className="text-white flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-orange-400" />
+                        Apply Coupon
+                    </DialogTitle>
                 </DialogHeader>
 
-                <Tabs defaultValue="custom" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-gray-700">
-                        <TabsTrigger value="custom" className="text-white">Custom</TabsTrigger>
-                        <TabsTrigger value="promotions" className="text-white">Promotions</TabsTrigger>
-                        <TabsTrigger value="coupons" className="text-white">Coupons</TabsTrigger>
-                    </TabsList>
-
-                    {/* Custom Discount */}
-                    <TabsContent value="custom" className="space-y-4">
-                        <div className="bg-gray-700 p-3 rounded mb-4">
-                            <p className="text-gray-400 text-sm">Order Total</p>
-                            <p className="text-orange-400 text-2xl font-bold">£{(order?.total || 0).toFixed(2)}</p>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div>
-                                <Label className="text-white text-sm">Discount Type</Label>
-                                <div className="flex gap-2 mt-1">
-                                    <Button
-                                        onClick={() => setDiscountType('fixed')}
-                                        variant={discountType === 'fixed' ? 'default' : 'outline'}
-                                        className={`flex-1 ${discountType === 'fixed' ? 'bg-orange-500' : 'bg-gray-700 border-gray-600'} text-white`}
-                                    >
-                                        £ Fixed
-                                    </Button>
-                                    <Button
-                                        onClick={() => setDiscountType('percentage')}
-                                        variant={discountType === 'percentage' ? 'default' : 'outline'}
-                                        className={`flex-1 ${discountType === 'percentage' ? 'bg-orange-500' : 'bg-gray-700 border-gray-600'} text-white`}
-                                    >
-                                        % Percentage
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <Label className="text-white text-sm">Amount</Label>
-                                <Input
-                                    type="number"
-                                    value={discountAmount}
-                                    onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                                    placeholder={discountType === 'percentage' ? '0-100' : '0.00'}
-                                    min="0"
-                                    step={discountType === 'percentage' ? '1' : '0.01'}
-                                    className="bg-gray-700 border-gray-600 text-white"
-                                />
-                            </div>
-
-                            {discountAmount > 0 && (
-                                <div className="bg-gray-700 p-2 rounded">
-                                    <p className="text-gray-400 text-sm">Applied Discount</p>
-                                    <p className="text-green-400 font-bold">
-                                        £{calculateDiscount(discountType, discountAmount).toFixed(2)}
-                                    </p>
-                                </div>
-                            )}
-
-                            <Button
-                                onClick={handleApplyCustomDiscount}
-                                className="w-full bg-orange-500 hover:bg-orange-600"
-                            >
-                                Apply Custom Discount
-                            </Button>
-                        </div>
-                    </TabsContent>
-
-                    {/* Promotions */}
-                    <TabsContent value="promotions" className="space-y-2 max-h-60 overflow-y-auto">
-                        {promotions.length === 0 ? (
-                            <p className="text-gray-400 text-center py-4">No active promotions</p>
-                        ) : (
-                            promotions.map(promo => (
-                                <div key={promo.id} className="bg-gray-700 p-3 rounded border border-gray-600">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <p className="text-white font-medium">{promo.name}</p>
-                                            <p className="text-gray-400 text-xs">{promo.description}</p>
-                                        </div>
-                                        <Button
-                                            onClick={() => handleApplyPromotion(promo)}
-                                            size="sm"
-                                            className="bg-green-600 hover:bg-green-700"
-                                        >
-                                            Apply
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </TabsContent>
-
-                    {/* Coupons */}
-                    <TabsContent value="coupons" className="space-y-2 max-h-60 overflow-y-auto">
-                        {coupons.length === 0 ? (
-                            <p className="text-gray-400 text-center py-4">No active coupons</p>
-                        ) : (
-                            coupons.map(coupon => (
-                                <div key={coupon.id} className="bg-gray-700 p-3 rounded border border-gray-600">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <p className="text-white font-bold">{coupon.code}</p>
-                                            <p className="text-gray-400 text-xs">
-                                                {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `£${coupon.discount_value}`} off
-                                                {coupon.minimum_order && ` - Min £${coupon.minimum_order}`}
-                                            </p>
-                                        </div>
-                                        <Button
-                                            onClick={() => handleApplyCoupon(coupon)}
-                                            size="sm"
-                                            className="bg-green-600 hover:bg-green-700"
-                                        >
-                                            Apply
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </TabsContent>
-                </Tabs>
-
-                {/* Applied Discount Summary */}
-                {appliedDiscount && (
-                    <div className="bg-green-700/30 border border-green-600 p-3 rounded">
-                        <p className="text-green-300 text-sm font-medium">
-                            {appliedDiscount.promoName || appliedDiscount.code || 'Custom Discount'} - £{appliedDiscount.amount.toFixed(2)}
-                        </p>
+                {/* Manual code entry */}
+                <div className="space-y-2">
+                    <Label className="text-gray-300 text-sm">Enter coupon code</Label>
+                    <div className="flex gap-2">
+                        <Input
+                            value={manualCode}
+                            onChange={e => { setManualCode(e.target.value.toUpperCase()); setError(null); }}
+                            onKeyDown={e => e.key === 'Enter' && handleManualApply()}
+                            placeholder="e.g. SAVE10"
+                            className="bg-gray-700 border-gray-600 text-white uppercase"
+                        />
+                        <Button
+                            onClick={handleManualApply}
+                            disabled={!manualCode.trim() || validating === manualCode.trim().toUpperCase()}
+                            className="bg-orange-500 hover:bg-orange-600 shrink-0"
+                        >
+                            {validating === manualCode.trim().toUpperCase()
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : 'Apply'
+                            }
+                        </Button>
                     </div>
-                )}
+                    {error && (
+                        <p className="text-red-400 text-xs flex items-center gap-1">
+                            <XCircle className="h-3.5 w-3.5 shrink-0" />
+                            {error}
+                        </p>
+                    )}
+                </div>
+
+                {/* Eligible coupon list */}
+                <div className="mt-3">
+                    <p className="text-gray-400 text-xs mb-2 uppercase tracking-wide font-semibold">Available coupons</p>
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+                        </div>
+                    ) : coupons.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">No eligible coupons for this restaurant</p>
+                    ) : (
+                        <div className="space-y-2 max-h-56 overflow-y-auto">
+                            {coupons.map(coupon => {
+                                const isValidating = validating === coupon.code;
+                                const meetsMinimum = !coupon.minimum_order || cartSubtotal >= coupon.minimum_order;
+                                return (
+                                    <div
+                                        key={coupon.id}
+                                        className={`bg-gray-700 p-3 rounded-lg border ${meetsMinimum ? 'border-gray-600' : 'border-gray-700 opacity-50'}`}
+                                    >
+                                        <div className="flex justify-between items-start gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-white font-bold text-sm">{coupon.code}</p>
+                                                <p className="text-gray-400 text-xs mt-0.5">
+                                                    {coupon.discount_type === 'percentage'
+                                                        ? `${coupon.discount_value}% off`
+                                                        : coupon.discount_type === 'fixed'
+                                                        ? `£${coupon.discount_value} off`
+                                                        : coupon.discount_type === 'free_delivery'
+                                                        ? 'Free delivery'
+                                                        : coupon.discount_type === 'free_item'
+                                                        ? `Free item: ${coupon.free_item_name || 'see staff'}`
+                                                        : coupon.discount_type
+
+                                                    }
+                                                    {coupon.minimum_order ? ` · Min £${coupon.minimum_order}` : ''}
+                                                    {coupon.max_discount ? ` · Max £${coupon.max_discount}` : ''}
+                                                </p>
+                                                {coupon.description && (
+                                                    <p className="text-gray-500 text-xs mt-0.5 truncate">{coupon.description}</p>
+                                                )}
+                                                {!meetsMinimum && (
+                                                    <p className="text-orange-400 text-xs mt-0.5">
+                                                        Need £{(coupon.minimum_order - cartSubtotal).toFixed(2)} more
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => validateAndApply(coupon.code)}
+                                                disabled={!meetsMinimum || isValidating}
+                                                className="bg-green-600 hover:bg-green-700 disabled:opacity-40 shrink-0"
+                                            >
+                                                {isValidating
+                                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    : meetsMinimum ? 'Apply' : 'Min not met'
+                                                }
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} className="bg-gray-700 border-gray-600 text-white">Cancel</Button>
-                    <Button onClick={handleSaveDiscount} className="bg-orange-500 hover:bg-orange-600" disabled={!appliedDiscount}>
-                        Save Discount
+                    <Button variant="outline" onClick={onClose} className="bg-gray-700 border-gray-600 text-white">
+                        Cancel
                     </Button>
                 </DialogFooter>
             </DialogContent>

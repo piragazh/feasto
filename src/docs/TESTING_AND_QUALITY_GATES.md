@@ -166,6 +166,7 @@ Required fixture data and cleanup instructions: `scripts/smoke/README.md`
 | `adjustLoyaltyPoints` | Admin-only; reason required; valid adjustment_type; zero-delta rejected; valid correction returns before/after |
 | `validateCouponUsage` (updated) | Documents the coupon_codes→coupon_code fix; manual cases for first-use/repeat-use verification |
 | `posCreateOrderDiscount` | Documents discount-without-reason zeroed; manager threshold cap; valid-within-threshold accepted |
+| `posCouponValidation` | POS coupon path hardening: expiry filtering, scope, minimum spend, global limit, per-customer limit (phone orders), coupon_code written, usage_count incremented server-side, one-coupon enforcement |
 
 Run: `npm run smoke:operationalcontrols`
 
