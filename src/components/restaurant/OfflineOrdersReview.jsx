@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, WifiOff, CheckCircle2, Clock, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import OfflineOrderReviewAction from './OfflineOrderReviewAction';
-import OfflineReviewStats from './OfflineReviewStats';
+import OfflineReviewHealthIndicator from './OfflineReviewHealthIndicator';
 import OfflineReviewAnalytics from './OfflineReviewAnalytics';
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 
@@ -127,7 +127,7 @@ export default function OfflineOrdersReview({ restaurantId }) {
 
     return (
         <>
-            <OfflineReviewStats orders={offlineOrders} />
+            <OfflineReviewHealthIndicator orders={offlineOrders} />
             
             {/* Analytics tab */}
             <Tabs defaultValue="orders" className="w-full">
