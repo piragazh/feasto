@@ -2,11 +2,16 @@
  * B) COUPON POLICY
  *
  * Tests the one-coupon-per-order policy, expiry, minimum spend,
- * restaurant scoping, and discount cap rules.
+ * restaurant scoping, discount cap rules, per-customer limits,
+ * and the expires_at field used by reward coupons.
+ *
+ * SYNC NOTE: These tests cover the pure-function mirror of the logic
+ * in functions/verifyAndCreateOrder. Any change to the Deno handler's
+ * coupon block MUST be reflected here and vice versa.
  */
 
-import { describe, it, expect } from 'vitest';
-import { validateCoupon, resolveCouponDiscount } from '../order-logic.js';
+import { describe, it, expect, vi } from 'vitest';
+import { validateCoupon, checkPerCustomerLimit, resolveCouponDiscount } from '../order-logic.js';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -158,6 +163,94 @@ describe('validateCoupon', () => {
         );
         expect(result.valid).toBe(true);
         expect(result.discount).toBe(5.00);
+    });
+
+    it('rejects when expires_at (reward coupon) timestamp has passed', () => {
+        const result = validateCoupon(
+            baseCoupon({ expires_at: past(1) }),
+            SUBTOTAL, RESTAURANT_A
+        );
+        expect(result.valid).toBe(false);
+        expect(result.reason).toBe('expired');
+    });
+
+    it('accepts when expires_at is in the future', () => {
+        const result = validateCoupon(
+            baseCoupon({ expires_at: future(2) }),
+            SUBTOTAL, RESTAURANT_A
+        );
+        expect(result.valid).toBe(true);
+    });
+
+    it('rejects when valid_until is in the past even if expires_at is null', () => {
+        const result = validateCoupon(
+            baseCoupon({ valid_until: past(1), expires_at: null }),
+            SUBTOTAL, RESTAURANT_A
+        );
+        expect(result.valid).toBe(false);
+        expect(result.reason).toBe('expired');
+    });
+});
+
+// ─── checkPerCustomerLimit ────────────────────────────────────────────────────
+
+describe('checkPerCustomerLimit', () => {
+    const couponWithLimit = (limit) => ({
+        id: 'coupon-1',
+        code: 'SAVE10',
+        per_customer_limit: limit,
+    });
+
+    it('is not blocked when customer has used 0 times (limit=1)', async () => {
+        const getOrderCount = async () => 0;
+        const result = await checkPerCustomerLimit(couponWithLimit(1), 'user@test.com', getOrderCount);
+        expect(result.blocked).toBe(false);
+    });
+
+    it('is blocked when customer has already used the coupon once (limit=1)', async () => {
+        const getOrderCount = async () => 1;
+        const result = await checkPerCustomerLimit(couponWithLimit(1), 'user@test.com', getOrderCount);
+        expect(result.blocked).toBe(true);
+        expect(result.reason).toBe('per_customer_limit_reached');
+    });
+
+    it('is not blocked when customer used 1 of 2 allowed uses', async () => {
+        const getOrderCount = async () => 1;
+        const result = await checkPerCustomerLimit(couponWithLimit(2), 'user@test.com', getOrderCount);
+        expect(result.blocked).toBe(false);
+    });
+
+    it('is blocked at exactly the limit (used=2, limit=2)', async () => {
+        const getOrderCount = async () => 2;
+        const result = await checkPerCustomerLimit(couponWithLimit(2), 'user@test.com', getOrderCount);
+        expect(result.blocked).toBe(true);
+    });
+
+    it('returns no_identifier reason when customerEmail is null', async () => {
+        const getOrderCount = async () => 0;
+        const result = await checkPerCustomerLimit(couponWithLimit(1), null, getOrderCount);
+        expect(result.blocked).toBe(false);
+        expect(result.reason).toBe('no_identifier');
+    });
+
+    it('is not blocked when per_customer_limit is 0 (unlimited)', async () => {
+        const getOrderCount = async () => 99;
+        const result = await checkPerCustomerLimit(couponWithLimit(0), 'user@test.com', getOrderCount);
+        expect(result.blocked).toBe(false);
+    });
+
+    it('is not blocked when per_customer_limit is null', async () => {
+        const coupon = { ...couponWithLimit(null) };
+        const getOrderCount = async () => 99;
+        const result = await checkPerCustomerLimit(coupon, 'user@test.com', getOrderCount);
+        expect(result.blocked).toBe(false);
+    });
+
+    it('a second customer with 0 uses is NOT blocked by first customer hitting limit', async () => {
+        // getOrderCount is scoped to one customer, so returns 0 for a new customer
+        const getOrderCount = async () => 0;
+        const result = await checkPerCustomerLimit(couponWithLimit(1), 'other@test.com', getOrderCount);
+        expect(result.blocked).toBe(false);
     });
 });
 

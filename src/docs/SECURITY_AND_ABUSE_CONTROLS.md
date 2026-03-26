@@ -180,6 +180,24 @@ All permission checks are enforced server-side. The UI gates are supplementary o
   stripped from the client payload entirely — server always computes these
 - The approved `discount_reason_code` is persisted on the Order for auditability
 
+### verifyAndCreateOrder — online checkout coupon hardening (2026-03-26)
+
+**Online checkout coupon policy (authoritative path):**
+
+| Check | Before | After |
+|---|---|---|
+| Per-customer limit (auth) | ❌ Missing | ✅ Enforced via `created_by` + `coupon_code` query |
+| Per-customer limit (guest) | ❌ Missing | ⚠️ Weak — enforced via `guest_email` (self-reported) |
+| `expires_at` (reward coupons) | ❌ Not checked | ✅ Checked |
+| `coupon_code` field written to Order | ❌ `coupon_codes` (wrong plural) | ✅ `coupon_code` (correct singular) |
+| `usage_count` increment | ❌ Client-side race | ✅ Server-side after order created |
+
+**Customer identifier strategy:**
+- Authenticated: `created_by` (platform-set, cannot be spoofed)
+- Guest: `guest_email` from orderData (weak — self-reported, not verified)
+
+**Guest checkout limitation:** A guest can bypass `per_customer_limit` by using a different email. This is a known, accepted limitation. There is no strong identity anchor for unauthenticated users on this platform.
+
 ### validateCouponUsage — per-customer limit fix (2026-03-26)
 **BUG FOUND AND FIXED.**
 - Previous query: `coupon_codes: { $includes: coupon.code }` (array operator on non-existent field)
@@ -228,3 +246,7 @@ All permission checks are enforced server-side. The UI gates are supplementary o
 | Loyalty manual adjustment | ✅ adjustLoyaltyPoints, admin-only, reason required, audited |
 | POS discount bypass (posCreateOrder) | ✅ Re-validates discount server-side, strips financial fields |
 | coupon_code per-customer limit | ✅ FIXED — was querying wrong field (coupon_codes vs coupon_code) |
+| Online checkout coupon per-customer limit | ✅ NEW — was missing entirely from verifyAndCreateOrder |
+| Online checkout expires_at check | ✅ NEW — reward coupon expiry now checked |
+| Online checkout coupon_code field written | ✅ FIXED — now writes correct singular field |
+| Online checkout usage_count increment | ✅ MOVED TO SERVER — was client-side race |

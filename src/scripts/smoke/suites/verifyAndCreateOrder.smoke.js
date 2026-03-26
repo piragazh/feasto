@@ -67,6 +67,8 @@ export async function run(env) {
         assertNoRawError(body);
     });
 
+    // ── Coupon enforcement in the real checkout path ──────────────────────────
+
     await test('coupon stacking (two codes) rejected with 400', 'A', async () => {
         if (!hasFixtures) {
             console.log('       (no fixtures — using stub restaurant ID)');
@@ -86,6 +88,77 @@ export async function run(env) {
         }
         assertNoRawError(body);
     });
+
+    await test('unrecognised coupon code returns 400', 'A', async () => {
+        const orderData = buildFixtureOrder({
+            restaurantId: env.restaurantId || 'smoke-stub-restaurant',
+            menuItemId: env.menuItemId || 'smoke-stub-item',
+            couponCode: 'NOTACOUPON_SMOKE_XYZ',
+        });
+        const { status, body } = await call(env.baseUrl, 'verifyAndCreateOrder', { orderData });
+        // Will fail earlier (restaurant/item not found) if no fixtures, but coupon path is hit after those
+        // If it fails on restaurant — that's fine; the server never reaches the coupon block for stub IDs.
+        // With real fixtures it must be 400 with coupon error.
+        if (env.restaurantId) {
+            assertStatus(status, 400);
+            const errorLower = (body.error || '').toLowerCase();
+            if (!errorLower.includes('coupon') && !errorLower.includes('recognised') && !errorLower.includes('valid')) {
+                throw new Error(`Expected coupon error, got: "${body.error}"`);
+            }
+        }
+        assertNoRawError(body);
+    });
+
+    /*
+     * ── MANUAL COUPON SMOKE CASES ─────────────────────────────────────────────
+     * The following require real coupon fixtures in the database. They are documented
+     * here for manual execution against a staging environment. To automate, set
+     * SMOKE_TEST_COUPON_CODE and SMOKE_TEST_RESTAURANT_ID.
+     *
+     * Case 1 — First use of single-use coupon succeeds:
+     *   POST verifyAndCreateOrder with { coupon_codes: "ONCE_ONLY", ... }
+     *   Expected: 201, order.coupon_code === "ONCE_ONLY", Coupon.usage_count incremented by 1
+     *
+     * Case 2 — Second use by same authenticated customer is blocked:
+     *   POST verifyAndCreateOrder again (same user session) with { coupon_codes: "ONCE_ONLY", ... }
+     *   Expected: 400, error contains "already used this coupon"
+     *
+     * Case 3 — Different customer can still use if global limit not hit:
+     *   POST verifyAndCreateOrder with a DIFFERENT user session and { coupon_codes: "ONCE_ONLY", ... }
+     *   Expected: 201 (if per_customer_limit=1 and global limit not reached)
+     *
+     * Case 4 — Expired coupon blocked:
+     *   Create coupon with valid_until = yesterday. POST with that code.
+     *   Expected: 400, error contains "expired"
+     *
+     * Case 5 — expires_at reward coupon blocked after expiry:
+     *   Create coupon with expires_at = yesterday. POST with that code.
+     *   Expected: 400, error contains "expired"
+     *
+     * Case 6 — Wrong-restaurant coupon blocked:
+     *   Use coupon scoped to restaurant A on restaurant B order.
+     *   Expected: 400, error contains "not valid for this restaurant"
+     *
+     * Case 7 — Below minimum spend blocked:
+     *   Coupon with minimum_order=50, order subtotal=20.
+     *   Expected: 400, error contains "minimum order"
+     *
+     * Case 8 — Promotion + one valid coupon both apply:
+     *   Order with appliedPromotion discount AND one coupon code.
+     *   Expected: 201, total = subtotal + fee - promotion_discount - coupon_discount (server recomputed)
+     *
+     * Case 9 — Order total matches server calculation:
+     *   Submit order with accurate client total after coupon.
+     *   Expected: 201 (within £0.50 tolerance)
+     *   Submit with total £1 too low (as if extra discount was added client-side).
+     *   Expected: 400, error contains "total does not match"
+     *
+     * Case 10 — Guest per-customer limit enforcement (WEAK — documented limitation):
+     *   Guest uses coupon_code with per_customer_limit=1 via guest_email=test@example.com.
+     *   Second order from same guest_email should be blocked.
+     *   NOTE: A guest can bypass this by changing their email. This is a known limitation.
+     * ──────────────────────────────────────────────────────────────────────────
+     */
 
     await test('card payment with no paymentIntentId returns 400', 'A', async () => {
         const orderData = buildFixtureOrder({

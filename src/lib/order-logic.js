@@ -10,7 +10,8 @@
  * SYNC RULE: Any change to a function here MUST be applied to its
  * corresponding inline copy in the Deno handler, and vice versa:
  *   - functions/verifyAndCreateOrder  → recomputeSubtotal, computeAndVerifyTotal,
- *                                        validateCoupon, capPromotionDiscount
+ *                                        validateCoupon, checkPerCustomerLimit,
+ *                                        capPromotionDiscount
  *   - functions/orderVelocityThrottle → basketFingerprint, checkPerUserBurst,
  *                                        checkPlatformBurst
  *   - functions/enforceRateLimiting   → checkPerUserBurst
@@ -78,7 +79,11 @@ export function computeAndVerifyTotal({ serverSubtotal, deliveryFee, discount },
 
 /**
  * Validate a single coupon record against the current order context.
+ * Does NOT check per-customer limits (requires async DB query — see checkPerCustomerLimit).
  * Returns { valid: boolean, reason: string|null, discount: number }
+ *
+ * SYNC RULE: Keep in sync with the inline coupon validation block in
+ * functions/verifyAndCreateOrder (sections A-D + global usage limit).
  *
  * @param {object} coupon        - coupon record from DB
  * @param {number} serverSubtotal
@@ -86,26 +91,34 @@ export function computeAndVerifyTotal({ serverSubtotal, deliveryFee, discount },
  * @param {Date}   [now]
  */
 export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date()) {
+    // A: Active status
     if (!coupon.is_active) {
         return { valid: false, reason: 'inactive', discount: 0 };
     }
 
+    // B: Date range
     if (coupon.valid_from && new Date(coupon.valid_from) > now) {
         return { valid: false, reason: 'not_yet_valid', discount: 0 };
     }
-
     if (coupon.valid_until && new Date(coupon.valid_until) < now) {
         return { valid: false, reason: 'expired', discount: 0 };
     }
+    // Precise expires_at timestamp (reward coupons)
+    if (coupon.expires_at && new Date(coupon.expires_at) < now) {
+        return { valid: false, reason: 'expired', discount: 0 };
+    }
 
+    // Global usage limit
     if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
         return { valid: false, reason: 'usage_limit_reached', discount: 0 };
     }
 
+    // D: Minimum spend
     if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
         return { valid: false, reason: 'below_minimum_order', discount: 0 };
     }
 
+    // C: Restaurant scope
     if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) {
         return { valid: false, reason: 'wrong_restaurant', discount: 0 };
     }
@@ -114,6 +127,9 @@ export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new D
     if (coupon.discount_type === 'percentage') {
         d = (serverSubtotal * coupon.discount_value) / 100;
         if (coupon.max_discount) d = Math.min(d, coupon.max_discount);
+    } else if (coupon.discount_type === 'free_delivery') {
+        // free_delivery: caller should pass deliveryFee as serverSubtotal context; we return the raw value here
+        d = coupon.discount_value || 0;
     } else {
         d = coupon.discount_value || 0;
     }
@@ -121,6 +137,32 @@ export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new D
     d = Math.min(d, serverSubtotal);
 
     return { valid: true, reason: null, discount: d };
+}
+
+/**
+ * Check per-customer coupon usage limit.
+ * Separate from validateCoupon because it requires async DB access.
+ *
+ * SYNC RULE: Keep in sync with the per-customer check in functions/verifyAndCreateOrder.
+ *
+ * @param {object} coupon               - coupon record from DB
+ * @param {string|null} customerEmail   - authenticated user email (authoritative) or guest email (weak)
+ * @param {Function} getOrderCount      - async (filter) => number — injected for testability
+ * @returns {Promise<{ blocked: boolean, reason: string|null }>}
+ */
+export async function checkPerCustomerLimit(coupon, customerEmail, getOrderCount) {
+    if (!coupon.per_customer_limit || coupon.per_customer_limit <= 0) {
+        return { blocked: false, reason: null };
+    }
+    if (!customerEmail) {
+        // No identifier — cannot enforce. Caller decides how to handle.
+        return { blocked: false, reason: 'no_identifier' };
+    }
+    const count = await getOrderCount({ customer_email: customerEmail, coupon_code: coupon.code });
+    if (count >= coupon.per_customer_limit) {
+        return { blocked: true, reason: 'per_customer_limit_reached' };
+    }
+    return { blocked: false, reason: null };
 }
 
 /**

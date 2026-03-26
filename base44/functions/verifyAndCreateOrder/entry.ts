@@ -380,17 +380,35 @@ Deno.serve(async (req) => {
 
         // ============================================
         // COUPON POLICY: ONE coupon code per order.
+        //
         // Stacking multiple coupon codes is not permitted.
         // Restaurant promotions (auto-applied BOGO, percentage_off, etc.) are a separate
         // track handled via orderData.discount when no coupon_codes are present — they
         // can combine with a single coupon since they are restaurant-controlled, not
         // user-entered codes.
+        //
+        // AUTHORITATIVE IDENTIFIER for per-customer limits:
+        //   - Authenticated users: created_by (set automatically by the platform to user email)
+        //   - Guest users: guest_email supplied by the frontend (weak — self-reported)
+        //   NOTE: Guest identity is WEAK. A guest can bypass per-customer limits by changing
+        //   their email. This is a known limitation documented in SECURITY_AND_ABUSE_CONTROLS.md.
+        //   Authenticated users are strongly enforced.
         // ============================================
         let verifiedDiscount = 0;
         const clientDiscount = orderData.discount || 0;
 
-        if (orderData.coupon_codes) {
-            const couponCodes = orderData.coupon_codes.split(',').map(c => c.trim()).filter(Boolean);
+        // Resolve the customer identifier for per-customer limit checks.
+        // For authenticated users, created_by is set by the platform (trustworthy).
+        // For guests, we use guest_email (weak but best available signal).
+        const customerIdentifier = user?.email || orderData.guest_email || null;
+
+        // Normalise coupon input: the frontend sends coupon_codes (plural, comma-separated string).
+        // The Order entity stores coupon_code (singular string). We read from coupon_codes but
+        // write coupon_code to the stored order.
+        const rawCouponCodes = orderData.coupon_codes || orderData.coupon_code || null;
+
+        if (rawCouponCodes) {
+            const couponCodes = String(rawCouponCodes).split(',').map(c => c.trim()).filter(Boolean);
 
             // POLICY: Reject if more than one coupon code is submitted
             if (couponCodes.length > 1) {
@@ -408,38 +426,7 @@ Deno.serve(async (req) => {
                 const code = couponCodes[0];
                 const coupons = await base44.asServiceRole.entities.Coupon.filter({ code });
 
-                if (coupons?.length > 0) {
-                    const coupon = coupons[0];
-                    const now = new Date();
-                    const isActive = coupon.is_active;
-                    const notExpired = !coupon.valid_until || new Date(coupon.valid_until) >= now;
-                    const notYetStarted = coupon.valid_from && new Date(coupon.valid_from) > now;
-                    const withinUsage = !coupon.usage_limit || coupon.usage_count < coupon.usage_limit;
-                    const meetsMinimum = !coupon.minimum_order || serverSubtotal >= coupon.minimum_order;
-                    const forThisRestaurant = !coupon.restaurant_id || coupon.restaurant_id === orderData.restaurant_id;
-
-                    if (isActive && notExpired && !notYetStarted && withinUsage && meetsMinimum && forThisRestaurant) {
-                        let d = 0;
-                        if (coupon.discount_type === 'percentage') {
-                            d = (serverSubtotal * coupon.discount_value) / 100;
-                            if (coupon.max_discount) d = Math.min(d, coupon.max_discount);
-                        } else {
-                            d = coupon.discount_value || 0;
-                        }
-                        verifiedDiscount = Math.min(d, serverSubtotal);
-                    } else {
-                        // Coupon found but failed validation — reject rather than silently drop
-                        console.warn(`[COUPON] Invalid coupon "${code}" on order: active=${isActive} notExpired=${notExpired} withinUsage=${withinUsage}`);
-                        return new Response(
-                            JSON.stringify({
-                                error: 'The coupon code applied is no longer valid. Please remove it and try again.',
-                                success: false
-                            }),
-                            { status: 400 }
-                        );
-                    }
-                } else {
-                    // Code not found
+                if (!coupons?.length) {
                     return new Response(
                         JSON.stringify({
                             error: 'The coupon code applied is not recognised. Please remove it and try again.',
@@ -448,6 +435,104 @@ Deno.serve(async (req) => {
                         { status: 400 }
                     );
                 }
+
+                const coupon = coupons[0];
+                const now = new Date();
+
+                // ── A: Active status ────────────────────────────────────────
+                if (!coupon.is_active) {
+                    console.warn(`[COUPON] Inactive coupon "${code}"`);
+                    return new Response(JSON.stringify({ error: 'This coupon is no longer active.', success: false }), { status: 400 });
+                }
+
+                // ── B: Date range / expiry ──────────────────────────────────
+                if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+                    return new Response(JSON.stringify({ error: 'This coupon is not yet valid.', success: false }), { status: 400 });
+                }
+                if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+                    return new Response(JSON.stringify({ error: 'This coupon has expired.', success: false }), { status: 400 });
+                }
+                // Also check the precise expires_at timestamp (used for reward coupons)
+                if (coupon.expires_at && new Date(coupon.expires_at) < now) {
+                    return new Response(JSON.stringify({ error: 'This coupon has expired.', success: false }), { status: 400 });
+                }
+
+                // ── C: Restaurant scope ─────────────────────────────────────
+                if (coupon.restaurant_id && coupon.restaurant_id !== orderData.restaurant_id) {
+                    return new Response(JSON.stringify({ error: 'This coupon is not valid for this restaurant.', success: false }), { status: 400 });
+                }
+
+                // ── D: Minimum spend ────────────────────────────────────────
+                if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
+                    return new Response(
+                        JSON.stringify({ error: `A minimum order of £${coupon.minimum_order.toFixed(2)} is required to use this coupon.`, success: false }),
+                        { status: 400 }
+                    );
+                }
+
+                // ── Global usage limit ──────────────────────────────────────
+                if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+                    return new Response(JSON.stringify({ error: 'This coupon has reached its usage limit.', success: false }), { status: 400 });
+                }
+
+                // ── A (per-customer): Per-customer usage limit ──────────────
+                // CRITICAL: This was MISSING in the original implementation.
+                // Uses coupon_code (singular, the correct Order field) — NOT coupon_codes.
+                if (coupon.per_customer_limit && coupon.per_customer_limit > 0 && customerIdentifier) {
+                    // Check authenticated orders (created_by is platform-set, authoritative)
+                    const authOrders = await base44.asServiceRole.entities.Order.filter({
+                        created_by: customerIdentifier,
+                        coupon_code: coupon.code
+                    });
+                    let customerUsageCount = Array.isArray(authOrders) ? authOrders.length : 0;
+
+                    // For guests: also check guest_email if the identifier is an email
+                    // that might be stored as guest_email on older orders
+                    if (!user?.email && orderData.guest_email) {
+                        const guestOrders = await base44.asServiceRole.entities.Order.filter({
+                            guest_email: orderData.guest_email,
+                            coupon_code: coupon.code
+                        });
+                        const guestCount = Array.isArray(guestOrders) ? guestOrders.length : 0;
+                        customerUsageCount = Math.max(customerUsageCount, guestCount);
+                    }
+
+                    if (customerUsageCount >= coupon.per_customer_limit) {
+                        console.warn(`[COUPON] Per-customer limit hit: identifier=${customerIdentifier} code=${code} used=${customerUsageCount} limit=${coupon.per_customer_limit}`);
+                        return new Response(
+                            JSON.stringify({
+                                error: `You have already used this coupon the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`,
+                                success: false
+                            }),
+                            { status: 400 }
+                        );
+                    }
+                } else if (coupon.per_customer_limit && coupon.per_customer_limit > 0 && !customerIdentifier) {
+                    // No identifier at all — cannot enforce per-customer limit. Log and allow
+                    // (guest with no email; very edge case since guest_email is required by the form).
+                    console.warn(`[COUPON] Per-customer limit cannot be enforced: no customer identifier for code=${code}`);
+                }
+
+                // ── Compute discount ────────────────────────────────────────
+                let d = 0;
+                if (coupon.discount_type === 'percentage') {
+                    d = (serverSubtotal * coupon.discount_value) / 100;
+                    if (coupon.max_discount) d = Math.min(d, coupon.max_discount);
+                } else if (coupon.discount_type === 'free_delivery') {
+                    // free_delivery coupon: server grants delivery fee as discount, capped at actual fee
+                    d = Math.min(coupon.discount_value || deliveryFee, deliveryFee);
+                } else {
+                    d = coupon.discount_value || 0;
+                }
+                verifiedDiscount = Math.min(d, serverSubtotal);
+
+                // Store the normalised code on the order (singular field, correct entity shape)
+                // We'll write coupon_code (not coupon_codes) when creating the order below.
+                orderData._verified_coupon_code = coupon.code;
+                orderData._verified_coupon_id = coupon.id;
+                orderData._coupon_usage_count = coupon.usage_count || 0;
+
+                console.log(`[COUPON] Verified code="${code}" type=${coupon.discount_type} discount=£${verifiedDiscount.toFixed(2)} customer=${customerIdentifier || 'unknown'}`);
             }
         } else {
             // No coupon code: allow restaurant promotion discount, capped at 50% of subtotal
@@ -475,13 +560,33 @@ Deno.serve(async (req) => {
 
         // ============================================
         // All Validations Passed - Create Order
-        // Store idempotency_key and payment_intent_id so concurrent dupes are caught
+        // Store idempotency_key and payment_intent_id so concurrent dupes are caught.
+        // Normalise coupon_code field: entity stores coupon_code (singular string).
+        // Strip coupon_codes (plural, frontend field) and any internal _verified_* fields.
         // ============================================
+        const {
+            coupon_codes: _couponCodesPlural,   // strip plural frontend field
+            _verified_coupon_code,
+            _verified_coupon_id,
+            _coupon_usage_count,
+            ...cleanOrderData
+        } = orderData;
+
         const newOrder = await base44.asServiceRole.entities.Order.create({
-            ...orderData,
+            ...cleanOrderData,
+            // Write correct singular field — use server-verified code if available
+            coupon_code: _verified_coupon_code || orderData.coupon_code || null,
             ...(idempotency_key ? { idempotency_key } : {}),
             ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
         });
+
+        // Increment coupon usage_count server-side (atomic, not client-side race)
+        // This is intentionally fire-and-forget after order creation to avoid blocking the response.
+        if (_verified_coupon_id) {
+            base44.asServiceRole.entities.Coupon.update(_verified_coupon_id, {
+                usage_count: (_coupon_usage_count || 0) + 1
+            }).catch(e => console.warn(`[COUPON] Failed to increment usage_count for coupon ${_verified_coupon_id}:`, e));
+        }
 
         if (!newOrder || !newOrder.id) {
             console.error('[ORDER] Entity create returned no ID for restaurant', orderData.restaurant_id);

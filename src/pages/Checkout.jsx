@@ -970,19 +970,8 @@ export default function Checkout() {
                 );
             }
 
-            // Increment coupon usage (parallel per coupon)
-            appliedCoupons.forEach(coupon => {
-                backgroundTasks.push(
-                    base44.functions.invoke('validateCouponUsage', { couponId: coupon.id })
-                        .then(recheck => {
-                            if (recheck?.data?.valid) {
-                                return base44.entities.Coupon.update(coupon.id, {
-                                    usage_count: (coupon.usage_count || 0) + 1
-                                });
-                            }
-                        }).catch(e => console.error('Failed to update coupon usage:', e))
-                );
-            });
+            // NOTE: Coupon usage_count is now incremented server-side in verifyAndCreateOrder.
+            // No client-side coupon update needed here.
 
             // Increment promotion usage (parallel per promo)
             appliedPromotions.filter(p => !p.is_automatic).forEach(promo => {
