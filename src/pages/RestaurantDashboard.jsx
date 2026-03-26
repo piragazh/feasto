@@ -514,6 +514,8 @@ export default function RestaurantDashboard() {
                 </Tabs>
             );
         }
+
+        return null;
     };
 
     // ── Page title for breadcrumb ─────────────────────────────────────────────
