@@ -7,7 +7,6 @@ import CustomItemsManager from './CustomItemsManager';
 import TableManagement from './TableManagement';
 import POSLayoutSelector from '../pos/POSLayoutSelector';
 import PhoneOrderSettings from '../pos/PhoneOrderSettings';
-import POSPrinterSettings from '../pos/POSPrinterSettings';
 import POSCardTerminalSettings from '../pos/POSCardTerminalSettings';
 import POSCustomizationLayoutSelector from '../pos/POSCustomizationLayoutSelector';
 
@@ -34,8 +33,6 @@ export default function POSConfigurations({ restaurantId }) {
                     </Button>
                 </CardContent>
             </Card>
-
-            <POSPrinterSettings restaurantId={restaurantId} />
 
             <POSCardTerminalSettings restaurantId={restaurantId} />
 
