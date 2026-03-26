@@ -258,15 +258,7 @@ export default function RestaurantDashboard() {
         requestNotificationPermission();
     }, []);
 
-    useEffect(() => {
-        if (!restaurant?.id) return;
-        const track = async () => {
-            try { await base44.functions.invoke('trackDashboardActivity', { restaurant_id: restaurant.id }); } catch (err) {}
-        };
-        track();
-        const interval = setInterval(track, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [restaurant?.id]);
+    // Lightweight engagement tracking disabled
 
     const loadUserAndRestaurant = async () => {
         try {
