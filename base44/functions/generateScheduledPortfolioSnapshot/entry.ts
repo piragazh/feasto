@@ -4,6 +4,12 @@
  * Runs on a daily schedule (9:00 UTC) to create reliable portfolio digest snapshots.
  * Deduplicates on hash to avoid noise if digest unchanged.
  * 
+ * SECURITY:
+ * - Requires SCHEDULED_DIGEST_SECRET in Authorization header (Bearer token)
+ * - Enforces 60-second cooldown to prevent spam
+ * - Logs all execution attempts (authorized/rejected)
+ * - Rejects unauthorized calls immediately (403)
+ * 
  * Triggered by: Base44 scheduled automation
  * Schedule: Daily 09:00 UTC
  * Created by: 'system' (no user auth)
@@ -214,8 +220,82 @@ function generatePortfolioDigest(orders = [], restaurants = [], portfolioAnalyti
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-
-    console.log('[Scheduled] generateScheduledPortfolioSnapshot triggered');
+    
+    // SECURITY: Validate authorization header with scheduler secret
+    const authHeader = req.headers.get('authorization');
+    const scheduledSecret = Deno.env.get('SCHEDULED_DIGEST_SECRET');
+    
+    if (!scheduledSecret) {
+      console.error('[Scheduled] ERROR: SCHEDULED_DIGEST_SECRET not set in environment');
+      return Response.json(
+        { error: 'Configuration error: scheduler secret not configured' },
+        { status: 500 }
+      );
+    }
+    
+    const expectedAuth = `Bearer ${scheduledSecret}`;
+    const isAuthorized = authHeader === expectedAuth;
+    
+    console.log(`[Scheduled] generateScheduledPortfolioSnapshot triggered (auth: ${isAuthorized ? 'valid' : 'INVALID'})`);
+    
+    // Check execution log for cooldown + unauthorized attempt tracking
+    let executionLog = null;
+    try {
+      const logs = await base44.asServiceRole.entities.ScheduledExecutionLog.filter({
+        function_name: 'generateScheduledPortfolioSnapshot'
+      });
+      executionLog = logs?.[0] || null;
+    } catch (e) {
+      console.warn('[Scheduled] Could not fetch execution log:', e.message);
+      executionLog = null;
+    }
+    
+    // SECURITY: Reject unauthorized calls immediately
+    if (!isAuthorized) {
+      console.warn(`[Scheduled] UNAUTHORIZED attempt (no valid secret)`);
+      
+      // Log unauthorized attempt
+      if (executionLog) {
+        await base44.asServiceRole.entities.ScheduledExecutionLog.update(executionLog.id, {
+          unauthorized_attempts: (executionLog.unauthorized_attempts || 0) + 1,
+          last_unauthorized_attempt_at: new Date().toISOString()
+        }).catch(e => console.warn('[Scheduled] Could not log unauthorized attempt:', e.message));
+      }
+      
+      return Response.json(
+        { error: 'Unauthorized: invalid or missing scheduler secret' },
+        { status: 403 }
+      );
+    }
+    
+    // SECURITY: Check cooldown (prevent spam/rapid repeated calls)
+    const cooldownSeconds = executionLog?.cooldown_seconds || 60;
+    if (executionLog?.last_execution_timestamp) {
+      const lastExecTime = new Date(executionLog.last_execution_timestamp).getTime();
+      const nowTime = new Date().getTime();
+      const secondsSinceLastExec = Math.round((nowTime - lastExecTime) / 1000);
+      
+      if (secondsSinceLastExec < cooldownSeconds) {
+        console.log(
+          `[Scheduled] Cooldown active: ${secondsSinceLastExec}/${cooldownSeconds}s elapsed since last run, skipping`
+        );
+        
+        // Update log to show cooldown block
+        await base44.asServiceRole.entities.ScheduledExecutionLog.update(executionLog.id, {
+          last_execution_status: 'cooldown_blocked',
+          reason_skipped: `Only ${secondsSinceLastExec}s since last execution (cooldown: ${cooldownSeconds}s)`
+        }).catch(e => console.warn('[Scheduled] Could not update cooldown log:', e.message));
+        
+        return Response.json({
+          success: true,
+          scheduled: true,
+          execution_source: 'scheduled',
+          is_cooldown_blocked: true,
+          seconds_until_next_allowed: cooldownSeconds - secondsSinceLastExec,
+          message: `Cooldown active (${cooldownSeconds}s), execution skipped`
+        });
+      }
+    }
 
     // Fetch all orders and restaurants
     const orders = await base44.asServiceRole.entities.Order.list('-offline_synced_at', 1000);
@@ -290,10 +370,27 @@ Deno.serve(async (req) => {
       )[0];
       
       if (latest.digest_hash === digestHash) {
-        console.log(`[Scheduled] Digest unchanged, skipping snapshot (hash: ${digestHash})`);
+        console.log(`[Scheduled] Digest unchanged, skipping snapshot (hash: ${digestHash}, execution_source: scheduled)`);
+        
+        // Update execution log: duplicate
+        const logData = {
+          function_name: 'generateScheduledPortfolioSnapshot',
+          last_execution_timestamp: new Date().toISOString(),
+          last_execution_status: 'duplicate',
+          reason_skipped: 'Digest content unchanged (hash dedup)',
+          unauthorized_attempts: 0,
+          last_unauthorized_attempt_at: null
+        };
+        
+        if (executionLog) {
+          await base44.asServiceRole.entities.ScheduledExecutionLog.update(executionLog.id, logData)
+            .catch(e => console.warn('[Scheduled] Could not update duplicate log:', e.message));
+        }
+        
         return Response.json({
           success: true,
           scheduled: true,
+          execution_source: 'scheduled',
           is_duplicate: true,
           message: 'Digest unchanged, no snapshot created',
           hash: digestHash
@@ -301,7 +398,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create snapshot
+    // Create snapshot with authorization info
     const snapshot = {
       snapshot_id: generateSnapshotId(),
       timestamp: new Date().toISOString(),
@@ -324,17 +421,68 @@ Deno.serve(async (req) => {
 
     const created = await base44.asServiceRole.entities.DigestSnapshot.create(snapshot);
 
-    console.log(`[Scheduled] Portfolio snapshot created: ${created.id}`);
+    // Update execution log: success
+    const logData = {
+      function_name: 'generateScheduledPortfolioSnapshot',
+      last_execution_timestamp: new Date().toISOString(),
+      last_execution_status: 'success',
+      last_snapshot_id: created.id,
+      reason_skipped: null,
+      unauthorized_attempts: 0,
+      last_unauthorized_attempt_at: null
+    };
+    
+    if (executionLog) {
+      await base44.asServiceRole.entities.ScheduledExecutionLog.update(executionLog.id, logData)
+        .catch(e => console.warn('[Scheduled] Could not update success log:', e.message));
+    } else {
+      await base44.asServiceRole.entities.ScheduledExecutionLog.create(logData)
+        .catch(e => console.warn('[Scheduled] Could not create execution log:', e.message));
+    }
+
+    console.log(`[Scheduled] Portfolio snapshot created: ${created.id} (execution_source: scheduled, cooldown: ok)`);
 
     return Response.json({
       success: true,
       scheduled: true,
+      execution_source: 'scheduled',
+      is_duplicate: false,
       snapshot_id: created.id,
       critical_count: snapshot.critical_item_count,
       message: 'Scheduled portfolio snapshot created'
     });
   } catch (error) {
-    console.error('[Scheduled] Error:', error);
-    return Response.json({ error: error.message, scheduled: true }, { status: 500 });
+    console.error('[Scheduled] Error:', error.message);
+    
+    // Log error in execution log
+    const base44 = createClientFromRequest(req);
+    try {
+      const logs = await base44.asServiceRole.entities.ScheduledExecutionLog.filter({
+        function_name: 'generateScheduledPortfolioSnapshot'
+      });
+      const executionLog = logs?.[0];
+      
+      const logData = {
+        function_name: 'generateScheduledPortfolioSnapshot',
+        last_execution_timestamp: new Date().toISOString(),
+        last_execution_status: 'error',
+        reason_skipped: `Error: ${error.message}`,
+        unauthorized_attempts: 0,
+        last_unauthorized_attempt_at: null
+      };
+      
+      if (executionLog) {
+        await base44.asServiceRole.entities.ScheduledExecutionLog.update(executionLog.id, logData)
+          .catch(e => console.warn('[Scheduled] Could not log error:', e.message));
+      }
+    } catch (logError) {
+      console.warn('[Scheduled] Could not update error log:', logError.message);
+    }
+    
+    return Response.json({ 
+      error: error.message, 
+      scheduled: true, 
+      execution_source: 'scheduled'
+    }, { status: 500 });
   }
 });

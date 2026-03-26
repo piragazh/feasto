@@ -1,0 +1,51 @@
+{
+  "name": "ScheduledExecutionLog",
+  "type": "object",
+  "properties": {
+    "function_name": {
+      "type": "string",
+      "description": "Name of scheduled function (e.g., generateScheduledPortfolioSnapshot)"
+    },
+    "last_execution_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the function was last executed (authorized call)"
+    },
+    "last_execution_status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "duplicate",
+        "cooldown_blocked",
+        "error"
+      ],
+      "description": "Outcome of last execution"
+    },
+    "last_snapshot_id": {
+      "type": "string",
+      "description": "ID of last created snapshot (if status=success)"
+    },
+    "reason_skipped": {
+      "type": "string",
+      "description": "If skipped: 'no_change', 'cooldown_active', 'error_reason', etc"
+    },
+    "unauthorized_attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Count of rejected unauthorized calls since last authorized run"
+    },
+    "last_unauthorized_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When last unauthorized call was attempted"
+    },
+    "cooldown_seconds": {
+      "type": "number",
+      "default": 60,
+      "description": "Cooldown window to prevent spam (seconds)"
+    }
+  },
+  "required": [
+    "function_name"
+  ]
+}
