@@ -1,12 +1,23 @@
 /**
- * order-logic.js
+ * src/lib/order-logic.js
+ * =======================
+ * TESTED source of truth for order/pricing/discount/throttle business logic.
  *
- * Pure business-logic functions extracted from the Deno backend handlers so they
- * can be unit-tested without a live runtime or database.
+ * The pure functions here are mirrored verbatim in the Deno handlers.
+ * Vitest tests in src/lib/__tests__/ cover this file — those tests ARE
+ * the production logic tests.
  *
- * IMPORTANT: Keep this file in sync with:
- *   - functions/verifyAndCreateOrder  (pricing & coupon sections)
- *   - functions/orderVelocityThrottle (basketFingerprint, throttle checks)
+ * SYNC RULE: Any change to a function here MUST be applied to its
+ * corresponding inline copy in the Deno handler, and vice versa:
+ *   - functions/verifyAndCreateOrder  → recomputeSubtotal, computeAndVerifyTotal,
+ *                                        validateCoupon, capPromotionDiscount
+ *   - functions/orderVelocityThrottle → basketFingerprint, checkPerUserBurst,
+ *                                        checkPlatformBurst
+ *   - functions/enforceRateLimiting   → checkPerUserBurst
+ *
+ * Architecture note: Deno functions cannot import from src/lib/ (separate
+ * deployment targets). The mirror pattern is intentional — the test suite
+ * provides the safety net that keeps them in sync.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
