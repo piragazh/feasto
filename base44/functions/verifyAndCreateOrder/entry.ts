@@ -22,15 +22,18 @@ Deno.serve(async (req) => {
         // Allow guest orders
         const { orderData, paymentIntentId, idempotency_key } = await req.json();
 
-        // CRITICAL: Check IP-based rate limiting to prevent account farm attacks
-        const ipRateLimitResult = await base44.functions.invoke('ipBasedRateLimiting', {});
-        if (ipRateLimitResult?.data && !ipRateLimitResult.data.allowed) {
+        // Order velocity throttle: per-user burst limit, platform-wide circuit breaker,
+        // and duplicate basket fingerprint guard.
+        // NOTE: True per-IP rate limiting is NOT enforced here — the Order entity does not
+        // store client IP, so filtering by IP is not possible at the application layer.
+        const velocityResult = await base44.functions.invoke('orderVelocityThrottle', { orderData });
+        if (velocityResult?.data && !velocityResult.data.allowed) {
             return new Response(
                 JSON.stringify({ 
-                    error: ipRateLimitResult.data.error || 'Too many orders. Please wait.',
+                    error: velocityResult.data.error || 'Too many orders. Please wait.',
                     success: false 
                 }),
-                { status: 429, headers: { 'Retry-After': String(ipRateLimitResult.data.retryAfter || 60) } }
+                { status: 429, headers: { 'Retry-After': String(velocityResult.data.retryAfter || 60) } }
             );
         }
 

@@ -1,33 +1,17 @@
 # Critical Security Fixes Applied
-**Date:** 2026-03-23  
+**Date:** 2026-03-23 (updated 2026-03-26)
 **Status:** ✅ IMPLEMENTED
 
 ---
 
 ## 🔴 VULNERABILITY 1: Per-User Coupon Limits
-**Severity:** CRITICAL  
+**Severity:** CRITICAL
 **Status:** ✅ FIXED
 
 ### What Was Fixed
 Added `per_customer_limit` field to Coupon entity (default: 1)
 
-**Before:**
-```javascript
-// Single attacker could use $1000 coupon 100 times
-// No per-user enforcement existed
-```
-
-**After:**
-```javascript
-// Coupon schema now includes:
-"per_customer_limit": {
-  "type": "number",
-  "default": 1,
-  "description": "Max times each customer can use this coupon"
-}
-```
-
-### Implementation
+**Implementation**
 1. **Entity Schema Update** — Added `per_customer_limit` to Coupon.json
 2. **Validation Logic** — Updated `validateCouponUsage` to check per-user limit
 3. **Code:**
@@ -38,7 +22,6 @@ if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
     created_by: user.email,
     coupon_codes: { $includes: coupon.code }
   });
-  
   if (userOrders.length >= coupon.per_customer_limit) {
     return { valid: false, error: 'Usage limit reached' };
   }
@@ -47,263 +30,124 @@ if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
 
 **Impact:**
 - ✅ Single user cannot drain entire coupon budget
-- ✅ Example: $1000 coupon with limit:1 → safe from single attacker
 - ✅ Backward compatible (default: 1 use per customer)
 
 ---
 
-## 🔴 VULNERABILITY 2: IP-Based Rate Limiting
-**Severity:** CRITICAL  
+## 🔴 VULNERABILITY 2: Order Velocity Throttling
+**Severity:** CRITICAL
 **Status:** ✅ FIXED
 
 ### What Was Fixed
-Added IP-based rate limiting to prevent account farm attacks
+Added `orderVelocityThrottle` backend function (replaces the previously misnamed `ipBasedRateLimiting`).
 
-**Before:**
-```
-Attacker Account 1: 5 orders/min ✅ Limited
-Attacker Account 2: 5 orders/min ✅ Limited
-... ×100 accounts = 500 orders/min ❌ NOT LIMITED
-```
+### What This Actually Does
+This function enforces **three distinct controls** using data that genuinely exists in the system:
 
-**After:**
-```
-All accounts from same IP: 20 orders/hour max
-(Regardless of account count)
-```
+| Control | Signal Used | Threshold | Window |
+|---------|-------------|-----------|--------|
+| Per-user burst limit | `user.email` / `guest_email` | 5 orders | 60 seconds |
+| Platform-wide circuit breaker | All orders (global count) | 30 orders | 60 seconds |
+| Duplicate basket guard | Email + restaurant + item fingerprint | 1 duplicate | 90 seconds |
 
-### Implementation
-1. **New Function** — `ipBasedRateLimiting` backend function
-2. **Called from** — `verifyAndCreateOrder` before order creation
-3. **Code:**
+### What This Does NOT Do
+**True per-IP rate limiting is not implemented.**
+
+The `Order` entity does not store client IP addresses. Filtering recent orders by IP is therefore
+not possible at the application layer. The IP is visible in request headers at function invocation
+time, but there is no historical record to check against.
+
+To add real per-IP controls, one of the following is required:
+- Store `client_ip` on the Order entity at creation time, OR
+- Enforce rate limits upstream at the CDN/reverse proxy layer (e.g. Cloudflare Rate Limiting rules)
+
+### Code
 ```javascript
-// functions/ipBasedRateLimiting
-const orderCount = recentOrdersLastHour.length;
-if (orderCount >= 20) {
-  return { allowed: false, error: 'Too many orders from your IP' };
-}
+// functions/orderVelocityThrottle
+// 1. Per-user: max 5 orders/min using user.email
+// 2. Platform: max 30 orders/min globally (circuit breaker)
+// 3. Duplicate basket: fingerprint(restaurant + sorted items) within 90s
 ```
-
-**Features:**
-- Extracts client IP from request (handles proxies, Cloudflare)
-- Checks all orders from IP in last 60 minutes
-- Blocks if >20 orders/hour (safe threshold)
-- Returns Retry-After header
 
 **Impact:**
-- ✅ Account farm attack (100 accounts) → BLOCKED after 20 orders
-- ✅ Prevents spam order flooding
-- ✅ Legitimate users unaffected
+- ✅ Accidental double-submit → BLOCKED by basket fingerprint guard
+- ✅ Single-account burst → BLOCKED after 5 orders/min
+- ✅ Sudden platform-wide spike → BLOCKED at 30 orders/min (circuit breaker)
+- ⚠️ Account farm (100 fake accounts) → Partially mitigated by platform circuit breaker;
+  full per-IP defense requires platform-layer support
 
 ---
 
 ## 🔴 VULNERABILITY 3: No Phone Verification
-**Severity:** HIGH  
+**Severity:** HIGH
 **Status:** ✅ FIXED
 
-### What Was Fixed
-Added SMS OTP phone verification
+Added SMS OTP phone verification via `verifyPhoneOTP` backend function.
 
-**Before:**
-```
-User enters: 07999999999 (fake number, invalid format)
-System accepts it ✅ (only format-validated)
-Order placed to non-existent address ❌
-```
-
-**After:**
-```
-1. User clicks "Verify Phone"
-2. System sends 6-digit OTP via SMS
-3. User enters code to prove phone ownership
-4. Phone saved only after verification succeeds
-```
-
-### Implementation
-1. **New Function** — `verifyPhoneOTP` backend function
-2. **Workflow:**
-   - `action: 'send'` → Generate OTP, send SMS, store in user profile
-   - `action: 'verify'` → Validate OTP code, confirm phone, update user
-3. **Code:**
-```javascript
-// Send OTP
-const otp = Math.floor(100000 + Math.random() * 900000).toString();
-await base44.auth.updateMe({
-  phone_verification_otp: otp,
-  phone_verification_otp_expires_at: expiresAt // 10 min validity
-});
-
-// Verify OTP
-if (user.phone_verification_otp !== code) {
-  return { error: 'Invalid code' };
-}
-```
-
-**Features:**
-- 6-digit OTP (1 million combinations)
-- 10-minute expiration
-- Integration with Twilio (secrets already configured)
-- Prevents reuse of old codes
-
-**Impact:**
-- ✅ Fake phone numbers cannot be saved
-- ✅ Fraudulent orders blocked
-- ✅ Better customer contact validation
+- 6-digit OTP, 10-minute expiry
+- Twilio integration (secrets configured)
+- Phone saved only after successful verification
 
 ---
 
 ## 🔴 VULNERABILITY 4: Account Creation Rate Limiting
-**Severity:** CRITICAL  
-**Status:** ⚠️ REQUIRES BASE44 CONFIG
+**Severity:** CRITICAL
+**Status:** ⚠️ PLATFORM LIMITATION — Cannot implement in app layer
 
-### What We Can Do
-We cannot implement this in the app layer (auth is managed by Base44)
-
-### What To Do
-**Request from Base44 support:**
-```
-Feature: Account creation rate limiting
-Configuration: Max 5 new accounts per IP per hour
-Location: Registration/signup endpoint
-Priority: CRITICAL
-```
-
-### Current Status
-- Base44 SDK manages authentication
-- Custom rate limiting not possible in app layer
-- Need platform-level configuration
+Base44 manages authentication. Custom rate limiting on the signup endpoint is not possible
+without platform-level configuration. Request this from Base44 support if needed.
 
 ---
 
 ## 🔴 VULNERABILITY 5: Brute Force Login Protection
-**Severity:** CRITICAL  
-**Status:** ⚠️ REQUIRES BASE44 + LOCAL FIXES
+**Severity:** CRITICAL
+**Status:** ⚠️ PLATFORM LIMITATION — Cannot implement in app layer
 
-### What We Can Do (Local)
-Add CAPTCHA and login attempt tracking
-
-### What To Request From Base44
-```
-Feature: Login brute force protection
-Configuration:
-  - Max 5 failed login attempts
-  - 15-minute account lockout after exceeding limit
-  - Automatic unlock after timeout
-  - Email notification on suspicious attempts
-Priority: CRITICAL
-```
-
-### Local Enhancement (For Checkout)
-Already implemented in `Checkout.jsx`:
-```javascript
-// Phone validation prevents fake numbers
-const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
-```
+Base44 SDK manages authentication. The app cannot intercept login attempts or enforce
+lockout logic. This must be configured at the platform level.
 
 ---
 
 ## 📋 FIXES STATUS SUMMARY
 
-| Vulnerability | Fix Type | Status | Impact |
-|---------------|----------|--------|--------|
-| Per-user coupon limits | ✅ App code | IMPLEMENTED | Prevents budget drain |
-| IP-based rate limiting | ✅ App code | IMPLEMENTED | Prevents account farm |
-| Phone verification | ✅ App code | IMPLEMENTED | Validates phone numbers |
-| Account creation limiting | ⏳ Platform | REQUEST PENDING | Prevents fake accounts |
-| Brute force protection | ⏳ Platform | REQUEST PENDING | Prevents password attacks |
+| Vulnerability | Fix Type | Status | Signal Used |
+|---------------|----------|--------|-------------|
+| Per-user coupon limits | ✅ App code | IMPLEMENTED | user.email |
+| Order velocity throttling | ✅ App code | IMPLEMENTED | email + basket fingerprint |
+| Phone verification | ✅ App code | IMPLEMENTED | Twilio OTP |
+| Account creation limiting | ⏳ Platform | REQUEST PENDING | N/A (platform layer) |
+| Brute force protection | ⏳ Platform | REQUEST PENDING | N/A (platform layer) |
 
 ---
 
 ## 🧪 TESTING CHECKLIST
 
-After deployment, test these scenarios:
-
 ### Test 1: Per-User Coupon Limit
 ```
 [ ] Create coupon with per_customer_limit: 2
 [ ] User applies coupon once → SUCCESS
-[ ] User applies coupon twice → SUCCESS  
-[ ] User applies coupon third time → BLOCKED (limit reached)
+[ ] User applies coupon twice → SUCCESS
+[ ] User applies coupon third time → BLOCKED
 ```
 
-### Test 2: IP-Based Rate Limiting
+### Test 2: Order Velocity — Per-User Burst
 ```
-[ ] Place order from IP address A → SUCCESS (1/20)
-[ ] Place 19 more orders from same IP → SUCCESS
-[ ] Place 21st order from same IP → BLOCKED with 429 status
-[ ] Verify Retry-After header present
+[ ] Place 5 orders in under 60 seconds (same account) → 5th succeeds
+[ ] Place 6th order → BLOCKED with 429 + Retry-After header
+[ ] Wait 60 seconds → next order succeeds
 ```
 
-### Test 3: Phone Verification
+### Test 3: Order Velocity — Duplicate Basket Guard
 ```
-[ ] Click "Verify Phone" → Send OTP
-[ ] Check SMS received ✅
+[ ] Place order for restaurant X with items A+B
+[ ] Immediately re-submit identical basket to restaurant X → BLOCKED (duplicate)
+[ ] Wait 90 seconds → identical basket accepted again
+```
+
+### Test 4: Phone Verification
+```
+[ ] Click "Verify Phone" → OTP sent via SMS
 [ ] Enter wrong code → REJECTED
 [ ] Enter correct code → VERIFIED
 [ ] Verify phone_verified flag set in user profile
-```
-
----
-
-## 🚀 REMAINING ACTIONS
-
-### Immediate (Today)
-- [x] Implement per-user coupon limits
-- [x] Implement IP-based rate limiting
-- [x] Implement phone verification
-- [ ] Deploy to staging
-- [ ] Test all three fixes
-- [ ] Approve for production
-
-### This Week
-- [ ] Request Base44 account creation rate limiting
-- [ ] Request Base44 brute force protection
-- [ ] Set default `per_customer_limit: 1` for all new coupons
-- [ ] Monitor production for abuse patterns
-
-### Next Sprint
-- [ ] Add login CAPTCHA after 3 failed attempts
-- [ ] Implement order fraud scoring system
-- [ ] Create abuse monitoring dashboard
-- [ ] Add automated security alerts
-
----
-
-## 📊 RISK REDUCTION
-
-| Vulnerability | Before | After | % Reduction |
-|---------------|--------|-------|-------------|
-| Coupon fraud | 🔴 CRITICAL | 🟢 BLOCKED | 100% |
-| Account farm spam | 🔴 CRITICAL | 🟡 REDUCED | 80% |
-| Fake phone orders | 🟡 HIGH | 🟢 BLOCKED | 100% |
-| Brute force | 🔴 CRITICAL | ⏳ PENDING | 0% |
-| Account farm creation | 🔴 CRITICAL | ⏳ PENDING | 0% |
-
-**Overall Risk: 60% Reduction (Good progress, two more to go)**
-
----
-
-## 🔐 NEXT CRITICAL STEP
-
-**Contact Base44 Support with:**
-```
-Subject: URGENT - Security fixes needed for production launch
-
-Body:
-We're preparing for production launch and need two critical 
-features from the authentication/API layer:
-
-1. Account Creation Rate Limiting
-   - Limit: 5 new accounts per IP per hour
-   - Status: BLOCKING production deployment
-
-2. Login Brute Force Protection  
-   - Limit: 5 failed attempts
-   - Lockout: 15 minutes
-   - Status: BLOCKING production deployment
-
-Timeline: NEEDED THIS WEEK
-
-Thank you,
-[Team]
 ``
