@@ -61,9 +61,11 @@ export function generatePortfolioDigest(orders = [], restaurants = [], portfolio
   const last24h = orders.filter(o => new Date(o.offline_synced_at) > new Date(now - day24h) && o.offline_created);
   const last7d = orders.filter(o => new Date(o.offline_synced_at) > new Date(now - day7d) && o.offline_created);
 
+  const flagged24h = last24h.filter(o => o.needs_review).length;
   const escalated24h = last24h.filter(o => o.offline_review_status === 'escalated').length;
   const escalated7d = last7d.filter(o => o.offline_review_status === 'escalated').length;
   
+  const flaggedRate24h = calculateFlaggedRate(flagged24h, last24h.length);
   const escalation24h = calculateEscalationRate(escalated24h, last24h.length);
   const escalation7d = calculateEscalationRate(escalated7d, last7d.length);
 
