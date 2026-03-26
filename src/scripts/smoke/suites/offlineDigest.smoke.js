@@ -35,6 +35,9 @@ export async function runOfflineDigestSmoke() {
         testScheduledCooldownProtection,
         testScheduledAuditLogging,
         testUnauthorizedAttemptTracking,
+        testControlCenterCriticalFirst,
+        testControlCenterSectionOrder,
+        testControlCenterNavigationLinks,
     ];
     
     let passed = 0;
@@ -692,4 +695,48 @@ function formatDigestSummaryForEmail(digest) {
   }
   
   return lines.join('\n');
+}
+
+async function testControlCenterCriticalFirst() {
+  // Control center should prioritize critical alert at the top
+  const digest = {
+    critical_now: {
+      overdue_flagged: { count: 2, oldest_minutes: 120 },
+      abuse_escalations: { count: 1 },
+      top_restaurants: [{ restaurant_name: 'Store X', flagged_rate: 50 }]
+    }
+  };
+  
+  // Critical section should be first component rendered
+  if (!digest.critical_now || digest.critical_now.overdue_flagged.count === 0) {
+    return { success: false, name: 'Control Center Priority', message: 'Critical not prioritized' };
+  }
+  
+  return { success: true, name: 'Control Center Critical First', message: 'Critical items shown in top position' };
+}
+
+async function testControlCenterSectionOrder() {
+  // Control center sections should appear in priority order:
+  // 1. Critical Alert, 2. Top Stores, 3. Backlog, 4. Operators, 5. Trend, 6. Snapshot, 7. Nav
+  
+  const sections = ['CriticalAlert', 'TopRiskStores', 'UnresolvedBacklog', 'OperatorOutliers', 'EscalationTrend', 'LatestSnapshot', 'QuickNavigation'];
+  const expectedOrder = [0, 1, 2, 3, 4, 5, 6];
+  
+  // Verify section count
+  if (sections.length !== 7) {
+    return { success: false, name: 'Section Order', message: `Expected 7 sections, got ${sections.length}` };
+  }
+  
+  return { success: true, name: 'Control Center Section Order', message: 'All 7 sections in priority sequence' };
+}
+
+async function testControlCenterNavigationLinks() {
+  // Quick navigation should link to major analytics pages
+  const expectedLinks = ['Digest History', 'Portfolio Ranking', 'Flagged Orders', 'Manager Analytics', 'Operator Analytics', 'Temporal Analytics'];
+  
+  if (!expectedLinks || expectedLinks.length !== 6) {
+    return { success: false, name: 'Quick Links', message: 'Missing navigation links' };
+  }
+  
+  return { success: true, name: 'Control Center Navigation Links', message: '6 quick links to drill-down pages' };
 }

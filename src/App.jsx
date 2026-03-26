@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
+import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -72,6 +73,13 @@ const AuthenticatedApp = () => {
               }
             />
           ))}
+          <Route path="/OfflineRiskControlCenter" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="OfflineRiskControlCenter">
+                <OfflineRiskControlCenter />
+              </LayoutWrapper>
+            </Suspense>
+          } />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </StackNavigationAnimator>
