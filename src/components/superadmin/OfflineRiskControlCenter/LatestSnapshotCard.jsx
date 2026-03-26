@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History, CheckCircle } from 'lucide-react';
+import SourceLabel from './SourceLabel';
 
 export default function LatestSnapshotCard({ latestSnapshot }) {
   if (!latestSnapshot) return null;
@@ -11,9 +12,12 @@ export default function LatestSnapshotCard({ latestSnapshot }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <History className="h-4 w-4" /> Latest Digest Snapshot
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <History className="h-4 w-4" /> Latest Digest Snapshot
+          </CardTitle>
+          <SourceLabel source="snapshot" size="sm" />
+        </div>
       </CardHeader>
       <CardContent className="text-xs space-y-1">
         <p className="text-gray-900">

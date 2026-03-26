@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import CriticalAlert from '@/components/superadmin/OfflineRiskControlCenter/CriticalAlert';
@@ -8,20 +8,25 @@ import OperatorOutliersCard from '@/components/superadmin/OfflineRiskControlCent
 import EscalationTrendCard from '@/components/superadmin/OfflineRiskControlCenter/EscalationTrendCard';
 import LatestSnapshotCard from '@/components/superadmin/OfflineRiskControlCenter/LatestSnapshotCard';
 import QuickNavigationPanel from '@/components/superadmin/OfflineRiskControlCenter/QuickNavigationPanel';
+import FreshnessIndicator from '@/components/superadmin/OfflineRiskControlCenter/FreshnessIndicator';
 import { generatePortfolioDigest } from '@/lib/offline-digest-logic';
 
 export default function OfflineRiskControlCenter() {
-  const { data: restaurants = [] } = useQuery({
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(new Date());
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: restaurants = [], refetch: refetchRestaurants } = useQuery({
     queryKey: ['all-restaurants'],
     queryFn: () => base44.entities.Restaurant.list()
   });
 
-  const { data: orders = [] } = useQuery({
+  const { data: orders = [], refetch: refetchOrders } = useQuery({
     queryKey: ['all-orders'],
     queryFn: () => base44.entities.Order.list('-offline_synced_at', 1000)
   });
 
-  const { data: snapshots = [] } = useQuery({
+  const { data: snapshots = [], refetch: refetchSnapshots } = useQuery({
     queryKey: ['digest-snapshots'],
     queryFn: async () => {
       const snaps = await base44.entities.DigestSnapshot.filter(
@@ -87,6 +92,30 @@ export default function OfflineRiskControlCenter() {
 
   const latestSnapshot = snapshots[0] || null;
 
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetchRestaurants(), refetchOrders(), refetchSnapshots()]);
+      setLastRefreshedAt(new Date());
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Auto-refresh effect (every 5 minutes if enabled)
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [autoRefreshEnabled]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
@@ -94,6 +123,18 @@ export default function OfflineRiskControlCenter() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Offline Risk Control Center</h1>
           <p className="text-sm text-gray-600 mt-1">Critical operational overview. Drill down for details.</p>
+        </div>
+
+        {/* Freshness Indicator */}
+        <div className="mb-6">
+          <FreshnessIndicator
+            lastRefreshedAt={lastRefreshedAt}
+            latestSnapshotTime={latestSnapshot?.timestamp}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            autoRefreshEnabled={autoRefreshEnabled}
+            onAutoRefreshToggle={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+          />
         </div>
 
         {/* Priority Stack: Critical → Stores → Backlog → People → Trends → Context → Nav */}

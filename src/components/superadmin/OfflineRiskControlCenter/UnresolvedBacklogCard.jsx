@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle } from 'lucide-react';
+import SourceLabel from './SourceLabel';
 
 export default function UnresolvedBacklogCard({ orders }) {
   const backlog = useMemo(() => {
@@ -17,9 +18,12 @@ export default function UnresolvedBacklogCard({ orders }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" /> Unresolved Backlog
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" /> Unresolved Backlog
+          </CardTitle>
+          <SourceLabel source="live" size="sm" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

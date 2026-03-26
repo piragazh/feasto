@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, TrendingUp } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import SourceLabel from './SourceLabel';
 
 export default function TopRiskStoresCard({ restaurants, orders }) {
   const topRisks = useMemo(() => {
@@ -36,9 +37,12 @@ export default function TopRiskStoresCard({ restaurants, orders }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <TrendingUp className="h-4 w-4" /> Top 5 Risk Stores
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> Top 5 Risk Stores
+          </CardTitle>
+          <SourceLabel source="live" size="sm" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

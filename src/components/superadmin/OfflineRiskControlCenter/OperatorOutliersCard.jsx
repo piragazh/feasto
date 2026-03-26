@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users } from 'lucide-react';
+import SourceLabel from './SourceLabel';
 
 export default function OperatorOutliersCard({ digest }) {
   const outliers = digest?.watch_worsening?.operator_outliers || [];
@@ -11,9 +12,12 @@ export default function OperatorOutliersCard({ digest }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Users className="h-4 w-4" /> Top Operator Outliers
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="h-4 w-4" /> Top Operator Outliers
+          </CardTitle>
+          <SourceLabel source="derived" size="sm" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
