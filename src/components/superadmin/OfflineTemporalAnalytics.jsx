@@ -1,13 +1,13 @@
 /**
- * Offline Temporal Analytics Dashboard
+ * Offline Temporal Analytics Dashboard — Timezone-Aware
  * 
- * Shows when offline issues occur:
- * - Daypart (breakfast/lunch/afternoon/dinner/late)
+ * Shows when offline issues occur using restaurant's local time:
+ * - Daypart (breakfast/lunch/afternoon/dinner/late) in local time
  * - Day-of-week (weekday vs weekend)
- * - Hourly trends
+ * - Hourly trends (local time)
  * - Temporal outliers (5 rule-based signals)
  * 
- * All timestamps in UTC. No timezone conversion (see docs for limitation).
+ * Each restaurant's data converted from UTC to local timezone for analysis.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -16,7 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, AlertTriangle, Clock, Calendar, TrendingUp, Eye } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Clock, Calendar, TrendingUp, Eye, Globe } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { calculateTemporalMetrics, detectTemporalOutliers, aggregateTemporalMetricsAcrossRestaurants } from '@/lib/offline-temporal-analytics';
 import { createPageUrl } from '@/utils';
@@ -45,12 +45,13 @@ export default function OfflineTemporalAnalytics() {
         queryFn: () => base44.entities.Order.list('-offline_synced_at', 1000)
     });
 
-    // Calculate temporal metrics per restaurant
+    // Calculate temporal metrics per restaurant (timezone-aware)
     const temporalByRestaurant = useMemo(() => {
         const result = {};
         restaurants.forEach(r => {
             const restaurantOrders = orders.filter(o => o.restaurant_id === r.id);
-            result[r.id] = calculateTemporalMetrics(r.id, restaurantOrders);
+            // Pass restaurant for timezone-aware conversion
+            result[r.id] = calculateTemporalMetrics(r.id, restaurantOrders, r);
         });
         return result;
     }, [restaurants, orders]);
@@ -269,7 +270,7 @@ export default function OfflineTemporalAnalytics() {
             {/* Hourly Trend */}
             <Card className="border-0 shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-sm">Hourly Trend (UTC)</CardTitle>
+                    <CardTitle className="text-sm">Hourly Trend (Restaurant Local Time)</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {hourlyData.length > 0 ? (
@@ -283,7 +284,7 @@ export default function OfflineTemporalAnalytics() {
                                     <Line type="monotone" dataKey="rate" stroke="#ef4444" name="Flagged %" />
                                 </LineChart>
                             </ResponsiveContainer>
-                            <p className="text-xs text-gray-500 text-center">All times in UTC. See docs for timezone limitations.</p>
+                            <p className="text-xs text-gray-500 text-center">Times converted to each restaurant's local timezone.</p>
                         </div>
                     ) : (
                         <p className="text-gray-500 text-sm">No data</p>
@@ -295,13 +296,14 @@ export default function OfflineTemporalAnalytics() {
             <Card className="border-0 shadow-sm bg-blue-50 border border-blue-200">
                 <CardContent className="p-4">
                     <div className="flex gap-3">
-                        <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <Globe className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                         <div className="text-sm text-blue-900">
-                            <p className="font-semibold">Timestamp Notes</p>
+                            <p className="font-semibold">Timezone-Aware Analytics</p>
                             <ul className="list-disc list-inside text-xs mt-2 space-y-1">
-                                <li>All analysis uses <strong>offline_synced_at</strong> (server-authoritative UTC)</li>
-                                <li>No timezone conversion applied (see docs for impact)</li>
-                                <li>Dayparts: Morning (05–11), Lunch (11–14), Afternoon (14–17), Dinner (17–22), Late (22–05)</li>
+                                <li>All analysis uses <strong>offline_synced_at</strong> (UTC) converted to <strong>restaurant's local timezone</strong></li>
+                                <li>Timezone inferred from Restaurant.timezone (IANA identifier) or auto-detected from country</li>
+                                <li>Dayparts shown in local time: Morning (05–11), Lunch (11–14), Afternoon (14–17), Dinner (17–22), Late (22–05)</li>
+                                <li>Hours in trend chart are in restaurant's local time (not UTC)</li>
                                 <li>Outliers are operational signals, not proof of root cause</li>
                             </ul>
                         </div>

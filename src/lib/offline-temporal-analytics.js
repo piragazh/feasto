@@ -1,17 +1,25 @@
 /**
- * Offline Order Temporal Analytics
+ * Offline Order Temporal Analytics — Timezone-Aware
  * 
  * Analyzes when offline issues occur (daypart, day-of-week, hourly patterns).
- * All timestamps normalized to UTC (offline_synced_at is server-authoritative).
+ * Uses restaurant's local timezone for all grouping (converts from UTC).
+ * Fallback to UTC if timezone not available.
  * 
  * Pure deterministic calculations — no ML, no forecasting.
  * Simple explainable buckets for operational visibility.
  */
 
+import { convertUtcToLocal, getRestaurantTimezone } from './timezone-utils.js';
+
 /**
  * Map hour of day to daypart bucket
  * 
- * Note: All times in UTC. No timezone conversion (document limitation).
+ * Dayparts (restaurant local time):
+ * - Morning: 05:00–10:59
+ * - Lunch: 11:00–13:59
+ * - Afternoon: 14:00–16:59
+ * - Dinner: 17:00–21:59
+ * - Late: 22:00–04:59
  * 
  * @param {number} hour (0-23)
  * @returns {string} daypart name
@@ -48,25 +56,30 @@ export function classifyDay(dayNum) {
 /**
  * Calculate temporal metrics for a restaurant's offline orders
  * 
- * Groups by daypart and day-of-week, calculates rates per bucket.
- * Uses offline_synced_at (server timestamp, UTC).
+ * Groups by daypart and day-of-week using restaurant's local timezone.
+ * Converts UTC offline_synced_at to local time for all grouping.
  * 
  * @param {string} restaurantId
  * @param {array} orders - all orders for restaurant
+ * @param {object} restaurant - restaurant entity with {timezone, country}
  * @returns {object} {
  *   byDaypart: {daypart: {metrics}},
  *   byDayOfWeek: {day: {metrics}},
  *   hourlyTrend: [0-23] array of {hour, count, flagged},
- *   summary: {totals, concentrations}
+ *   summary: {totals, concentrations},
+ *   timezone: timezone used for calculation
  * }
  */
-export function calculateTemporalMetrics(restaurantId, orders) {
+export function calculateTemporalMetrics(restaurantId, orders, restaurant) {
+    const timezone = getRestaurantTimezone(restaurant);
+
     if (!orders || orders.length === 0) {
         return {
             byDaypart: {},
             byDayOfWeek: {},
             hourlyTrend: Array(24).fill(null).map((_, h) => ({ hour: h, count: 0, flagged: 0 })),
-            summary: { totalOrders: 0 }
+            summary: { totalOrders: 0 },
+            timezone
         };
     }
 
@@ -78,9 +91,10 @@ export function calculateTemporalMetrics(restaurantId, orders) {
     const hourlyTrend = Array(24).fill(null).map((_, h) => ({ hour: h, count: 0, flagged: 0 }));
 
     offlineOrders.forEach(order => {
-        const syncedTime = new Date(order.offline_synced_at);
-        const hour = syncedTime.getUTCHours();
-        const dayOfWeek = syncedTime.getUTCDay();
+        // Convert UTC → local time
+        const localTime = convertUtcToLocal(order.offline_synced_at, timezone);
+        const hour = localTime.hour;
+        const dayOfWeek = localTime.dayOfWeek;
         const dayName = dayNumToName(dayOfWeek);
         const daypart = hourToDaypart(hour);
 
@@ -162,6 +176,7 @@ export function calculateTemporalMetrics(restaurantId, orders) {
         byDaypart,
         byDayOfWeek,
         hourlyTrend,
+        timezone,
         summary: {
             totalOrders,
             totalFlagged,
@@ -286,6 +301,10 @@ export function detectTemporalOutliers(temporalMetrics) {
 
 /**
  * Aggregate temporal metrics across multiple restaurants
+ * 
+ * Note: When aggregating across restaurants with different timezones,
+ * metrics will be in UTC-equivalent buckets (most-common timezone of aggregated restaurants).
+ * For precise per-restaurant analysis, examine individual timezone-aware metrics.
  * 
  * @param {object} byRestaurant - {restaurant_id: temporalMetrics}
  * @returns {object} aggregated temporal view

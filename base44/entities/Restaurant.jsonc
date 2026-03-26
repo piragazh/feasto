@@ -1,0 +1,444 @@
+{
+  "name": "Restaurant",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Restaurant name"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Restaurant logo image URL"
+    },
+    "alert_phone": {
+      "type": "string",
+      "description": "UK mobile number for order alerts (e.g., 07123456789)"
+    },
+    "order_alert_channel": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "sms"
+      ],
+      "default": "sms",
+      "description": "Preferred channel for order alerts: WhatsApp or SMS"
+    },
+    "whatsapp_alerts_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable WhatsApp notifications for new orders"
+    },
+    "sms_alerts_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable SMS notifications for new orders"
+    },
+    "custom_domain": {
+      "type": "string"
+    },
+    "domain_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "seo_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "seo_description": {
+      "type": "string"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "gallery_images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "about_us": {
+      "type": "string"
+    },
+    "our_story": {
+      "type": "string"
+    },
+    "is_halal": {
+      "type": "boolean",
+      "default": false
+    },
+    "social_media": {
+      "type": "object",
+      "properties": {
+        "facebook": {
+          "type": "string"
+        },
+        "instagram": {
+          "type": "string"
+        },
+        "twitter": {
+          "type": "string"
+        },
+        "tiktok": {
+          "type": "string"
+        },
+        "website": {
+          "type": "string"
+        }
+      }
+    },
+    "awards_certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cuisine_type": {
+      "type": "string"
+    },
+    "cuisine_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rating": {
+      "type": "number"
+    },
+    "review_count": {
+      "type": "number"
+    },
+    "delivery_time": {
+      "type": "string"
+    },
+    "delivery_fee": {
+      "type": "number"
+    },
+    "minimum_order": {
+      "type": "number"
+    },
+    "tiered_delivery": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "lower_minimum": {
+          "type": "number"
+        },
+        "lower_minimum_fee": {
+          "type": "number"
+        }
+      }
+    },
+    "is_open": {
+      "type": "boolean",
+      "default": true
+    },
+    "opening_hours": {
+      "type": "object"
+    },
+    "delivery_hours": {
+      "type": "object"
+    },
+    "collection_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "collection_hours": {
+      "type": "object"
+    },
+    "accepts_cash_on_delivery": {
+      "type": "boolean",
+      "default": true
+    },
+    "special_offers": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "menu_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "category_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "category_images": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "item_order": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "custom_option_templates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "custom_pos_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "commission_rate": {
+      "type": "number",
+      "default": 15
+    },
+    "commission_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed"
+      ],
+      "default": "percentage"
+    },
+    "fixed_commission_amount": {
+      "type": "number"
+    },
+    "onboarding_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "completed"
+      ],
+      "default": "pending"
+    },
+    "onboarding_token": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "latitude": {
+      "type": "number"
+    },
+    "longitude": {
+      "type": "number"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country code (e.g., GB, US, AU) for timezone inference"
+    },
+    "timezone": {
+      "type": "string",
+      "description": "IANA timezone identifier (e.g., Europe/London, America/New_York). Used for local-time temporal analytics. Auto-inferred from country if not set.",
+      "default": "UTC"
+    },
+    "food_hygiene_rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "food_hygiene_certificate_url": {
+      "type": "string"
+    },
+    "loyalty_program_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "loyalty_points_multiplier": {
+      "type": "number",
+      "default": 1
+    },
+    "theme_primary_color": {
+      "type": "string",
+      "default": "#f97316"
+    },
+    "media_screen_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "max_screens_allowed": {
+      "type": "number",
+      "default": 1
+    },
+    "pos_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "max_pos_count": {
+      "type": "number",
+      "default": 1
+    },
+    "pos_layout": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "compact",
+        "menu_focus",
+        "cart_focus"
+      ],
+      "default": "standard"
+    },
+    "pos_customization_layout": {
+      "type": "string",
+      "enum": [
+        "classic",
+        "stepped",
+        "grid",
+        "fullscreen"
+      ],
+      "default": "classic"
+    },
+    "printer_config": {
+      "type": "object"
+    },
+    "kiosk_config": {
+      "type": "object"
+    },
+    "brand_guidelines": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "sms_notification_settings": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "confirmed": {
+          "type": "boolean",
+          "default": true
+        },
+        "preparing": {
+          "type": "boolean",
+          "default": false
+        },
+        "out_for_delivery": {
+          "type": "boolean",
+          "default": false
+        },
+        "delivered": {
+          "type": "boolean",
+          "default": false
+        },
+        "ready_for_collection": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "whatsapp_notification_settings": {
+      "type": "object",
+      "description": "WhatsApp notification settings for customer order status updates",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "confirmed": {
+          "type": "boolean",
+          "default": true
+        },
+        "preparing": {
+          "type": "boolean",
+          "default": false
+        },
+        "out_for_delivery": {
+          "type": "boolean",
+          "default": true
+        },
+        "delivered": {
+          "type": "boolean",
+          "default": true
+        },
+        "ready_for_collection": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "info_section": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "message": {
+          "type": "string"
+        },
+        "background_color": {
+          "type": "string",
+          "default": "#f0f9ff"
+        },
+        "text_color": {
+          "type": "string",
+          "default": "#0369a1"
+        },
+        "border_color": {
+          "type": "string",
+          "default": "#0ea5e9"
+        },
+        "icon": {
+          "type": "string",
+          "enum": [
+            "info",
+            "alert",
+            "star",
+            "bell",
+            "heart",
+            "zap",
+            "none"
+          ],
+          "default": "info"
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "cuisine_type"
+  ]
+}
