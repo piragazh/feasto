@@ -245,7 +245,7 @@ export default function Layout({ children, currentPageName }) {
         return () => clearInterval(interval);
     }, []);
 
-    // Lightweight engagement tracking disabled
+    // Remove trackDashboardActivity calls that cause 404 errors
 
     // Track page views with GTM
     useEffect(() => {

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     UtensilsCrossed, ShoppingBag, History, Settings, LogOut,
@@ -14,43 +15,42 @@ import {
     MessageCircle, UsersRound, Palette, Star, Sparkles,
     ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff
 } from 'lucide-react';
+
+import LiveOrders from '@/components/restaurant/LiveOrders';
+import MenuManagement from '@/components/restaurant/MenuManagement';
+import MealDealsManagement from '@/components/restaurant/MealDealsManagement';
+import AIMealDealSuggestions from '@/components/restaurant/AIMealDealSuggestions';
+import CouponsManagement from '@/components/restaurant/CouponsManagement';
+import PastOrders from '@/components/restaurant/PastOrders';
+import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
+import ReviewManagement from '@/components/restaurant/ReviewManagement';
+import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
+import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
+import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
+import DriverTracking from '@/components/restaurant/DriverTracking';
+import DriverManagement from '@/components/restaurant/DriverManagement';
+import DriverPerformance from '@/components/restaurant/DriverPerformance';
+import CustomerCRM from '@/components/restaurant/CustomerCRM';
+import RefundManagement from '@/components/restaurant/RefundManagement';
+import PromotionManagement from '@/components/restaurant/PromotionManagement';
+import OrderBatching from '@/components/restaurant/OrderBatching';
+import OrderModification from '@/components/restaurant/OrderModification';
+import OfflineOrdersReview from '@/components/restaurant/OfflineOrdersReview';
+import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
+import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
+import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
+import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
+import BrandingManager from '@/components/restaurant/BrandingManager';
+import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
+import POSConfigurations from '@/components/restaurant/POSConfigurations';
+import StaffManagement from '@/components/restaurant/StaffManagement';
+import KioskSettings from '@/components/kiosk/KioskSettings';
+import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrinterSettings';
+import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
+import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
+import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
-
-// Lazy-load heavy components to prevent module loading failures
-const LiveOrders = ({ restaurantId, onOrderUpdate }) => <div>LiveOrders loading...</div>;
-const MenuManagement = ({ restaurantId }) => <div>Menu loading...</div>;
-const MealDealsManagement = ({ restaurantId }) => <div>Meal Deals loading...</div>;
-const AIMealDealSuggestions = ({ restaurantId }) => <div>AI Suggestions loading...</div>;
-const CouponsManagement = ({ restaurantId, restaurantName }) => <div>Coupons loading...</div>;
-const PastOrders = ({ restaurantId }) => <div>Order History loading...</div>;
-const RestaurantMessages = ({ restaurantId }) => <div>Messages loading...</div>;
-const ReviewManagement = ({ restaurantId }) => <div>Reviews loading...</div>;
-const RestaurantOnboarding = ({ restaurant, onComplete }) => <div>Onboarding loading...</div>;
-const EnhancedAnalyticsDashboard = ({ restaurantId }) => <div>Analytics loading...</div>;
-const OrderAnalyticsDashboard = ({ restaurantId }) => <div>Order Analytics loading...</div>;
-const DriverTracking = ({ restaurantId }) => <div>Driver Tracking loading...</div>;
-const DriverManagement = ({ restaurantId }) => <div>Driver Management loading...</div>;
-const DriverPerformance = ({ restaurantId }) => <div>Performance loading...</div>;
-const CustomerCRM = ({ restaurantId, restaurantName }) => <div>CRM loading...</div>;
-const RefundManagement = ({ restaurantId }) => <div>Refunds loading...</div>;
-const PromotionManagement = ({ restaurantId }) => <div>Promotions loading...</div>;
-const OrderBatching = ({ restaurantId }) => <div>Batching loading...</div>;
-const OrderModification = ({ restaurantId }) => <div>Modifications loading...</div>;
-const OfflineOrdersReview = ({ restaurantId }) => <div>Offline Orders loading...</div>;
-const DeliveryZoneManagement = ({ restaurantId, restaurantLocation }) => <div>Zones loading...</div>;
-const RestaurantSettings = ({ restaurantId }) => <div>Settings loading...</div>;
-const AIMarketingAssistant = ({ restaurantId }) => <div>AI Marketing loading...</div>;
-const NotificationSoundManager = ({ restaurantId }) => <div>Notifications loading...</div>;
-const BrandingManager = ({ restaurantId }) => <div>Branding loading...</div>;
-const ThirdPartyIntegrations = ({ restaurantId }) => <div>Integrations loading...</div>;
-const POSConfigurations = ({ restaurantId }) => <div>POS Config loading...</div>;
-const StaffManagement = ({ restaurantId }) => <div>Staff loading...</div>;
-const KioskSettings = ({ restaurantId }) => <div>Kiosk loading...</div>;
-const CentralizedPrinterSettings = ({ restaurantId }) => <div>Printers loading...</div>;
-const KitchenDisplaySystem = ({ restaurant }) => <div>Kitchen Display loading...</div>;
-const SmsNotificationSettings = ({ restaurantId, currentSettings }) => <div>SMS Settings loading...</div>;
-const RestaurantPayoutHistory = ({ restaurantId }) => <div>Payouts loading...</div>;
 
 // ── Nav definition ──────────────────────────────────────────────────────────
 const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refundRequests, unresolvedOfflineReviewCount) => [
@@ -181,7 +181,7 @@ function SidebarNav({ sections, activeSection, activeTab, onNavigate, collapsed,
                                         >
                                             <IIcon className="h-3.5 w-3.5 flex-shrink-0" />
                                             <span className="flex-1 text-left truncate">{item.label}</span>
-                                            {(item.badge || 0) > 0 && (
+                                            {item.badge > 0 && (
                                                 <span className="h-4 min-w-[16px] bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center px-1 flex-shrink-0">
                                                     {item.badge}
                                                 </span>
@@ -254,12 +254,17 @@ export default function RestaurantDashboard() {
     const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(m => !m.is_read).length;
     const unresolvedOfflineReviewCount = offlineOrdersForBadge.length;
 
-    useEffect(() => {
-        loadUserAndRestaurant();
-        requestNotificationPermission();
-    }, []);
+    useEffect(() => { loadUserAndRestaurant(); requestNotificationPermission(); }, []);
 
-    // Lightweight engagement tracking disabled
+    useEffect(() => {
+        if (!restaurant?.id) return;
+        const track = async () => {
+            try { await base44.functions.invoke('trackDashboardActivity', { restaurant_id: restaurant.id }); } catch {}
+        };
+        track();
+        const interval = setInterval(track, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [restaurant?.id]);
 
     const loadUserAndRestaurant = async () => {
         try {
@@ -276,7 +281,7 @@ export default function RestaurantDashboard() {
                         try {
                             await base44.functions.invoke('enforceRestaurantPermissions', { restaurantId: restaurantIdParam });
                             setRestaurant(r); return;
-                        } catch (err) { toast.error('Access denied to this restaurant'); return; }
+                        } catch { toast.error('Access denied to this restaurant'); return; }
                     }
                 }
                 if (allRestaurants.length > 0) setRestaurant(allRestaurants[0]);
@@ -293,7 +298,7 @@ export default function RestaurantDashboard() {
                         const allRestaurants = await base44.entities.Restaurant.list();
                         const r = allRestaurants.find(r => r.id === restaurantId);
                         if (r) setRestaurant(r); else toast.error('Restaurant not found');
-                    } catch (err) { toast.error('Access denied to this restaurant'); }
+                    } catch { toast.error('Access denied to this restaurant'); }
                 } else { toast.error('No restaurant assigned to your account'); }
             } else { toast.error('No restaurant assigned. Please contact admin.'); }
         } catch (e) {
@@ -439,30 +444,24 @@ export default function RestaurantDashboard() {
             );
         }
         if (activeSection === 'marketing') {
-            const tabs = [
-                { value: 'coupons', content: <CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} /> },
-                { value: 'promotions', content: <PromotionManagement restaurantId={restaurant.id} /> },
-                { value: 'ai-marketing', content: <AIMarketingAssistant restaurantId={restaurant.id} /> },
-            ];
-            if (restaurant?.media_screen_enabled) {
-                tabs.push({
-                    value: 'media',
-                    content: (
-                        <Card>
-                            <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Media Screen Management</CardTitle></CardHeader>
-                            <CardContent>
-                                <p className="text-gray-600 mb-4">Manage promotional content, screens, and layouts for in-store displays.</p>
-                                <Button onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}>
-                                    <Monitor className="h-4 w-4 mr-2" />Open Media Screen Manager
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ),
-                });
-            }
             return (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    {tabs.map(tab => <TabsContent key={tab.value} value={tab.value}>{tab.content}</TabsContent>)}
+                    <TabsContent value="coupons"><CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
+                    <TabsContent value="promotions"><PromotionManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="ai-marketing"><AIMarketingAssistant restaurantId={restaurant.id} /></TabsContent>
+                    {restaurant?.media_screen_enabled && (
+                        <TabsContent value="media">
+                            <Card>
+                                <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Media Screen Management</CardTitle></CardHeader>
+                                <CardContent>
+                                    <p className="text-gray-600 mb-4">Manage promotional content, screens, and layouts for in-store displays.</p>
+                                    <Button onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}>
+                                        <Monitor className="h-4 w-4 mr-2" />Open Media Screen Manager
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )}
                 </Tabs>
             );
         }
@@ -512,8 +511,6 @@ export default function RestaurantDashboard() {
                 </Tabs>
             );
         }
-
-        return null;
     };
 
     // ── Page title for breadcrumb ─────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff, CheckCircle, XCircle, Loader2, Monitor, FileText, Tag } from 'lucide-react';
@@ -9,9 +9,6 @@ import ApplyPromotionDialog from './ApplyPromotionDialog';
 import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel } from '@/lib/printUtils';
-import { TerminalService } from '@/lib/terminal-service';
-import { createTerminalProvider } from '@/lib/providers/terminal-provider-factory';
-import { TERMINAL_STATES } from '@/lib/terminal-state-machine';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
@@ -89,79 +86,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const [showCardConfirm, setShowCardConfirm] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Terminal service (dependency-injected provider)
-    const terminalServiceRef = useRef(null);
-    const [terminalState, setTerminalState] = useState(TERMINAL_STATES.IDLE);
+    // Terminal payment flow
+    const [terminalStep, setTerminalStep] = useState(null); // null | 'waiting' | 'success' | 'failed'
     const [terminalAmount, setTerminalAmount] = useState(0);
-    const [terminalTransactionId, setTerminalTransactionId] = useState('');
+    const [terminalTransactionRef, setTerminalTransactionRef] = useState('');
     const [terminalError, setTerminalError] = useState('');
-    const [terminalErrorCode, setTerminalErrorCode] = useState('');
-
-    // Initialize terminal service on mount
-    useEffect(() => {
-        (async () => {
-            // Create provider based on restaurant config
-            const providerConfig = {
-                terminal_provider: restaurant?.printer_config?.card_terminal?.provider || 'mock',
-                terminal_config: restaurant?.printer_config?.card_terminal?.stripe_config || {}
-            };
-            const provider = createTerminalProvider(providerConfig);
-            const service = new TerminalService(provider);
-            
-            // Initialize provider
-            try {
-                await service.init();
-            } catch (error) {
-                console.error('[Terminal] Init failed:', error.message);
-            }
-
-            // Subscribe to state changes
-            service.subscribe(({ state, metadata }) => {
-                setTerminalState(state);
-
-                // Handle success
-                if (state === TERMINAL_STATES.AUTHORIZED) {
-                  setTerminalTransactionId(metadata?.transaction_id || metadata?.transactionId || '');
-                  setTerminalError('');
-                  setTerminalErrorCode('');
-                }
-
-                // Handle errors with normalized codes
-                if (state === TERMINAL_STATES.DECLINED) {
-                  const errorMsg = metadata?.error_message || metadata?.errorMessage || 'Card declined';
-                  const errorCode = metadata?.error_code || 'CARD_ERROR';
-                  setTerminalError(errorMsg);
-                  setTerminalErrorCode(errorCode);
-                }
-
-                if (state === TERMINAL_STATES.FAILED) {
-                  const errorMsg = metadata?.error_message || metadata?.error || 'Payment processing failed';
-                  const errorCode = metadata?.error_code || 'PAYMENT_ERROR';
-                  setTerminalError(errorMsg);
-                  setTerminalErrorCode(errorCode);
-                }
-
-                if (state === TERMINAL_STATES.TIMEOUT) {
-                  setTerminalError('Card reading timed out. Please try again.');
-                  setTerminalErrorCode('TIMEOUT');
-                }
-
-                if (state === TERMINAL_STATES.CANCELLED) {
-                  setTerminalError('Payment cancelled');
-                  setTerminalErrorCode('CANCELLED');
-                }
-            });
-
-            terminalServiceRef.current = service;
-        })();
-
-        return () => {
-            // Cleanup: cancel any pending transaction
-            if (terminalServiceRef.current) {
-                terminalServiceRef.current.cancelPayment();
-            }
-        };
-    }, []);
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
     const remaining = Math.max(0, effectiveTotal - totalPaid);
@@ -354,67 +283,58 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     // Card confirm — route through terminal if configured
     const processCard = async () => {
         const amount = numericInput > 0 ? numericInput : remaining;
-        const amountCents = Math.round(amount * 100);
-
         setShowCardConfirm(false);
-        setTerminalError('');
-        setTerminalErrorCode('');
-        setTerminalAmount(amount);
 
-        if (!hasConfiguredTerminal) {
-            // No terminal configured, record as offline card
+        if (hasConfiguredTerminal) {
+            setTerminalAmount(amount);
+            const txnRef = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            setTerminalTransactionRef(txnRef);
+            setTerminalError('');
+            setTerminalStep('waiting');
+            await sendToTerminal(amount, txnRef);
+        } else {
             addPayment('card', amount);
-            return;
-        }
-
-        // Route to terminal service
-        if (!terminalServiceRef.current) {
-            setTerminalError('Terminal service not initialized');
-            setTerminalErrorCode('NO_SERVICE');
-            return;
-        }
-
-        // Initiate payment — state machine will drive UI via subscription
-        try {
-            await terminalServiceRef.current.startPayment({
-                amount: amountCents,
-                currency: 'GBP',
-                orderId: `POS-${restaurantId}-${Date.now()}`
-            });
-            // UI will react to state changes via subscription
-            // Do NOT check result here — that's the old pattern
-        } catch (error) {
-            setTerminalError(error.message || 'Failed to initiate payment');
-            setTerminalErrorCode(error.code || 'PAYMENT_INIT_FAILED');
         }
     };
 
-    // Watch for successful authorization and complete payment
-    useEffect(() => {
-        if (terminalState === TERMINAL_STATES.AUTHORIZED && terminalAmount > 0) {
-            // Small delay to ensure user sees success screen
-            const timer = setTimeout(() => {
-                addPayment('card', terminalAmount);
-                toast.success('Card approved');
-                terminalServiceRef.current?.resetToIdle();
-            }, 800);
-            return () => clearTimeout(timer);
+    const sendToTerminal = async (amount, txnRef) => {
+        try {
+            const response = await base44.functions.invoke('processCardTerminal', {
+                restaurantId,
+                amount,
+                terminalConfig: cardTerminal,
+                transactionRef: txnRef
+            });
+            if (response.data?.success) {
+                handleTerminalSuccess();
+            } else {
+                setTerminalError(response.data?.error || 'Transaction failed');
+                setTerminalStep('failed');
+            }
+        } catch (error) {
+            setTerminalError('Failed to communicate with terminal: ' + (error.message || 'Unknown error'));
+            setTerminalStep('failed');
         }
-    }, [terminalState]);
+    };
+
+    const handleTerminalSuccess = () => {
+        setTerminalStep('success');
+        setTimeout(() => {
+            setTerminalStep(null);
+            addPayment('card', terminalAmount);
+            toast.success(`Card payment approved (Ref: ${terminalTransactionRef})`);
+        }, 1500);
+    };
+
+    const handleTerminalFailure = () => {
+        setTerminalStep(null);
+        toast.error(terminalError || 'Card payment declined. Please try again.');
+    };
 
     const handleTerminalRetry = async () => {
         setTerminalError('');
-        setTerminalErrorCode('');
-        processCard();
-    };
-
-    const handleTerminalCancel = async () => {
-        if (terminalServiceRef.current) {
-            await terminalServiceRef.current.cancelPayment();
-        }
-        setTerminalError('');
-        setTerminalErrorCode('');
-        setActiveMethod(null);
+        setTerminalStep('waiting');
+        await sendToTerminal(terminalAmount, terminalTransactionRef);
     };
 
     if (cart.length === 0) {
@@ -722,27 +642,21 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={processCard} disabled={isProcessing || terminalState !== TERMINAL_STATES.IDLE}
-                            className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                            {terminalState === TERMINAL_STATES.IDLE ? (
-                                hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : 'Confirm'
-                            ) : (
-                                'Sending...'
-                            )}
+                        <AlertDialogAction onClick={processCard} disabled={isProcessing}
+                            className="bg-blue-600 hover:bg-blue-700 text-white">
+                            {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Terminal waiting/initiating screen */}
-            <AlertDialog open={[TERMINAL_STATES.INITIATING, TERMINAL_STATES.AWAITING_CARD, TERMINAL_STATES.PROCESSING].includes(terminalState)}>
+            {/* Terminal waiting screen */}
+            <AlertDialog open={terminalStep === 'waiting'}>
                 <AlertDialogContent className={`${t.dialog} border`}>
                     <AlertDialogHeader>
                         <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
                             <Monitor className="h-5 w-5 text-blue-400" />
-                            {terminalState === TERMINAL_STATES.INITIATING && 'Connecting to Terminal...'}
-                            {terminalState === TERMINAL_STATES.AWAITING_CARD && 'Ready for Card'}
-                            {terminalState === TERMINAL_STATES.PROCESSING && 'Processing Payment'}
+                            Sending to Card Terminal
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc} asChild>
                             <div className="space-y-4">
@@ -756,31 +670,21 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     <div className="text-center">
                                         <p className={`text-2xl font-bold ${t.text}`}>£{terminalAmount.toFixed(2)}</p>
                                         <p className={`${t.subtext} text-sm mt-1`}>
-                                            {terminalState === TERMINAL_STATES.INITIATING && `Connecting to ${cardTerminal?.reader_label || 'the terminal'}...`}
-                                            {terminalState === TERMINAL_STATES.AWAITING_CARD && `Waiting on ${cardTerminal?.reader_label || 'the terminal'}`}
-                                            {terminalState === TERMINAL_STATES.PROCESSING && `Processing on ${cardTerminal?.reader_label || 'the terminal'}`}
+                                            Processing on <strong>{cardTerminal?.reader_label || 'the terminal'}</strong>
                                         </p>
                                     </div>
                                 </div>
                                 <p className={`${t.subtext} text-xs text-center`}>
-                                    {terminalState === TERMINAL_STATES.AWAITING_CARD && 'Customer should tap or insert their card.'}
-                                    {terminalState === TERMINAL_STATES.PROCESSING && 'Please wait while payment is processed.'}
+                                    Customer should tap or insert their card. Do not cancel.
                                 </p>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    {terminalState === TERMINAL_STATES.AWAITING_CARD && (
-                        <AlertDialogFooter>
-                            <Button onClick={handleTerminalCancel} variant="outline" className={`${t.cancelDlg}`}>
-                                Cancel
-                            </Button>
-                        </AlertDialogFooter>
-                    )}
                 </AlertDialogContent>
             </AlertDialog>
 
             {/* Terminal success screen */}
-            <AlertDialog open={terminalState === TERMINAL_STATES.AUTHORIZED}>
+            <AlertDialog open={terminalStep === 'success'}>
                 <AlertDialogContent className={`${isDark ? 'bg-[#151720] border-green-500/30' : 'bg-white border-green-200'} border`}>
                     <AlertDialogHeader>
                         <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
@@ -792,7 +696,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                 <div className="text-center py-4">
                                     <p className={`text-3xl font-bold text-green-500`}>£{terminalAmount.toFixed(2)}</p>
                                     <p className={`${t.subtext} text-sm mt-2`}>Transaction approved</p>
-                                    <p className={`${t.subtext} text-xs mt-1 font-mono`}>{terminalTransactionId}</p>
+                                    <p className={`${t.subtext} text-xs mt-1 font-mono`}>{terminalTransactionRef}</p>
                                 </div>
                             </div>
                         </AlertDialogDescription>
@@ -815,40 +719,24 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             )}
 
             {/* Terminal failed screen */}
-            <AlertDialog open={[TERMINAL_STATES.DECLINED, TERMINAL_STATES.FAILED, TERMINAL_STATES.TIMEOUT, TERMINAL_STATES.CANCELLED].includes(terminalState)}>
+            <AlertDialog open={terminalStep === 'failed'}>
                 <AlertDialogContent className={`${isDark ? 'bg-[#151720] border-red-500/30' : 'bg-white border-red-200'} border`}>
                     <AlertDialogHeader>
                         <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
                             <XCircle className="h-6 w-6 text-red-500" />
-                            {terminalState === TERMINAL_STATES.DECLINED && 'Card Declined'}
-                            {terminalState === TERMINAL_STATES.TIMEOUT && 'Card Read Timeout'}
-                            {terminalState === TERMINAL_STATES.CANCELLED && 'Payment Cancelled'}
-                            {terminalState === TERMINAL_STATES.FAILED && 'Payment Failed'}
+                            Transaction Failed
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc} asChild>
                             <div className="space-y-4">
                                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                                    <p className="text-red-400 text-sm font-medium">{terminalError || 'Transaction failed. Please try again.'}</p>
-                                    {terminalErrorCode && (
-                                        <p className={`${t.subtext} text-xs mt-1 font-mono`}>Code: {terminalErrorCode}</p>
-                                    )}
+                                    <p className="text-red-400 text-sm font-medium">{terminalError || 'Card was declined'}</p>
                                 </div>
-                                <p className={`${t.subtext} text-xs`}>
-                                    {terminalState === TERMINAL_STATES.DECLINED && 'Try another card or payment method.'}
-                                    {terminalState === TERMINAL_STATES.TIMEOUT && 'The card was not tapped in time. Please try again.'}
-                                    {terminalState === TERMINAL_STATES.CANCELLED && 'You cancelled the payment. You can retry or choose another method.'}
-                                    {terminalState === TERMINAL_STATES.FAILED && 'There was a technical issue. Please try again or use another method.'}
-                                </p>
+                                <p className={`${t.subtext} text-xs`}>Try another payment method or card.</p>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
-                        <Button onClick={() => { 
-                            terminalServiceRef.current?.resetToIdle();
-                            setActiveMethod(null);
-                            setTerminalError('');
-                            setTerminalErrorCode('');
-                        }} variant="outline" className={`flex-1 ${t.cancelDlg}`}>
+                        <Button onClick={() => { setTerminalStep(null); setActiveMethod(null); }} variant="outline" className={`flex-1 ${t.cancelDlg}`}>
                             Back to Methods
                         </Button>
                         <Button onClick={handleTerminalRetry} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">

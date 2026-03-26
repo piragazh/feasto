@@ -19,13 +19,13 @@ import { toast } from 'sonner';
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
 const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
 const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
-const PopularItems = () => <div>Popular Items loading...</div>; // Stub to prevent module fetch error
+const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
 const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
 const RestaurantInfoDialog = lazy(() => import('@/components/restaurant/RestaurantInfoDialog'));
 const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
 const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
 const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
-const MealDealsSection = () => <div>Meal Deals loading...</div>; // Stub to prevent module fetch error
+const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
 
 export default function Restaurant() {

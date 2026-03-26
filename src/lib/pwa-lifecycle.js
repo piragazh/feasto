@@ -88,13 +88,6 @@ export function registerServiceWorker() {
   // Register
   window.addEventListener('load', async () => {
     try {
-      // Bypass service worker caching during build/deploy issues
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const reg of registrations) {
-        await reg.unregister();
-        log('Cleared cached service worker registration');
-      }
-
       const registration = await navigator.serviceWorker.register('/sw.js', {
         // updateViaCache: 'none' — browser always fetches sw.js from network
         // so stale SW file is never served from HTTP cache
