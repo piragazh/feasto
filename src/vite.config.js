@@ -6,6 +6,11 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.{js,jsx,ts,tsx}'],
+    globals: true,
+  },
   logLevel: 'error',
   plugins: [
     react(),
