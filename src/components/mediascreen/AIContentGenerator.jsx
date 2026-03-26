@@ -20,6 +20,8 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
     const [selectedCategory, setSelectedCategory] = useState('');
     const [customCategory, setCustomCategory] = useState(''); // free-text custom category
     const [outputType, setOutputType] = useState('image'); // image | gif
+    const [priceType, setPriceType] = useState('online'); // online | pos
+    const [colorPalette, setColorPalette] = useState('default');
     const [promoOffer, setPromoOffer] = useState('');
     const [customPrompt, setCustomPrompt] = useState(initialPrompt);
     const [style, setStyle] = useState('cinematic');
@@ -59,6 +61,22 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
         { value: 'neon', label: 'Neon Night', desc: 'Dark background, neon accents, modern' },
     ];
 
+    const colorPalettes = [
+        { value: 'default', label: 'Brand Default', colors: [restaurantColor] },
+        { value: 'warm', label: 'Warm Fire', colors: ['#FF6B35', '#F7931E', '#FDB913'] },
+        { value: 'cool', label: 'Cool & Fresh', colors: ['#00A8E8', '#00C9FF', '#00F0FF'] },
+        { value: 'luxury', label: 'Luxury Gold', colors: ['#D4AF37', '#C0A57B', '#2D2D2D'] },
+        { value: 'vibrant', label: 'Tropical Vibes', colors: ['#FF006E', '#FB5607', '#FFBE0B'] },
+        { value: 'natural', label: 'Natural Earth', colors: ['#8B4513', '#DAA520', '#228B22'] },
+        { value: 'neon', label: 'Neon Cyber', colors: ['#00FF00', '#FF00FF', '#00FFFF'] },
+        { value: 'minimalist', label: 'Minimalist B&W', colors: ['#000000', '#FFFFFF', '#808080'] },
+    ];
+
+    const priceTypeOptions = [
+        { value: 'online', label: 'Online Price', desc: 'Include website URL' },
+        { value: 'pos', label: 'POS Price', desc: 'In-store only (no website)' },
+    ];
+
     const effectiveCategory = customCategory.trim() || selectedCategory;
 
     const buildScreenAdPrompt = () => {
@@ -67,11 +85,16 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
             ? items.filter(i => i.is_popular).slice(0, 2)
             : items.slice(0, 2);
 
-        const itemList = items.map(i => `${i.name} £${i.price}`).join(', ');
-        const heroList = heroItems.map(i => `${i.name} £${i.price}${i.description ? ' - ' + i.description.slice(0, 40) : ''}`).join('; ');
+        // Get prices based on selected type
+        const itemList = items.map(i => `${i.name} ${getPrice(i)}`).join(', ');
+        const heroList = heroItems.map(i => `${i.name} ${getPrice(i)}${i.description ? ' - ' + i.description.slice(0, 40) : ''}`).join('; ');
         const orientationDesc = orientation === 'portrait'
             ? 'vertical portrait format (9:16), tall screen, mobile/totem display'
             : 'horizontal landscape format (16:9), wide LED screen, window display';
+        
+        const paletteInfo = colorPalettes.find(p => p.value === colorPalette);
+        const colorDesc = paletteInfo ? `Color palette: ${paletteInfo.label} (${paletteInfo.colors.join(', ')})` : '';
+        
         const styleMap = {
             cinematic: 'cinematic fast-food advertising style like McDonald\'s or KFC, dark background with orange fire glow gradient, bold dramatic typography',
             vibrant: 'vibrant colorful high-contrast promotional style, bold colors, eye-catching composition',
@@ -84,6 +107,7 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
 ${effectiveCategory ? `Category focus: ${effectiveCategory}` : ''}
 Style: ${styleMap[style]}
 Brand color: ${restaurantColor}
+${colorDesc}
 ${gifNote}
 
 HERO ITEMS (large, dominant): ${heroList || effectiveCategory || restaurantName}
@@ -100,7 +124,8 @@ DESIGN RULES:
 - NO paragraphs — only short punchy labels
 - ${orientation === 'portrait' ? 'Stack content vertically: header → hero → item grid → offer → CTA' : 'Left: hero item + price. Right: item grid. Bottom: offer + CTA bar'}
 - Professional food photography lighting, 4K quality
-- ${promoOffer ? 'Promo badge/banner must be impossible to miss' : 'Strong visual hierarchy'}`;
+- ${promoOffer ? 'Promo badge/banner must be impossible to miss' : 'Strong visual hierarchy'}
+- ${priceType === 'pos' ? 'NO website URL or online ordering references — in-store only, focus on walk-in appeal' : ''}`;
     };
 
     const handleGenerateScreenAd = async () => {
@@ -378,6 +403,44 @@ Return a JSON screen ad plan with this exact structure:
                                         >
                                             <p className="text-xs font-semibold">{s.label}</p>
                                             <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Color Palette */}
+                            <div>
+                                <Label className="text-sm font-semibold">Color Palette</Label>
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {colorPalettes.map(p => (
+                                        <button
+                                            key={p.value}
+                                            onClick={() => setColorPalette(p.value)}
+                                            className={`p-2.5 rounded-lg border-2 text-left transition-all ${colorPalette === p.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                        >
+                                            <p className="text-xs font-semibold">{p.label}</p>
+                                            <div className="flex gap-1 mt-1.5">
+                                                {p.colors.map((color, i) => (
+                                                    <div key={i} className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: color }} />
+                                                ))}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Price Type */}
+                            <div>
+                                <Label className="text-sm font-semibold">Price Source</Label>
+                                <div className="flex gap-3 mt-2">
+                                    {priceTypeOptions.map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setPriceType(opt.value)}
+                                            className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${priceType === opt.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                        >
+                                            <span className="text-xs font-semibold">{opt.label}</span>
+                                            <span className="text-[10px] text-gray-500">{opt.desc}</span>
                                         </button>
                                     ))}
                                 </div>
