@@ -10,6 +10,13 @@
 npm run verify          # full local gate — run before every PR
 npm run test:run        # Vitest single run
 npm run check:mirror-sync  # drift guard for handler ↔ lib parity
+
+# Backend smoke tests (requires .env.smoke — see scripts/smoke/README.md)
+npm run smoke           # run all smoke suites
+npm run smoke:manifest  # getManifest only (safe anywhere, no auth needed)
+npm run smoke:order     # verifyAndCreateOrder (staging only)
+npm run smoke:coupon    # validateCouponUsage (staging only)
+npm run smoke:payment   # createPaymentIntent guard rails (no real Stripe call)
 ```
 
 ---
@@ -35,7 +42,7 @@ npm run check:mirror-sync  # drift guard for handler ↔ lib parity
 - Frontend React components
 - Integration with real external services
 
-Use `test_backend_function` from the Base44 platform for handler smoke tests.
+Use the backend smoke tests (`npm run smoke`) for handler wiring — see `scripts/smoke/README.md`.
 
 ---
 
@@ -115,9 +122,54 @@ npm run build             # Vite production build
 
 ---
 
+## Backend smoke tests
+
+**Location:** `scripts/smoke/`  
+**Purpose:** Validate live function wiring — auth context, entity reads, error shapes, input guards.  
+These call **real deployed endpoints** and are run manually (or in a staging-only CI job).
+
+| Suite | Auth needed | Destructive | Safe for prod? |
+|---|---|---|---|
+| `getManifest` | No | No | ✅ Yes |
+| `auditLog` | Optional (admin for write) | Minor (creates 1 DashboardActivity row) | ✅ (auth tests only) |
+| `validateCouponUsage` | Yes (user token) | No | ✅ |
+| `enforceRestaurantPermissions` | Yes (admin + user) | No | ✅ |
+| `createPaymentIntent` | No (tests only reject paths) | No | ✅ |
+| `verifyAndCreateOrder` | No (happy path needs fixtures) | Yes (creates Order records) | ⛔ Staging only |
+
+### Running smoke tests
+
+```bash
+# One-time setup: create .env.smoke from the example
+cp scripts/smoke/.env.smoke.example scripts/smoke/.env.smoke
+# Then fill in SMOKE_BASE_URL and any tokens/fixture IDs you have
+
+# Run safe suites (no auth needed)
+npm run smoke:manifest
+npm run smoke:payment
+
+# Run full suite against staging
+npm run smoke
+```
+
+Required fixture data and cleanup instructions: `scripts/smoke/README.md`
+
+### What smoke tests cover that Vitest does not
+
+- **Auth wiring**: `base44.auth.me()` call actually works with a real token
+- **Entity reads**: DB filter calls return expected shapes
+- **Error shape safety**: no raw stack traces, no secret leakage in error responses
+- **HTTP guards**: method checks, missing-field 400s, auth 401/403 gates
+- **Idempotency**: duplicate submit returns existing order, not a new one
+- **Input sanitization**: object injection, negative amounts, oversized limits all rejected cleanly
+
+---
+
 ## Remaining gaps (honest)
 
 - **No `tsconfig.json`** — `typecheck` step is a no-op. Adding a tsconfig would enable real TypeScript coverage.
 - **ESLint does not cover `functions/`** — Deno import syntax (`npm:`, `jsr:`) causes false positives. Handler linting is manual.
-- **No E2E tests** — no Playwright/Cypress coverage of the full checkout flow. Manual smoke testing is the current approach.
-- **No handler unit tests** — Deno handler I/O is not mocked. Stripe/DB/auth paths are tested only via the Base44 `test_backend_function` tool.
+- **No E2E tests** — no Playwright/Cypress coverage of the full checkout flow.
+- **Smoke tests are manual** — not wired into CI (would require staging secrets in CI). Run them before production deploys.
+- **`awardLoyaltyPoints` not smoke-tested** — it requires a completed order entity in the right status; a future smoke fixture could enable this.
+- **`orderVelocityThrottle` not smoke-tested directly** — it is called internally by `verifyAndCreateOrder`. The happy-path smoke test exercises it transitively.

@@ -18,6 +18,15 @@
     "check:mirror-sync": "node scripts/check-mirror-sync.js",
 
     "verify": "npm run lint && npm run typecheck && npm run test:run && npm run check:mirror-sync && npm run build",
-    "ci": "npm run verify"
+    "ci": "npm run verify",
+
+    "smoke": "node scripts/smoke/run-smoke.js",
+    "smoke:manifest": "node scripts/smoke/run-smoke.js --only getManifest",
+    "smoke:order": "node scripts/smoke/run-smoke.js --only verifyAndCreateOrder",
+    "smoke:coupon": "node scripts/smoke/run-smoke.js --only validateCouponUsage",
+    "smoke:audit": "node scripts/smoke/run-smoke.js --only auditLog",
+    "smoke:payment": "node scripts/smoke/run-smoke.js --only createPaymentIntent",
+    "smoke:permissions": "node scripts/smoke/run-smoke.js --only enforceRestaurantPermissions",
+    "smoke:cleanup": "node scripts/smoke/cleanup-smoke-orders.js"
   }
 }
