@@ -336,9 +336,26 @@
       "format": "date-time",
       "description": "When manager last reviewed/acknowledged this flagged order"
     },
+    "offline_review_reason_code": {
+      "type": "string",
+      "enum": [
+        "sync_validation_acceptable",
+        "discount_capped_correct",
+        "coupon_expired_expected",
+        "price_reconciled_fair",
+        "customer_contacted_satisfied",
+        "needs_customer_contact",
+        "policy_review_needed",
+        "system_error_found",
+        "discount_excessive",
+        "unclear_validation_flag",
+        "other"
+      ],
+      "description": "Structured reason code for resolved/escalated decision (required for terminal actions)"
+    },
     "offline_review_notes": {
       "type": "string",
-      "description": "Manager notes explaining their review decision"
+      "description": "Optional manager notes providing additional context beyond reason code"
     }
   },
   "required": [

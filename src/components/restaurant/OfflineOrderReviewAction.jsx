@@ -8,6 +8,23 @@ import {
     AlertDialogContent, AlertDialogDescription,
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select";
+
+const REASON_CODES = {
+    sync_validation_acceptable: "Sync validation is acceptable",
+    discount_capped_correct: "Discount cap is policy-correct",
+    coupon_expired_expected: "Coupon expiry is expected",
+    price_reconciled_fair: "Price reconciled fairly",
+    customer_contacted_satisfied: "Customer contacted & satisfied",
+    needs_customer_contact: "Needs customer contact",
+    policy_review_needed: "Policy review needed",
+    system_error_found: "System error found",
+    discount_excessive: "Discount appears excessive",
+    unclear_validation_flag: "Validation flag unclear",
+    other: "Other (specify in notes)"
+};
 
 /**
  * Offline Order Review Action Component
@@ -23,6 +40,7 @@ import {
 export default function OfflineOrderReviewAction({ order, restaurantId, onReviewComplete }) {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedAction, setSelectedAction] = useState(null);
+    const [reviewReasonCode, setReviewReasonCode] = useState('');
     const [reviewNotes, setReviewNotes] = useState('');
     const [showDialog, setShowDialog] = useState(false);
 
@@ -46,10 +64,10 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
     const confirmAction = async () => {
         if (!selectedAction) return;
 
-        // Enforce required notes for terminal decisions
-        const requiresNotes = ['resolved', 'escalated'].includes(selectedAction);
-        if (requiresNotes && !reviewNotes.trim()) {
-            toast.error(`Notes required for "${selectedAction}" action`);
+        // Enforce required reason code for terminal decisions
+        const requiresReasonCode = ['resolved', 'escalated'].includes(selectedAction);
+        if (requiresReasonCode && !reviewReasonCode) {
+            toast.error(`Reason code required for "${selectedAction}" action`);
             return;
         }
 
@@ -59,6 +77,7 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
                 order_id: order.id,
                 restaurant_id: restaurantId,
                 action: selectedAction,
+                review_reason_code: reviewReasonCode || null,
                 review_notes: reviewNotes?.trim() || null,
             });
 
@@ -66,6 +85,7 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
                 toast.success(`Order marked as ${selectedAction}`);
                 setShowDialog(false);
                 setSelectedAction(null);
+                setReviewReasonCode('');
                 setReviewNotes('');
                 if (onReviewComplete) {
                     onReviewComplete(order.id);
@@ -130,27 +150,38 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
-                    {/* Notes input */}
+                    {/* Reason code (for terminal decisions) */}
+                    {['resolved', 'escalated'].includes(selectedAction) && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-700">
+                                Reason <span className="text-red-500">*required</span>
+                            </label>
+                            <Select value={reviewReasonCode} onValueChange={setReviewReasonCode}>
+                                <SelectTrigger className={`text-xs ${!reviewReasonCode ? 'border-red-300 bg-red-50' : ''}`}>
+                                    <SelectValue placeholder="Select a reason..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(REASON_CODES).map(([code, label]) => (
+                                        <SelectItem key={code} value={code}>
+                                            {label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
+                    {/* Notes input (optional for all actions) */}
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-gray-700">
-                            Review notes {(['resolved', 'escalated'].includes(selectedAction)) && <span className="text-red-500">*required</span>}
+                            Additional notes {(['resolved', 'escalated'].includes(selectedAction)) && <span className="text-gray-400 font-normal">(optional)</span>}
                         </label>
                         <textarea
                             value={reviewNotes}
                             onChange={(e) => setReviewNotes(e.target.value)}
-                            placeholder={selectedAction === 'acknowledge' ? "Optional: add context..." : "Explain your decision..."}
-                            className={`w-full border rounded-lg p-2 text-xs resize-none h-20 focus:outline-none ${
-                                ['resolved', 'escalated'].includes(selectedAction) && !reviewNotes.trim()
-                                    ? 'border-red-300 bg-red-50 focus:border-red-400'
-                                    : 'border-gray-300 focus:border-blue-400'
-                            }`}
+                            placeholder={selectedAction === 'acknowledge' ? "Optional: add context..." : "Add more details..."}
+                            className="w-full border border-gray-300 rounded-lg p-2 text-xs resize-none h-16 focus:outline-none focus:border-blue-400"
                         />
-                        {(['resolved', 'escalated'].includes(selectedAction)) && (
-                            <p className="text-xs text-gray-500 italic">
-                                {selectedAction === 'resolved' && 'Explain why this order is acceptable.'}
-                                {selectedAction === 'escalated' && 'Explain what needs investigation.'}
-                            </p>
-                        )}
                     </div>
 
                     <AlertDialogFooter>

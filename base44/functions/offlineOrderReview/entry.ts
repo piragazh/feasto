@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { order_id, restaurant_id, action, review_notes } = await req.json();
+        const { order_id, restaurant_id, action, review_reason_code, review_notes } = await req.json();
 
         if (!order_id || !restaurant_id || !action) {
             return Response.json({ error: 'order_id, restaurant_id, action required' }, { status: 400 });
@@ -39,14 +39,29 @@ Deno.serve(async (req) => {
             return Response.json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }, { status: 400 });
         }
 
-        // ── REQUIRE NOTES FOR TERMINAL DECISIONS ─────────────────────────────────
-        // resolved & escalated require manager to provide rationale
-        const requiresNotes = ['resolved', 'escalated'].includes(action);
-        if (requiresNotes && (!review_notes || typeof review_notes !== 'string' || !review_notes.trim())) {
+        // ── VALIDATE REASON CODE FOR TERMINAL DECISIONS ──────────────────────────
+        // resolved & escalated require structured reason code (+ optional notes)
+        const validReasonCodes = [
+            'sync_validation_acceptable',
+            'discount_capped_correct',
+            'coupon_expired_expected',
+            'price_reconciled_fair',
+            'customer_contacted_satisfied',
+            'needs_customer_contact',
+            'policy_review_needed',
+            'system_error_found',
+            'discount_excessive',
+            'unclear_validation_flag',
+            'other'
+        ];
+        
+        const requiresReasonCode = ['resolved', 'escalated'].includes(action);
+        if (requiresReasonCode && (!review_reason_code || !validReasonCodes.includes(review_reason_code))) {
             return Response.json({
-                error: `Notes are required when marking order as "${action}". Please explain your decision.`,
-                field: 'review_notes',
-                policy: 'mandatory_notes'
+                error: `Reason code required when marking order as "${action}". Please select a reason.`,
+                field: 'review_reason_code',
+                policy: 'mandatory_reason_code',
+                valid_codes: validReasonCodes
             }, { status: 400 });
         }
 
@@ -106,6 +121,10 @@ Deno.serve(async (req) => {
             offline_review_at: new Date().toISOString(),
         };
 
+        if (requiresReasonCode) {
+            reviewUpdate.offline_review_reason_code = review_reason_code;
+        }
+
         if (review_notes && typeof review_notes === 'string' && review_notes.trim()) {
             reviewUpdate.offline_review_notes = review_notes.trim();
         }
@@ -118,6 +137,7 @@ Deno.serve(async (req) => {
             restaurant_id,
             action,
             new_status: newStatus,
+            review_reason_code: review_reason_code || null,
             review_notes: review_notes?.trim() || null,
             sync_validation_notes: order.sync_validation_notes,
             review_age_hours: Math.round(reviewAgeHours * 10) / 10,

@@ -4,10 +4,12 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, WifiOff, CheckCircle2, Clock } from 'lucide-react';
+import { AlertCircle, WifiOff, CheckCircle2, Clock, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import OfflineOrderReviewAction from './OfflineOrderReviewAction';
 import OfflineReviewStats from './OfflineReviewStats';
+import OfflineReviewAnalytics from './OfflineReviewAnalytics';
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 
 /**
  * Offline Orders Review
@@ -126,6 +128,18 @@ export default function OfflineOrdersReview({ restaurantId }) {
     return (
         <>
             <OfflineReviewStats orders={offlineOrders} />
+            
+            {/* Analytics tab */}
+            <Tabs defaultValue="orders" className="w-full">
+                <div className="flex gap-2 mb-4">
+                    <TabsTrigger value="orders" className="gap-2">Orders</TabsTrigger>
+                    <TabsTrigger value="analytics" className="gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Analysis
+                    </TabsTrigger>
+                </div>
+
+                <TabsContent value="orders">
             <Card>
             <CardHeader>
                 <div className="flex items-center justify-between">
@@ -281,8 +295,13 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                         </Badge>
                                     </div>
                                     {order.offline_review_by && (
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-gray-600 space-y-1">
                                             <p>Reviewed by {order.offline_review_by.split('@')[0]} on {formatTime(order.offline_review_at)}</p>
+                                            {order.offline_review_reason_code && (
+                                                <p className="text-gray-700 font-medium bg-gray-50 px-2 py-1 rounded inline-block">
+                                                    {order.offline_review_reason_code.split('_').join(' ')}
+                                                </p>
+                                            )}
                                             {order.offline_review_notes && (
                                                 <p className="mt-1 italic text-gray-500">Note: {order.offline_review_notes}</p>
                                             )}
@@ -302,6 +321,12 @@ export default function OfflineOrdersReview({ restaurantId }) {
                 </div>
             </CardContent>
         </Card>
+                </TabsContent>
+
+                <TabsContent value="analytics">
+                    <OfflineReviewAnalytics orders={offlineOrders} />
+                </TabsContent>
+            </Tabs>
         </>
     );
 }
