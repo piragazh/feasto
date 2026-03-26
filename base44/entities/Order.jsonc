@@ -339,23 +339,21 @@
     "offline_review_reason_code": {
       "type": "string",
       "enum": [
-        "sync_validation_acceptable",
-        "discount_capped_correct",
-        "coupon_expired_expected",
-        "price_reconciled_fair",
-        "customer_contacted_satisfied",
-        "needs_customer_contact",
-        "policy_review_needed",
-        "system_error_found",
-        "discount_excessive",
-        "unclear_validation_flag",
+        "price_adjusted_on_sync",
+        "acceptable_policy_override",
+        "customer_already_served",
+        "minor_discrepancy",
+        "potential_abuse",
+        "large_price_mismatch",
+        "repeated_offline_issues",
+        "needs_refund_followup",
         "other"
       ],
       "description": "Structured reason code for resolved/escalated decision (required for terminal actions)"
     },
     "offline_review_notes": {
       "type": "string",
-      "description": "Optional manager notes providing additional context beyond reason code"
+      "description": "Manager notes: required if reason_code='other', optional otherwise"
     }
   },
   "required": [

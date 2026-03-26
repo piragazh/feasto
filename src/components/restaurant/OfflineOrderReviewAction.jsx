@@ -12,18 +12,20 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 
-const REASON_CODES = {
-    sync_validation_acceptable: "Sync validation is acceptable",
-    discount_capped_correct: "Discount cap is policy-correct",
-    coupon_expired_expected: "Coupon expiry is expected",
-    price_reconciled_fair: "Price reconciled fairly",
-    customer_contacted_satisfied: "Customer contacted & satisfied",
-    needs_customer_contact: "Needs customer contact",
-    policy_review_needed: "Policy review needed",
-    system_error_found: "System error found",
-    discount_excessive: "Discount appears excessive",
-    unclear_validation_flag: "Validation flag unclear",
-    other: "Other (specify in notes)"
+const RESOLVED_CODES = {
+    price_adjusted_on_sync: "Sync recalculation was fair",
+    acceptable_policy_override: "Manual action was justified",
+    customer_already_served: "Customer satisfied, no action needed",
+    minor_discrepancy: "Variance within tolerance",
+    other: "Other (requires documentation)"
+};
+
+const ESCALATED_CODES = {
+    potential_abuse: "Suspicious pattern detected",
+    large_price_mismatch: "Variance exceeds tolerance",
+    repeated_offline_issues: "Recurring problems with this restaurant",
+    needs_refund_followup: "Customer refund action required",
+    other: "Other (requires documentation)"
 };
 
 /**
@@ -61,15 +63,24 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
         setShowDialog(true);
     };
 
-    const confirmAction = async () => {
-        if (!selectedAction) return;
+    const getReasonCodes = () => {
+        if (selectedAction === 'resolved') return RESOLVED_CODES;
+        if (selectedAction === 'escalated') return ESCALATED_CODES;
+        return {};
+    };
 
-        // Enforce required reason code for terminal decisions
-        const requiresReasonCode = ['resolved', 'escalated'].includes(selectedAction);
-        if (requiresReasonCode && !reviewReasonCode) {
-            toast.error(`Reason code required for "${selectedAction}" action`);
-            return;
-        }
+    const isOtherCode = reviewReasonCode === 'other';
+    const notesRequired = ['resolved', 'escalated'].includes(selectedAction) && isOtherCode;
+    const notesLength = reviewNotes.trim().length;
+    const canSubmit = () => {
+        const requiresCode = ['resolved', 'escalated'].includes(selectedAction);
+        if (requiresCode && !reviewReasonCode) return false;
+        if (notesRequired && notesLength < 10) return false;
+        return true;
+    };
+
+    const confirmAction = async () => {
+        if (!selectedAction || !canSubmit()) return;
 
         setIsLoading(true);
         try {
@@ -151,38 +162,60 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
                     </AlertDialogHeader>
 
                     {/* Reason code (for terminal decisions) */}
-                    {['resolved', 'escalated'].includes(selectedAction) && (
-                        <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">
-                                Reason <span className="text-red-500">*required</span>
-                            </label>
-                            <Select value={reviewReasonCode} onValueChange={setReviewReasonCode}>
-                                <SelectTrigger className={`text-xs ${!reviewReasonCode ? 'border-red-300 bg-red-50' : ''}`}>
-                                    <SelectValue placeholder="Select a reason..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(REASON_CODES).map(([code, label]) => (
-                                        <SelectItem key={code} value={code}>
-                                            {label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
+                     {['resolved', 'escalated'].includes(selectedAction) && (
+                         <div className="space-y-2">
+                             <label className="text-xs font-medium text-gray-700">
+                                 Reason <span className="text-red-500">*required</span>
+                             </label>
+                             <Select value={reviewReasonCode} onValueChange={setReviewReasonCode}>
+                                 <SelectTrigger className={`text-xs ${!reviewReasonCode ? 'border-red-300 bg-red-50' : ''}`}>
+                                     <SelectValue placeholder="Select a reason..." />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                     {Object.entries(getReasonCodes()).map(([code, label]) => (
+                                         <SelectItem key={code} value={code}>
+                                             {label}
+                                         </SelectItem>
+                                     ))}
+                                 </SelectContent>
+                             </Select>
+                         </div>
+                     )}
 
-                    {/* Notes input (optional for all actions) */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-medium text-gray-700">
-                            Additional notes {(['resolved', 'escalated'].includes(selectedAction)) && <span className="text-gray-400 font-normal">(optional)</span>}
-                        </label>
-                        <textarea
-                            value={reviewNotes}
-                            onChange={(e) => setReviewNotes(e.target.value)}
-                            placeholder={selectedAction === 'acknowledge' ? "Optional: add context..." : "Add more details..."}
-                            className="w-full border border-gray-300 rounded-lg p-2 text-xs resize-none h-16 focus:outline-none focus:border-blue-400"
-                        />
-                    </div>
+                     {/* Notes input */}
+                     {['resolved', 'escalated'].includes(selectedAction) && (
+                         <div className="space-y-2">
+                             <label className="text-xs font-medium text-gray-700">
+                                 Notes {notesRequired && <span className="text-red-500">*required (min 10 chars for "Other")</span>}
+                                 {!notesRequired && <span className="text-gray-400 font-normal">(optional)</span>}
+                             </label>
+                             <textarea
+                                 value={reviewNotes}
+                                 onChange={(e) => setReviewNotes(e.target.value)}
+                                 placeholder={notesRequired ? "Explain the unique circumstances (required)..." : "Add optional context..."}
+                                 className={`w-full border rounded-lg p-2 text-xs resize-none h-16 focus:outline-none ${
+                                     notesRequired && notesLength < 10 ? 'border-red-300 bg-red-50 focus:border-red-400' : 'border-gray-300 focus:border-blue-400'
+                                 }`}
+                             />
+                             {notesRequired && (
+                                 <p className={`text-xs ${notesLength >= 10 ? 'text-green-600' : 'text-red-600'}`}>
+                                     {notesLength} / 10 characters
+                                 </p>
+                             )}
+                         </div>
+                     )}
+
+                     {selectedAction === 'acknowledge' && (
+                         <div className="space-y-2">
+                             <label className="text-xs font-medium text-gray-700">Optional notes</label>
+                             <textarea
+                                 value={reviewNotes}
+                                 onChange={(e) => setReviewNotes(e.target.value)}
+                                 placeholder="Add context if needed..."
+                                 className="w-full border border-gray-300 rounded-lg p-2 text-xs resize-none h-16 focus:outline-none focus:border-blue-400"
+                             />
+                         </div>
+                     )}
 
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={isLoading}>
@@ -190,11 +223,11 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmAction}
-                            disabled={isLoading}
+                            disabled={isLoading || !canSubmit()}
                             className="gap-2"
                         >
                             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                            Confirm
+                            {!canSubmit() ? 'Complete required fields' : 'Confirm'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

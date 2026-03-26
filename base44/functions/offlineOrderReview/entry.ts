@@ -40,30 +40,54 @@ Deno.serve(async (req) => {
         }
 
         // ── VALIDATE REASON CODE FOR TERMINAL DECISIONS ──────────────────────────
-        // resolved & escalated require structured reason code (+ optional notes)
-        const validReasonCodes = [
-            'sync_validation_acceptable',
-            'discount_capped_correct',
-            'coupon_expired_expected',
-            'price_reconciled_fair',
-            'customer_contacted_satisfied',
-            'needs_customer_contact',
-            'policy_review_needed',
-            'system_error_found',
-            'discount_excessive',
-            'unclear_validation_flag',
-            'other'
-        ];
-        
-        const requiresReasonCode = ['resolved', 'escalated'].includes(action);
-        if (requiresReasonCode && (!review_reason_code || !validReasonCodes.includes(review_reason_code))) {
-            return Response.json({
-                error: `Reason code required when marking order as "${action}". Please select a reason.`,
-                field: 'review_reason_code',
-                policy: 'mandatory_reason_code',
-                valid_codes: validReasonCodes
-            }, { status: 400 });
-        }
+         // resolved & escalated require structured reason code
+         const validResolvedCodes = [
+             'price_adjusted_on_sync',
+             'acceptable_policy_override',
+             'customer_already_served',
+             'minor_discrepancy',
+             'other'
+         ];
+
+         const validEscalatedCodes = [
+             'potential_abuse',
+             'large_price_mismatch',
+             'repeated_offline_issues',
+             'needs_refund_followup',
+             'other'
+         ];
+
+         const requiresReasonCode = ['resolved', 'escalated'].includes(action);
+         if (requiresReasonCode && !review_reason_code) {
+             return Response.json({
+                 error: `Reason code required when marking order as "${action}". Please select a reason.`,
+                 field: 'review_reason_code',
+                 policy: 'mandatory_reason_code'
+             }, { status: 400 });
+         }
+
+         // Validate reason code against action-specific set
+         const validCodes = action === 'resolved' ? validResolvedCodes : validEscalatedCodes;
+         if (requiresReasonCode && !validCodes.includes(review_reason_code)) {
+             return Response.json({
+                 error: `Invalid reason code "${review_reason_code}" for action "${action}".`,
+                 field: 'review_reason_code',
+                 policy: 'invalid_reason_code',
+                 valid_codes: validCodes
+             }, { status: 400 });
+         }
+
+         // Enforce notes: required if reason_code = "other", optional otherwise
+         if (requiresReasonCode && review_reason_code === 'other') {
+             if (!review_notes || review_notes.trim().length < 10) {
+                 return Response.json({
+                     error: 'Notes required for "Other" reason (minimum 10 characters) to document unique case.',
+                     field: 'review_notes',
+                     policy: 'mandatory_notes_for_other',
+                     min_length: 10
+                 }, { status: 400 });
+             }
+         }
 
         // ── TENANT CHECK ────────────────────────────────────────────────────────
         // Verify manager has access to this restaurant

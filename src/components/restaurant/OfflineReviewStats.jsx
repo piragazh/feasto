@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle, Clock, ChevronRight, TrendingUp } from 'lucide-react';
 
 /**
  * Offline Review Statistics
@@ -32,6 +32,20 @@ export default function OfflineReviewStats({ orders = [] }) {
 
     const withNotesCount = flagged.filter(o => o.offline_review_notes && o.offline_review_notes.trim()).length;
     const notesRatio = flagged.length > 0 ? Math.round((withNotesCount / flagged.length) * 100) : 0;
+
+    // Group reviewed orders by reason code
+    const reasonCodeBreakdown = {};
+    flagged
+        .filter(o => o.offline_review_reason_code)
+        .forEach(o => {
+            const code = o.offline_review_reason_code;
+            if (!reasonCodeBreakdown[code]) {
+                reasonCodeBreakdown[code] = { resolved: 0, escalated: 0, count: 0 };
+            }
+            reasonCodeBreakdown[code].count++;
+            if (o.offline_review_status === 'resolved') reasonCodeBreakdown[code].resolved++;
+            if (o.offline_review_status === 'escalated') reasonCodeBreakdown[code].escalated++;
+        });
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
@@ -113,6 +127,47 @@ export default function OfflineReviewStats({ orders = [] }) {
                     </p>
                 </CardContent>
             </Card>
+
+            {/* Reason code breakdown */}
+            {Object.keys(reasonCodeBreakdown).length > 0 && (
+                <Card className="border-gray-200 md:col-span-5">
+                    <CardHeader>
+                        <CardTitle className="text-xs flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-blue-500" />
+                            Decision Breakdown by Reason
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            {Object.entries(reasonCodeBreakdown)
+                                .sort((a, b) => b[1].count - a[1].count)
+                                .map(([code, counts]) => (
+                                <div key={code} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded hover:bg-gray-100 transition">
+                                    <div className="flex items-center gap-2">
+                                        <ChevronRight className="h-3 w-3 text-gray-400" />
+                                        <span className="font-medium text-gray-800 capitalize">
+                                            {code.replace(/_/g, ' ')}
+                                        </span>
+                                        <span className="text-gray-500">({counts.count})</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {counts.resolved > 0 && (
+                                            <Badge className="bg-green-100 text-green-800 text-xs font-medium">
+                                                {counts.resolved} resolved
+                                            </Badge>
+                                        )}
+                                        {counts.escalated > 0 && (
+                                            <Badge className="bg-orange-100 text-orange-800 text-xs font-medium">
+                                                {counts.escalated} escalated
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }
