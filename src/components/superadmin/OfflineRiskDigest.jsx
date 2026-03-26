@@ -21,25 +21,6 @@ export default function OfflineRiskDigest() {
     const [copiedToClipboard, setCopiedToClipboard] = useState(false);
     const [activeTab, setActiveTab] = useState('current');
 
-    // Auto-snapshot digest when component mounts
-    useEffect(() => {
-        const snapshot = async () => {
-            try {
-                if (digest && plaintext) {
-                    await base44.functions.invoke('createDigestSnapshot', {
-                        digest,
-                        scope: 'portfolio',
-                        scope_id: null,
-                        plaintext
-                    });
-                }
-            } catch (e) {
-                // Silently fail - snapshot is optional
-            }
-        };
-        snapshot();
-    }, [digest]);
-
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list()
@@ -116,6 +97,25 @@ export default function OfflineRiskDigest() {
     const plaintext = useMemo(() => {
         return formatDigestAsPlaintext(digest);
     }, [digest]);
+
+    // Auto-snapshot digest when component mounts
+    useEffect(() => {
+        const snapshot = async () => {
+            try {
+                if (digest && plaintext) {
+                    await base44.functions.invoke('createDigestSnapshot', {
+                        digest,
+                        scope: 'portfolio',
+                        scope_id: null,
+                        plaintext
+                    });
+                }
+            } catch (e) {
+                // Silently fail - snapshot is optional
+            }
+        };
+        snapshot();
+    }, [digest, plaintext]);
 
     const isCritical = isDigestCritical(digest);
 
