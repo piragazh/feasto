@@ -5,7 +5,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, X } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle, Menu, X } from 'lucide-react';
+import { createPageUrl } from '@/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 // Stub components to prevent module fetch errors
 const SystemOverview = () => <div className="p-4 bg-white rounded-lg">SystemOverview loading...</div>;
 const RestaurantManagement = () => <div className="p-4 bg-white rounded-lg">RestaurantManagement loading...</div>;
@@ -35,9 +38,6 @@ const OfflineTemporalAnalytics = () => <div className="p-4 bg-white rounded-lg">
 const OperatorAnalytics = () => <div className="p-4 bg-white rounded-lg">OperatorAnalytics loading...</div>;
 const ShiftWindowAnalytics = () => <div className="p-4 bg-white rounded-lg">ShiftWindowAnalytics loading...</div>;
 const OfflineRiskDigest = () => <div className="p-4 bg-white rounded-lg">OfflineRiskDigest loading...</div>;
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle } from 'lucide-react';
-import { createPageUrl } from '@/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
