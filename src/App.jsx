@@ -11,6 +11,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
 import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
+import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -77,6 +78,13 @@ const AuthenticatedApp = () => {
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="OfflineRiskControlCenter">
                 <OfflineRiskControlCenter />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/RestaurantOfflineRiskOverview" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="RestaurantOfflineRiskOverview">
+                <RestaurantOfflineRiskOverview />
               </LayoutWrapper>
             </Suspense>
           } />
