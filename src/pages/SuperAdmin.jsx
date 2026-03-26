@@ -31,6 +31,7 @@ import BackupRestore from '@/components/superadmin/BackupRestore';
 import OfflineReviewPortfolio from '@/components/superadmin/OfflineReviewPortfolio';
 import ManagerOperatorAnalytics from '@/components/superadmin/ManagerOperatorAnalytics';
 import OfflineTemporalAnalytics from '@/components/superadmin/OfflineTemporalAnalytics';
+import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -86,6 +87,7 @@ export default function SuperAdmin() {
                 { id: 'monitoring', label: 'Monitoring', icon: Activity },
                 { id: 'screens', label: 'Screen Health', icon: Monitor },
                 { id: 'offline-reviews', label: 'Offline Reviews', icon: Activity },
+                { id: 'operator-analytics', label: 'Operator Analytics', icon: Users },
                 { id: 'manager-analytics', label: 'Manager Analytics', icon: Users },
                 { id: 'temporal-analytics', label: 'Temporal Analytics', icon: Clock },
                 { id: 'bulk-price', label: 'Bulk Price Adjust', icon: DollarSign },
@@ -257,6 +259,7 @@ export default function SuperAdmin() {
                     {activeTab === 'files' && <PublicFilesManagement />}
                     {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
                     {activeTab === 'offline-reviews' && <OfflineReviewPortfolio />}
+                    {activeTab === 'operator-analytics' && <OperatorAnalytics />}
                     {activeTab === 'manager-analytics' && <ManagerOperatorAnalytics mode="superadmin" />}
                     {activeTab === 'temporal-analytics' && <OfflineTemporalAnalytics />}
                     {activeTab === 'sms-log' && <SmsLogViewer />}

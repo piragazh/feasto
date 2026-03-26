@@ -246,20 +246,97 @@ export function flagManagerOutliers(managerMetrics) {
 
 /**
  * Calculate operator (staff) metrics from orders
- * Groups by orders created in offline mode
+ * Groups by offline_created_by (operator email)
  * 
- * Note: Currently offline_created_by is not persisted on Order entity,
- * so this is a stub awaiting schema change.
+ * Metrics are based on real captured data only:
+ * - offline_created_by (operator identity)
+ * - offline_created_by_name & role (snapshot at creation)
+ * - needs_review flag (was order flagged?)
+ * - offline_review_status (escalated, resolved, acknowledged)
+ * - offline_review_reason_code (what was the issue type?)
  * 
  * @param {string} restaurantId
- * @param {array} orders - all orders
- * @returns {object} {operatorId: {metrics...}, ...}
+ * @param {array} orders - all orders for restaurant
+ * @returns {object} {operatorEmail: {metrics...}, ...}
  */
 export function calculateOperatorMetrics(restaurantId, orders) {
-    // STUB: Requires offline_created_by field on Order entity
-    // For now, returns empty because we don't have operator identity
-    // This will be implemented in Phase 2 when Order schema is updated
-    return {};
+    const operatorMap = {};
+    
+    if (!orders || orders.length === 0) {
+        return operatorMap;
+    }
+    
+    orders.forEach(order => {
+        // Only count offline orders
+        if (!order.offline_created) return;
+        
+        // Only count orders with operator identity
+        const operatorEmail = order.offline_created_by;
+        if (!operatorEmail) return;
+        
+        // Initialize operator bucket
+        if (!operatorMap[operatorEmail]) {
+            operatorMap[operatorEmail] = {
+                operatorEmail,
+                operatorName: order.offline_created_by_name || operatorEmail,
+                operatorRole: order.offline_created_by_role || 'unknown',
+                restaurantId,
+                totalOrders: 0,
+                flaggedCount: 0,
+                flaggedRate: 0,
+                escalatedCount: 0,
+                escalationRate: 0,
+                resolvedCount: 0,
+                acknowledgedCount: 0,
+                reasonCodes: {},
+                daypartDistribution: {},
+                abuseEscalations: 0,
+            };
+        }
+        
+        const op = operatorMap[operatorEmail];
+        op.totalOrders += 1;
+        
+        // Count flagged orders
+        if (order.needs_review) {
+            op.flaggedCount += 1;
+        }
+        
+        // Count review outcomes (only if flagged)
+        if (order.needs_review) {
+            const status = order.offline_review_status;
+            if (status === 'escalated') op.escalatedCount += 1;
+            if (status === 'resolved') op.resolvedCount += 1;
+            if (status === 'acknowledged') op.acknowledgedCount += 1;
+            
+            // Reason code distribution
+            const code = order.offline_review_reason_code;
+            if (code) {
+                op.reasonCodes[code] = (op.reasonCodes[code] || 0) + 1;
+            }
+            
+            // Abuse-related escalations
+            const abuseCodesList = ['potential_abuse', 'large_price_mismatch', 'repeated_offline_issues'];
+            if (status === 'escalated' && code && abuseCodesList.includes(code)) {
+                op.abuseEscalations += 1;
+            }
+        }
+    });
+    
+    // Post-process: calculate rates and distributions
+    Object.values(operatorMap).forEach(op => {
+        // Flagged rate
+        op.flaggedRate = op.totalOrders > 0
+            ? Math.round((op.flaggedCount / op.totalOrders) * 100)
+            : 0;
+        
+        // Escalation rate (% of flagged that escalated)
+        op.escalationRate = op.flaggedCount > 0
+            ? Math.round((op.escalatedCount / op.flaggedCount) * 100)
+            : 0;
+    });
+    
+    return operatorMap;
 }
 
 /**
