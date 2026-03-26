@@ -123,16 +123,17 @@ ${promoOffer ? `PROMO: ${promoOffer} - make this DOMINANT with urgency (LIMITED 
 ${websiteUrl ? `CTA: ORDER NOW - ${websiteUrl}` : 'CTA: ORDER NOW / SKIP THE QUEUE'}
 
 DESIGN RULES:
-- Readable from 5 meters away — massive bold text
+- Readable from 5 meters away — massive bold text (40-50pt minimum)
 - Dark background with brand color (${restaurantColor}) glow/gradient
-- Hero item takes up 40% of screen with appetite-appeal close-up
-- Prices in large visible text with currency symbol
+- Hero item takes up ${orientation === 'portrait' ? '35-40%' : '40%'} of screen with appetite-appeal close-up
+- Prices in large visible text with currency symbol (bold orange/gold)
 - Use power words: CRISPY, LOADED, JUICY, FIERY, MELTED
-- NO paragraphs — only short punchy labels
-- ${orientation === 'portrait' ? 'Stack content vertically: header → hero → item grid → offer → CTA' : 'Left: hero item + price. Right: item grid. Bottom: offer + CTA bar'}
+- NO paragraphs — only short punchy labels and names
+- ${orientation === 'portrait' ? 'CRITICAL: Fill entire 9:16 screen. Top 35%: header + hook. Middle 35%: hero image + price. Bottom 30%: menu grid (3 cols max) + offer banner + large CTA button. NO WHITESPACE. All elements must fit without cutting off.' : 'Left 40%: hero item + price + hook. Right 60%: grid of items stacked vertically. Bottom: offer banner + CTA. Ensure all text visible.'}
 - Professional food photography lighting, 4K quality
-- ${promoOffer ? 'Promo badge/banner must be impossible to miss' : 'Strong visual hierarchy'}
-- ${priceType === 'pos' ? 'NO website URL or online ordering references — in-store only, focus on walk-in appeal' : ''}`;
+- ${promoOffer ? 'Promo badge/banner (10-15% of screen height) must be BOLD, impossible to miss, positioned prominently' : 'Strong visual hierarchy with clear focus'}
+- Menu items listed as simple labels, ${orientation === 'portrait' ? '3 columns in compact grid' : '2 columns'}, no descriptions
+- ${priceType === 'pos' ? 'NO website URL or online ordering references — in-store only, focus on walk-in appeal' : 'Include website URL prominently in CTA'}`;
     };
 
     const handleGenerateScreenAd = async () => {
