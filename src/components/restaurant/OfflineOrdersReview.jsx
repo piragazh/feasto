@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, WifiOff, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import OfflineOrderReviewAction from './OfflineOrderReviewAction';
 
 /**
  * Offline Orders Review
@@ -17,7 +18,7 @@ import { toast } from 'sonner';
  * - Allow manager to acknowledge/archive flagged orders
  */
 export default function OfflineOrdersReview({ restaurantId }) {
-    const [filterStatus, setFilterStatus] = useState('flagged'); // 'flagged' | 'all_offline'
+    const [filterStatus, setFilterStatus] = useState('flagged'); // 'flagged' | 'unresolved' | 'all_offline'
 
     const { data: offlineOrders = [], isLoading, refetch } = useQuery({
         queryKey: ['offline-orders', restaurantId, filterStatus],
@@ -29,6 +30,14 @@ export default function OfflineOrdersReview({ restaurantId }) {
                     offline_created: true,
                     needs_review: true,
                 });
+            } else if (filterStatus === 'unresolved') {
+                // Get flagged orders that are NOT yet reviewed (status = 'new')
+                const flagged = await base44.entities.Order.filter({
+                    restaurant_id: restaurantId,
+                    offline_created: true,
+                    needs_review: true,
+                });
+                return flagged.filter(o => !o.offline_review_status || o.offline_review_status === 'new');
             } else {
                 // Get all offline-created orders
                 return await base44.entities.Order.filter({
@@ -48,7 +57,8 @@ export default function OfflineOrdersReview({ restaurantId }) {
     };
 
     const flaggedCount = offlineOrders.filter(o => o.needs_review).length;
-    const totalOfflineCount = offlineOrders.length;
+    const unresolvedCount = offlineOrders.filter(o => o.needs_review && (!o.offline_review_status || o.offline_review_status === 'new')).length;
+    const totalOfflineCount = offlineOrders.filter(o => !o.filterStatus || o.filterStatus === 'all_offline').length;
 
     if (isLoading) {
         return (
@@ -82,7 +92,9 @@ export default function OfflineOrdersReview({ restaurantId }) {
                     <div className="text-center py-6">
                         <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-3" />
                         <p className="text-gray-600 text-sm">
-                            {filterStatus === 'flagged'
+                            {filterStatus === 'unresolved'
+                                ? 'No pending reviews'
+                                : filterStatus === 'flagged'
                                 ? 'No offline orders flagged for review'
                                 : 'No offline orders'}
                         </p>
@@ -100,23 +112,31 @@ export default function OfflineOrdersReview({ restaurantId }) {
                         <WifiOff className="h-4 w-4 text-amber-500" />
                         Offline Orders
                     </CardTitle>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                        <Button
+                            variant={filterStatus === 'unresolved' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setFilterStatus('unresolved')}
+                            className={unresolvedCount > 0 ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : ''}
+                        >
+                            {unresolvedCount > 0 && (
+                                <span className="inline-block h-2 w-2 bg-red-500 rounded-full mr-2 animate-pulse" />
+                            )}
+                            Pending Review ({unresolvedCount})
+                        </Button>
                         <Button
                             variant={filterStatus === 'flagged' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setFilterStatus('flagged')}
                         >
-                            {flaggedCount > 0 && (
-                                <span className="inline-block h-2 w-2 bg-red-500 rounded-full mr-2" />
-                            )}
-                            Flagged ({flaggedCount})
+                            All Flagged ({flaggedCount})
                         </Button>
                         <Button
                             variant={filterStatus === 'all_offline' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setFilterStatus('all_offline')}
                         >
-                            All Offline ({totalOfflineCount})
+                            All Offline
                         </Button>
                     </div>
                 </div>
@@ -182,7 +202,7 @@ export default function OfflineOrdersReview({ restaurantId }) {
                             )}
 
                             {/* Timestamps */}
-                            <div className="flex gap-3 text-xs text-gray-600 border-t border-gray-200 pt-2">
+                            <div className="flex gap-3 text-xs text-gray-600 border-t border-gray-200 pt-2 mb-2">
                                 <div className="flex items-center gap-1">
                                     <Clock className="h-3 w-3 text-gray-500" />
                                     <span>Created: {formatTime(order.offline_created_at)}</span>
@@ -192,6 +212,41 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                     <span>Synced: {formatTime(order.offline_synced_at)}</span>
                                 </div>
                             </div>
+
+                            {/* Review status */}
+                            {order.needs_review && (
+                                <div className="pt-2 space-y-2 border-t border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-gray-700">Review Status:</span>
+                                        <Badge className={`text-xs ${
+                                            order.offline_review_status === 'acknowledged'
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : order.offline_review_status === 'resolved'
+                                                ? 'bg-green-100 text-green-800'
+                                                : order.offline_review_status === 'escalated'
+                                                ? 'bg-orange-100 text-orange-800'
+                                                : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            {order.offline_review_status || 'new'}
+                                        </Badge>
+                                    </div>
+                                    {order.offline_review_by && (
+                                        <div className="text-xs text-gray-600">
+                                            <p>Reviewed by {order.offline_review_by.split('@')[0]} on {formatTime(order.offline_review_at)}</p>
+                                            {order.offline_review_notes && (
+                                                <p className="mt-1 italic text-gray-500">Note: {order.offline_review_notes}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                    {(!order.offline_review_status || order.offline_review_status === 'new') && (
+                                        <OfflineOrderReviewAction
+                                            order={order}
+                                            restaurantId={restaurantId}
+                                            onReviewComplete={() => refetch()}
+                                        />
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

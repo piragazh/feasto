@@ -53,7 +53,7 @@ import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
 // ── Nav definition ──────────────────────────────────────────────────────────
-const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refundRequests) => [
+const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refundRequests, unresolvedOfflineReviewCount) => [
     {
         id: 'main', label: 'Orders', icon: ShoppingBag,
         items: [
@@ -101,7 +101,7 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'driver-management', label: 'Manage Drivers', icon: Users },
             { id: 'crm', label: 'CRM', icon: UsersRound },
             { id: 'refunds', label: 'Refunds', icon: RotateCcw, badge: refundRequests.length },
-            { id: 'offline-orders', label: 'Offline Orders', icon: WifiOff },
+            { id: 'offline-orders', label: 'Offline Orders', icon: WifiOff, badge: unresolvedOfflineReviewCount },
             { id: 'batching', label: 'Order Batching', icon: GitBranch },
             { id: 'modifications', label: 'Modifications', icon: PenLine },
         ]
@@ -237,7 +237,22 @@ export default function RestaurantDashboard() {
         refetchInterval: 45000,
     });
 
+    const { data: offlineOrdersForBadge = [] } = useQuery({
+        queryKey: ['offline-orders-badge', restaurant?.id],
+        queryFn: async () => {
+            const flagged = await base44.entities.Order.filter({
+                restaurant_id: restaurant.id,
+                offline_created: true,
+                needs_review: true,
+            });
+            return flagged.filter(o => !o.offline_review_status || o.offline_review_status === 'new');
+        },
+        enabled: !!restaurant?.id,
+        refetchInterval: 30000,
+    });
+
     const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(m => !m.is_read).length;
+    const unresolvedOfflineReviewCount = offlineOrdersForBadge.length;
 
     useEffect(() => { loadUserAndRestaurant(); requestNotificationPermission(); }, []);
 
@@ -314,7 +329,7 @@ export default function RestaurantDashboard() {
         setMobileMenuOpen(false);
     };
 
-    const navSections = buildNavSections(restaurant, pendingOrders, unreadMessagesCount, refundRequests);
+    const navSections = buildNavSections(restaurant, pendingOrders, unreadMessagesCount, refundRequests, unresolvedOfflineReviewCount);
 
     if (!user || !restaurant) {
         return (
@@ -327,7 +342,7 @@ export default function RestaurantDashboard() {
         );
     }
 
-    const totalAlerts = pendingOrders.length + unreadMessagesCount + refundRequests.length;
+    const totalAlerts = pendingOrders.length + unreadMessagesCount + refundRequests.length + unresolvedOfflineReviewCount;
 
     // ── Sidebar inner (shared between desktop and mobile sheet) ──────────────
     const SidebarContent = ({ onClose }) => (

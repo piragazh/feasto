@@ -316,6 +316,29 @@
     "sync_validation_notes": {
       "type": "string",
       "description": "Details of any validation issues found during offline sync (for audit trail)"
+    },
+    "offline_review_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "acknowledged",
+        "resolved",
+        "escalated"
+      ],
+      "description": "Manager review state for flagged offline orders (new=just flagged, acknowledged=manager confirmed, resolved=acceptable as-is, escalated=needs investigation)"
+    },
+    "offline_review_by": {
+      "type": "string",
+      "description": "Email of manager who reviewed/acknowledged the flagged order"
+    },
+    "offline_review_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When manager last reviewed/acknowledged this flagged order"
+    },
+    "offline_review_notes": {
+      "type": "string",
+      "description": "Manager notes explaining their review decision"
     }
   },
   "required": [
