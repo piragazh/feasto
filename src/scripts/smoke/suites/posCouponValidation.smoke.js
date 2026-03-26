@@ -14,7 +14,13 @@
  *   - ApplyPromotionDialog:
  *     - Removed direct base44.entities.Order.update() writes
  *     - Now calls posValidateCoupon before accepting a coupon
- *     - Manual discount path (POSDiscountPanel) remains unchanged
+ *     - Passes has_manual_discount flag to posValidateCoupon
+ *   - Mutual exclusion policy (2026-03-26):
+ *     - posCreateOrder rejects orders with both discount>0 AND coupon_code → 400 mutual_exclusion
+ *     - posValidateCoupon rejects coupon when has_manual_discount=true → valid=false mutual_exclusion
+ *     - UI: POSDiscountPanel shows blocked state when coupon is active (couponActive prop)
+ *     - UI: Add Coupon button replaced with info message when manual discount is active
+ *     - UI: ApplyPromotionDialog shows warning banner when has_manual_discount=true
  *
  * POS customer identity policy:
  *   - Walk-in orders (no phone/email): only global usage_limit applies
@@ -27,6 +33,13 @@ export const name = 'posCouponValidation';
 export const cases = [
     // ── posValidateCoupon automated reject paths ─────────────────────────────
 
+    {
+        name: 'posValidateCoupon: has_manual_discount=true → valid=false (mutual exclusion)',
+        function: 'posValidateCoupon',
+        payload: { restaurant_id: '__restaurant__', coupon_code: 'ANYCODE', subtotal: 20, has_manual_discount: true },
+        expectedStatus: 200,
+        expectedBody: { valid: false, policy: 'mutual_exclusion' },
+    },
     {
         name: 'posValidateCoupon: unauthenticated → 401',
         function: 'posValidateCoupon',
@@ -130,12 +143,23 @@ export const cases = [
  *   Call:    posCreateOrder({ ..., coupon_code: 'EXPIRED_CODE', total: 20 })
  *   Expect:  ❌ 400 "has expired"
  *
- * CASE 12: posCreateOrder — coupon + manual discount compose correctly
- *   Setup:   Coupon CODE_FIXED with discount_value=5; manager applies 10% manual discount
- *   Subtotal: £30
- *   Expected: total = £30 - £3 (10%) - £5 (coupon) = £22
+ * CASE 12: posCreateOrder — coupon + manual discount combination BLOCKED
+ *   Setup:   Coupon CODE_FIXED; manual discount £3 with reason code
  *   Call:    posCreateOrder({ ..., discount: 3, discount_reason_code: 'loyalty_gesture', coupon_code: 'CODE_FIXED' })
- *   Expect:  ✅ order.total === 22, order.coupon_code === 'CODE_FIXED', order.discount === 8
+ *   Expect:  ❌ 400 { error: "...", policy: "mutual_exclusion" }
+ *   POLICY:  Coupon and manual discount cannot coexist on the same POS order.
+ *
+ * CASE 12b: posValidateCoupon — coupon blocked when has_manual_discount=true
+ *   Call:    posValidateCoupon({ ..., coupon_code: 'CODE_10', subtotal: 30, has_manual_discount: true })
+ *   Expect:  ✅ { valid: false, error: "A manual discount is already applied...", policy: "mutual_exclusion" }
+ *
+ * CASE 12c: posCreateOrder — coupon-only succeeds (no manual discount)
+ *   Call:    posCreateOrder({ ..., coupon_code: 'CODE_FIXED' })  (no discount/discount_reason_code)
+ *   Expect:  ✅ 200 — order.coupon_code set, order.discount = coupon discount
+ *
+ * CASE 12d: posCreateOrder — manual discount only succeeds (no coupon)
+ *   Call:    posCreateOrder({ ..., discount: 3, discount_reason_code: 'loyalty_gesture' })  (no coupon_code)
+ *   Expect:  ✅ 200 — order.discount_reason_code set, order.coupon_code absent
  *
  * CASE 13: posCreateOrder — per-customer limit enforced when phone provided
  *   Setup:   Coupon SINGLE_USE with per_customer_limit=1; prior order with phone=07500111222 and coupon_code=SINGLE_USE

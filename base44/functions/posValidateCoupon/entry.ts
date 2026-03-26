@@ -13,6 +13,7 @@
  *   - Global usage_limit enforced
  *   - Per-customer limit enforced when customer_phone is provided (walk-in POS)
  *   - One coupon per order — enforced by caller (posCreateOrder)
+ *   - Mutually exclusive with manual discount — if has_manual_discount=true, returns valid=false
  *   - Caller must be authenticated staff for this restaurant
  *
  * Customer identity note:
@@ -58,8 +59,9 @@ Deno.serve(async (req) => {
             restaurant_id,
             coupon_code,
             subtotal,
-            customer_phone,    // optional — walk-in may not have this
-            customer_email,    // optional
+            customer_phone,      // optional — walk-in may not have this
+            customer_email,      // optional
+            has_manual_discount, // boolean — caller signals a manual discount is already applied
         } = await req.json();
 
         // ── Input validation ─────────────────────────────────────────────────
@@ -85,6 +87,16 @@ Deno.serve(async (req) => {
                 console.error(`[SECURITY] ${user.email} attempted POS coupon validation for restaurant ${restaurant_id}`);
                 return Response.json({ error: 'Access denied to this restaurant' }, { status: 403 });
             }
+        }
+
+        // ── Mutual exclusion check ────────────────────────────────────────────
+        // POLICY: coupon and manual discount cannot coexist on one POS order.
+        if (has_manual_discount) {
+            return Response.json({
+                valid: false,
+                error: 'A manual discount is already applied. Remove it before adding a coupon.',
+                policy: 'mutual_exclusion',
+            }, { status: 200 });
         }
 
         // ── Fetch coupon ──────────────────────────────────────────────────────

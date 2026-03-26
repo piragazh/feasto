@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Tag, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Tag, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export default function ApplyPromotionDialog({
     open,
@@ -35,6 +35,7 @@ export default function ApplyPromotionDialog({
     cartSubtotal,
     customerPhone = null,   // optional — from phone order details
     customerEmail = null,   // optional
+    hasManualDiscount = false, // mutual exclusion: true when a manual discount is active
 }) {
     const [manualCode, setManualCode] = useState('');
     const [validating, setValidating] = useState(null); // coupon id being validated
@@ -65,6 +66,7 @@ export default function ApplyPromotionDialog({
                 subtotal: cartSubtotal,
                 customer_phone: customerPhone || undefined,
                 customer_email: customerEmail || undefined,
+                has_manual_discount: hasManualDiscount,
             });
 
             const result = res?.data;
@@ -101,6 +103,16 @@ export default function ApplyPromotionDialog({
                         Apply Coupon
                     </DialogTitle>
                 </DialogHeader>
+
+                {/* Mutual exclusion warning */}
+                {hasManualDiscount && (
+                    <div className="flex items-start gap-2 bg-orange-500/10 border border-orange-500/30 rounded-lg px-3 py-2">
+                        <AlertCircle className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
+                        <p className="text-orange-300 text-xs">
+                            A manual discount is already applied. Coupons and manual discounts cannot be combined — remove the manual discount first.
+                        </p>
+                    </div>
+                )}
 
                 {/* Manual code entry */}
                 <div className="space-y-2">

@@ -98,11 +98,23 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ── Mutual exclusion: coupon vs manual discount ──────────────────────────
+        // POLICY: A POS order may have a coupon OR a manual discount, not both.
+        // Reason: allowing both creates an undetectable double-discount path and
+        // complicates margin analysis. Staff must choose one mechanism.
+        // This is enforced here (server authority) and mirrored in the UI.
+        const rawCouponCodeCheck = typeof orderData.coupon_code === 'string' ? orderData.coupon_code.trim() : '';
+        if (approvedDiscount > 0 && rawCouponCodeCheck) {
+            console.warn(`[POS-POLICY] Combination rejected: manual_discount=${approvedDiscount} + coupon=${rawCouponCodeCheck} on same order. restaurant=${orderData.restaurant_id} user=${user.email}`);
+            return Response.json({
+                error: 'A coupon and a manual discount cannot be applied to the same order. Remove one before proceeding.',
+                policy: 'mutual_exclusion',
+            }, { status: 400 });
+        }
+
         // ── Coupon validation (server-side) ─────────────────────────────────────
         // Coupons are separate from manual discounts. A coupon_code may be provided
-        // from the POS coupon picker. If supplied, we re-validate it here to prevent
-        // the client from forging approval. Manual discount and coupon are mutually
-        // composable but coupon takes priority for identity-scoped limits.
+        // from the POS coupon picker. If supplied, we re-validate it here.
         let approvedCouponDiscount = 0;
         let approvedCouponCode = null;
         let approvedCouponId = null;
@@ -197,7 +209,7 @@ Deno.serve(async (req) => {
             approvedCouponId = coupon.id;
         }
 
-        // Total discount = manual discount + coupon discount (both server-approved)
+        // Total discount = manual discount XOR coupon discount (mutually exclusive — enforced above)
         const totalDiscount = approvedDiscount + approvedCouponDiscount;
         const serverTotal = Math.max(0, serverSubtotal - totalDiscount);
 
@@ -242,7 +254,8 @@ Deno.serve(async (req) => {
             }
         }
 
-        console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} coupon=${approvedCouponCode || 'none'} by=${user.email}`);
+        const discountSource = approvedCouponCode ? `coupon:${approvedCouponCode}` : (approvedDiscount > 0 ? `manual_discount:${discountReasonCode}` : 'none');
+        console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} discount_source=${discountSource} by=${user.email}`);
         return Response.json({ order });
     } catch (error) {
         console.error('[POS] posCreateOrder error:', error);

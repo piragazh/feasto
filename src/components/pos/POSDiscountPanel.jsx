@@ -29,6 +29,7 @@ export default function POSDiscountPanel({
     restaurantId,
     orderId = null,
     isDark,
+    couponActive = false, // mutual exclusion: true when a coupon is already applied
 }) {
     const [type, setType] = useState('percentage');
     const [value, setValue] = useState('');
@@ -116,6 +117,16 @@ export default function POSDiscountPanel({
                 <button onClick={onRemove} className="text-red-400 hover:text-red-300 transition-colors">
                     <X className="h-3.5 w-3.5" />
                 </button>
+            </div>
+        );
+    }
+
+    // Mutual exclusion: block discount entry when a coupon is applied
+    if (couponActive) {
+        return (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-white/5 border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+                <span>Coupon applied — remove it to add a manual discount</span>
             </div>
         );
     }

@@ -267,6 +267,29 @@ POS coupon handling uses a dedicated server path separate from online checkout (
 
 3. **`posCreateOrder`** — re-validates the coupon code server-side at order creation time (independent of client state), writes `coupon_code` to the Order entity, and increments `usage_count` after persisting the order.
 
+### POS discount interaction policy (mutual exclusion)
+
+**A POS order may have a coupon OR a manual discount — never both.**
+
+This is the safest simple rule. Rationale:
+- Combining both creates an undetectable double-discount path
+- Makes margin analysis ambiguous (was the total loss from abuse or authorised gesture?)
+- Harder for management to spot via audit log review
+
+Enforcement layers:
+1. **`posCreateOrder`** (hard gate): rejects with 400 `{ policy: "mutual_exclusion" }` if `discount > 0` AND `coupon_code` are both present
+2. **`posValidateCoupon`** (early signal): returns `{ valid: false, policy: "mutual_exclusion" }` when `has_manual_discount: true` is passed
+3. **UI — `POSDiscountPanel`**: shows a blocked notice when `couponActive=true`; discount form cannot be opened
+4. **UI — coupon button**: replaced with an informational message when a manual discount is already applied
+5. **UI — `ApplyPromotionDialog`**: shows an orange warning banner when `hasManualDiscount=true`
+
+Staff workflow:
+- To apply a coupon: ensure no manual discount is active first (remove it)
+- To apply a manual discount: ensure no coupon is active first (remove it)
+- The receipt/order record clearly shows either `coupon_code` or `discount_reason_code` — never both
+
+---
+
 ### POS coupon policy rules
 
 | Rule | Enforced? | Where |
@@ -282,6 +305,7 @@ POS coupon handling uses a dedicated server path separate from online checkout (
 | coupon_code written to Order | ✅ | posCreateOrder |
 | usage_count incremented server-side | ✅ | posCreateOrder (after order persisted) |
 | Manual discount remains separate | ✅ | posApplyDiscount / POSDiscountPanel (unchanged) |
+| Coupon + manual discount mutually exclusive | ✅ NEW | posCreateOrder (400), posValidateCoupon (valid=false), UI blocks |
 
 ### POS vs online checkout: differences
 
@@ -351,4 +375,5 @@ For counter walk-in orders where no customer phone or email is captured:
 | POS usage_count increment (server-side) | ✅ NEW — was client-side / missing; now in posCreateOrder |
 | POS one-coupon-per-order enforcement | ✅ NEW — posCreateOrder rejects comma-separated codes |
 | POS manual discount path separation | ✅ Unchanged — posApplyDiscount / POSDiscountPanel |
-| POS coupon stacking with manual discount | ✅ Both applied server-side independently |
+| POS coupon + manual discount mutual exclusion | ✅ NEW — posCreateOrder 400, posValidateCoupon valid=false, UI blocks |
+| POS order record distinguishes coupon vs manual discount | ✅ NEW — coupon_code XOR discount_reason_code written; audit log shows discount_source |

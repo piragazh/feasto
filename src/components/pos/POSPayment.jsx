@@ -52,9 +52,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const handleRemoveDiscount = () => { setDiscount(null); if (onRemoveDiscount) onRemoveDiscount(); };
 
     // Coupon state — separate from manual discount; validated server-side via posValidateCoupon
+    // POLICY: coupon and manual discount are mutually exclusive.
     const [coupon, setCoupon] = useState(null);
     const [couponDialogOpen, setCouponDialogOpen] = useState(false);
-    const handleApplyCoupon = (result) => setCoupon(result);
+    const handleApplyCoupon = (result) => {
+        // Applying a coupon clears any active manual discount
+        if (discount) {
+            handleRemoveDiscount();
+        }
+        setCoupon(result);
+    };
     const handleRemoveCoupon = () => setCoupon(null);
 
     const cartSubtotal = cart.reduce((s, i) => s + (i.pos_price != null ? i.pos_price : i.price) * i.quantity, 0);
@@ -400,9 +407,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         restaurantId={restaurantId}
                         t={t}
                         isDark={isDark}
+                        couponActive={!!coupon}
                     />
 
-                    {/* Coupon section — server-validated */}
+                    {/* Coupon section — server-validated, mutually exclusive with manual discount */}
                     {coupon ? (
                         <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200'}`}>
                             <div className="flex items-center gap-2">
@@ -417,6 +425,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             <button onClick={handleRemoveCoupon} className="text-red-400 hover:text-red-300 transition-colors">
                                 <XCircle className="h-3.5 w-3.5" />
                             </button>
+                        </div>
+                    ) : discount ? (
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-white/5 border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+                            <span>Manual discount applied — remove it to add a coupon</span>
                         </div>
                     ) : (
                         <button
@@ -692,6 +705,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 cartSubtotal={cartSubtotal}
                 customerPhone={window.__phoneOrderDetails?.phone || null}
                 customerEmail={null}
+                hasManualDiscount={!!discount}
             />
 
             {/* Terminal failed screen */}
