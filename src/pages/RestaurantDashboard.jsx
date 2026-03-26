@@ -447,24 +447,30 @@ export default function RestaurantDashboard() {
             );
         }
         if (activeSection === 'marketing') {
+            const tabs = [
+                { value: 'coupons', content: <CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} /> },
+                { value: 'promotions', content: <PromotionManagement restaurantId={restaurant.id} /> },
+                { value: 'ai-marketing', content: <AIMarketingAssistant restaurantId={restaurant.id} /> },
+            ];
+            if (restaurant?.media_screen_enabled) {
+                tabs.push({
+                    value: 'media',
+                    content: (
+                        <Card>
+                            <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Media Screen Management</CardTitle></CardHeader>
+                            <CardContent>
+                                <p className="text-gray-600 mb-4">Manage promotional content, screens, and layouts for in-store displays.</p>
+                                <Button onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}>
+                                    <Monitor className="h-4 w-4 mr-2" />Open Media Screen Manager
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ),
+                });
+            }
             return (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsContent value="coupons"><CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
-                    <TabsContent value="promotions"><PromotionManagement restaurantId={restaurant.id} /></TabsContent>
-                    <TabsContent value="ai-marketing"><AIMarketingAssistant restaurantId={restaurant.id} /></TabsContent>
-                    {restaurant?.media_screen_enabled && (
-                        <TabsContent value="media">
-                            <Card>
-                                <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Media Screen Management</CardTitle></CardHeader>
-                                <CardContent>
-                                    <p className="text-gray-600 mb-4">Manage promotional content, screens, and layouts for in-store displays.</p>
-                                    <Button onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}>
-                                        <Monitor className="h-4 w-4 mr-2" />Open Media Screen Manager
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    )}
+                    {tabs.map(tab => <TabsContent key={tab.value} value={tab.value}>{tab.content}</TabsContent>)}
                 </Tabs>
             );
         }
