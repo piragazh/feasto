@@ -254,7 +254,10 @@ export default function RestaurantDashboard() {
     const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(m => !m.is_read).length;
     const unresolvedOfflineReviewCount = offlineOrdersForBadge.length;
 
-    useEffect(() => { loadUserAndRestaurant(); requestNotificationPermission(); }, []);
+    useEffect(() => {
+        loadUserAndRestaurant();
+        requestNotificationPermission();
+    }, []);
 
     useEffect(() => {
         if (!restaurant?.id) return;
