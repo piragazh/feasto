@@ -5,12 +5,8 @@ import { fileURLToPath, URL } from 'url'
 import path from 'path'
 
 // https://vite.dev/config/
+// Note: Vitest config has been moved to vitest.config.js for clean separation.
 export default defineConfig({
-  test: {
-    environment: 'node',
-    include: ['src/**/*.test.{js,jsx,ts,tsx}'],
-    globals: true,
-  },
   logLevel: 'error',
   plugins: [
     react(),
