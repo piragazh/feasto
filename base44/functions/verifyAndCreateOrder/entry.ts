@@ -378,14 +378,36 @@ Deno.serve(async (req) => {
         const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
         const deliveryFee = orderData.delivery_fee || 0;
 
-        // Validate coupons server-side if any were applied
+        // ============================================
+        // COUPON POLICY: ONE coupon code per order.
+        // Stacking multiple coupon codes is not permitted.
+        // Restaurant promotions (auto-applied BOGO, percentage_off, etc.) are a separate
+        // track handled via orderData.discount when no coupon_codes are present — they
+        // can combine with a single coupon since they are restaurant-controlled, not
+        // user-entered codes.
+        // ============================================
         let verifiedDiscount = 0;
         const clientDiscount = orderData.discount || 0;
 
-        if (clientDiscount > 0 && orderData.coupon_codes) {
+        if (orderData.coupon_codes) {
             const couponCodes = orderData.coupon_codes.split(',').map(c => c.trim()).filter(Boolean);
-            for (const code of couponCodes) {
+
+            // POLICY: Reject if more than one coupon code is submitted
+            if (couponCodes.length > 1) {
+                console.warn(`[COUPON] Stacking rejected: ${couponCodes.length} codes submitted for order restaurant=${orderData.restaurant_id}`);
+                return new Response(
+                    JSON.stringify({
+                        error: 'Only one coupon code can be applied per order.',
+                        success: false
+                    }),
+                    { status: 400 }
+                );
+            }
+
+            if (couponCodes.length === 1) {
+                const code = couponCodes[0];
                 const coupons = await base44.asServiceRole.entities.Coupon.filter({ code });
+
                 if (coupons?.length > 0) {
                     const coupon = coupons[0];
                     const now = new Date();
@@ -404,14 +426,31 @@ Deno.serve(async (req) => {
                         } else {
                             d = coupon.discount_value || 0;
                         }
-                        verifiedDiscount += d;
+                        verifiedDiscount = Math.min(d, serverSubtotal);
+                    } else {
+                        // Coupon found but failed validation — reject rather than silently drop
+                        console.warn(`[COUPON] Invalid coupon "${code}" on order: active=${isActive} notExpired=${notExpired} withinUsage=${withinUsage}`);
+                        return new Response(
+                            JSON.stringify({
+                                error: 'The coupon code applied is no longer valid. Please remove it and try again.',
+                                success: false
+                            }),
+                            { status: 400 }
+                        );
                     }
+                } else {
+                    // Code not found
+                    return new Response(
+                        JSON.stringify({
+                            error: 'The coupon code applied is not recognised. Please remove it and try again.',
+                            success: false
+                        }),
+                        { status: 400 }
+                    );
                 }
             }
-            // Cap discount at subtotal
-            verifiedDiscount = Math.min(verifiedDiscount, serverSubtotal);
         } else {
-            // No coupons: allow promotion discount but cap it at 50% of subtotal as sanity check
+            // No coupon code: allow restaurant promotion discount, capped at 50% of subtotal
             verifiedDiscount = Math.min(clientDiscount, serverSubtotal * 0.5);
         }
 

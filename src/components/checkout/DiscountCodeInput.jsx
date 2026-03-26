@@ -81,7 +81,13 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
     };
 
     const validateCoupon = async (coupon) => {
-        // Check if already applied
+        // POLICY: Only one coupon code per order
+        if (appliedCoupons.length >= 1) {
+            toast.error('Only one coupon code can be applied per order. Remove the existing coupon first.');
+            return;
+        }
+
+        // Check if already applied (same coupon re-submitted)
         if (appliedCoupons.find(c => c.id === coupon.id)) {
             toast.error('This coupon is already applied');
             return;
@@ -325,22 +331,22 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                 </div>
             )}
 
-            {/* Input to add more discounts */}
+            {/* Input to add a discount code — only one coupon allowed per order */}
             <div className="flex gap-2">
                 <div className="relative flex-1">
                     <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                        placeholder="Add another code"
+                        placeholder={appliedCoupons.length >= 1 ? 'Remove current coupon to apply another' : 'Enter coupon or promo code'}
                         value={code}
                         onChange={(e) => setCode(e.target.value.toUpperCase())}
                         onKeyPress={(e) => e.key === 'Enter' && validateCode()}
                         className="pl-10 h-12 uppercase"
-                        disabled={isValidating}
+                        disabled={isValidating || appliedCoupons.length >= 1}
                     />
                 </div>
                 <Button
                     onClick={validateCode}
-                    disabled={isValidating || !code.trim()}
+                    disabled={isValidating || !code.trim() || appliedCoupons.length >= 1}
                     className="h-12 px-6"
                     variant="outline"
                 >
