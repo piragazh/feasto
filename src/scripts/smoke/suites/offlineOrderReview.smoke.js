@@ -30,38 +30,53 @@ export const suite = {
             expected: 'Unauthorized user rejected; order not modified'
         },
         {
-            name: 'managerCanAcknowledge',
-            description: 'Manager can acknowledge flagged order',
-            steps: [
-                'Create flagged offline order (needs_review=true)',
-                'Manager calls offlineOrderReview with action="acknowledge"',
-                'Verify: order offline_review_status="acknowledged"',
-                'Verify: offline_review_by=manager email',
-                'Verify: offline_review_at set to current time'
-            ],
-            expected: 'Order acknowledged; review state updated'
-        },
-        {
-            name: 'managerCanResolve',
-            description: 'Manager can mark order as resolved',
+            name: 'acknowledgeNotesOptional',
+            description: 'Acknowledge allows empty notes',
             steps: [
                 'Create flagged offline order',
-                'Manager calls offlineOrderReview with action="resolved"',
-                'Verify: offline_review_status="resolved"',
-                'Verify: review_notes (optional) stored if provided'
+                'Manager calls offlineOrderReview with action="acknowledge", review_notes=""',
+                'Verify: 200 success, offline_review_status="acknowledged"'
             ],
-            expected: 'Order marked resolved; notes persisted'
+            expected: 'Acknowledge succeeds without notes'
         },
         {
-            name: 'managerCanEscalate',
-            description: 'Manager can escalate order for investigation',
+            name: 'resolveRequiresNotes',
+            description: 'Resolved action BLOCKED without notes',
             steps: [
                 'Create flagged offline order',
-                'Manager calls offlineOrderReview with action="escalated"',
-                'Verify: offline_review_status="escalated"',
-                'Verify: review notes captured for context'
+                'Manager calls offlineOrderReview with action="resolved", review_notes=""',
+                'Verify: 400 error "Notes are required"',
+                'Verify: order offline_review_status remains "new"',
+                'Call again with action="resolved", review_notes="acceptable"',
+                'Verify: 200 success, offline_review_status="resolved"'
             ],
-            expected: 'Order escalated; marked for further review'
+            expected: 'Resolved requires non-empty notes; empty rejected'
+        },
+        {
+            name: 'escalateRequiresNotes',
+            description: 'Escalated action BLOCKED without notes',
+            steps: [
+                'Create flagged offline order',
+                'Manager calls offlineOrderReview with action="escalated", review_notes=""',
+                'Verify: 400 error "Notes are required"',
+                'Verify: order offline_review_status remains "new"',
+                'Call again with action="escalated", review_notes="needs investigation"',
+                'Verify: 200 success, offline_review_status="escalated"'
+            ],
+            expected: 'Escalated requires non-empty notes; empty rejected'
+        },
+        {
+            name: 'overdueCalculation',
+            description: 'Overdue flag calculated correctly (>4 hours)',
+            steps: [
+                'Create flagged offline order synced 2 hours ago',
+                'Verify: was_overdue=false in audit log',
+                'Create flagged offline order synced 5 hours ago',
+                'Manager reviews it',
+                'Verify: audit log shows was_overdue=true',
+                'Verify: review_age_hours shows ~5'
+            ],
+            expected: 'Overdue properly calculated; audit captures it'
         },
         {
             name: 'onlyFlaggedOrdersReviewable',
@@ -75,19 +90,6 @@ export const suite = {
                 'Verify: 400 error'
             ],
             expected: 'Only flagged offline orders accepted for review'
-        },
-        {
-            name: 'reviewNotesOptional',
-            description: 'Review notes are optional but stored when provided',
-            steps: [
-                'Create flagged offline order',
-                'Manager acknowledges without notes',
-                'Verify: offline_review_status updated; offline_review_notes null',
-                'Create another flagged offline order',
-                'Manager resolves with review_notes="order is acceptable"',
-                'Verify: review_notes stored correctly'
-            ],
-            expected: 'Review action completes with or without notes'
         },
         {
             name: 'tenantScopeEnforced',
@@ -135,6 +137,31 @@ export const suite = {
                 'Verify: badge now shows "2"'
             ],
             expected: 'Badge reflects count of unresolved (new) flagged orders'
+        },
+        {
+            name: 'auditCapturesReviewAge',
+            description: 'Audit log includes review age and overdue flag',
+            steps: [
+                'Create flagged order synced at T=0',
+                'At T=5h, manager reviews it',
+                'Query DashboardActivity for OFFLINE_ORDER_REVIEW action',
+                'Verify: review_age_hours≈5',
+                'Verify: was_overdue=true',
+                'Verify: review_notes present (for resolved/escalated)'
+            ],
+            expected: 'Audit trail captures review timing and status'
+        },
+        {
+            name: 'documentationQualityTracking',
+            description: 'Dashboard shows % of orders with review notes',
+            steps: [
+                'Create 10 flagged orders',
+                'Review 3 with notes, 2 without notes (acknowledge)',
+                'Go to OfflineOrdersReview',
+                'See stats showing "50% Documented" or similar',
+                'Verify: count/total shown (e.g., 3/10)'
+            ],
+            expected: 'Documentation quality visible in stats'
         }
     ],
 

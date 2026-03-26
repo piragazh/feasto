@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, WifiOff, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import OfflineOrderReviewAction from './OfflineOrderReviewAction';
+import OfflineReviewStats from './OfflineReviewStats';
 
 /**
  * Offline Orders Review
@@ -54,6 +55,24 @@ export default function OfflineOrdersReview({ restaurantId }) {
         if (!isoStr) return '—';
         const d = new Date(isoStr);
         return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+
+    const getReviewAge = (isoStr) => {
+        if (!isoStr) return null;
+        const d = new Date(isoStr);
+        const now = new Date();
+        const minutes = Math.floor((now.getTime() - d.getTime()) / (1000 * 60));
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    };
+
+    const isOverdue = (order) => {
+        if (!order.offline_synced_at || order.offline_review_status !== 'new') return false;
+        const hours = (new Date().getTime() - new Date(order.offline_synced_at).getTime()) / (1000 * 60 * 60);
+        return hours > 4;
     };
 
     const flaggedCount = offlineOrders.filter(o => o.needs_review).length;
@@ -105,7 +124,9 @@ export default function OfflineOrdersReview({ restaurantId }) {
     }
 
     return (
-        <Card>
+        <>
+            <OfflineReviewStats orders={offlineOrders} />
+            <Card>
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
@@ -143,16 +164,30 @@ export default function OfflineOrdersReview({ restaurantId }) {
             </CardHeader>
             <CardContent>
                 <div className="space-y-3">
-                    {offlineOrders.map(order => (
+                    {offlineOrders
+                        .sort((a, b) => {
+                            // Sort by: overdue first, then by sync time (newer first)
+                            const aOverdue = isOverdue(a) ? 0 : 1;
+                            const bOverdue = isOverdue(b) ? 0 : 1;
+                            if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+                            const aTime = new Date(a.offline_synced_at || 0).getTime();
+                            const bTime = new Date(b.offline_synced_at || 0).getTime();
+                            return bTime - aTime;
+                        })
+                        .map(order => (
                         <div
                             key={order.id}
-                            className={`border rounded-lg p-3 ${
-                                order.needs_review
+                            className={`border rounded-lg p-3 transition-all ${
+                                isOverdue(order)
+                                    ? 'bg-red-50 border-red-400 ring-1 ring-red-200'
+                                    : order.offline_review_status === 'escalated'
+                                    ? 'bg-orange-50 border-orange-300'
+                                    : order.needs_review
                                     ? 'bg-yellow-50 border-yellow-300'
                                     : 'bg-gray-50 border-gray-200'
                             }`}
                         >
-                            {/* Header: Order number + flagged badge */}
+                            {/* Header: Order number + badges */}
                             <div className="flex items-start justify-between mb-2">
                                 <div>
                                     <p className="font-semibold text-sm text-gray-900">
@@ -162,12 +197,22 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                         £{order.total.toFixed(2)} · {order.items?.length || 0} items
                                     </p>
                                 </div>
-                                {order.needs_review && (
-                                    <Badge className="bg-yellow-200 text-yellow-900 text-xs">
-                                        <AlertCircle className="h-3 w-3 mr-1" />
-                                        Needs Review
-                                    </Badge>
-                                )}
+                                <div className="flex gap-1.5">
+                                    {isOverdue(order) && (
+                                        <Badge className="bg-red-500 text-white text-xs animate-pulse">
+                                            <AlertCircle className="h-3 w-3 mr-1" />
+                                            OVERDUE
+                                        </Badge>
+                                    )}
+                                    {order.needs_review && (
+                                        <Badge className={`text-xs ${
+                                            isOverdue(order) ? 'bg-red-200 text-red-900' : 'bg-yellow-200 text-yellow-900'
+                                        }`}>
+                                            <AlertCircle className="h-3 w-3 mr-1" />
+                                            Needs Review
+                                        </Badge>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Validation notes */}
@@ -201,8 +246,8 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                 </div>
                             )}
 
-                            {/* Timestamps */}
-                            <div className="flex gap-3 text-xs text-gray-600 border-t border-gray-200 pt-2 mb-2">
+                            {/* Timestamps + Review Age */}
+                            <div className="flex gap-3 text-xs text-gray-600 border-t border-gray-200 pt-2 mb-2 flex-wrap">
                                 <div className="flex items-center gap-1">
                                     <Clock className="h-3 w-3 text-gray-500" />
                                     <span>Created: {formatTime(order.offline_created_at)}</span>
@@ -211,6 +256,11 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                     <CheckCircle2 className="h-3 w-3 text-gray-500" />
                                     <span>Synced: {formatTime(order.offline_synced_at)}</span>
                                 </div>
+                                {!order.offline_review_status && (
+                                    <div className={`flex items-center gap-1 font-medium ${isOverdue(order) ? 'text-red-600' : 'text-gray-600'}`}>
+                                        <span>Pending: {getReviewAge(order.offline_synced_at)}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Review status */}
@@ -252,5 +302,6 @@ export default function OfflineOrdersReview({ restaurantId }) {
                 </div>
             </CardContent>
         </Card>
+        </>
     );
 }

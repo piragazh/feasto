@@ -23,26 +23,34 @@ Offline flagged orders are no longer just visible; they are now **operationally 
 ### `new` (Default)
 - Order just flagged by sync validation
 - Manager has not yet reviewed it
-- **Visible in:** "Pending Review" tab (red badge)
+- **Visible in:** "Pending Review" tab (red badge, overdue if >4h)
+- **Deadline:** Must move to acknowledged/resolved/escalated within 4 hours
 - **Action available:** acknowledge, resolved, escalate
 
 ### `acknowledged`
 - Manager confirmed receipt of flag
-- Acceptable interim state before full review
+- Interim state indicating awareness but pending full decision
 - **Visible in:** All flagged / All offline tabs
 - **Meaning:** "I've seen this and it's on my radar"
+- **Notes:** Optional (acknowledge can be blank)
+- **Expected next:** Will move to resolved or escalated within shift
 
 ### `resolved`
 - Manager investigated; order acceptable as-is
-- No further action needed
+- **Terminal state** — no further action needed
 - **Visible in:** All flagged / All offline tabs
 - **Meaning:** "This is fine; sync validation caught the issue but it's acceptable"
+- **Notes:** **REQUIRED** — Manager must document why order is acceptable
+- **Accountability:** Audit trail shows manager decision + rationale
 
 ### `escalated`
 - Manager needs to investigate further
-- Flagged for higher-level review or system change
-- **Visible in:** All flagged / All offline tabs
+- **Terminal state** — flagged for higher-level review or system change
+- **Visible in:** All flagged / All offline tabs (red highlight)
 - **Meaning:** "This needs more investigation/decision"
+- **Notes:** **REQUIRED** — Manager must document what needs investigation
+- **Accountability:** Audit trail shows manager decision + reasoning
+- **Follow-up:** Escalated items tracked separately; expected to be resolved within 24h
 
 ---
 
@@ -72,18 +80,27 @@ For each order, see:
 **Acknowledge** (blue) — "I've confirmed this"
 - Use when you've noted the flag but need to investigate further later
 - Sets status to "acknowledged"
-- Optional: add review notes (e.g., "will follow up on this")
+- **Notes:** Optional (you can save with empty notes)
+- Interim state only — plan to resolve/escalate within shift
 
 **Resolved** (green) — "This is acceptable"
 - Use when you've reviewed and the order is fine as-is
 - Example: "Discount was capped by system, which is correct"
-- Sets status to "resolved"
-- Optional: add review notes explaining your decision
+- Sets status to "resolved" (TERMINAL)
+- **Notes:** REQUIRED — you must explain why order is acceptable
+- Examples:
+  - "Discount cap is policy-correct; no customer issue"
+  - "Coupon expiry is expected; customer was informed"
+  - "Price update from cached to live menu; customer charged fairly"
 
 **Escalate** (orange) — "Needs investigation"
 - Use when you need to investigate further (e.g., contact customer, review policy)
-- Sets status to "escalated"
-- Recommended: add notes explaining what needs investigation
+- Sets status to "escalated" (TERMINAL)
+- **Notes:** REQUIRED — you must document what needs investigation
+- Examples:
+  - "Need to call customer about discount discrepancy"
+  - "Manual discount seems excessive; policy review needed"
+  - "Sync error with coupon application; needs log review"
 
 ### Step 4: Confirm Action
 1. Click action button
@@ -266,6 +283,25 @@ If check fails → 403 Forbidden
 
 ---
 
+## Overdue & Time-Based Accountability
+
+### Overdue Definition
+Orders in "new" status for >4 hours are flagged as **OVERDUE**:
+- Visual red highlight + OVERDUE badge in dashboard
+- Pulsing animation to draw attention
+- Shows time pending (e.g., "5h ago")
+- Must be acted upon (acknowledge/resolve/escalate) within 4 hours of sync
+
+### Why 4 hours?
+- Typically covers one manager shift
+- Prevents accumulation of pending reviews
+- Creates accountability: "what happened to this for 5 hours?"
+
+### Audit Trail Captures Overdue
+- `was_overdue: true/false` in audit log
+- `review_age_hours: 5.2` in audit log
+- Enables reporting: "X orders reviewed while overdue"
+
 ## Remaining Limitations
 
 | Limitation | Why | Mitigation |
@@ -273,6 +309,7 @@ If check fails → 403 Forbidden
 | Cannot undo sync revalidation | Order already created with updated values | Review notes explain manager's decision |
 | Cannot refund during review | Must use refund workflow separately | Note if refund needed; escalate if critical |
 | Review doesn't auto-refund | Sync validation is not a refund trigger | Manager manually initiates refunds if warranted |
+| Cannot change overdue threshold per restaurant | 4h is platform-wide standard | Contact platform if custom threshold needed |
 
 ---
 

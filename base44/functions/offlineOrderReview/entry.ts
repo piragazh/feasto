@@ -39,6 +39,17 @@ Deno.serve(async (req) => {
             return Response.json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }, { status: 400 });
         }
 
+        // ── REQUIRE NOTES FOR TERMINAL DECISIONS ─────────────────────────────────
+        // resolved & escalated require manager to provide rationale
+        const requiresNotes = ['resolved', 'escalated'].includes(action);
+        if (requiresNotes && (!review_notes || typeof review_notes !== 'string' || !review_notes.trim())) {
+            return Response.json({
+                error: `Notes are required when marking order as "${action}". Please explain your decision.`,
+                field: 'review_notes',
+                policy: 'mandatory_notes'
+            }, { status: 400 });
+        }
+
         // ── TENANT CHECK ────────────────────────────────────────────────────────
         // Verify manager has access to this restaurant
         if (user.role !== 'admin') {
@@ -72,6 +83,12 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
+        // ── CALCULATE REVIEW AGE (OVERDUE CHECK) ─────────────────────────────────
+        const now = new Date();
+        const syncedAt = order.offline_synced_at ? new Date(order.offline_synced_at) : null;
+        const reviewAgeHours = syncedAt ? (now.getTime() - syncedAt.getTime()) / (1000 * 60 * 60) : 0;
+        const isOverdue = reviewAgeHours > 4; // Flagged >4 hours with no review
+
         // ── DETERMINE NEW STATUS ────────────────────────────────────────────────
         let newStatus;
         if (action === 'acknowledge') {
@@ -89,7 +106,7 @@ Deno.serve(async (req) => {
             offline_review_at: new Date().toISOString(),
         };
 
-        if (review_notes && typeof review_notes === 'string') {
+        if (review_notes && typeof review_notes === 'string' && review_notes.trim()) {
             reviewUpdate.offline_review_notes = review_notes.trim();
         }
 
@@ -101,11 +118,13 @@ Deno.serve(async (req) => {
             restaurant_id,
             action,
             new_status: newStatus,
-            review_notes: review_notes || null,
+            review_notes: review_notes?.trim() || null,
             sync_validation_notes: order.sync_validation_notes,
+            review_age_hours: Math.round(reviewAgeHours * 10) / 10,
+            was_overdue: isOverdue,
         };
 
-        console.log(`[AUDIT] OFFLINE_ORDER_REVIEW: order=${order_id} action=${action} status=${newStatus} by=${user.email} restaurant=${restaurant_id}`);
+        console.log(`[AUDIT] OFFLINE_ORDER_REVIEW: order=${order_id} action=${action} status=${newStatus} by=${user.email} age=${Math.round(reviewAgeHours)}h overdue=${isOverdue} restaurant=${restaurant_id}`);
 
         try {
             await base44.asServiceRole.entities.DashboardActivity.create({

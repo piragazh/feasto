@@ -46,13 +46,20 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
     const confirmAction = async () => {
         if (!selectedAction) return;
 
+        // Enforce required notes for terminal decisions
+        const requiresNotes = ['resolved', 'escalated'].includes(selectedAction);
+        if (requiresNotes && !reviewNotes.trim()) {
+            toast.error(`Notes required for "${selectedAction}" action`);
+            return;
+        }
+
         setIsLoading(true);
         try {
             const result = await base44.functions.invoke('offlineOrderReview', {
                 order_id: order.id,
                 restaurant_id: restaurantId,
                 action: selectedAction,
-                review_notes: reviewNotes || null,
+                review_notes: reviewNotes?.trim() || null,
             });
 
             if (result?.data?.success) {
@@ -126,14 +133,24 @@ export default function OfflineOrderReviewAction({ order, restaurantId, onReview
                     {/* Notes input */}
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-gray-700">
-                            Review notes (optional)
+                            Review notes {(['resolved', 'escalated'].includes(selectedAction)) && <span className="text-red-500">*required</span>}
                         </label>
                         <textarea
                             value={reviewNotes}
                             onChange={(e) => setReviewNotes(e.target.value)}
-                            placeholder="Add your notes..."
-                            className="w-full border rounded-lg p-2 text-xs resize-none h-20 focus:outline-none focus:border-blue-400"
+                            placeholder={selectedAction === 'acknowledge' ? "Optional: add context..." : "Explain your decision..."}
+                            className={`w-full border rounded-lg p-2 text-xs resize-none h-20 focus:outline-none ${
+                                ['resolved', 'escalated'].includes(selectedAction) && !reviewNotes.trim()
+                                    ? 'border-red-300 bg-red-50 focus:border-red-400'
+                                    : 'border-gray-300 focus:border-blue-400'
+                            }`}
                         />
+                        {(['resolved', 'escalated'].includes(selectedAction)) && (
+                            <p className="text-xs text-gray-500 italic">
+                                {selectedAction === 'resolved' && 'Explain why this order is acceptable.'}
+                                {selectedAction === 'escalated' && 'Explain what needs investigation.'}
+                            </p>
+                        )}
                     </div>
 
                     <AlertDialogFooter>
