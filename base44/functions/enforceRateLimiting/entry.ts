@@ -3,7 +3,7 @@
  * Prevents users from creating more than 5 orders per minute
  */
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {

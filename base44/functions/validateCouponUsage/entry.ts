@@ -3,7 +3,7 @@
  * CRITICAL: Prevents unlimited coupon usage
  */
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     } catch (error) {
         console.error('Coupon validation error:', error);
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: 'Coupon validation failed. Please try again.' }),
             { status: 500 }
         );
     }

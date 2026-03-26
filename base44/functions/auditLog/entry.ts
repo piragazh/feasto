@@ -3,7 +3,7 @@
  * Logs: User actions, permission changes, payment operations, refunds, etc.
  */
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     } catch (error) {
         console.error('Audit log error:', error);
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: 'Audit log failed' }),
             { status: 500 }
         );
     }

@@ -4,7 +4,7 @@
  * Blocks orders if >10 from same IP in last hour
  */
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
