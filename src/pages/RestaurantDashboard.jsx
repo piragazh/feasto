@@ -262,7 +262,7 @@ export default function RestaurantDashboard() {
     useEffect(() => {
         if (!restaurant?.id) return;
         const track = async () => {
-            try { await base44.functions.invoke('trackDashboardActivity', { restaurant_id: restaurant.id }); } catch {}
+            try { await base44.functions.invoke('trackDashboardActivity', { restaurant_id: restaurant.id }); } catch (err) {}
         };
         track();
         const interval = setInterval(track, 5 * 60 * 1000);
@@ -284,7 +284,7 @@ export default function RestaurantDashboard() {
                         try {
                             await base44.functions.invoke('enforceRestaurantPermissions', { restaurantId: restaurantIdParam });
                             setRestaurant(r); return;
-                        } catch { toast.error('Access denied to this restaurant'); return; }
+                        } catch (err) { toast.error('Access denied to this restaurant'); return; }
                     }
                 }
                 if (allRestaurants.length > 0) setRestaurant(allRestaurants[0]);
@@ -301,7 +301,7 @@ export default function RestaurantDashboard() {
                         const allRestaurants = await base44.entities.Restaurant.list();
                         const r = allRestaurants.find(r => r.id === restaurantId);
                         if (r) setRestaurant(r); else toast.error('Restaurant not found');
-                    } catch { toast.error('Access denied to this restaurant'); }
+                    } catch (err) { toast.error('Access denied to this restaurant'); }
                 } else { toast.error('No restaurant assigned to your account'); }
             } else { toast.error('No restaurant assigned. Please contact admin.'); }
         } catch (e) {
