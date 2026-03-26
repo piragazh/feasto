@@ -84,6 +84,29 @@ Delivery addresses and phone numbers in the checkout flow are stored in browser 
 - Managers: max 20% or £20; above requires admin
 - Structured reason code required — blank reason rejected with 400
 
+### Restaurant settings controls (2026-03-26)
+- All restaurant settings writes go through `updateRestaurantSettings` server function
+- Field allowlist enforced server-side — unknown fields silently stripped and logged
+- `commission_rate` and platform-ops fields require admin role
+- Financial/order-affecting field changes (delivery_fee, minimum_order, etc.) capture before/after in `DashboardActivity` with `severity: high`
+
+### Loyalty balance controls (2026-03-26)
+- Manual balance adjustments require admin role via `adjustLoyaltyPoints`
+- Adjustment type from allowlist required; blank reason rejected
+- Every adjustment writes a `LoyaltyTransaction` (visible to customer) and a high-severity audit record
+- No manager or customer path to raw balance writes
+
+### coupon_code per-customer limit fix (2026-03-26)
+- **CRITICAL BUG FIXED**: `validateCouponUsage` was querying `coupon_codes: { $includes: ... }` —
+  a non-existent array field. The Order entity stores `coupon_code: string` (singular).
+- The $includes filter silently returned 0 results every time, making `per_customer_limit` completely unenforced.
+- Fixed to `coupon_code: coupon.code`. Single-use coupons now actually enforce the per-customer limit.
+
+### POS discount bypass closure (2026-03-26)
+- `posCreateOrder` no longer blindly trusts client `discount` field
+- Re-runs threshold validation: no reason → zeroed; manager >20%/£20 → zeroed; admin → any value
+- `total`, `subtotal`, `platform_commission_amount`, `restaurant_earnings` stripped from client payload
+
 ### Void controls
 - POS voids routed through `posVoidOrder`; direct status=cancelled update via `posUpdateOrder` is blocked
 - Card-paid voided orders automatically flagged for refund review

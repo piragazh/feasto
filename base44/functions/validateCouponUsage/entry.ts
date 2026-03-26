@@ -51,11 +51,16 @@ Deno.serve(async (req) => {
         const coupon = coupons[0];
 
         // CRITICAL: Check per-user coupon usage limit
-        // Prevents single user from draining entire coupon budget
+        // Prevents single user from draining entire coupon budget.
+        //
+        // FIX: The Order entity stores coupon as coupon_code (singular string),
+        // NOT coupon_codes (array). The previous filter used $includes on a non-existent
+        // array field, silently returning 0 results every time and making per-customer
+        // limits entirely unenforced. Fixed to filter on the correct field.
         if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
             const userOrders = await base44.asServiceRole.entities.Order.filter({
                 created_by: user.email,
-                coupon_codes: { $includes: coupon.code }
+                coupon_code: coupon.code
             });
 
             const userUsageCount = Array.isArray(userOrders) ? userOrders.length : 0;

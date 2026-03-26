@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     try {
@@ -48,16 +48,58 @@ Deno.serve(async (req) => {
         });
 
         const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * (i.quantity || 1)), 0);
-        const discount = orderData.discount || 0;
-        const serverTotal = Math.max(0, serverSubtotal - discount);
 
-        // Strip any attempt to spoof created_by
-        const { created_by: _cb, ...safeOrderData } = orderData;
+        // SECURITY: Re-validate any client-supplied discount server-side.
+        // The POSDiscountPanel calls posApplyDiscount first, then passes the approved
+        // amount here. However posCreateOrder is a public endpoint — a caller hitting it
+        // directly could inject an arbitrary discount. We close this by reapplying the
+        // same threshold rules posApplyDiscount uses: managers are capped at 20% / £20,
+        // admins may pass any value. A missing reason_code resets discount to 0.
+        const MANAGER_MAX_PCT = 20;
+        const MANAGER_MAX_FIXED = 20;
+
+        let approvedDiscount = 0;
+        const clientDiscount = typeof orderData.discount === 'number' ? orderData.discount : 0;
+        const discountReasonCode = orderData.discount_reason_code || null;
+
+        if (clientDiscount > 0) {
+            if (!discountReasonCode) {
+                // No reason code supplied — silently zero the discount and log
+                console.warn(`[POS] posCreateOrder: discount ${clientDiscount} rejected — no reason_code. restaurant=${orderData.restaurant_id} user=${user.email}`);
+                approvedDiscount = 0;
+            } else if (user.role === 'admin') {
+                approvedDiscount = clientDiscount;
+            } else {
+                // Manager threshold check
+                const pct = serverSubtotal > 0 ? (clientDiscount / serverSubtotal) * 100 : 0;
+                if (pct > MANAGER_MAX_PCT || clientDiscount > MANAGER_MAX_FIXED) {
+                    console.warn(`[POS] posCreateOrder: discount ${clientDiscount} exceeds manager threshold (${pct.toFixed(1)}%). Zeroed. restaurant=${orderData.restaurant_id} user=${user.email}`);
+                    approvedDiscount = 0;
+                } else {
+                    approvedDiscount = clientDiscount;
+                }
+            }
+        }
+
+        const serverTotal = Math.max(0, serverSubtotal - approvedDiscount);
+
+        // Strip any attempt to spoof created_by or inject financial fields directly
+        const {
+            created_by: _cb,
+            discount: _d,
+            total: _t,
+            subtotal: _s,
+            platform_commission_amount: _pc,
+            restaurant_earnings: _re,
+            ...safeOrderData
+        } = orderData;
 
         const order = await base44.asServiceRole.entities.Order.create({
             ...safeOrderData,
             items: verifiedItems,
             subtotal: serverSubtotal,
+            discount: approvedDiscount,
+            discount_reason_code: approvedDiscount > 0 ? discountReasonCode : undefined,
             total: serverTotal,
             status: 'confirmed',
             payment_method: orderData.payment_method || 'cash',

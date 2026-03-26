@@ -28,6 +28,7 @@
     "smoke:payment": "node scripts/smoke/run-smoke.js --only createPaymentIntent",
     "smoke:permissions": "node scripts/smoke/run-smoke.js --only enforceRestaurantPermissions",
     "smoke:cleanup": "node scripts/smoke/cleanup-smoke-orders.js",
-    "smoke:moneycontrols": "node scripts/smoke/run-smoke.js --only posApplyDiscount,posVoidOrder,approveRefund,platformRefundOverride,auditSensitiveAction"
+    "smoke:moneycontrols": "node scripts/smoke/run-smoke.js --only posApplyDiscount,posVoidOrder,approveRefund,platformRefundOverride,auditSensitiveAction",
+    "smoke:operationalcontrols": "node scripts/smoke/run-smoke.js --only updateRestaurantSettings,adjustLoyaltyPoints,validateCouponUsage,posCreateOrderDiscount"
   }
 }

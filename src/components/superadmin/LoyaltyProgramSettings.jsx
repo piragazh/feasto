@@ -8,13 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Gift, TrendingUp, Users, Award, Plus, Trash2, Edit, Settings, Store, BarChart3, TrendingDown } from 'lucide-react';
+import { Gift, TrendingUp, Users, Award, Plus, Trash2, Edit, Settings, Store, BarChart3, TrendingDown, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import LoyaltyAdjustmentDialog from './LoyaltyAdjustmentDialog';
 
 export default function LoyaltyProgramSettings() {
     const [showRewardDialog, setShowRewardDialog] = useState(false);
     const [editingReward, setEditingReward] = useState(null);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+    const [adjustmentTarget, setAdjustmentTarget] = useState(null);
     const [rewardForm, setRewardForm] = useState({
         name: '',
         description: '',
@@ -205,6 +207,14 @@ export default function LoyaltyProgramSettings() {
 
     return (
         <div className="space-y-6">
+            {adjustmentTarget && (
+                <LoyaltyAdjustmentDialog
+                    open={!!adjustmentTarget}
+                    onOpenChange={(open) => { if (!open) setAdjustmentTarget(null); }}
+                    targetUser={adjustmentTarget}
+                    onSuccess={() => queryClient.invalidateQueries(['loyalty-points'])}
+                />
+            )}
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <Card>
@@ -388,17 +398,27 @@ export default function LoyaltyProgramSettings() {
                                 <div className="space-y-2">
                                     {topCustomers.map((customer, idx) => (
                                         <div key={customer.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-bold text-lg text-gray-400 w-6">#{idx + 1}</span>
-                                                <div>
-                                                    <p className="font-medium">{customer.user_email}</p>
-                                                    <p className="text-xs text-gray-600">Member since {new Date(customer.created_date).toLocaleDateString()}</p>
-                                                </div>
-                                            </div>
-                                            <Badge className="text-lg font-bold bg-orange-100 text-orange-800">
-                                                {customer.total_points || 0} pts
-                                            </Badge>
-                                        </div>
+                                             <div className="flex items-center gap-3">
+                                                 <span className="font-bold text-lg text-gray-400 w-6">#{idx + 1}</span>
+                                                 <div>
+                                                     <p className="font-medium">{customer.user_email}</p>
+                                                     <p className="text-xs text-gray-600">Member since {new Date(customer.created_date).toLocaleDateString()}</p>
+                                                 </div>
+                                             </div>
+                                             <div className="flex items-center gap-2">
+                                                 <Badge className="text-lg font-bold bg-orange-100 text-orange-800">
+                                                     {customer.total_points || 0} pts
+                                                 </Badge>
+                                                 <Button
+                                                     size="sm"
+                                                     variant="outline"
+                                                     onClick={() => setAdjustmentTarget(customer)}
+                                                     title="Manual adjustment"
+                                                 >
+                                                     <SlidersHorizontal className="h-3.5 w-3.5" />
+                                                 </Button>
+                                             </div>
+                                         </div>
                                     ))}
                                 </div>
                             )}

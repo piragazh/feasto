@@ -154,6 +154,17 @@ npm run smoke
 
 Required fixture data and cleanup instructions: `scripts/smoke/README.md`
 
+### Operational-controls smoke suites (2026-03-26)
+
+| Suite | What it covers |
+|---|---|
+| `updateRestaurantSettings` | Auth required; tenant scope; allowlist (strips unknown fields); admin-only fields blocked for managers; high-risk fields audited |
+| `adjustLoyaltyPoints` | Admin-only; reason required; valid adjustment_type; zero-delta rejected; valid correction returns before/after |
+| `validateCouponUsage` (updated) | Documents the coupon_codes→coupon_code fix; manual cases for first-use/repeat-use verification |
+| `posCreateOrderDiscount` | Documents discount-without-reason zeroed; manager threshold cap; valid-within-threshold accepted |
+
+Run: `npm run smoke:operationalcontrols`
+
 ### Money-control smoke suites (new)
 
 | Suite | What it covers |

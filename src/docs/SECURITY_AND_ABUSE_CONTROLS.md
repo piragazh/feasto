@@ -99,6 +99,50 @@ To add true per-IP controls:
 
 ---
 
+## Restaurant settings-change control policy
+
+### Write path
+All restaurant settings writes are routed through `updateRestaurantSettings` (POST, auth required).
+Direct frontend entity writes to `Restaurant` are no longer used by `RestaurantSettings`.
+
+### Field allowlist
+Only fields in the explicit `ALLOWED_FIELDS` set may be updated.
+Unknown/unlisted fields are stripped server-side and logged — the request is not rejected so UX is preserved.
+
+### Admin-only fields
+`commission_rate`, `commission_type`, `fixed_commission_amount`, `pos_enabled`, `max_pos_count`,
+`media_screen_enabled`, `max_screens_allowed`, `onboarding_status` — non-admin callers receive 403.
+
+### Audit
+- All settings changes write an audit record to `DashboardActivity`
+- High-risk financial fields (delivery_fee, minimum_order, tiered_delivery, accepts_cash_on_delivery,
+  loyalty_program_enabled, loyalty_points_multiplier, commission_rate) capture **before/after values**
+  and are logged with `severity: high`
+- Low-risk changes (name, logo, hours, printer config, SEO) are logged with `severity: info`
+
+---
+
+## Loyalty balance adjustment control policy
+
+### Write path
+Manual admin adjustments go through `adjustLoyaltyPoints` (POST, admin-only).
+There is no UI for managers or customers to adjust raw balances.
+Order-earned points still flow exclusively through `awardLoyaltyPoints`.
+
+### Adjustment types
+`correction` | `goodwill` | `penalty` | `expiry_reversal` | `bulk_promotion`
+Unknown types are rejected with 400.
+
+### Guards
+- Admin-only: non-admin callers receive 403
+- Reason required: blank reason rejected with 400
+- Balance floor: balance never goes below 0
+- All adjustments write a `LoyaltyTransaction` entry visible in the customer's history
+- All adjustments write a `DashboardActivity` audit record with `severity: high`,
+  capturing: actor, target user, type, delta, before/after balance, reason, note
+
+---
+
 ## POS / restaurant money-control policy
 
 ### Roles
@@ -125,6 +169,23 @@ All permission checks are enforced server-side. The UI gates are supplementary o
 - Replaces direct frontend entity write — all writes go through the server function
 - Amount and item-total cross-check re-run server-side at approval time
 - Refunds ≥ £30 flagged as **high severity** in audit log
+
+### POS discount bypass closure (`posCreateOrder`)
+- `posCreateOrder` no longer trusts the client-supplied `discount` field directly
+- Re-validates discount using the same threshold rules as `posApplyDiscount`:
+  - No `discount_reason_code` → discount zeroed (logged, order still created)
+  - Manager: discount capped at 20% of subtotal OR £20 server-side; above threshold → zeroed
+  - Admin: any value accepted
+- Financial fields (`total`, `subtotal`, `platform_commission_amount`, `restaurant_earnings`) are
+  stripped from the client payload entirely — server always computes these
+- The approved `discount_reason_code` is persisted on the Order for auditability
+
+### validateCouponUsage — per-customer limit fix (2026-03-26)
+**BUG FOUND AND FIXED.**
+- Previous query: `coupon_codes: { $includes: coupon.code }` (array operator on non-existent field)
+- Correct query: `coupon_code: coupon.code` (matches the `coupon_code: string` field in Order schema)
+- Impact: `per_customer_limit` was entirely unenforced — any user could apply a single-use coupon
+  unlimited times. The fix makes the per-customer limit actually work.
 
 ### Platform refund override (`platformRefundOverride`)
 - Admin-only (role check is server-side)
@@ -163,3 +224,7 @@ All permission checks are enforced server-side. The UI gates are supplementary o
 | Coupon CRUD audit | ✅ auditSensitiveAction on every mutation |
 | Staff CRUD audit | ✅ auditSensitiveAction on add/deactivate/remove |
 | Cashier/kitchen discount/void | ✅ Blocked server-side (manager check) |
+| Restaurant settings (financial) | ✅ updateRestaurantSettings, allowlist + before/after audit |
+| Loyalty manual adjustment | ✅ adjustLoyaltyPoints, admin-only, reason required, audited |
+| POS discount bypass (posCreateOrder) | ✅ Re-validates discount server-side, strips financial fields |
+| coupon_code per-customer limit | ✅ FIXED — was querying wrong field (coupon_codes vs coupon_code) |

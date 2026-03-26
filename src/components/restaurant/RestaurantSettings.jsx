@@ -171,13 +171,22 @@ export default function RestaurantSettings({ restaurantId }) {
     }, [restaurant]);
 
     const updateMutation = useMutation({
-        mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
+        mutationFn: async (data) => {
+            const result = await base44.functions.invoke('updateRestaurantSettings', {
+                restaurant_id: restaurantId,
+                updates: data,
+            });
+            if (!result?.data?.success) {
+                throw new Error(result?.data?.error || 'Update failed');
+            }
+            return result.data;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant', restaurantId]);
             toast.success('Settings updated successfully');
         },
-        onError: () => {
-            toast.error('Failed to update settings');
+        onError: (err) => {
+            toast.error(err?.message || 'Failed to update settings');
         }
     });
 
