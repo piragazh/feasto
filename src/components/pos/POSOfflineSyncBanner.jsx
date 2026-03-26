@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getAllPendingUnsynced, markOrderSynced, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt } from './POSOfflineDB';
+import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt } from './POSOfflineDB';
 import { WifiOff, RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,19 +44,28 @@ export async function triggerSync(restaurantId) {
 
             for (const order of forRestaurant) {
                 try {
-                    const { offline_id, synced: _s, ...orderData } = order;
+                    const { offline_id, synced: _s, syncStatus: _ss, syncError: _se, syncAttempts: _sa, ...orderData } = order;
                     // Route through syncOfflineOrder for re-validation
                     const syncResult = await base44.functions.invoke('syncOfflineOrder', orderData);
+                    
+                    // ✨ NEW: Handle explicit sync outcomes
                     if (syncResult.data?.order) {
+                        // SYNC_ACCEPTED or SYNC_ACCEPTED_NEEDS_REVIEW
                         await markOrderSynced(offline_id);
                         synced++;
-                        // Log validation issues if flagged for review
-                        if (syncResult.data?.needs_review) {
-                            console.warn(`[OFFLINE-SYNC-BANNER] Order ${syncResult.data.order.id} flagged for review: ${syncResult.data.validation_notes}`);
-                        }
+                        const outcome = syncResult.data.needs_review ? 'FLAGGED' : 'ACCEPTED';
+                        console.log(`[OFFLINE-SYNC-BANNER] Order ${syncResult.data.order.id} synced (${outcome}). Reason: ${syncResult.data.validation_notes || 'none'}`);
+                    } else {
+                        // SYNC_REJECTED
+                        const rejectReason = syncResult.data?.error || 'Unknown error';
+                        await markOrderSyncFailed(offline_id, rejectReason);
+                        failed++;
+                        console.warn(`[OFFLINE-SYNC-BANNER] Order ${offline_id} sync rejected: ${rejectReason}`);
                     }
                 } catch (error) {
-                    console.error(`[OFFLINE-SYNC-BANNER] Sync failed for order ${order.offline_id}:`, error.message);
+                    // Network error or function failure
+                    await markOrderSyncFailed(order.offline_id, error.message);
+                    console.error(`[OFFLINE-SYNC-BANNER] Sync error for order ${order.offline_id}:`, error.message);
                     failed++;
                 }
             }

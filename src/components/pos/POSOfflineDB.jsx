@@ -141,6 +141,9 @@ export async function savePendingOrder(orderData) {
         ...orderData,
         offline_id,
         synced: false,
+        syncStatus: 'pending', // ✨ NEW: 'pending' | 'synced' | 'failed'
+        syncError: null, // ✨ NEW: error message if failed
+        syncAttempts: 0, // ✨ NEW: retry count
         created_at: new Date().toISOString(),
     };
     await promisify(store.put(record));
@@ -160,7 +163,22 @@ export async function markOrderSynced(offline_id) {
     const store = txStore(db, STORES.PENDING_ORDERS, 'readwrite');
     const record = await promisify(store.get(offline_id));
     if (record) {
-        await promisify(store.put({ ...record, synced: true }));
+        await promisify(store.put({ ...record, synced: true, syncStatus: 'synced', syncError: null }));
+    }
+}
+
+// ✨ NEW: Mark sync failure with error details
+export async function markOrderSyncFailed(offline_id, errorMessage) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_ORDERS, 'readwrite');
+    const record = await promisify(store.get(offline_id));
+    if (record) {
+        await promisify(store.put({
+            ...record,
+            syncStatus: 'failed',
+            syncError: errorMessage,
+            syncAttempts: (record.syncAttempts || 0) + 1,
+        }));
     }
 }
 

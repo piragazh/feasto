@@ -13,7 +13,7 @@ import {
     Menu, TrendingUp, Truck, UserCheck, RotateCcw,
     GitBranch, PenLine, MapPin, Link2, Cpu, Smartphone,
     MessageCircle, UsersRound, Palette, Star, Sparkles,
-    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer
+    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff
 } from 'lucide-react';
 
 import LiveOrders from '@/components/restaurant/LiveOrders';
@@ -35,6 +35,7 @@ import RefundManagement from '@/components/restaurant/RefundManagement';
 import PromotionManagement from '@/components/restaurant/PromotionManagement';
 import OrderBatching from '@/components/restaurant/OrderBatching';
 import OrderModification from '@/components/restaurant/OrderModification';
+import OfflineOrdersReview from '@/components/restaurant/OfflineOrdersReview';
 import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
 import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
 import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
@@ -100,6 +101,7 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'driver-management', label: 'Manage Drivers', icon: Users },
             { id: 'crm', label: 'CRM', icon: UsersRound },
             { id: 'refunds', label: 'Refunds', icon: RotateCcw, badge: refundRequests.length },
+            { id: 'offline-orders', label: 'Offline Orders', icon: WifiOff },
             { id: 'batching', label: 'Order Batching', icon: GitBranch },
             { id: 'modifications', label: 'Modifications', icon: PenLine },
         ]
@@ -468,6 +470,7 @@ export default function RestaurantDashboard() {
                     <TabsContent value="driver-management"><DriverManagement restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="crm"><CustomerCRM restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
                     <TabsContent value="refunds"><RefundManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="offline-orders"><OfflineOrdersReview restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="batching"><OrderBatching restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="modifications"><OrderModification restaurantId={restaurant.id} /></TabsContent>
                 </Tabs>

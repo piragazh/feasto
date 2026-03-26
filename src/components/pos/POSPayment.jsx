@@ -410,6 +410,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         t={t}
                         isDark={isDark}
                         couponActive={!!coupon}
+                        isOffline={isOffline}
                     />
 
                     {/* Coupon section — server-validated, mutually exclusive with manual discount */}

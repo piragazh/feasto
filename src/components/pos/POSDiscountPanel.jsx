@@ -30,6 +30,7 @@ export default function POSDiscountPanel({
     orderId = null,
     isDark,
     couponActive = false, // mutual exclusion: true when a coupon is already applied
+    isOffline = false, // ✨ NEW: offline mode blocks discounts entirely
 }) {
     const [type, setType] = useState('percentage');
     const [value, setValue] = useState('');
@@ -117,6 +118,16 @@ export default function POSDiscountPanel({
                 <button onClick={onRemove} className="text-red-400 hover:text-red-300 transition-colors">
                     <X className="h-3.5 w-3.5" />
                 </button>
+            </div>
+        );
+    }
+
+    // Offline policy: discounts fully blocked offline
+    if (isOffline) {
+        return (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>Manual discounts unavailable offline. Full price applies.</span>
             </div>
         );
     }

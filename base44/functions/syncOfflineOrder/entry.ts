@@ -45,6 +45,25 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ✨ NEW: Idempotency check — prevent duplicate sync of same offline order
+        const offlineId = offlineOrderData.offline_id;
+        if (offlineId) {
+            const existingOrders = await base44.asServiceRole.entities.Order.filter({ offline_created: true });
+            // Check if an order with this offline_id was already synced (by matching offline_id pattern + exact timestamps)
+            const isDuplicate = existingOrders?.some(o => 
+                o.offline_created_at === offlineOrderData.created_at && 
+                o.restaurant_id === offlineOrderData.restaurant_id &&
+                Math.abs(new Date(o.offline_synced_at).getTime() - new Date().getTime()) < 5000 // within 5 sec
+            );
+            if (isDuplicate) {
+                console.warn(`[OFFLINE-SYNC] Duplicate detected for offline_id=${offlineId}. Rejecting.`);
+                return Response.json({ 
+                    error: 'Order already synced (duplicate offline_id)',
+                    isDuplicate: true
+                }, { status: 409 });
+            }
+        }
+
         // Verify restaurant exists
         const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: offlineOrderData.restaurant_id });
         if (!restaurants || restaurants.length === 0) {
