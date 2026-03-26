@@ -24,6 +24,30 @@ import PastOrders from '@/components/restaurant/PastOrders';
 import RestaurantMessages from '@/components/restaurant/RestaurantMessages';
 import ReviewManagement from '@/components/restaurant/ReviewManagement';
 import RestaurantOnboarding from '@/components/restaurant/RestaurantOnboarding';
+import EnhancedAnalyticsDashboard from '@/components/restaurant/EnhancedAnalyticsDashboard';
+import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashboard';
+import DriverTracking from '@/components/restaurant/DriverTracking';
+import DriverManagement from '@/components/restaurant/DriverManagement';
+import DriverPerformance from '@/components/restaurant/DriverPerformance';
+import CustomerCRM from '@/components/restaurant/CustomerCRM';
+import RefundManagement from '@/components/restaurant/RefundManagement';
+import PromotionManagement from '@/components/restaurant/PromotionManagement';
+import OrderBatching from '@/components/restaurant/OrderBatching';
+import OrderModification from '@/components/restaurant/OrderModification';
+import OfflineOrdersReview from '@/components/restaurant/OfflineOrdersReview';
+import DeliveryZoneManagement from '@/components/restaurant/DeliveryZoneManagement';
+import RestaurantSettings from '@/components/restaurant/RestaurantSettings';
+import AIMarketingAssistant from '@/components/restaurant/AIMarketingAssistant';
+import NotificationSoundManager from '@/components/notifications/NotificationSoundManager';
+import BrandingManager from '@/components/restaurant/BrandingManager';
+import ThirdPartyIntegrations from '@/components/restaurant/ThirdPartyIntegrations';
+import POSConfigurations from '@/components/restaurant/POSConfigurations';
+import StaffManagement from '@/components/restaurant/StaffManagement';
+import KioskSettings from '@/components/kiosk/KioskSettings';
+import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrinterSettings';
+import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
+import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
+import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -45,7 +69,56 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'reviews', label: 'Reviews', icon: Star },
         ]
     },
-
+    {
+        id: 'marketing', label: 'Marketing', icon: Tag,
+        items: [
+            { id: 'coupons', label: 'Coupons', icon: Tag },
+            { id: 'promotions', label: 'Promotions', icon: Sparkles },
+            { id: 'ai-marketing', label: 'AI Assistant', icon: Sparkles },
+            ...(restaurant?.media_screen_enabled ? [{ id: 'media', label: 'Media Screens', icon: Monitor }] : []),
+        ]
+    },
+    {
+        id: 'analytics', label: 'Analytics', icon: BarChart3,
+        items: [
+            { id: 'analytics', label: 'Overview', icon: BarChart3 },
+            { id: 'order-analytics', label: 'Order Insights', icon: TrendingUp },
+            { id: 'driver-performance', label: 'Driver Performance', icon: UserCheck },
+        ]
+    },
+    {
+        id: 'payouts', label: 'Payouts', icon: PoundSterling,
+        items: [
+            { id: 'payouts', label: 'Payout History', icon: PoundSterling },
+        ]
+    },
+    {
+        id: 'operations', label: 'Operations', icon: ChefHat,
+        items: [
+            { id: 'kds', label: 'Kitchen Display', icon: ChefHat },
+            { id: 'drivers', label: 'Driver Tracking', icon: Truck },
+            { id: 'driver-management', label: 'Manage Drivers', icon: Users },
+            { id: 'crm', label: 'CRM', icon: UsersRound },
+            { id: 'refunds', label: 'Refunds', icon: RotateCcw, badge: refundRequests.length },
+            { id: 'offline-orders', label: 'Offline Orders', icon: WifiOff, badge: unresolvedOfflineReviewCount },
+            { id: 'batching', label: 'Order Batching', icon: GitBranch },
+            { id: 'modifications', label: 'Modifications', icon: PenLine },
+        ]
+    },
+    {
+        id: 'settings', label: 'Settings', icon: Settings,
+        items: [
+            { id: 'settings', label: 'Restaurant Settings', icon: Settings },
+            { id: 'branding', label: 'Branding', icon: Palette },
+            { id: 'zones', label: 'Delivery Zones', icon: MapPin },
+            { id: 'integrations', label: 'Third-Party Orders', icon: Link2 },
+            { id: 'printers', label: 'Printer Config', icon: Printer },
+            { id: 'pos', label: 'POS Config', icon: Cpu },
+            { id: 'kiosk', label: 'Kiosk', icon: Smartphone },
+            { id: 'sms', label: 'SMS Notifications', icon: MessageCircle },
+            { id: 'staff', label: 'Staff', icon: UserCheck },
+        ]
+    },
 ];
 
 // ── Sidebar Nav ─────────────────────────────────────────────────────────────
@@ -372,7 +445,74 @@ export default function RestaurantDashboard() {
                 </Tabs>
             );
         }
-
+        if (activeSection === 'marketing') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="coupons"><CouponsManagement restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
+                    <TabsContent value="promotions"><PromotionManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="ai-marketing"><AIMarketingAssistant restaurantId={restaurant.id} /></TabsContent>
+                    {restaurant?.media_screen_enabled && (
+                        <TabsContent value="media">
+                            <Card>
+                                <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Media Screen Management</CardTitle></CardHeader>
+                                <CardContent>
+                                    <p className="text-gray-600 mb-4">Manage promotional content, screens, and layouts for in-store displays.</p>
+                                    <Button onClick={() => window.location.href = createPageUrl('MediaScreenManagement') + `?restaurantId=${restaurant.id}`}>
+                                        <Monitor className="h-4 w-4 mr-2" />Open Media Screen Manager
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )}
+                </Tabs>
+            );
+        }
+        if (activeSection === 'analytics') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="analytics"><EnhancedAnalyticsDashboard restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="order-analytics"><OrderAnalyticsDashboard restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="driver-performance"><DriverPerformance restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+        if (activeSection === 'payouts') {
+            return <RestaurantPayoutHistory restaurantId={restaurant.id} />;
+        }
+        if (activeSection === 'operations') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="kds"><KitchenDisplaySystem restaurant={restaurant} /></TabsContent>
+                    <TabsContent value="drivers"><DriverTracking restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="driver-management"><DriverManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="crm"><CustomerCRM restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
+                    <TabsContent value="refunds"><RefundManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="offline-orders"><OfflineOrdersReview restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="batching"><OrderBatching restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="modifications"><OrderModification restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
+        if (activeSection === 'settings') {
+            return (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsContent value="settings"><RestaurantSettings restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="branding"><BrandingManager restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="zones">
+                        <DeliveryZoneManagement
+                            restaurantId={restaurant.id}
+                            restaurantLocation={restaurant.latitude && restaurant.longitude ? { lat: restaurant.latitude, lng: restaurant.longitude } : null}
+                        />
+                    </TabsContent>
+                    <TabsContent value="integrations"><ThirdPartyIntegrations restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="printers"><CentralizedPrinterSettings restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="pos"><POSConfigurations restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="kiosk"><KioskSettings restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="sms"><SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} /></TabsContent>
+                    <TabsContent value="staff"><StaffManagement restaurantId={restaurant.id} /></TabsContent>
+                </Tabs>
+            );
+        }
 
         return null;
     };
@@ -384,6 +524,8 @@ export default function RestaurantDashboard() {
 
     return (
         <div className="flex h-screen overflow-hidden bg-gray-50">
+            <NotificationSoundManager restaurantId={restaurant?.id} />
+
             {showOnboarding && (
                 <RestaurantOnboarding restaurant={restaurant} onComplete={() => setShowOnboarding(false)} />
             )}
