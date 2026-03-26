@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     UtensilsCrossed, ShoppingBag, History, Settings, LogOut,
