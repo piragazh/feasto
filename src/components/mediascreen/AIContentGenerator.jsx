@@ -80,6 +80,13 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
     const effectiveCategory = customCategory.trim() || selectedCategory;
 
     const buildScreenAdPrompt = () => {
+        const getPrice = (item) => {
+            if (priceType === 'pos' && item.pos_price) {
+                return `£${item.pos_price}`;
+            }
+            return `£${item.price}`;
+        };
+
         const items = itemsForCategory.slice(0, 8);
         const heroItems = items.filter(i => i.is_popular).slice(0, 2).length > 0
             ? items.filter(i => i.is_popular).slice(0, 2)
