@@ -34,13 +34,36 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Strip any attempt to change restaurant_id or created_by
-        const { restaurant_id: _rid, created_by: _cb, ...safeUpdates } = updates;
+        // Strip immutable fields — never allow spoofing of owner or restaurant
+        const {
+            restaurant_id: _rid,
+            created_by: _cb,
+            payment_intent_id: _pi,
+            idempotency_key: _ik,
+            // Financial fields must not be modified directly via posUpdateOrder
+            total: _total,
+            subtotal: _subtotal,
+            platform_commission_amount: _comm,
+            restaurant_earnings: _earn,
+            ...safeUpdates
+        } = updates;
+
+        // Cancellation must go through posVoidOrder (has audit + reason requirement)
+        if (safeUpdates.status === 'cancelled') {
+            return Response.json({
+                error: 'Use posVoidOrder to cancel orders. A reason code is required.',
+            }, { status: 400 });
+        }
 
         const order = await base44.asServiceRole.entities.Order.update(order_id, safeUpdates);
 
+        // Lightweight audit for status transitions
+        if (safeUpdates.status && safeUpdates.status !== existingOrder.status) {
+            console.log(`[AUDIT] ORDER_STATUS_CHANGED: actor=${user.email} order=${order_id} from=${existingOrder.status} to=${safeUpdates.status}`);
+        }
+
         return Response.json({ order });
     } catch (error) {
-        return Response.json({ error: error.message }, { status: 500 });
+        return Response.json({ error: 'Order update failed. Please try again.' }, { status: 500 });
     }
 });

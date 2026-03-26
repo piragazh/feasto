@@ -28,32 +28,17 @@ export default function RefundManagement({ restaurantId }) {
 
     const approveMutation = useMutation({
         mutationFn: async (orderId) => {
-            const order = refundRequests.find(o => o.id === orderId);
-            const requestedAmount = order?.refund_requested_amount || 0;
-
-            // Server-side validation: amount cap + item verification
-            const validation = await base44.functions.invoke('validateRefundAmount', {
-                orderId,
-                refundAmount: requestedAmount,
-                refundType: order?.refund_request_type,
-                refundItems: order?.refund_requested_items || []
-            });
-
-            if (!validation?.data?.valid) {
-                throw new Error(validation?.data?.error || 'Refund validation failed');
+            // All validation and the entity write happen server-side in approveRefund.
+            // The frontend must not write directly to the Order entity for refund approvals.
+            const result = await base44.functions.invoke('approveRefund', { order_id: orderId });
+            if (!result?.data?.success) {
+                throw new Error(result?.data?.error || 'Refund approval failed');
             }
-
-            const approvedAmount = validation.data.approvedAmount;
-            return base44.entities.Order.update(orderId, {
-                status: 'refunded',
-                refund_amount: approvedAmount,
-                refund_paid_by: 'restaurant',
-                refund_approved_date: new Date().toISOString()
-            });
+            return result.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['refund-requests']);
-            toast.success('Refund approved - Amount will be deducted from earnings');
+            toast.success('Refund approved — amount will be deducted from earnings');
             setViewDialog(null);
         },
     });

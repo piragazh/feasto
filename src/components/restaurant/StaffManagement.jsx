@@ -91,6 +91,7 @@ export default function StaffManagement({ restaurantId }) {
                 staff_member_id: staff.id,
                 restaurant_name: restaurant?.name || '',
             });
+            logAudit('STAFF_ADDED', staff.id, null, { email: data.email, role: data.role, full_name: data.full_name });
             return staff;
         },
         onSuccess: () => {
@@ -115,13 +116,31 @@ export default function StaffManagement({ restaurantId }) {
         onError: () => toast.error('Failed to resend invite'),
     });
 
+    const logAudit = (action, resource_id, before_value, after_value) => {
+        base44.functions.invoke('auditSensitiveAction', {
+            action,
+            resource_type: 'StaffMember',
+            resource_id,
+            restaurant_id: restaurantId,
+            before_value,
+            after_value,
+            severity: 'info',
+        }).catch(() => {});
+    };
+
     const toggleActiveMutation = useMutation({
-        mutationFn: ({ id, is_active }) => base44.entities.StaffMember.update(id, { is_active }),
+        mutationFn: async ({ id, is_active, member }) => {
+            await base44.entities.StaffMember.update(id, { is_active });
+            logAudit('STAFF_DEACTIVATED', id, { is_active: !is_active, email: member?.email, role: member?.role }, { is_active });
+        },
         onSuccess: () => queryClient.invalidateQueries(['staff-members', restaurantId]),
     });
 
     const deleteMutation = useMutation({
-        mutationFn: (id) => base44.entities.StaffMember.delete(id),
+        mutationFn: async (member) => {
+            await base44.entities.StaffMember.delete(member.id);
+            logAudit('STAFF_REMOVED', member.id, { email: member.email, role: member.role, full_name: member.full_name }, null);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['staff-members', restaurantId]);
             toast.success('Staff member removed');
@@ -231,10 +250,10 @@ export default function StaffManagement({ restaurantId }) {
                                                 </Button>
                                             )}
                                             <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => toggleActiveMutation.mutate({ id: member.id, is_active: !member.is_active })}
-                                                title={member.is_active ? 'Deactivate' : 'Activate'}
+                                               variant="ghost"
+                                               size="icon"
+                                               onClick={() => toggleActiveMutation.mutate({ id: member.id, is_active: !member.is_active, member })}
+                                               title={member.is_active ? 'Deactivate' : 'Activate'}
                                             >
                                                 {member.is_active
                                                     ? <ToggleRight className="h-5 w-5 text-green-500" />
@@ -242,12 +261,12 @@ export default function StaffManagement({ restaurantId }) {
                                                 }
                                             </Button>
                                             <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => deleteMutation.mutate(member.id)}
-                                                className="text-red-500 hover:text-red-700"
+                                               variant="ghost"
+                                               size="icon"
+                                               onClick={() => { if (confirm(`Remove ${member.full_name} (${member.email})? They will lose all access.`)) deleteMutation.mutate(member); }}
+                                               className="text-red-500 hover:text-red-700"
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                               <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>

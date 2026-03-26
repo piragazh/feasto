@@ -62,20 +62,44 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
         queryFn: () => base44.entities.Coupon.filter({ restaurant_id: restaurantId }),
     });
 
+    const logAudit = (action, resource_id, before_value, after_value) => {
+        base44.functions.invoke('auditSensitiveAction', {
+            action,
+            resource_type: 'Coupon',
+            resource_id,
+            restaurant_id: restaurantId,
+            before_value,
+            after_value,
+            severity: 'info',
+        }).catch(() => {}); // fire-and-forget — never block the UI for audit writes
+    };
+
     const createMutation = useMutation({
-        mutationFn: (data) => base44.entities.Coupon.create({ ...data, restaurant_id: restaurantId }),
+        mutationFn: async (data) => {
+            const coupon = await base44.entities.Coupon.create({ ...data, restaurant_id: restaurantId });
+            logAudit('COUPON_CREATED', coupon.id, null, data);
+            return coupon;
+        },
         onSuccess: () => { queryClient.invalidateQueries(['restaurant-coupons']); toast.success('Coupon created'); resetForm(); },
         onError: (err) => toast.error('Failed to create coupon: ' + (err?.message || 'Unknown error')),
     });
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }) => base44.entities.Coupon.update(id, data),
+        mutationFn: async ({ id, data }) => {
+            const before = coupons.find(c => c.id === id);
+            const coupon = await base44.entities.Coupon.update(id, data);
+            logAudit('COUPON_UPDATED', id, before, data);
+            return coupon;
+        },
         onSuccess: () => { queryClient.invalidateQueries(['restaurant-coupons']); toast.success('Coupon updated'); resetForm(); },
         onError: (err) => toast.error('Failed to update coupon: ' + (err?.message || 'Unknown error')),
     });
 
     const deleteMutation = useMutation({
-        mutationFn: (id) => base44.entities.Coupon.delete(id),
+        mutationFn: async (coupon) => {
+            await base44.entities.Coupon.delete(coupon.id);
+            logAudit('COUPON_DELETED', coupon.id, coupon, null);
+        },
         onSuccess: () => { queryClient.invalidateQueries(['restaurant-coupons']); toast.success('Coupon deleted'); },
     });
 
@@ -333,12 +357,12 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                                         <Send className="h-3 w-3 mr-1" />Promote via CRM
                                     </Button>
                                     <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => { if (confirm('Delete coupon?')) deleteMutation.mutate(coupon.id); }}
-                                        className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => { if (confirm(`Delete coupon "${coupon.code}"? This cannot be undone.`)) deleteMutation.mutate(coupon); }}
+                                       className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
                                     >
-                                        <Trash2 className="h-3 w-3" />
+                                       <Trash2 className="h-3 w-3" />
                                     </Button>
                                 </div>
                             </CardContent>

@@ -154,6 +154,18 @@ npm run smoke
 
 Required fixture data and cleanup instructions: `scripts/smoke/README.md`
 
+### Money-control smoke suites (new)
+
+| Suite | What it covers |
+|---|---|
+| `posApplyDiscount` | Auth required; reason mandatory; threshold gate (>20% blocked for manager); admin passes |
+| `posVoidOrder` | Auth required; reason mandatory; status guard; cancellation blocked via posUpdateOrder |
+| `approveRefund` | Auth required; manager tenant scope; amount cap; no-direct-entity-write |
+| `platformRefundOverride` | Admin-only; reason required; non-admin 403 |
+| `auditSensitiveAction` | Authenticated writes only; anonymous write 401; valid action required |
+
+Run: `npm run smoke:moneycontrols`
+
 ### What smoke tests cover that Vitest does not
 
 - **Auth wiring**: `base44.auth.me()` call actually works with a real token

@@ -99,6 +99,46 @@ To add true per-IP controls:
 
 ---
 
+## POS / restaurant money-control policy
+
+### Roles
+| Role | Refund approve | POS discount | Coupon create | Void order | Staff changes | Platform override |
+|---|---|---|---|---|---|---|
+| `cashier` / `kitchen_staff` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `manager` (RestaurantManager) | ✅ own restaurant | ≤20% / ≤£20 | ✅ own restaurant | ✅ own restaurant | ✅ own restaurant | ❌ |
+| `admin` | ✅ any | ✅ any value | ✅ any | ✅ any | ✅ any | ✅ |
+
+All permission checks are enforced server-side. The UI gates are supplementary only.
+
+### Discount threshold policy (`posApplyDiscount`)
+- Manager may apply up to **20%** or **£20** without admin sign-off
+- Above either threshold: server returns 403 `requires_admin: true`
+- A structured **reason code** is always mandatory — blank reason is rejected with 400
+
+### Void policy (`posVoidOrder`)
+- Only voidable statuses: `pending`, `confirmed`, `preparing`
+- Structured reason code required
+- Card-paid voided orders are **auto-flagged** for refund review (status stays `cancelled`, refund fields populated)
+- Full audit written including before/after status
+
+### Refund approval (`approveRefund`)
+- Replaces direct frontend entity write — all writes go through the server function
+- Amount and item-total cross-check re-run server-side at approval time
+- Refunds ≥ £30 flagged as **high severity** in audit log
+
+### Platform refund override (`platformRefundOverride`)
+- Admin-only (role check is server-side)
+- Reason is required — blank reason is rejected
+- Writes `HIGH` severity audit record with before/after values and admin identity
+
+### Sensitive action audit (`auditSensitiveAction`)
+- Authenticated-only endpoint — anonymous writes are rejected
+- Actor email and role are resolved server-side (cannot be spoofed from client)
+- Covers: coupon CRUD, staff CRUD, POS discount, POS void, refund events
+- Persists to `DashboardActivity` entity; always console-logs even on DB failure
+
+---
+
 ## Summary scorecard
 
 | Area | Status |
@@ -116,3 +156,10 @@ To add true per-IP controls:
 | XSS in order notes | ✅ DOMPurify |
 | Double-refund | ✅ Idempotency check |
 | Admin-only guards | ✅ role check + 403 |
+| POS discount threshold | ✅ Server-enforced, reason required |
+| POS void audit | ✅ Full before/after log, reason required |
+| Refund approval (server-side) | ✅ No direct entity write from frontend |
+| Platform override audit | ✅ Admin-only, high-severity log |
+| Coupon CRUD audit | ✅ auditSensitiveAction on every mutation |
+| Staff CRUD audit | ✅ auditSensitiveAction on add/deactivate/remove |
+| Cashier/kitchen discount/void | ✅ Blocked server-side (manager check) |

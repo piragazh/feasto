@@ -26,18 +26,19 @@ export default function PlatformRefundOversight() {
 
     const overrideMutation = useMutation({
         mutationFn: async ({ orderId, reason }) => {
-            const user = await base44.auth.me();
-            return base44.asServiceRole.entities.Order.update(orderId, {
-                status: 'refunded',
-                refund_paid_by: 'platform',
-                platform_override_reason: reason,
-                platform_override_date: new Date().toISOString(),
-                platform_override_by: user.email
+            // Route through server-side function so audit is written with server-resolved actor identity.
+            const result = await base44.functions.invoke('platformRefundOverride', {
+                order_id: orderId,
+                reason,
             });
+            if (!result?.data?.success) {
+                throw new Error(result?.data?.error || 'Override failed');
+            }
+            return result.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['rejected-refunds']);
-            toast.success('Refund approved - Platform will cover the cost');
+            toast.success('Refund approved — platform will cover the cost');
             setSelectedOrder(null);
             setOverrideReason('');
         },

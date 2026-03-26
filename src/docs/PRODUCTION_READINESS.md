@@ -67,6 +67,34 @@ Delivery addresses and phone numbers in the checkout flow are stored in browser 
 
 ---
 
+## POS / restaurant money-control ✅
+
+### Permissions (server-enforced)
+- `cashier` and `kitchen_staff` roles cannot apply discounts, void orders, approve refunds, or create coupons — blocked at the function layer
+- `RestaurantManager` access is scoped to assigned restaurants only; cross-tenant actions return 403
+- Platform refund overrides are admin-only and verified server-side
+
+### Audit trail
+- Every sensitive money action (discount, void, refund approval, coupon mutation, staff change, platform override) writes a structured record to `DashboardActivity` via `auditSensitiveAction`
+- Records include: actor email, role, restaurant scope, action type, before/after values, reason code, timestamp
+- Actor identity is always resolved server-side — cannot be spoofed from the client
+
+### Discount controls
+- POS discounts validated server-side via `posApplyDiscount`
+- Managers: max 20% or £20; above requires admin
+- Structured reason code required — blank reason rejected with 400
+
+### Void controls
+- POS voids routed through `posVoidOrder`; direct status=cancelled update via `posUpdateOrder` is blocked
+- Card-paid voided orders automatically flagged for refund review
+
+### Refund controls
+- Restaurant managers approve via `approveRefund` function (not direct entity write)
+- Amount and item-total re-verified server-side at approval time
+- Refunds ≥ £30 flagged as high severity
+
+---
+
 ## Must pass before every deploy
 
 - [ ] CI workflow green (lint → typecheck → test:run → mirror-sync → build)
