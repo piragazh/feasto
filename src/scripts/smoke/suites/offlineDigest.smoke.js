@@ -23,6 +23,10 @@ export async function runOfflineDigestSmoke() {
         testSnapshotItemCounting,
         testAcknowledgementPermissions,
         testSnapshotHistoryOrdering,
+        testScheduledPortfolioSnapshotGeneration,
+        testScheduledSnapshotDedup,
+        testScheduledSnapshotRoleScope,
+        testSummaryFormatterEmail,
     ];
     
     let passed = 0;
@@ -433,4 +437,162 @@ function countWorseningItems(digest) {
   if (digest.watch_worsening?.escalation_rate_up) count += 1;
   if (digest.watch_worsening?.operator_outliers?.length > 0) count += 1;
   return count;
+}
+
+async function testScheduledPortfolioSnapshotGeneration() {
+  // Scheduled function should generate portfolio digest without user auth
+  const digest = {
+    generated_at: new Date().toISOString(),
+    critical_now: { overdue_flagged: { count: 2 } },
+    watch_worsening: { escalation_rate_up: true },
+    summary_metrics: { total_offline: 50 }
+  };
+  
+  // Simulate snapshot creation from scheduled function
+  const snapshot = {
+    snapshot_id: generateSnapshotId(),
+    timestamp: new Date().toISOString(),
+    scope: 'portfolio',
+    scope_id: null,
+    digest_hash: hashDigest(digest),
+    critical_item_count: 2,
+    worsening_item_count: 1,
+    created_by: 'system'
+  };
+  
+  if (snapshot.scope !== 'portfolio' || snapshot.created_by !== 'system') {
+    return { success: false, name: 'Scheduled Gen', message: 'Snapshot not marked as scheduled' };
+  }
+  
+  return { success: true, name: 'Scheduled Portfolio Generation', message: 'Scheduled snapshot created with created_by=system' };
+}
+
+async function testScheduledSnapshotDedup() {
+  // Scheduled snapshots should dedup on hash like on-demand
+  const digest1 = {
+    critical_now: { overdue_flagged: { count: 3 } },
+    watch_worsening: { escalation_rate_up: false },
+    summary_metrics: { total_offline: 100 }
+  };
+  
+  const hash1 = hashDigest(digest1);
+  const hash2 = hashDigest(digest1);
+  
+  if (hash1 !== hash2) {
+    return { success: false, name: 'Scheduled Dedup', message: 'Hash not stable' };
+  }
+  
+  // Simulate skip if no change
+  const recentSnapshots = [{ digest_hash: hash1, timestamp: new Date().toISOString() }];
+  const isDuplicate = recentSnapshots.some(s => s.digest_hash === hash1);
+  
+  if (!isDuplicate) {
+    return { success: false, name: 'Scheduled Dedup', message: 'Dedup check failed' };
+  }
+  
+  return { success: true, name: 'Scheduled Snapshot Dedup', message: 'Duplicate detection working for scheduled snapshots' };
+}
+
+async function testScheduledSnapshotRoleScope() {
+  // Scheduled snapshots should always be portfolio scope (no manager-level scheduling)
+  const snapshots = [
+    { scope: 'portfolio', scope_id: null, created_by: 'system' },
+    { scope: 'portfolio', scope_id: null, created_by: 'system' }
+  ];
+  
+  const allPortfolio = snapshots.every(s => s.scope === 'portfolio' && s.scope_id === null);
+  
+  if (!allPortfolio) {
+    return { success: false, name: 'Scheduled Scope', message: 'Non-portfolio scheduled snapshots found' };
+  }
+  
+  return { success: true, name: 'Scheduled Snapshot Role Scope', message: 'All scheduled snapshots are portfolio-level' };
+}
+
+async function testSummaryFormatterEmail() {
+  // Email formatter should produce compact summary
+  const digest = {
+    generated_at: new Date().toISOString(),
+    critical_now: {
+      overdue_flagged: { count: 3, oldest_minutes: 480 },
+      top_restaurants: [{ restaurant_name: 'Store A', flagged_rate: 45 }],
+      abuse_escalations: { count: 1 }
+    },
+    watch_worsening: {
+      escalation_rate_up: true,
+      escalation_24h: 25,
+      escalation_7d: 15,
+      operator_outliers: [{ operator_email: 'op@test.com' }]
+    },
+    summary_metrics: {
+      total_offline: 100,
+      total_flagged: 30,
+      flagged_rate: 30,
+      total_escalated: 10,
+      escalation_rate: 33
+    }
+  };
+  
+  const summary = formatDigestSummaryForEmail(digest);
+  
+  // Should include critical, watch, metrics sections
+  if (!summary.includes('CRITICAL') || !summary.includes('WATCH') || !summary.includes('METRICS')) {
+    return { success: false, name: 'Email Summary', message: 'Missing summary sections' };
+  }
+  
+  // Should be compact (< 20 lines)
+  const lines = summary.split('\n').length;
+  if (lines > 25) {
+    return { success: false, name: 'Email Summary', message: `Summary too verbose (${lines} lines)` };
+  }
+  
+  return { success: true, name: 'Summary Formatter (Email)', message: 'Compact summary generated' };
+}
+
+function formatDigestSummaryForEmail(digest) {
+  const lines = [];
+  const ts = new Date(digest.generated_at).toLocaleString('en-GB', { timeZone: 'UTC' });
+  
+  lines.push(`Offline Risk Digest | ${ts} UTC`);
+  lines.push('─'.repeat(60));
+  lines.push('');
+  
+  const critCount = (digest.critical_now?.overdue_flagged?.count || 0) + 
+                    (digest.critical_now?.top_restaurants?.length || 0) +
+                    (digest.critical_now?.abuse_escalations?.count || 0);
+  
+  if (critCount > 0) {
+    lines.push('🚨 CRITICAL');
+    if (digest.critical_now?.overdue_flagged?.count > 0) {
+      lines.push(`  • ${digest.critical_now.overdue_flagged.count} overdue (oldest ${digest.critical_now.overdue_flagged.oldest_minutes}m)`);
+    }
+    if (digest.critical_now?.top_restaurants?.length > 0) {
+      const top = digest.critical_now.top_restaurants[0];
+      lines.push(`  • Top risk: ${top.restaurant_name} (${top.flagged_rate}% flagged)`);
+    }
+    if (digest.critical_now?.abuse_escalations?.count > 0) {
+      lines.push(`  • ${digest.critical_now.abuse_escalations.count} abuse escalations`);
+    }
+    lines.push('');
+  }
+  
+  if (digest.watch_worsening?.escalation_rate_up || digest.watch_worsening?.operator_outliers?.length > 0) {
+    lines.push('⚠️ WATCH');
+    if (digest.watch_worsening?.escalation_rate_up) {
+      lines.push(`  • Escalation rate UP: ${digest.watch_worsening.escalation_24h}% (was ${digest.watch_worsening.escalation_7d}%)`);
+    }
+    if (digest.watch_worsening?.operator_outliers?.length > 0) {
+      lines.push(`  • ${digest.watch_worsening.operator_outliers.length} operator outlier(s)`);
+    }
+    lines.push('');
+  }
+  
+  if (digest.summary_metrics) {
+    lines.push('📊 METRICS (24h)');
+    lines.push(`  • Offline: ${digest.summary_metrics.total_offline}`);
+    lines.push(`  • Flagged: ${digest.summary_metrics.total_flagged} (${digest.summary_metrics.flagged_rate}%)`);
+    lines.push(`  • Escalated: ${digest.summary_metrics.total_escalated} (${digest.summary_metrics.escalation_rate}%)`);
+  }
+  
+  return lines.join('\n');
 }

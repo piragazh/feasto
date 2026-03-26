@@ -157,3 +157,63 @@ export function getLatestSnapshot(snapshots) {
 export function needsAcknowledgement(snapshot) {
   return !snapshot.acknowledged && snapshot.critical_item_count > 0;
 }
+
+/**
+ * Format digest summary for email-ready output
+ * Compact summary suitable for reports/digests
+ * @param {object} digest
+ * @returns {string} summary plaintext
+ */
+export function formatDigestSummaryForEmail(digest) {
+  const lines = [];
+  const ts = new Date(digest.generated_at).toLocaleString('en-GB', { timeZone: 'UTC' });
+  
+  lines.push(`Offline Risk Digest | ${ts} UTC`);
+  lines.push('─'.repeat(60));
+  lines.push('');
+  
+  // Critical section
+  const critCount = (digest.critical_now?.overdue_flagged?.count || 0) + 
+                    (digest.critical_now?.top_restaurants?.length || 0) +
+                    (digest.critical_now?.abuse_escalations?.count || 0);
+  
+  if (critCount > 0) {
+    lines.push('🚨 CRITICAL');
+    if (digest.critical_now?.overdue_flagged?.count > 0) {
+      lines.push(`  • ${digest.critical_now.overdue_flagged.count} overdue (oldest ${digest.critical_now.overdue_flagged.oldest_minutes}m)`);
+    }
+    if (digest.critical_now?.top_restaurants?.length > 0) {
+      const top = digest.critical_now.top_restaurants[0];
+      lines.push(`  • Top risk: ${top.restaurant_name} (${top.flagged_rate}% flagged)`);
+    }
+    if (digest.critical_now?.abuse_escalations?.count > 0) {
+      lines.push(`  • ${digest.critical_now.abuse_escalations.count} abuse escalations`);
+    }
+    lines.push('');
+  }
+  
+  // Worsening section
+  if (digest.watch_worsening?.escalation_rate_up || digest.watch_worsening?.operator_outliers?.length > 0) {
+    lines.push('⚠️ WATCH');
+    if (digest.watch_worsening?.escalation_rate_up) {
+      lines.push(`  • Escalation rate UP: ${digest.watch_worsening.escalation_24h}% (was ${digest.watch_worsening.escalation_7d}%)`);
+    }
+    if (digest.watch_worsening?.operator_outliers?.length > 0) {
+      lines.push(`  • ${digest.watch_worsening.operator_outliers.length} operator outlier(s)`);
+    }
+    lines.push('');
+  }
+  
+  // Summary metrics
+  if (digest.summary_metrics) {
+    lines.push('📊 METRICS (24h)');
+    lines.push(`  • Offline: ${digest.summary_metrics.total_offline}`);
+    lines.push(`  • Flagged: ${digest.summary_metrics.total_flagged} (${digest.summary_metrics.flagged_rate}%)`);
+    lines.push(`  • Escalated: ${digest.summary_metrics.total_escalated} (${digest.summary_metrics.escalation_rate}%)`);
+  }
+  
+  lines.push('');
+  lines.push('View full digest: [Dashboard → Super Admin → Risk Digest → History]');
+  
+  return lines.join('\n');
+}
