@@ -482,6 +482,9 @@ export default function Checkout() {
             // Scheduled orders validation
             if (isScheduled && !scheduledFor) return;
 
+            // CRITICAL: Prevent payment init if cart/total is invalid (likely still loading)
+            if (total <= 0 || isNaN(total)) return;
+
             setInitializingPayment(true);
             try {
                 const stripe = await initializeStripe();
