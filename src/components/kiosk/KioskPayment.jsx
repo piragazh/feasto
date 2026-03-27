@@ -27,6 +27,7 @@ import {
 import { StaffHelpBanner } from './KioskStaffHelp';
 import { toast } from 'sonner';
 import { printWithCentralizedConfig } from '@/lib/printUtils';
+import { getKioskPaymentOptions } from '@/lib/kioskTerminalReadiness';
 
 // Hard timeout: if terminal hasn't responded in 90 seconds, treat as timeout
 const TERMINAL_TIMEOUT_MS = 90_000;
@@ -87,14 +88,8 @@ export default function KioskPayment({
     const kioskConfig = restaurant?.kiosk_config || {};
     const terminalConfig = kioskConfig.card_terminal || null;
 
-    // Card is available only when: config enables it AND a terminal reader_id is actually configured
-    const terminalConfigured = !!(terminalConfig?.reader_id);
-    const terminalUnavailable = kioskConfig.terminal_unavailable === true;
-    const allowCard = kioskConfig.payment_card_enabled === true && terminalConfigured && !terminalUnavailable;
-
-    // "Pay at Counter" — replaces old allow_cash_payment; also falls back if card was enabled but terminal missing
-    const counterFallback = kioskConfig.payment_card_enabled === true && !terminalConfigured;
-    const allowCounter = kioskConfig.payment_counter_enabled !== false || counterFallback;
+    // Derive payment options via shared readiness logic (same logic used in admin UI + tests)
+    const { showCard: allowCard, showCounter: allowCounter, terminalReadiness } = getKioskPaymentOptions(kioskConfig);
 
     // On mount: detect if a prior payment was interrupted by a reload
     useEffect(() => {
@@ -532,7 +527,7 @@ export default function KioskPayment({
                     <div className="ml-auto flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 text-green-400" />
                         <span className="text-green-400 text-xs font-medium">
-                            {terminalConfig?.reader_label || 'Terminal configured'}
+                            {terminalConfig?.reader_label || terminalReadiness.provider || 'Terminal ready'}
                         </span>
                     </div>
                 )}
@@ -550,7 +545,7 @@ export default function KioskPayment({
 
                 {/* Operational notices — customer-facing only, no technical details */}
                 <div className="w-full space-y-3 mb-4">
-                    {(terminalUnavailable || (kioskConfig.payment_card_enabled && !terminalConfigured)) && allowCounter && (
+                    {(!terminalReadiness.available && allowCounter) && (
                         <StaffHelpBanner
                             icon={Banknote}
                             color="yellow"
