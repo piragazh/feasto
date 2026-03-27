@@ -1,0 +1,97 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "phone": {
+      "type": "string",
+      "description": "User phone number"
+    },
+    "favorite_restaurants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of favorite restaurants",
+      "default": []
+    },
+    "favorite_menu_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of favorite menu items",
+      "default": []
+    },
+    "saved_addresses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "Home",
+              "Work",
+              "Other"
+            ],
+            "default": "Home"
+          },
+          "address": {
+            "type": "string"
+          },
+          "door_number": {
+            "type": "string"
+          },
+          "coordinates": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lng": {
+                "type": "number"
+              }
+            }
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Saved delivery addresses",
+      "default": []
+    },
+    "loyalty_points": {
+      "type": "number",
+      "default": 0,
+      "description": "Accumulated loyalty points"
+    },
+    "total_orders": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of orders placed"
+    },
+    "total_spent": {
+      "type": "number",
+      "default": 0,
+      "description": "Total amount spent"
+    },
+    "promotional_emails_opted_out": {
+      "type": "boolean",
+      "default": false,
+      "description": "User has opted out of promotional emails"
+    },
+    "promotional_sms_opted_out": {
+      "type": "boolean",
+      "default": false,
+      "description": "User has opted out of promotional SMS/WhatsApp"
+    }
+  },
+  "required": [
+    "phone"
+  ]
+}

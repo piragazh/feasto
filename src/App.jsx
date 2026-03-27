@@ -14,6 +14,7 @@ import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
 import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview';
 import AdminRestaurants from './pages/AdminRestaurants';
 import ReconciliationDashboard from './pages/ReconciliationDashboard';
+import Unsubscribe from './pages/Unsubscribe';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -104,6 +105,7 @@ const AuthenticatedApp = () => {
               </LayoutWrapper>
             </Suspense>
           } />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </StackNavigationAnimator>
