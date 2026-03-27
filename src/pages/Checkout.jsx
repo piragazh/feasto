@@ -881,8 +881,8 @@ export default function Checkout() {
                 delivery_fee: deliveryFee,
                 small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
-                coupon_codes: appliedCoupons.map(c => c.code).join(', '),
-                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name).join(', '),
+                coupon_codes: appliedCoupons.map(c => c.code),
+                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name),
                 total,
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
@@ -1043,16 +1043,22 @@ export default function Checkout() {
                 };
 
     const handleStripeSuccess = async (paymentIntentId) => {
+        // Guard against double-click race condition
+        if (isSubmitting) {
+            console.warn('Payment already processing, ignoring duplicate call');
+            return;
+        }
+        
         // Validate payment intent before proceeding
         if (!paymentIntentId || typeof paymentIntentId !== 'string') {
             toast.error('Invalid payment confirmation. Please try again.');
-            setIsSubmitting(false);
             setPaymentCompleted(false);
             return;
         }
         
-        // Mark payment as completed
+        // Mark payment as completed and prevent re-entry
         setPaymentCompleted(true);
+        setIsSubmitting(true);
         toast.success('Payment successful!');
         await createOrder(paymentIntentId);
     };

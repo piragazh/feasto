@@ -65,6 +65,10 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                     } else if (result.error.code === 'incorrect_number') {
                         msg = 'Invalid card number. Please check and try again.';
                     }
+                } else if (result.error.type === 'authentication_error') {
+                    msg = 'Payment verification failed (3D Secure). Please try a different card.';
+                } else if (result.error.type === 'api_error') {
+                    msg = 'Payment processing error. Please contact support or try again later.';
                 }
                 
                 setErrorMessage(msg);
@@ -72,8 +76,16 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                 return false;
             }
             
-            // Handle both 'succeeded' and 'processing' states
-            if (result.paymentIntent && result.paymentIntent.id && ['succeeded', 'processing', 'requires_action'].includes(result.paymentIntent.status)) {
+            // Handle 'requires_action' (3D Secure) - NOT success
+            if (result.paymentIntent?.status === 'requires_action') {
+                console.log('⚠️ Payment requires action (3D Secure):', result.paymentIntent.id);
+                setErrorMessage('Payment verification required. Please complete additional verification step.');
+                setIsProcessing(false);
+                return false;
+            }
+            
+            // Only 'succeeded' and 'processing' are valid success states
+            if (result.paymentIntent && result.paymentIntent.id && ['succeeded', 'processing'].includes(result.paymentIntent.status)) {
                 console.log(`✅ Payment ${result.paymentIntent.status}: ${result.paymentIntent.id}`);
                 setErrorMessage('');
                 setIsProcessing(false);
