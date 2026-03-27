@@ -22,8 +22,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
     ArrowLeft, CreditCard, Banknote, CheckCircle2, Loader2,
-    XCircle, AlertTriangle, Clock, RotateCcw, ShieldCheck
+    XCircle, AlertTriangle, Clock, RotateCcw, ShieldCheck, UserRound, Printer
 } from 'lucide-react';
+import { StaffHelpBanner } from './KioskStaffHelp';
 import { toast } from 'sonner';
 import { printWithCentralizedConfig } from '@/lib/printUtils';
 
@@ -75,10 +76,14 @@ export default function KioskPayment({
     const timeoutRef = useRef(null);
     const attemptIdRef = useRef(null); // guard stale responses from previous attempts
 
+    const [printerWarning, setPrinterWarning] = useState(false);
+
     const kioskConfig = restaurant?.kiosk_config || {};
     const terminalConfig = kioskConfig.card_terminal || null;
     const allowCash = kioskConfig.allow_cash_payment !== false;
-    const allowCard = kioskConfig.allow_card_payment !== false;
+    // Card disabled if: config disables it, OR no terminal configured, OR terminal explicitly marked unavailable
+    const terminalUnavailable = kioskConfig.terminal_unavailable === true || !terminalConfig;
+    const allowCard = kioskConfig.allow_card_payment !== false && !terminalUnavailable;
 
     // On mount: detect if a prior payment was interrupted by a reload
     useEffect(() => {
@@ -128,8 +133,10 @@ export default function KioskPayment({
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
             const placedOrder = { ...order, order_number: orderNum };
-            printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order').catch(() => {});
-            onOrderPlaced(placedOrder);
+            let didPrinterFail = false;
+            try { await printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order'); }
+            catch { didPrinterFail = true; setPrinterWarning(true); }
+            onOrderPlaced(placedOrder, didPrinterFail);
         } catch (err) {
             setPaymentState('failed');
             setErrorMessage('Failed to place order. Please try again.');
@@ -245,8 +252,10 @@ export default function KioskPayment({
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
             const placedOrder = { ...order, order_number: orderNum };
-            printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order').catch(() => {});
-            onOrderPlaced(placedOrder);
+            let didPrinterFail = false;
+            try { await printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order'); }
+            catch { didPrinterFail = true; setPrinterWarning(true); }
+            onOrderPlaced(placedOrder, didPrinterFail);
         } catch (err) {
             // CRITICAL: payment WAS authorized but order creation failed
             // Do NOT retry payment. Show error with transaction ID for staff recovery.
@@ -463,6 +472,27 @@ export default function KioskPayment({
         ...(allowCash ? [{ id: 'cash', label: 'Pay with Cash', icon: Banknote, description: 'Pay at the counter — staff will confirm your order' }] : []),
     ];
 
+    // No payment methods available at all — block ordering
+    if (paymentMethods.length === 0) {
+        return (
+            <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-8 text-center">
+                <div className="w-28 h-28 rounded-3xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-8">
+                    <XCircle className="h-14 w-14 text-red-400" />
+                </div>
+                <h2 className="text-white text-3xl font-black mb-3">Payment Unavailable</h2>
+                <p className="text-gray-300 text-lg mb-8">We're unable to take payment at this kiosk right now.</p>
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl px-6 py-5 mb-8 max-w-sm w-full">
+                    <UserRound className="h-8 w-8 text-orange-400 mx-auto mb-2" />
+                    <p className="text-orange-300 font-bold text-lg">Need help?</p>
+                    <p className="text-orange-300/70 text-sm mt-1">Please speak to a member of staff to place your order.</p>
+                </div>
+                <button onClick={onBack} className="bg-gray-800 hover:bg-gray-700 text-white font-semibold px-8 py-4 rounded-2xl transition-colors">
+                    ← Go Back
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-950 flex flex-col">
             {/* Header */}
@@ -498,6 +528,24 @@ export default function KioskPayment({
                     <p className="text-gray-600 text-sm mt-2">
                         {cart.reduce((s, i) => s + i.quantity, 0)} item{cart.reduce((s, i) => s + i.quantity, 0) !== 1 ? 's' : ''}
                     </p>
+                </div>
+
+                {/* Operational notices */}
+                <div className="w-full space-y-3 mb-4">
+                    {terminalUnavailable && (
+                        <StaffHelpBanner
+                            icon={CreditCard}
+                            color="yellow"
+                            message="Card payment is not available on this terminal right now."
+                        />
+                    )}
+                    {printerWarning && (
+                        <StaffHelpBanner
+                            icon={Printer}
+                            color="yellow"
+                            message="Receipt printer is unavailable. Your order is confirmed — no receipt will print."
+                        />
+                    )}
                 </div>
 
                 {/* Payment method selection */}
@@ -545,6 +593,11 @@ export default function KioskPayment({
                         Payment will be requested from the terminal. Your order is only confirmed after authorization.
                     </p>
                 )}
+
+                <div className="flex items-center gap-2 mt-6 text-gray-600 text-xs">
+                    <UserRound className="h-4 w-4 flex-shrink-0" />
+                    <span>Having trouble? Ask a member of staff for help.</span>
+                </div>
             </div>
         </div>
     );

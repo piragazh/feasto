@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ShoppingCart, Search, ArrowLeft, ChevronRight, X } from 'lucide-react';
+import { ShoppingCart, Search, ArrowLeft, ChevronRight, X, WifiOff } from 'lucide-react';
 import KioskItemModal from './KioskItemModal';
+import { StaffHelpScreen } from './KioskStaffHelp';
 
 export default function KioskMenu({
     restaurant, restaurantId, cart, cartTotal, cartCount,
@@ -12,13 +13,15 @@ export default function KioskMenu({
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItem, setSelectedItem] = useState(null);
 
-    const { data: menuItems = [] } = useQuery({
+    const { data: menuItems = [], isLoading: menuLoading, isError: menuError, refetch: refetchMenu } = useQuery({
         queryKey: ['kiosk-menu', restaurantId],
         queryFn: async () => {
             const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true });
             return items.filter(i => !i.availability_channel || i.availability_channel !== 'online_only');
         },
         enabled: !!restaurantId,
+        retry: 2,
+        staleTime: 60_000,
     });
 
     const getOrderedCategories = () => {
@@ -36,6 +39,46 @@ export default function KioskMenu({
     })();
 
     const orderTypeLabel = orderType === 'dine_in' ? 'Eat In' : 'Takeaway';
+
+    // Menu sync failure — show full-screen staff prompt
+    if (menuError) {
+        return (
+            <StaffHelpScreen
+                icon={WifiOff}
+                iconColor="text-red-400"
+                iconBg="bg-red-500/10 border-red-500/30"
+                title="Menu Unavailable"
+                subtitle="We couldn't load the menu right now."
+                detail="A member of staff can take your order at the counter."
+                onBack={onBack}
+            />
+        );
+    }
+
+    // Loading state
+    if (menuLoading) {
+        return (
+            <div className="h-screen bg-gray-950 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-full border-4 border-orange-500/30 border-t-orange-500 animate-spin mb-4" />
+                <p className="text-gray-400">Loading menu...</p>
+            </div>
+        );
+    }
+
+    // Menu loaded but genuinely empty
+    if (!menuLoading && menuItems.length === 0) {
+        return (
+            <StaffHelpScreen
+                icon={WifiOff}
+                iconColor="text-yellow-400"
+                iconBg="bg-yellow-500/10 border-yellow-500/30"
+                title="No Items Available"
+                subtitle="There are no items available to order right now."
+                detail="Please ask a member of staff for assistance."
+                onBack={onBack}
+            />
+        );
+    }
 
     return (
         <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">

@@ -27,6 +27,7 @@ export default function KioskDashboard() {
     const [orderType, setOrderType] = useState('takeaway');
     const [cart, setCart] = useState([]);
     const [placedOrder, setPlacedOrder] = useState(null);
+    const [printerError, setPrinterError] = useState(false);
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showAdmin, setShowAdmin] = useState(false);
@@ -102,14 +103,16 @@ export default function KioskDashboard() {
     const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
-    const handleOrderPlaced = (order) => {
+    const handleOrderPlaced = (order, hadPrinterError = false) => {
         setPlacedOrder(order);
+        setPrinterError(hadPrinterError);
         setScreen('confirmation');
     };
 
     const resetKiosk = () => {
         setCart([]);
         setPlacedOrder(null);
+        setPrinterError(false);
         setOrderType('takeaway');
         setSelectedTable(null);
         setScreen('welcome');
@@ -225,6 +228,7 @@ export default function KioskDashboard() {
                     orderType={orderType}
                     restaurant={restaurant}
                     onDone={resetKiosk}
+                    printerError={printerError}
                 />
             )}
         </div>

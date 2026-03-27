@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UtensilsCrossed, ShoppingBag } from 'lucide-react';
+import { StaffHelpScreen } from './KioskStaffHelp';
 
 function LiveClock() {
     const [time, setTime] = useState(new Date());
@@ -15,6 +16,30 @@ function LiveClock() {
 }
 
 export default function KioskWelcome({ restaurant, onStart, onLogoTap }) {
+    // Block ordering if restaurant is closed or has disabled ordering
+    const kioskConfig = restaurant?.kiosk_config || {};
+    const orderingDisabled = kioskConfig.ordering_disabled === true;
+    const restaurantClosed = restaurant?.is_open === false;
+
+    if (restaurantClosed || orderingDisabled) {
+        const message = orderingDisabled
+            ? 'Ordering is temporarily unavailable on this kiosk.'
+            : 'We\'re not taking orders right now.';
+        const detail = restaurant?.opening_hours
+            ? 'Please check our opening hours or ask a member of staff.'
+            : undefined;
+        return (
+            <StaffHelpScreen
+                icon={UtensilsCrossed}
+                iconColor="text-gray-400"
+                iconBg="bg-gray-800 border-gray-700"
+                title={orderingDisabled ? 'Ordering Paused' : 'We\'re Closed'}
+                subtitle={message}
+                detail={detail}
+            />
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 flex flex-col">
             {/* Top Bar */}

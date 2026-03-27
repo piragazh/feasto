@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, UtensilsCrossed } from 'lucide-react';
+import { CheckCircle, UtensilsCrossed, Printer } from 'lucide-react';
 
-export default function KioskConfirmation({ order, orderType, restaurant, onDone }) {
+export default function KioskConfirmation({ order, orderType, restaurant, onDone, printerFailed = false }) {
     const [countdown, setCountdown] = useState(30);
     const orderNum = order?.order_number || order?.id?.slice(-4).toUpperCase();
 
@@ -38,7 +38,14 @@ export default function KioskConfirmation({ order, orderType, restaurant, onDone
                 <p className="text-orange-400 font-black text-6xl tracking-widest">{orderNum}</p>
             </div>
 
-            <p className="text-gray-500 text-sm mb-10">Keep this number to collect your order</p>
+            <p className="text-gray-500 text-sm mb-4">Keep this number to collect your order</p>
+
+            {printerFailed && (
+                <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 mb-6 max-w-sm w-full">
+                    <Printer className="h-5 w-5 text-yellow-400 flex-shrink-0" />
+                    <p className="text-yellow-300 text-sm">Receipt printer unavailable — no receipt will be printed. Please note your order number.</p>
+                </div>
+            )}
 
             {/* Receipt-like items */}
             {order?.items && (
