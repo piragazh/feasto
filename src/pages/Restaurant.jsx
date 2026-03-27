@@ -417,8 +417,10 @@ export default function Restaurant() {
                     newItem.promotion_name = activePromotion.name;
                 }
                 return [...prev, newItem];
-                });
-                toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
+            });
+            
+            // Toast notification outside state setter to prevent double-invoke in StrictMode
+            toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
                 duration: 3000,
                 style: {
                     background: activePromotion ? '#8b5cf6' : '#10b981',
@@ -427,7 +429,7 @@ export default function Restaurant() {
                     padding: '16px',
                     borderRadius: '12px'
                 }
-                });
+            });
         } catch (error) {
             toast.error('Failed to add item to cart');
         }
@@ -480,34 +482,10 @@ export default function Restaurant() {
                     customizations: itemData.customizations,
                     itemQuantities: itemData.itemQuantities
                 }];
-                });
-                toast.success(`🛒 ${itemData.name} added to cart`, {
-                    duration: 2000,
-                    style: {
-                        background: '#10b981',
-                        color: '#fff',
-                        fontWeight: '600',
-                        padding: '16px',
-                        borderRadius: '12px'
-                    }
-                });
-        } catch (error) {
-            toast.error('Failed to add item to cart');
-        }
-    };
-
-    const addMealDealToCart = (deal) => {
-            setCart(prev => [...prev, {
-                menu_item_id: `deal_${deal.id}`,
-                name: deal.name,
-                price: deal.deal_price,
-                quantity: 1,
-                image_url: deal.image_url,
-                is_deal: true,
-                fixed_items: deal.items || [],
-                selected_items: deal.category_rules?.length === 0 ? null : {}
-                }]);
-                toast.success(`🛒 ${deal.name} added to cart`, {
+            });
+            
+            // Toast notification outside state setter to prevent double-invoke in StrictMode
+            toast.success(`🛒 ${itemData.name} added to cart`, {
                 duration: 2000,
                 style: {
                     background: '#10b981',
@@ -516,8 +494,36 @@ export default function Restaurant() {
                     padding: '16px',
                     borderRadius: '12px'
                 }
-                });
-        };
+            });
+        } catch (error) {
+            toast.error('Failed to add item to cart');
+        }
+    };
+
+    const addMealDealToCart = (deal) => {
+        setCart(prev => [...prev, {
+            menu_item_id: `deal_${deal.id}`,
+            name: deal.name,
+            price: deal.deal_price,
+            quantity: 1,
+            image_url: deal.image_url,
+            is_deal: true,
+            fixed_items: deal.items || [],
+            selected_items: deal.category_rules?.length === 0 ? null : {}
+        }]);
+        
+        // Toast notification outside state setter to prevent double-invoke in StrictMode
+        toast.success(`🛒 ${deal.name} added to cart`, {
+            duration: 2000,
+            style: {
+                background: '#10b981',
+                color: '#fff',
+                fontWeight: '600',
+                padding: '16px',
+                borderRadius: '12px'
+            }
+        });
+    };
 
     const handleCustomizeDeal = (deal) => {
             setSelectedDeal(deal);
@@ -540,8 +546,10 @@ export default function Restaurant() {
             is_deal: true,
             is_category_deal: true,
             selected_items: dealData.selected_items
-            }]);
-            toast.success(`🛒 ${dealData.deal_name} added to cart`, {
+        }]);
+        
+        // Toast notification outside state setter to prevent double-invoke in StrictMode
+        toast.success(`🛒 ${dealData.deal_name} added to cart`, {
             duration: 2000,
             style: {
                 background: '#10b981',
@@ -550,7 +558,7 @@ export default function Restaurant() {
                 padding: '16px',
                 borderRadius: '12px'
             }
-            });
+        });
     };
 
     const updateQuantity = (menuItemId, newQuantity, customizationKey) => {
