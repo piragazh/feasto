@@ -43,8 +43,8 @@ export default function KioskSettings({ restaurantId }) {
                 auto_print_receipt: false,
                 show_allergens: false,
                 idle_timeout_seconds: 120,
-                allow_cash_payment: true,
-                allow_card_payment: true,
+                payment_card_enabled: true,
+                payment_counter_enabled: true,
             });
         }
     }, [restaurant]);
@@ -144,25 +144,51 @@ export default function KioskSettings({ restaurantId }) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                            <p className="font-medium">Allow Card Payment</p>
-                            <p className="text-sm text-gray-500">Show card payment option on kiosk</p>
+                    {/* Payment Methods */}
+                    <div className="space-y-3">
+                        <p className="text-sm font-semibold text-gray-700">Payment Methods</p>
+
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                                <p className="font-medium">Enable Card Payment</p>
+                                <p className="text-sm text-gray-500">Show "Pay by Card" on kiosk — requires a configured card terminal</p>
+                            </div>
+                            <Switch
+                                checked={kioskConfig.payment_card_enabled === true}
+                                onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, payment_card_enabled: v })}
+                            />
                         </div>
-                        <Switch
-                            checked={kioskConfig.allow_card_payment !== false}
-                            onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, allow_card_payment: v })}
-                        />
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                            <p className="font-medium">Allow Cash Payment</p>
-                            <p className="text-sm text-gray-500">Show "pay at counter" cash option on kiosk</p>
+
+                        {/* Warning: card enabled but no terminal configured */}
+                        {kioskConfig.payment_card_enabled && !restaurant?.kiosk_config?.card_terminal?.reader_id && (
+                            <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                                <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-yellow-800">
+                                    <strong>Card payment is enabled but no terminal is configured.</strong> Card payment will be hidden from customers until a card terminal is set up below.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                                <p className="font-medium">Enable Pay at Counter</p>
+                                <p className="text-sm text-gray-500">Show "Pay at Counter" option — customer pays staff directly</p>
+                            </div>
+                            <Switch
+                                checked={kioskConfig.payment_counter_enabled !== false}
+                                onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, payment_counter_enabled: v })}
+                            />
                         </div>
-                        <Switch
-                            checked={kioskConfig.allow_cash_payment !== false}
-                            onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, allow_cash_payment: v })}
-                        />
+
+                        {/* Warning: both disabled */}
+                        {!kioskConfig.payment_card_enabled && !kioskConfig.payment_counter_enabled && (
+                            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-300 rounded-lg">
+                                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-red-800">
+                                    <strong>No payment methods are enabled.</strong> Customers will be blocked at checkout. Enable at least one method.
+                                </p>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
@@ -360,13 +386,13 @@ export default function KioskSettings({ restaurantId }) {
                         </div>
                     )}
 
-                    {/* Status display */}
-                    {restaurant?.kiosk_config?.card_terminal?.reader_label && (
+                    {/* Terminal status */}
+                    {restaurant?.kiosk_config?.card_terminal?.reader_id ? (
                         <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                            <Wifi className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                             <div>
                                 <p className="font-medium text-green-800">
-                                    Configured: {restaurant.kiosk_config.card_terminal.reader_label}
+                                    Terminal configured: {restaurant.kiosk_config.card_terminal.reader_label || restaurant.kiosk_config.card_terminal.reader_id}
                                 </p>
                                 <p className="text-xs text-green-600">
                                     {restaurant.kiosk_config.card_terminal.provider} ·{' '}
@@ -377,6 +403,14 @@ export default function KioskSettings({ restaurantId }) {
                                         <Badge variant="outline" className="text-green-600 border-green-400 text-[10px] py-0">Live</Badge>
                                     )}
                                 </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-gray-600">No terminal configured</p>
+                                <p className="text-xs text-gray-500">Fill in the Reader ID above and save to enable card payments on the kiosk.</p>
                             </div>
                         </div>
                     )}

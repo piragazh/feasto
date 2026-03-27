@@ -66,7 +66,13 @@ export default function KioskPayment({
     cart, cartTotal, orderType, restaurant, restaurantId,
     selectedTable, onBack, onOrderPlaced
 }) {
-    const [paymentMethod, setPaymentMethod] = useState('card');
+    // Default to card if available, otherwise counter
+    const kioskConfigForDefault = restaurant?.kiosk_config || {};
+    const terminalConfigForDefault = kioskConfigForDefault.card_terminal || null;
+    const defaultMethod = (kioskConfigForDefault.payment_card_enabled === true && !!terminalConfigForDefault?.reader_id)
+        ? 'card'
+        : 'cash';
+    const [paymentMethod, setPaymentMethod] = useState(defaultMethod);
     const [paymentState, setPaymentState] = useState('idle');
     const [terminalResult, setTerminalResult] = useState(null); // { transaction_id, provider, timestamp, ... }
     const [errorMessage, setErrorMessage] = useState('');
@@ -80,10 +86,15 @@ export default function KioskPayment({
 
     const kioskConfig = restaurant?.kiosk_config || {};
     const terminalConfig = kioskConfig.card_terminal || null;
-    const allowCash = kioskConfig.allow_cash_payment !== false;
-    // Card disabled if: config disables it, OR no terminal configured, OR terminal explicitly marked unavailable
-    const terminalUnavailable = kioskConfig.terminal_unavailable === true || !terminalConfig;
-    const allowCard = kioskConfig.allow_card_payment !== false && !terminalUnavailable;
+
+    // Card is available only when: config enables it AND a terminal reader_id is actually configured
+    const terminalConfigured = !!(terminalConfig?.reader_id);
+    const terminalUnavailable = kioskConfig.terminal_unavailable === true;
+    const allowCard = kioskConfig.payment_card_enabled === true && terminalConfigured && !terminalUnavailable;
+
+    // "Pay at Counter" — replaces old allow_cash_payment; also falls back if card was enabled but terminal missing
+    const counterFallback = kioskConfig.payment_card_enabled === true && !terminalConfigured;
+    const allowCounter = kioskConfig.payment_counter_enabled !== false || counterFallback;
 
     // On mount: detect if a prior payment was interrupted by a reload
     useEffect(() => {
@@ -105,7 +116,7 @@ export default function KioskPayment({
         return () => clearTimeout(timeoutRef.current);
     }, []);
 
-    // ── Cash flow: no terminal needed ─────────────────────────────────────────
+    // ── Pay at Counter flow: no terminal needed ───────────────────────────────
     const placeCashOrder = async () => {
         setPaymentState('processing');
         try {
@@ -128,7 +139,7 @@ export default function KioskPayment({
                 total: cartTotal,
                 payment_method: 'cash',
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                status: 'pending', // cash always pending until staff confirm
+                status: 'pending', // staff confirm payment at counter
                 notes: 'Kiosk order — pay at counter',
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
@@ -468,8 +479,18 @@ export default function KioskPayment({
 
     // ── Payment method selection (idle) ───────────────────────────────────────
     const paymentMethods = [
-        ...(allowCard ? [{ id: 'card', label: 'Pay by Card', icon: CreditCard, description: 'Tap, insert or swipe your card on the terminal' }] : []),
-        ...(allowCash ? [{ id: 'cash', label: 'Pay with Cash', icon: Banknote, description: 'Pay at the counter — staff will confirm your order' }] : []),
+        ...(allowCard ? [{
+            id: 'card',
+            label: 'Pay by Card',
+            icon: CreditCard,
+            description: `Tap, insert or swipe your card on the ${terminalConfig?.reader_label || 'terminal'}`,
+        }] : []),
+        ...(allowCounter ? [{
+            id: 'cash',
+            label: 'Pay at Counter',
+            icon: Banknote,
+            description: 'Bring your order number to the counter to pay',
+        }] : []),
     ];
 
     // No payment methods available at all — block ordering
@@ -532,11 +553,18 @@ export default function KioskPayment({
 
                 {/* Operational notices */}
                 <div className="w-full space-y-3 mb-4">
-                    {terminalUnavailable && (
+                    {kioskConfig.payment_card_enabled && !terminalConfigured && (
                         <StaffHelpBanner
                             icon={CreditCard}
                             color="yellow"
-                            message="Card payment is not available on this terminal right now."
+                            message="Card payment is not available — no terminal configured. You can pay at the counter."
+                        />
+                    )}
+                    {terminalUnavailable && terminalConfigured && (
+                        <StaffHelpBanner
+                            icon={CreditCard}
+                            color="yellow"
+                            message="Card payment is temporarily unavailable. Please pay at the counter."
                         />
                     )}
                     {printerWarning && (
@@ -585,7 +613,7 @@ export default function KioskPayment({
                     onClick={handleProceed}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 rounded-2xl text-xl transition-all active:scale-[0.98] shadow-lg shadow-orange-500/30"
                 >
-                    {paymentMethod === 'card' ? 'Pay £' + cartTotal.toFixed(2) + ' by Card' : 'Place Order — Pay at Counter'}
+                    {paymentMethod === 'card' ? `Pay £${cartTotal.toFixed(2)} by Card` : `Confirm Order — Pay at Counter`}
                 </button>
 
                 {paymentMethod === 'card' && (
