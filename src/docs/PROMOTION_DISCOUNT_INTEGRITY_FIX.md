@@ -1,164 +1,310 @@
 # Promotion Discount Integrity Fix
 
-## Problem
+## Security Problem
 
-**High-Risk Security Gap**: Promotion discounts were client-supplied and only capped, not verified server-side.
-
-An attacker could:
-- Claim a promotion exists when it doesn't
-- Claim arbitrary discount amounts (£999+ discounts on £50 orders)
-- Bypass usage limits (claimed promotions that had been exhausted)
-- Skip date validation (use expired/future promotions)
-
-**Root Cause**: `verifyAndCreateOrder` only applied `Math.min(clientDiscount, subtotal * 0.5)` — a sanity cap, not validation.
-
----
-
-## Solution
-
-**Move validation fully server-side**:
-
-### 1. New Backend Function: `validateAndApplyPromotion`
-
-**File**: `functions/validateAndApplyPromotion`
-
-**Security checks**:
-- ✅ Fetch promotion record by ID (must exist)
-- ✅ Verify `is_active = true`
-- ✅ Check date range: `start_date ≤ now ≤ end_date`
-- ✅ Verify restaurant scope (promotion belongs to order's restaurant)
-- ✅ Check global usage limit: `usage_count < usage_limit`
-- ✅ Validate minimum order threshold (if applicable)
-- ✅ **Compute discount server-side** (never trust client amount)
-- ✅ Cap discount at 50% of subtotal (global policy)
-
-**Input**: `{ promotion_id, restaurant_id, server_subtotal, delivery_fee }`
-
-**Output**: `{ valid: true, discount, promotion }` or `{ valid: false, error }`
-
----
-
-### 2. Updated `verifyAndCreateOrder`
-
-**Logic flow**:
-
+**Vulnerable flow:**
 ```
-if (coupon_codes present):
-  → Validate coupons (existing path, unchanged)
-else if (applied_promotion_id present):
-  → Call validateAndApplyPromotion (NEW)
-  → Use returned discount if valid
-  → Reject order if validation fails
-else:
-  → No discount
+❌ Client supplies:
+   {
+     promotion_id: "promo123",
+     promotion_discount: 9999  // User-controlled amount
+   }
+
+❌ Server logic:
+   // Only cap it, don't verify promotion exists!
+   promotion_discount = Math.min(clientDiscount, MAX_CAP);
+   
+❌ Result:
+   - User claims fake promotions with arbitrary discounts
+   - No validation that promotion is active
+   - No verification against database record
+   - Attacker can apply discount to any order without proof
 ```
 
-**Key change**: Line 490-492 replaced with server-side validation block.
+**Impact:**
+- Revenue loss from injected discounts
+- No audit trail (discount not tied to a real promotion ID)
+- Scaling attack: single script claims huge discounts across all orders
 
 ---
 
-## Files Changed
+## Secure Solution
 
-| File | Change | Purpose |
-|------|--------|---------|
-| `functions/validateAndApplyPromotion` | **NEW** | Server-side promotion validation & discount computation |
-| `functions/verifyAndCreateOrder` | **UPDATED** | Call validateAndApplyPromotion instead of trusting clientDiscount |
-| `scripts/smoke/suites/promotionDiscountIntegrity.smoke.js` | **NEW** | 6 comprehensive integrity tests |
-| `scripts/smoke/run-smoke.js` | **UPDATED** | Register new smoke test suite |
+**Safe flow:**
+```
+✅ Client supplies:
+   {
+     applied_promotion_id: "promo123"  // ID only, no amount
+     // promotion_discount field: IGNORED
+   }
+
+✅ Server validates:
+   - Promotion exists in database
+   - Promotion is active (is_active=true)
+   - Promotion dates are valid (now within start/end)
+   - Restaurant scope matches
+   - Minimum order met
+   - Usage limits not exceeded
+   - Promotion type is known
+
+✅ Server calculates:
+   - Discount amount based on promotion rules
+   - Apply max_discount cap if percentage type
+   - Apply universal 50% of subtotal cap
+   - Return server-calculated discount_amount
+
+✅ Server rejects:
+   - Any client-supplied promotion_discount field
+   - Non-existent promotion IDs
+   - Inactive or expired promotions
+   - Promotions for different restaurants
+   - Returns zero discount, no order created
+```
 
 ---
 
-## Tests Added
+## Architecture Changes
 
-**File**: `scripts/smoke/suites/promotionDiscountIntegrity.smoke.js`
+### 1. **New Function: validateAndApplyPromotion**
 
-**6 Smoke Tests**:
+**File:** `functions/validateAndApplyPromotion`
 
-1. ✅ **Valid active promotion accepted** — discount computed from promotion record
-2. ✅ **Fake promotion ID rejected** — non-existent promotions return 400
-3. ✅ **Client-supplied discount ignored** — server computes, not client value
-4. ✅ **Inactive promotion rejected** — `is_active=false` blocked
-5. ✅ **Below minimum rejected** — minimum order thresholds enforced
-6. ✅ **Promotion + coupon cap enforced** — 50% subtotal cap always applies
+**Input:**
+```javascript
+{
+  promotion_id: string,      // Promotion to validate
+  restaurant_id: string,     // Restaurant context
+  subtotal: number           // Order subtotal for min/cap checks
+}
+```
 
-**Run test**:
+**Output:**
+```javascript
+{
+  discount_amount: number,   // 0 if validation fails, >0 if success
+  validation_ok: boolean,    // true only if promotion valid + active
+  promotion_id: string,      // Echo the ID
+  promotion_name: string,    // Display name
+  reason: string             // "Promotion applied" or error reason
+}
+```
+
+**Validation steps:**
+1. ✅ Fetch promotion from DB
+2. ✅ Check `is_active === true`
+3. ✅ Check date range (start_date ≤ now ≤ end_date)
+4. ✅ Check restaurant scope (restaurant_id matches or empty)
+5. ✅ Check minimum order requirement
+6. ✅ Check global usage limit
+7. ✅ Calculate discount based on promotion_type
+8. ✅ Apply max_discount cap (if percentage type)
+9. ✅ Apply universal 50% subtotal cap
+10. ✅ Return validated discount_amount
+
+### 2. **Updated Function: verifyAndCreateOrder**
+
+**File:** `functions/verifyAndCreateOrder`
+
+**Changes (lines 489-523):**
+```javascript
+else if (orderData.applied_promotion_id) {
+    // ── PROMOTION DISCOUNT: Server-validate and compute ──────────────────────
+    // CRITICAL SECURITY: Never trust client-supplied promotion discount amounts.
+    try {
+        const promRes = await base44.functions.invoke('validateAndApplyPromotion', {
+            promotion_id: orderData.applied_promotion_id,
+            restaurant_id: orderData.restaurant_id,
+            server_subtotal: serverSubtotal,
+            delivery_fee: deliveryFee
+        });
+        
+        if (promRes?.data?.valid && typeof promRes.data.discount === 'number') {
+            verifiedDiscount = promRes.data.discount;
+        } else {
+            // Validation failed → reject order
+            const promError = promRes?.data?.error || 'Promotion validation failed';
+            return new Response(
+                JSON.stringify({ error: `Promotion: ${promError}`, success: false }),
+                { status: 400 }
+            );
+        }
+    } catch (promErr) {
+        console.error('[PROMOTION] Validation error:', promErr.message);
+        return new Response(
+            JSON.stringify({ error: 'Promotion validation failed. Please try again.', success: false }),
+            { status: 500 }
+        );
+    }
+}
+
+// Reject any client-supplied promotion_discount field
+if (cart.promotion_discount && typeof cart.promotion_discount === 'number' && cart.promotion_discount > 0.01) {
+    console.warn(`[SECURITY] Client tried to inject promotion_discount=${cart.promotion_discount}`);
+    // Ignored — server uses calculated value only
+}
+```
+
+**Logic:**
+- ✅ Takes `applied_promotion_id` from frontend (ID only)
+- ✅ Calls `validateAndApplyPromotion` with server-calculated subtotal
+- ✅ Rejects any `promotion_discount` field in request
+- ✅ Uses server-calculated discount or fails order creation
+
+---
+
+## Promotion Types Supported
+
+| Type | Calculation | Example |
+|---|---|---|
+| **percentage_off** | (subtotal × discount_value) / 100, capped at max_discount | 20% off = £20 on £100 |
+| **fixed_amount_off** | discount_value (flat amount) | £5 off any order |
+| **free_delivery** | delivery_fee (waived) | 0 if applied |
+| **tiered_discount** | Select tier by min_order_value, apply its discount | 10% off £50+, 15% off £100+ |
+| **buy_one_get_one** | Handled by order creation UI; server just validates | Special pricing logic |
+| **combo_deal** | Handled by order creation; server validates | Item bundles |
+
+---
+
+## Universal Safety Caps
+
+```javascript
+const MAX_PROMOTIONAL_DISCOUNT_PERCENTAGE = 50;
+
+// Applied to:
+// 1. Individual promotion discount (before accumulating)
+// 2. Combined promotion + coupon stack
+// 3. Final order total never negative
+```
+
+**Formula:**
+```
+maxAllowedDiscount = subtotal × 50%
+if (calculatedDiscount > maxAllowedDiscount) {
+    discountAmount = maxAllowedDiscount;
+}
+```
+
+Example:
+- Subtotal: £100
+- Promotion: 40% (£40)
+- Max cap: 50% (£50)
+- **Applied:** £40 ✅
+- ---
+- Promotion: 100% (£100)
+- Max cap: 50% (£50)
+- **Applied:** £50 (capped) ✅
+
+---
+
+## Test Coverage
+
+**File:** `scripts/smoke/suites/promotionDiscountIntegrity.smoke.js`
+
+**7 tests:**
+
+1. ✅ **valid_promotion_accepted** — Active promotion passes validation, discount calculated
+2. ✅ **fake_promotion_rejected** — Non-existent ID returns validation_ok=false
+3. ✅ **inactive_promotion_rejected** — is_active=false rejected
+4. ✅ **expired_promotion_rejected** — Past end_date rejected
+5. ✅ **client_discount_rejected** — Client-supplied discount_amount ignored
+6. ✅ **promotion_coupon_cap** — Promo + coupon respects 50% total cap
+7. ✅ **promotion_50_percent_cap** — 100% promotion capped at 50% of subtotal
+
+**Run:**
 ```bash
 node scripts/smoke/run-smoke.js --only promotionDiscountIntegrity
 ```
 
----
-
-## Security Invariants
-
-| Invariant | Enforcement |
-|-----------|------------|
-| **No fake promotions** | Promotion must exist in DB with matching ID |
-| **No inactive promotions** | `is_active=true` required |
-| **No expired promotions** | Date range checked server-side |
-| **No overused promotions** | `usage_count < usage_limit` enforced |
-| **No minimum bypass** | Minimum order validated before discount |
-| **No arbitrary discounts** | Server computes from promotion record, never trusts client |
-| **Max discount cap** | Capped at 50% of subtotal globally |
-| **Combined policy** | Promotions + coupons both respect 50% cap |
-
----
-
-## Workflow (Frontend to Backend)
-
-### Before (Unsafe)
+**Expected output:**
 ```
-Frontend:
-  1. Fetch promotions
-  2. Calculate discount locally (20% of subtotal)
-  3. Apply discount to cart total (client-supplied)
-  
-Backend:
-  1. Trust discount amount from orderData
-  2. Apply sanity cap: Math.min(discount, subtotal * 0.5)
-  3. Create order
-  
-RISK: Attacker claims £999 discount, gets Math.min(999, 25) = £25 (only capped, not validated)
-```
-
-### After (Secure)
-```
-Frontend:
-  1. Fetch active promotions
-  2. Show to user
-  3. Send promotion_id in orderData (NOT discount amount)
-  
-Backend verifyAndCreateOrder:
-  1. If promotion_id present:
-     → Call validateAndApplyPromotion(id, restaurant, subtotal)
-     → Returns { valid, discount } (server-computed)
-     → If valid → use returned discount
-     → If invalid → reject order
-  2. If no promotion_id → no discount
-  
-SECURE: Attacker sends fake promo ID → validation fails → order rejected
+✅ valid_promotion_accepted
+✅ fake_promotion_rejected
+✅ inactive_promotion_rejected
+✅ expired_promotion_rejected
+✅ client_discount_rejected
+✅ promotion_coupon_cap
+✅ promotion_50_percent_cap
 ```
 
 ---
 
 ## Backward Compatibility
 
-**Frontend changes needed**:
-- Stop sending `discount` amount from promotions
-- Send `applied_promotion_id` instead (just the ID)
-- Let backend compute the actual discount
+**Migration path:**
+1. Deploy `validateAndApplyPromotion` function
+2. Update `verifyAndCreateOrder` to call it and reject client discounts
+3. Frontend: Change from `promotion_discount` field to `applied_promotion_id`
+4. Old orders: No change (historical data unaffected)
+5. New orders: Use validated server-side discount only
 
-**Legacy orders**: Existing orders without promotion_id work fine (no discount applied).
+**No breaking changes:**
+- Coupon logic unchanged (separate validation path)
+- Order total calculation unchanged (still cap at 50%)
+- Existing active promotions still work (just validated server-side now)
 
 ---
 
-## Key Attack Vectors Blocked
+## Audit & Logging
 
-| Attack | Prevention |
-|--------|-----------|
-| Fake promo ID | Must exist in DB |
-| Expired promo | Date validation server-side |
-| Exhausted promo | `usage_count < usage_limit` check |
-| Arbitrary amount | Server computes from promo record |
-| Wrong restaurant | `restaurant_id` scope check |
-| Inactive promo | `is_active=true` required |
-| Over 50% discount | Cap enforced on all discounts |
+**validateAndApplyPromotion logs:**
+```
+[PROMOTION] Validated: id={id} discount=£{amount}
+[PROMOTION] Validation failed: id={id} error={reason}
+```
+
+**verifyAndCreateOrder logs:**
+```
+[SECURITY] Client tried to inject promotion_discount={amount}  // Logged but ignored
+[PROMOTION] Validated and applied: id={id} discount=£{amount}
+[ORDER] Created: ... discounts=£{totalDis} (promotion + coupons combined)
+```
+
+---
+
+## Attack Surface Mitigation
+
+| Attack | Old Flow | New Flow |
+|---|---|---|
+| **Inject arbitrary discount** | ✅ Allowed (capped only) | ❌ Rejected (not in promotion DB) |
+| **Claim expired promotion** | ✅ Allowed (not checked) | ❌ Rejected (date validation) |
+| **Inactive promotion abuse** | ✅ Allowed (not checked) | ❌ Rejected (is_active check) |
+| **Cross-restaurant promotion** | ✅ Allowed (not scoped) | ❌ Rejected (restaurant_id match) |
+| **Bypass usage limits** | ✅ Allowed (not enforced) | ❌ Rejected (limit check) |
+| **Clone valid promotion ID** | ✅ Works if promotion real | ❌ Validation per ID in DB |
+
+---
+
+## Files Changed
+
+| File | Change | Lines |
+|---|---|---|
+| `functions/validateAndApplyPromotion` | NEW | Standalone validation function |
+| `functions/verifyAndCreateOrder` | UPDATED | Lines 489–523 (promotion handling) + client discount rejection |
+| `scripts/smoke/suites/promotionDiscountIntegrity.smoke.js` | NEW | 7 test cases |
+| `scripts/smoke/run-smoke.js` | UPDATED | Import + register test suite |
+| `docs/PROMOTION_DISCOUNT_INTEGRITY_FIX.md` | NEW | This document |
+
+---
+
+## Rollout Checklist
+
+- [ ] Deploy `validateAndApplyPromotion` function
+- [ ] Deploy updated `verifyAndCreateOrder` (rejects client discount)
+- [ ] Update frontend: remove `promotion_discount` field → send `applied_promotion_id`
+- [ ] Test: run smoke test suite `promotionDiscountIntegrity`
+- [ ] Monitor: check logs for validation failures
+- [ ] Communicate: notify merchants about promotion validation
+
+---
+
+## Summary
+
+**Fixed:** Promotion discounts are now fully validated server-side instead of blindly accepting client amounts.
+
+**Invariant:** Every promotional discount originates from an active, validated database record.
+
+**Impact:** Attackers can no longer inject fake discounts; revenue protection improved.
+
+**Tests:** 7 comprehensive tests covering valid/invalid/expired/overpriced promotions.
+
+**Backward compat:** Existing promotions work as before, just with validation added.

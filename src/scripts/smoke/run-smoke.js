@@ -25,10 +25,10 @@ import { run as runCreateOrder } from './suites/verifyAndCreateOrder.smoke.js';
 import { run as runKioskCreateOrder } from './suites/kioskCreateOrder.smoke.js';
 import { run as runOfflineSyncIdempotency } from './suites/offlineSyncIdempotency.smoke.js';
 import { run as runLiveOrdersAccessControl } from './suites/liveOrdersAccessControl.smoke.js';
-import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 import { run as runKioskCardAuthTrust } from './suites/kioskCardAuthTrust.smoke.js';
 import { run as runAssignOrderDriver } from './suites/assignOrderDriver.smoke.js';
 import { run as runLiveOrdersKioskVisibility } from './suites/liveOrdersKioskVisibility.smoke.js';
+import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -44,6 +44,7 @@ const SUITES = {
     kioskCardAuthTrust: runKioskCardAuthTrust,
     assignOrderDriver: runAssignOrderDriver,
     liveOrdersKioskVisibility: runLiveOrdersKioskVisibility,
+    promotionDiscountIntegrity: runPromotionDiscountIntegrity,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
