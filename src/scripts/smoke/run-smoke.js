@@ -22,6 +22,7 @@ import { run as runValidateCoupon } from './suites/validateCouponUsage.smoke.js'
 import { run as runPermissions } from './suites/enforceRestaurantPermissions.smoke.js';
 import { run as runPaymentIntent } from './suites/createPaymentIntent.smoke.js';
 import { run as runCreateOrder } from './suites/verifyAndCreateOrder.smoke.js';
+import { run as runKioskCreateOrder } from './suites/kioskCreateOrder.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -30,6 +31,7 @@ const SUITES = {
     enforceRestaurantPermissions: runPermissions,
     createPaymentIntent: runPaymentIntent,
     verifyAndCreateOrder: runCreateOrder,
+    kioskCreateOrder: runKioskCreateOrder,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────

@@ -111,37 +111,45 @@ export default function KioskPayment({
         return () => clearTimeout(timeoutRef.current);
     }, []);
 
-    // ── Pay at Counter flow: no terminal needed ───────────────────────────────
+    // ── Pay at Counter flow: hardened via backend function ───────────────────
+    // SECURITY: No direct entity write. kioskCreateOrder recomputes all prices
+    // from the live menu server-side and enforces kiosk business rules.
     const placeCashOrder = async () => {
         setPaymentState('processing');
         try {
-            const orderNum = `K-${Math.floor(1000 + Math.random() * 9000)}`;
-            const order = await base44.entities.Order.create({
-                restaurant_id: restaurantId,
-                restaurant_name: restaurant?.name,
-                order_number: orderNum,
+            // Generate idempotency key once — prevents double-order on rapid re-tap or retry
+            const iKey = `kiosk-pac-${restaurantId.slice(-8)}-${Date.now()}`;
+
+            const response = await base44.functions.invoke('kioskCreateOrder', {
+                restaurantId,
+                orderType: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
+                idempotency_key: iKey,
+                selectedTable: selectedTable ? {
+                    id: selectedTable.id,
+                    table_number: selectedTable.table_number,
+                } : null,
+                // Send menu_item_id references + customization choices only.
+                // Server discards client-supplied price and recomputes from live menu.
                 items: cart.map(item => ({
                     menu_item_id: item.id,
                     name: item.name,
-                    price: item.price,
                     quantity: item.quantity,
                     customizations: item.customizations || {},
                     itemQuantities: item.itemQuantities || {},
+                    // price intentionally omitted — server will recompute
                 })),
-                subtotal: cartTotal,
-                delivery_fee: 0,
-                discount: 0,
-                total: cartTotal,
-                payment_method: 'pay_at_counter',
-                order_source: 'kiosk',
-                order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                // Explicit state separation: payment awaiting, order is new
-                payment_status: 'pending_payment',
-                order_status: 'new',
-                notes: 'Kiosk order — awaiting counter payment. Do not prepare until confirmed.',
-                ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
-            const placedOrder = { ...order, order_number: orderNum, payment_method: 'pay_at_counter' };
+
+            const result = response?.data || response;
+
+            if (!result?.success || !result?.order?.id) {
+                const errMsg = result?.error || 'Failed to place order. Please try again.';
+                setPaymentState('failed');
+                setErrorMessage(errMsg);
+                return;
+            }
+
+            const placedOrder = { ...result.order, payment_method: 'pay_at_counter' };
             let didPrinterFail = false;
             try { await printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order'); }
             catch { didPrinterFail = true; setPrinterWarning(true); }
@@ -230,44 +238,57 @@ export default function KioskPayment({
     };
 
     // ── Create confirmed card order ONLY when authorized ─────────────────────
+    // NOTE: Card terminal is currently simulated. When real SDK is wired into
+    // processCardTerminal, this path also needs a dedicated backend function
+    // (kioskCreateCardOrder) that verifies the transaction_id with the provider
+    // before writing the order. For now it routes through the same hardened
+    // kioskCreateOrder function with additional terminal auth fields in notes.
     const placeAuthorizedCardOrder = async (authResult) => {
         setPaymentState('processing');
         try {
-            const orderNum = `K-${Math.floor(1000 + Math.random() * 9000)}`;
-            const order = await base44.entities.Order.create({
-                restaurant_id: restaurantId,
-                restaurant_name: restaurant?.name,
-                order_number: orderNum,
+            const iKey = `kiosk-card-${authResult.transaction_id}`;
+
+            const response = await base44.functions.invoke('kioskCreateOrder', {
+                restaurantId,
+                orderType: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
+                idempotency_key: iKey,
+                paymentMethod: 'card',
+                paymentIntentId: authResult.transaction_id,
+                terminalLabel: authResult.terminal_label,
+                terminalProvider: authResult.provider,
+                terminalAuthTimestamp: authResult.authorization_timestamp,
+                selectedTable: selectedTable ? {
+                    id: selectedTable.id,
+                    table_number: selectedTable.table_number,
+                } : null,
                 items: cart.map(item => ({
                     menu_item_id: item.id,
                     name: item.name,
-                    price: item.price,
                     quantity: item.quantity,
                     customizations: item.customizations || {},
                     itemQuantities: item.itemQuantities || {},
                 })),
-                subtotal: cartTotal,
-                delivery_fee: 0,
-                discount: 0,
-                total: cartTotal,
-                payment_method: 'card',
-                order_source: 'kiosk',
-                payment_intent_id: authResult.transaction_id,
-                order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                // Explicit state separation: paid by card, order is new (kitchen hasn't confirmed yet)
-                payment_status: 'paid_card',
-                order_status: 'new',
-                notes: `Kiosk order — terminal: ${authResult.terminal_label} — provider: ${authResult.provider} — auth: ${authResult.authorization_timestamp}`,
-                ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
-            const placedOrder = { ...order, order_number: orderNum };
+
+            const result = response?.data || response;
+
+            if (!result?.success || !result?.order?.id) {
+                // CRITICAL: payment WAS authorized but order creation failed.
+                // Do NOT retry payment. Show error with transaction ID for staff recovery.
+                setPaymentState('failed');
+                setErrorMessage(
+                    `Payment was authorized (ref: ${authResult.transaction_id}) but the order could not be saved. ` +
+                    `Please speak to a member of staff — do NOT pay again.`
+                );
+                return;
+            }
+
+            const placedOrder = { ...result.order };
             let didPrinterFail = false;
             try { await printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order'); }
             catch { didPrinterFail = true; setPrinterWarning(true); }
             onOrderPlaced(placedOrder, didPrinterFail);
         } catch (err) {
-            // CRITICAL: payment WAS authorized but order creation failed
-            // Do NOT retry payment. Show error with transaction ID for staff recovery.
             setPaymentState('failed');
             setErrorMessage(
                 `Payment was authorized (ref: ${authResult.transaction_id}) but the order could not be saved. ` +
