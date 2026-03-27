@@ -1098,17 +1098,17 @@ export default function Restaurant() {
                     <div className="mb-8">
                         <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
                     </div>
-
-                    {/* Popular Items */}
-                    <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
-
-                    {/* Meal Deals Section */}
-                    <MealDealsSection 
-                        deals={mealDeals}
-                        onAddToCart={addMealDealToCart}
-                        onCustomize={handleCustomizeDeal}
-                    />
                 </Suspense>
+
+                {/* Popular Items */}
+                <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+
+                {/* Meal Deals Section */}
+                <MealDealsSection 
+                    deals={mealDeals}
+                    onAddToCart={addMealDealToCart}
+                    onCustomize={handleCustomizeDeal}
+                />
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Full Menu</h2>
 
