@@ -50,6 +50,7 @@ export default function RestaurantSettings({ restaurantId }) {
         tiered_delivery: { enabled: false, lower_minimum: '', lower_minimum_fee: '' },
         collection_enabled: false,
         accepts_cash_on_delivery: true,
+        show_review_count: true,
         logo_url: '',
         food_hygiene_rating: '',
         food_hygiene_certificate_url: '',
@@ -128,6 +129,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 },
                 collection_enabled: restaurant.collection_enabled || false,
                 accepts_cash_on_delivery: restaurant.accepts_cash_on_delivery !== false,
+                show_review_count: restaurant.show_review_count !== false,
                 logo_url: restaurant.logo_url || '',
                 food_hygiene_rating: restaurant.food_hygiene_rating || '',
                 food_hygiene_certificate_url: restaurant.food_hygiene_certificate_url || '',
@@ -249,6 +251,7 @@ export default function RestaurantSettings({ restaurantId }) {
             },
             collection_enabled: formData.collection_enabled,
             accepts_cash_on_delivery: formData.accepts_cash_on_delivery,
+            show_review_count: formData.show_review_count,
             logo_url: formData.logo_url,
             food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
             food_hygiene_certificate_url: formData.food_hygiene_certificate_url,
@@ -689,6 +692,18 @@ export default function RestaurantSettings({ restaurantId }) {
                                     <Label className="text-sm font-semibold">Accept Cash on Delivery</Label>
                                     <p className="text-xs text-gray-600 mt-1">
                                         Allow customers to pay with cash when order is delivered
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <Switch
+                                    checked={formData.show_review_count !== false}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, show_review_count: checked })}
+                                />
+                                <div>
+                                    <Label className="text-sm font-semibold">Display Review Count</Label>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        Show number of reviews in the rating badge on restaurant page
                                     </p>
                                 </div>
                             </div>
