@@ -34,14 +34,7 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        
-        let user = null;
-        try {
-            user = await base44.auth.me();
-        } catch (authErr) {
-            // Guest checkout - no auth token. Allow through; full throttling in verifyAndCreateOrder.
-            return new Response(JSON.stringify({ allowed: true }), { status: 200 });
-        }
+        const user = await base44.auth.me();
 
         if (!user) {
             // Guest pre-submit check: no user context available yet, allow through.

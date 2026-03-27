@@ -48,13 +48,7 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        
-        let user = null;
-        try {
-            user = await base44.auth.me();
-        } catch (authErr) {
-            // Guest checkout — continue without user context
-        }
+        const user = await base44.auth.me();
 
         const { orderData } = await req.json();
 

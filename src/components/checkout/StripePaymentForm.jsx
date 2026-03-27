@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 import ExpressCheckout from './ExpressCheckout';
 
-export default function StripePaymentForm({ onSuccess, amount, clientSecret, isFormValid = true }) {
+export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -21,8 +21,8 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
         setErrorMessage('');
 
         if (!stripe || !elements) {
-            console.error('❌ Stripe SDK error:', { stripe: !!stripe, elements: !!elements });
-            setErrorMessage('Payment system not ready. Please refresh the page and try again.');
+            console.log('🔴 Stripe not ready');
+            setErrorMessage('Payment system not ready. Please wait a moment.');
             return false;
         }
 
@@ -65,10 +65,6 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                     } else if (result.error.code === 'incorrect_number') {
                         msg = 'Invalid card number. Please check and try again.';
                     }
-                } else if (result.error.type === 'authentication_error') {
-                    msg = 'Payment verification failed (3D Secure). Please try a different card.';
-                } else if (result.error.type === 'api_error') {
-                    msg = 'Payment processing error. Please contact support or try again later.';
                 }
                 
                 setErrorMessage(msg);
@@ -76,19 +72,9 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                 return false;
             }
             
-            // Handle 'requires_action' (3D Secure) - NOT success
-            if (result.paymentIntent?.status === 'requires_action') {
-                console.log('⚠️ Payment requires action (3D Secure):', result.paymentIntent.id);
-                setErrorMessage('Payment verification required. Please complete additional verification step.');
-                setIsProcessing(false);
-                return false;
-            }
-            
-            // Only 'succeeded' and 'processing' are valid success states
-            if (result.paymentIntent && result.paymentIntent.id && ['succeeded', 'processing'].includes(result.paymentIntent.status)) {
-                console.log(`✅ Payment ${result.paymentIntent.status}: ${result.paymentIntent.id}`);
+            if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+                console.log('✅ Payment succeeded:', result.paymentIntent.id);
                 setErrorMessage('');
-                setIsProcessing(false);
                 onSuccess(result.paymentIntent.id);
                 return true;
             }
@@ -118,14 +104,13 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                 <ExpressCheckout
                     amount={amount}
                     clientSecret={clientSecret}
-                    isFormValid={isFormValid}
                     onSuccess={(paymentIntentId) => {
                         onSuccess(paymentIntentId);
                     }}
                     onError={(error) => {
                         setErrorMessage(String(error || 'Payment failed'));
                     }}
-                    disabled={isProcessing || !isFormValid}
+                    disabled={isProcessing}
                 />
             )}
             
@@ -155,17 +140,11 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                     }
                 }}
                 onChange={(e) => {
-                    console.log('PaymentElement onChange:', { complete: e.complete, value: !!e.value });
                     setIsFormComplete(e.complete);
                     if (e.complete) setErrorMessage('');
                 }}
                 onReady={() => {
                     console.log('✅ Payment Element ready');
-                }}
-                onLoadError={(e) => {
-                    console.error('❌ Payment Element load error:', e);
-                    const errorMsg = e?.message || (typeof e === 'string' ? e : 'Unknown error');
-                    setErrorMessage(`Payment form failed to load: ${String(errorMsg).slice(0, 100)}. Please refresh and try again.`);
                 }}
             />
             <Button

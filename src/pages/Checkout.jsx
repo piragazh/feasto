@@ -38,9 +38,7 @@ import { useSEO } from '@/lib/useSEO';
 // Initialize Stripe - fetch public key from backend
 let stripePromise = null;
 const initializeStripe = async () => {
-// CRITICAL: Never reuse stale Stripe instance across multiple payment sessions
-// This fixes "processing error" when clientSecret expires
-// if (stripePromise) return stripePromise;
+    if (stripePromise) return stripePromise;
     
     try {
         const response = await base44.functions.invoke('getStripePublicKey');
@@ -96,7 +94,6 @@ export default function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState(''); // Selected payment method (no default)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
-    const [stripeInstance, setStripeInstance] = useState(null); // Loaded Stripe instance
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Stable per-session key
     
@@ -130,10 +127,6 @@ export default function Checkout() {
     // INITIALIZATION - Runs when page loads
     // ============================================
     useEffect(() => {
-        // CRITICAL: Clear stale payment state on mount (fixes "processing error")
-        localStorage.removeItem('stalePaymentIntentId');
-        localStorage.removeItem('staleClientSecret');
-        
         // Check if user is logged in or guest
         checkAuthStatus();
         
@@ -496,7 +489,6 @@ export default function Checkout() {
                     setInitializingPayment(false);
                     return;
                 }
-                setStripeInstance(stripe);
 
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
@@ -654,13 +646,14 @@ export default function Checkout() {
         // CRITICAL SECURITY: Check rate limiting
         try {
             const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {});
-            if (rateLimitResponse?.data?.allowed === false) {
+            if (!rateLimitResponse?.data?.allowed) {
                 toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
                 return;
             }
         } catch (error) {
-            // Rate limit check failed — allow through, verifyAndCreateOrder will enforce server-side
-            console.warn('Rate limit pre-check failed, continuing:', error?.message);
+            console.error('Rate limit check failed:', error);
+            toast.error('Unable to process order. Please try again.');
+            return;
         }
         
         // ---- VALIDATION: Check Required Fields ----
@@ -881,8 +874,8 @@ export default function Checkout() {
                 delivery_fee: deliveryFee,
                 small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
-                coupon_codes: appliedCoupons.map(c => c.code),
-                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name),
+                coupon_codes: appliedCoupons.map(c => c.code).join(', '),
+                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name).join(', '),
                 total,
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
@@ -1028,7 +1021,7 @@ export default function Checkout() {
                 ).catch(() => {})
             );
 
-            await Promise.allSettled(backgroundTasks);
+            Promise.allSettled(backgroundTasks);
 
             setTimeout(() => {
                 navigate(createPageUrl('Orders'));
@@ -1043,22 +1036,16 @@ export default function Checkout() {
                 };
 
     const handleStripeSuccess = async (paymentIntentId) => {
-        // Guard against double-click race condition
-        if (isSubmitting) {
-            console.warn('Payment already processing, ignoring duplicate call');
-            return;
-        }
-        
         // Validate payment intent before proceeding
         if (!paymentIntentId || typeof paymentIntentId !== 'string') {
             toast.error('Invalid payment confirmation. Please try again.');
+            setIsSubmitting(false);
             setPaymentCompleted(false);
             return;
         }
         
-        // Mark payment as completed and prevent re-entry
+        // Mark payment as completed
         setPaymentCompleted(true);
-        setIsSubmitting(true);
         toast.success('Payment successful!');
         await createOrder(paymentIntentId);
     };
@@ -1623,28 +1610,21 @@ export default function Checkout() {
                                         <CardTitle>💳 Payment Details</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {stripeInstance ? (
+                                        {stripePromise ? (
                                             <Elements 
-                                               stripe={stripeInstance} 
+                                               stripe={stripePromise} 
                                                options={{ 
-                                                    clientSecret,
-                                                    appearance: {
-                                                        theme: 'stripe'
-                                                    },
-                                                    loader: 'auto'
-                                                }}
+                                                   clientSecret,
+                                                   appearance: {
+                                                       theme: 'stripe'
+                                                   },
+                                                   loader: 'auto'
+                                               }}
                                             >
                                                 <StripePaymentForm
                                                     amount={total}
                                                     clientSecret={clientSecret}
                                                     onSuccess={handleStripeSuccess}
-                                                    isFormValid={(() => {
-                                                        if (orderType === 'delivery') {
-                                                            return !!(formData.delivery_address && formData.phone && deliveryCoordinates?.lat && deliveryCoordinates?.lng && zoneCheckComplete && deliveryZoneInfo?.available !== false && (!isExistingAddress ? formData.door_number : true));
-                                                        } else {
-                                                            return !!formData.phone;
-                                                        }
-                                                    })()}
                                                 />
                                             </Elements>
                                         ) : (

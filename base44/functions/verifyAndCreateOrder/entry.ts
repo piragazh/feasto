@@ -125,46 +125,33 @@ Deno.serve(async (req) => {
     }
 
     try {
-        // Clone request so we can read body AND keep headers for SDK auth
-        const bodyText = await req.text();
-        let body;
-        try {
-            body = JSON.parse(bodyText);
-        } catch (parseErr) {
-            console.error('[ORDER] Failed to parse request body:', parseErr.message);
-            return new Response(JSON.stringify({ error: 'Invalid request body', success: false }), { status: 400 });
-        }
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        const { orderData, paymentIntentId, idempotency_key } = await req.json();
 
-        // Reconstruct a request with the same headers so SDK can read auth token
-        const clonedReq = new Request(req.url, {
-            method: req.method,
-            headers: req.headers,
-            body: bodyText,
-        });
-        const base44 = createClientFromRequest(clonedReq);
-        
-        let user = null;
-        try {
-            user = await base44.auth.me();
-        } catch (authErr) {
-            // Guest checkout - no auth token, continue as guest
-            console.log('[ORDER] Guest checkout detected');
-        }
-        
-        const { orderData, paymentIntentId, idempotency_key } = body;
+        // ── Order velocity throttle ───────────────────────────────────────────
+        const velocityResult = await base44.functions.invoke('orderVelocityThrottle', { orderData });
+        if (velocityResult?.data && !velocityResult.data.allowed) {
+            // Log failure for observability
+            await base44.asServiceRole.entities.FailureLog.create({
+                failure_type: 'payment_velocity_throttle',
+                severity: 'info',
+                restaurant_id: orderData.restaurant_id,
+                user_email: user?.email || 'guest',
+                guest_email: orderData.guest_email,
+                phone: orderData.phone,
+                error_message: velocityResult.data.error || 'Too many orders in short time',
+                context: {
+                    order_total: orderData.total,
+                    items_count: (orderData.items || []).length,
+                    http_status: 429,
+                }
+            }).catch(e => console.warn('[LOG] Failed to record velocity throttle:', e.message));
 
-        // ── Order velocity throttle ─────────────────────────────────────────
-        // Wrapped in try/catch — fail open to not block legitimate orders on internal error
-        try {
-            const velocityResult = await base44.asServiceRole.functions.invoke('orderVelocityThrottle', { orderData });
-            if (velocityResult?.data?.allowed === false) {
-                return new Response(
-                    JSON.stringify({ error: velocityResult.data.error || 'Too many orders. Please wait.', success: false, refunded: false }),
-                    { status: 429, headers: { 'Retry-After': String(velocityResult.data.retryAfter || 60) } }
-                );
-            }
-        } catch (velocityErr) {
-            console.warn('[ORDER] Velocity throttle check failed, continuing:', velocityErr.message);
+            return new Response(
+                JSON.stringify({ error: velocityResult.data.error || 'Too many orders. Please wait.', success: false, refunded: false }),
+                { status: 429, headers: { 'Retry-After': String(velocityResult.data.retryAfter || 60) } }
+            );
         }
 
         if (!orderData || !orderData.restaurant_id) {
@@ -876,7 +863,24 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         // Catch-all: should not reach here in normal flow
-        console.error('[ORDER] verifyAndCreateOrder unhandled error:', error.message);
+        console.error('[ORDER] verifyAndCreateOrder unhandled error:', error.message, error.stack);
+
+        // Log the unhandled exception for visibility
+        try {
+            const base44 = createClientFromRequest(req);
+            await base44.asServiceRole.entities.FailureLog.create({
+                failure_type: 'order_create',
+                severity: 'critical',
+                error_message: `Unhandled exception: ${error.message}`,
+                stack_trace: error.stack?.slice(0, 500) || null,
+                context: {
+                    http_status: 500
+                }
+            });
+        } catch (logErr) {
+            console.warn('[LOG] Failed to record unhandled exception:', logErr.message);
+        }
+
         return new Response(JSON.stringify({ error: 'Order creation failed. Please try again.', success: false }), { status: 500 });
     }
 });
