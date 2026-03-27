@@ -47,6 +47,7 @@ const ALLOWED_FIELDS = new Set([
     'tiered_delivery',
     'collection_enabled',
     'accepts_cash_on_delivery',
+    'show_review_count',
     'logo_url',
     'food_hygiene_rating',
     'food_hygiene_certificate_url',
