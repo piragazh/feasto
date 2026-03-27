@@ -1,17 +1,34 @@
+/**
+ * posCreateOrder — POS order creation with server-side price and coupon verification
+ *
+ * COUPON STACKING POLICY (POS):
+ *   - Up to 3 stackable coupon codes accepted per order (via coupon_codes array or comma-string)
+ *   - All coupons must have stackable=true when more than 1 is applied
+ *   - Duplicate codes rejected
+ *   - Each coupon independently re-validated server-side
+ *   - Discount application order: percentage first, then fixed (sorted by code asc)
+ *   - Total coupon discount capped at 50% of server-computed subtotal
+ *   - Mutual exclusion: coupon stack OR manual discount — not both
+ *   - usage_count incremented server-side per coupon after order creation
+ *   - Stored in Order.coupon_codes (array) + Order.coupon_code (first code, legacy compat)
+ *
+ * POS identity limitation:
+ *   Walk-in orders without phone/email: only global usage_limit applies per coupon.
+ *   This is a documented limitation of walk-in POS (SECURITY_AND_ABUSE_CONTROLS.md).
+ */
+
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-/** Mirrors order-logic.js: normalizePhone */
+const MAX_COUPONS_PER_ORDER = 3;
+const MAX_COUPON_DISCOUNT_RATIO = 0.50; // 50% of subtotal cap
+
 function _normalizePhone(phone) {
     if (!phone || typeof phone !== 'string') return null;
     let digits = phone.replace(/\D/g, '');
     if (!digits) return null;
-    if (digits.startsWith('07') && digits.length === 11) {
-        digits = '44' + digits.slice(1);
-    }
+    if (digits.startsWith('07') && digits.length === 11) digits = '44' + digits.slice(1);
     return digits.length >= 10 ? digits : null;
 }
-
-/** Mirrors order-logic.js: normalizeEmail */
 function _normalizeEmail(email) {
     if (!email || typeof email !== 'string') return null;
     return email.trim().toLowerCase() || null;
@@ -22,9 +39,7 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
 
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const orderData = await req.json();
 
@@ -32,7 +47,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // TENANT CHECK: verify caller owns / manages this restaurant
+        // TENANT CHECK
         if (user.role !== 'admin') {
             const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
                 user_email: user.email,
@@ -45,52 +60,41 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Verify restaurant exists
+        // Verify restaurant
         const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: orderData.restaurant_id });
         if (!restaurants || restaurants.length === 0) {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
-        // SECURITY: Verify item prices against menu (use pos_price if set, else standard price)
+        // SECURITY: Verify item prices (pos_price if set, else standard price)
         const menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: orderData.restaurant_id });
         const menuMap = new Map(menuItems.map(i => [i.id, i]));
 
         const verifiedItems = orderData.items.map(cartItem => {
             const menuItem = menuMap.get(cartItem.menu_item_id);
-            if (menuItem) {
-                // Use server-side authoritative POS price
-                return { ...cartItem, price: menuItem.pos_price ?? menuItem.price };
-            }
-            return cartItem; // custom/ad-hoc POS items without a menu_item_id
+            if (menuItem) return { ...cartItem, price: menuItem.pos_price ?? menuItem.price };
+            return cartItem; // ad-hoc POS items without menu_item_id
         });
 
         const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * (i.quantity || 1)), 0);
 
-        // SECURITY: Re-validate any client-supplied discount server-side.
-        // The POSDiscountPanel calls posApplyDiscount first, then passes the approved
-        // amount here. However posCreateOrder is a public endpoint — a caller hitting it
-        // directly could inject an arbitrary discount. We close this by reapplying the
-        // same threshold rules posApplyDiscount uses: managers are capped at 20% / £20,
-        // admins may pass any value. A missing reason_code resets discount to 0.
+        // ── Manual discount validation (unchanged) ───────────────────────────────
         const MANAGER_MAX_PCT = 20;
         const MANAGER_MAX_FIXED = 20;
-
         let approvedDiscount = 0;
         const clientDiscount = typeof orderData.discount === 'number' ? orderData.discount : 0;
         const discountReasonCode = orderData.discount_reason_code || null;
 
         if (clientDiscount > 0) {
             if (!discountReasonCode) {
-                // No reason code supplied — silently zero the discount and log
-                console.warn(`[POS] posCreateOrder: discount ${clientDiscount} rejected — no reason_code. restaurant=${orderData.restaurant_id} user=${user.email}`);
+                console.warn(`[POS] discount ${clientDiscount} rejected — no reason_code. restaurant=${orderData.restaurant_id} user=${user.email}`);
                 approvedDiscount = 0;
             } else if (user.role === 'admin') {
                 approvedDiscount = clientDiscount;
             } else {
-                // Manager threshold check
                 const pct = serverSubtotal > 0 ? (clientDiscount / serverSubtotal) * 100 : 0;
                 if (pct > MANAGER_MAX_PCT || clientDiscount > MANAGER_MAX_FIXED) {
-                    console.warn(`[POS] posCreateOrder: discount ${clientDiscount} exceeds manager threshold (${pct.toFixed(1)}%). Zeroed. restaurant=${orderData.restaurant_id} user=${user.email}`);
+                    console.warn(`[POS] discount ${clientDiscount} exceeds manager threshold (${pct.toFixed(1)}%). Zeroed. restaurant=${orderData.restaurant_id} user=${user.email}`);
                     approvedDiscount = 0;
                 } else {
                     approvedDiscount = clientDiscount;
@@ -98,122 +102,152 @@ Deno.serve(async (req) => {
             }
         }
 
-        // ── Mutual exclusion: coupon vs manual discount ──────────────────────────
-        // POLICY: A POS order may have a coupon OR a manual discount, not both.
-        // Reason: allowing both creates an undetectable double-discount path and
-        // complicates margin analysis. Staff must choose one mechanism.
-        // This is enforced here (server authority) and mirrored in the UI.
-        const rawCouponCodeCheck = typeof orderData.coupon_code === 'string' ? orderData.coupon_code.trim() : '';
-        if (approvedDiscount > 0 && rawCouponCodeCheck) {
-            console.warn(`[POS-POLICY] Combination rejected: manual_discount=${approvedDiscount} + coupon=${rawCouponCodeCheck} on same order. restaurant=${orderData.restaurant_id} user=${user.email}`);
+        // ── Parse coupon input ───────────────────────────────────────────────────
+        // Accept coupon_codes (array or comma-string) or legacy coupon_code (single)
+        let inputCodes = [];
+        if (Array.isArray(orderData.coupon_codes)) {
+            inputCodes = orderData.coupon_codes.map(c => String(c).trim().toUpperCase()).filter(Boolean);
+        } else if (orderData.coupon_codes) {
+            inputCodes = String(orderData.coupon_codes).split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+        } else if (orderData.coupon_code) {
+            const single = String(orderData.coupon_code).trim().toUpperCase();
+            if (single) inputCodes = [single];
+        }
+
+        // ── Mutual exclusion: coupon stack vs manual discount ────────────────────
+        if (approvedDiscount > 0 && inputCodes.length > 0) {
+            console.warn(`[POS-POLICY] Combination rejected: manual_discount=${approvedDiscount} + coupons=[${inputCodes.join(',')}]. restaurant=${orderData.restaurant_id} user=${user.email}`);
             return Response.json({
                 error: 'A coupon and a manual discount cannot be applied to the same order. Remove one before proceeding.',
                 policy: 'mutual_exclusion',
             }, { status: 400 });
         }
 
-        // ── Coupon validation (server-side) ─────────────────────────────────────
-        // Coupons are separate from manual discounts. A coupon_code may be provided
-        // from the POS coupon picker. If supplied, we re-validate it here.
+        // ── Coupon stack validation ──────────────────────────────────────────────
         let approvedCouponDiscount = 0;
-        let approvedCouponCode = null;
-        let approvedCouponId = null;
+        const approvedCouponCodes = [];
+        const approvedCouponIds = [];
+        const couponUsageCounts = [];
 
-        const rawCouponCode = typeof orderData.coupon_code === 'string' ? orderData.coupon_code.trim().toUpperCase() : null;
-
-        if (rawCouponCode) {
-            // One coupon only — if more than one comma-separated code, reject
-            if (rawCouponCode.includes(',')) {
-                return Response.json({ error: 'Only one coupon code per order is allowed' }, { status: 400 });
+        if (inputCodes.length > 0) {
+            // Max 3
+            if (inputCodes.length > MAX_COUPONS_PER_ORDER) {
+                return Response.json({ error: `A maximum of ${MAX_COUPONS_PER_ORDER} coupon codes can be applied per order` }, { status: 400 });
             }
 
-            // Fetch coupon for server-side re-validation
-            const coupons = await base44.asServiceRole.entities.Coupon.filter({ code: rawCouponCode });
-            const coupon = coupons?.[0];
-
-            if (!coupon || !coupon.is_active) {
-                return Response.json({ error: `Coupon "${rawCouponCode}" is not valid` }, { status: 400 });
+            // No duplicates
+            if (new Set(inputCodes).size !== inputCodes.length) {
+                return Response.json({ error: 'Duplicate coupon codes are not allowed' }, { status: 400 });
             }
 
-            // Restaurant scope
-            if (coupon.restaurant_id && coupon.restaurant_id !== orderData.restaurant_id) {
-                return Response.json({ error: `Coupon "${rawCouponCode}" is not valid for this restaurant` }, { status: 400 });
-            }
-
-            // Date range
             const now = new Date();
-            if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-                return Response.json({ error: `Coupon "${rawCouponCode}" is not yet valid` }, { status: 400 });
-            }
-            if (coupon.valid_until && new Date(coupon.valid_until) < now) {
-                return Response.json({ error: `Coupon "${rawCouponCode}" has expired` }, { status: 400 });
-            }
-            if (coupon.expires_at && new Date(coupon.expires_at) < now) {
-                return Response.json({ error: `Coupon "${rawCouponCode}" has expired` }, { status: 400 });
-            }
+            const normalizedPhone = _normalizePhone(orderData.phone || orderData.guest_phone);
+            const normalizedEmail = _normalizeEmail(orderData.guest_email);
 
-            // Minimum spend (against server-computed subtotal)
-            if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
-                return Response.json({
-                    error: `Minimum order of £${coupon.minimum_order.toFixed(2)} required for coupon "${rawCouponCode}"`,
-                }, { status: 400 });
-            }
+            const validatedCoupons = [];
 
-            // Global usage_limit
-            if (coupon.usage_limit && (coupon.usage_count || 0) >= coupon.usage_limit) {
-                return Response.json({ error: `Coupon "${rawCouponCode}" has reached its usage limit` }, { status: 400 });
-            }
+            for (const code of inputCodes) {
+                const coupons = await base44.asServiceRole.entities.Coupon.filter({ code });
+                const coupon = coupons?.[0];
 
-            // Per-customer limit (when customer identity available via phone order)
-            const perCustomerLimit = coupon.per_customer_limit ?? 1;
-            if (perCustomerLimit > 0) {
-                const normalizedPhone = _normalizePhone(orderData.phone || orderData.guest_phone);
-                const normalizedEmail = _normalizeEmail(orderData.guest_email);
+                if (!coupon || !coupon.is_active) {
+                    return Response.json({ error: `Coupon "${code}" is not valid` }, { status: 400 });
+                }
 
-                if (normalizedPhone || normalizedEmail) {
+                // Restaurant scope
+                if (coupon.restaurant_id && coupon.restaurant_id !== orderData.restaurant_id) {
+                    return Response.json({ error: `Coupon "${code}" is not valid for this restaurant` }, { status: 400 });
+                }
+
+                // Date range
+                if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+                    return Response.json({ error: `Coupon "${code}" is not yet valid` }, { status: 400 });
+                }
+                if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+                    return Response.json({ error: `Coupon "${code}" has expired` }, { status: 400 });
+                }
+                if (coupon.expires_at && new Date(coupon.expires_at) < now) {
+                    return Response.json({ error: `Coupon "${code}" has expired` }, { status: 400 });
+                }
+
+                // Minimum spend
+                if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
+                    return Response.json({ error: `Minimum order of £${coupon.minimum_order.toFixed(2)} required for coupon "${code}"` }, { status: 400 });
+                }
+
+                // Global usage_limit
+                if (coupon.usage_limit && (coupon.usage_count || 0) >= coupon.usage_limit) {
+                    return Response.json({ error: `Coupon "${code}" has reached its usage limit` }, { status: 400 });
+                }
+
+                // Per-customer limit (when identity available)
+                const perCustomerLimit = coupon.per_customer_limit ?? 1;
+                if (perCustomerLimit > 0 && (normalizedPhone || normalizedEmail)) {
                     let customerUsageCount = 0;
                     if (normalizedPhone) {
-                        const phoneOrders = await base44.asServiceRole.entities.Order.filter({
-                            coupon_code: rawCouponCode,
-                            phone: normalizedPhone,
-                        });
+                        const phoneOrders = await base44.asServiceRole.entities.Order.filter({ coupon_code: code, phone: normalizedPhone });
                         customerUsageCount = Math.max(customerUsageCount, phoneOrders?.length || 0);
                     }
                     if (normalizedEmail) {
-                        const emailOrders = await base44.asServiceRole.entities.Order.filter({
-                            coupon_code: rawCouponCode,
-                            guest_email: normalizedEmail,
-                        });
+                        const emailOrders = await base44.asServiceRole.entities.Order.filter({ coupon_code: code, guest_email: normalizedEmail });
                         customerUsageCount = Math.max(customerUsageCount, emailOrders?.length || 0);
                     }
                     if (customerUsageCount >= perCustomerLimit) {
-                        return Response.json({
-                            error: `Coupon "${rawCouponCode}" has already been used the maximum number of times for this customer`,
-                        }, { status: 400 });
+                        return Response.json({ error: `Coupon "${code}" has already been used the maximum number of times for this customer` }, { status: 400 });
                     }
                 }
-                // No identity → global limit only (walk-in POS limitation — documented)
+                // No identity → global limit only (walk-in limitation — documented)
+
+                // Compute raw discount
+                let rawDiscount = 0;
+                if (coupon.discount_type === 'percentage') {
+                    const pct = Math.min(coupon.discount_value || 0, 100);
+                    rawDiscount = (serverSubtotal * pct) / 100;
+                    if (coupon.max_discount) rawDiscount = Math.min(rawDiscount, coupon.max_discount);
+                } else if (coupon.discount_type === 'fixed') {
+                    rawDiscount = coupon.discount_value || 0;
+                }
+                // free_delivery / free_item / bogo: 0 monetary discount; caller handles non-monetary
+
+                validatedCoupons.push({ coupon, rawDiscount });
             }
 
-            // Compute coupon discount amount
-            if (coupon.discount_type === 'percentage') {
-                const pct = Math.min(coupon.discount_value || 0, 100);
-                approvedCouponDiscount = (serverSubtotal * pct) / 100;
-                if (coupon.max_discount) approvedCouponDiscount = Math.min(approvedCouponDiscount, coupon.max_discount);
-            } else if (coupon.discount_type === 'fixed') {
-                approvedCouponDiscount = coupon.discount_value || 0;
+            // Stacking check: if >1 coupon, all must be stackable=true
+            if (validatedCoupons.length > 1) {
+                const nonStackable = validatedCoupons.filter(vc => !vc.coupon.stackable);
+                if (nonStackable.length > 0) {
+                    const codes = nonStackable.map(vc => vc.coupon.code).join(', ');
+                    return Response.json({
+                        error: `The following coupon(s) cannot be combined: ${codes}. Only stackable coupons may be used together.`,
+                    }, { status: 400 });
+                }
             }
-            // free_delivery / free_item / bogo: 0 monetary discount from coupon; caller handles non-monetary aspects
-            approvedCouponDiscount = parseFloat(Math.min(approvedCouponDiscount, serverSubtotal).toFixed(2));
-            approvedCouponCode = rawCouponCode;
-            approvedCouponId = coupon.id;
+
+            // Deterministic application order: percentage first, then fixed; sorted by code asc
+            const percentageCoupons = validatedCoupons.filter(vc => vc.coupon.discount_type === 'percentage').sort((a, b) => a.coupon.code.localeCompare(b.coupon.code));
+            const otherCoupons = validatedCoupons.filter(vc => vc.coupon.discount_type !== 'percentage').sort((a, b) => a.coupon.code.localeCompare(b.coupon.code));
+            const orderedCoupons = [...percentageCoupons, ...otherCoupons];
+
+            const maxCouponDiscount = serverSubtotal * MAX_COUPON_DISCOUNT_RATIO;
+            let accumulated = 0;
+
+            for (const vc of orderedCoupons) {
+                const remaining = maxCouponDiscount - accumulated;
+                const contribution = Math.min(vc.rawDiscount, remaining);
+                accumulated += contribution;
+                approvedCouponCodes.push(vc.coupon.code);
+                approvedCouponIds.push(vc.coupon.id);
+                couponUsageCounts.push(vc.coupon.usage_count || 0);
+                console.log(`[POS-COUPON] Applied code="${vc.coupon.code}" type=${vc.coupon.discount_type} contribution=£${contribution.toFixed(2)}`);
+            }
+            approvedCouponDiscount = parseFloat(accumulated.toFixed(2));
         }
 
-        // Total discount = manual discount XOR coupon discount (mutually exclusive — enforced above)
+        // Total discount = manual XOR coupon (mutually exclusive, enforced above)
         const totalDiscount = approvedDiscount + approvedCouponDiscount;
         const serverTotal = Math.max(0, serverSubtotal - totalDiscount);
 
-        // Strip any attempt to spoof created_by or inject financial fields directly
+        // Strip spoofable / computed fields
         const {
             created_by: _cb,
             discount: _d,
@@ -221,7 +255,8 @@ Deno.serve(async (req) => {
             subtotal: _s,
             platform_commission_amount: _pc,
             restaurant_earnings: _re,
-            coupon_code: _cc,  // strip client value — we write the server-validated one
+            coupon_code: _cc,
+            coupon_codes: _ccs,
             ...safeOrderData
         } = orderData;
 
@@ -231,31 +266,37 @@ Deno.serve(async (req) => {
             subtotal: serverSubtotal,
             discount: totalDiscount,
             discount_reason_code: approvedDiscount > 0 ? discountReasonCode : undefined,
-            coupon_code: approvedCouponCode || undefined,
+            // Array (new) + first code in legacy singular field
+            coupon_codes: approvedCouponCodes.length > 0 ? approvedCouponCodes : undefined,
+            coupon_code: approvedCouponCodes.length > 0 ? approvedCouponCodes[0] : undefined,
             total: serverTotal,
             status: 'confirmed',
             payment_method: orderData.payment_method || 'cash',
             order_type: orderData.order_type || 'collection'
         });
 
-        // Increment coupon usage_count server-side after order is persisted
-        if (approvedCouponId) {
+        // Increment usage_count per coupon server-side
+        for (let i = 0; i < approvedCouponIds.length; i++) {
+            const couponId = approvedCouponIds[i];
+            const snapshotCount = couponUsageCounts[i];
             try {
-                const freshCoupons = await base44.asServiceRole.entities.Coupon.filter({ id: approvedCouponId });
+                const freshCoupons = await base44.asServiceRole.entities.Coupon.filter({ id: couponId });
                 const freshCoupon = freshCoupons?.[0];
                 if (freshCoupon) {
-                    await base44.asServiceRole.entities.Coupon.update(approvedCouponId, {
+                    await base44.asServiceRole.entities.Coupon.update(couponId, {
                         usage_count: (freshCoupon.usage_count || 0) + 1,
                     });
                 }
             } catch (couponErr) {
-                // Non-fatal: order is already created. Log for manual reconciliation.
-                console.error(`[POS-COUPON] Failed to increment usage_count for coupon ${approvedCouponId} on order ${order.id}:`, couponErr.message);
+                console.error(`[POS-COUPON] Failed to increment usage_count for coupon ${couponId} on order ${order.id}:`, couponErr.message);
             }
         }
 
-        const discountSource = approvedCouponCode ? `coupon:${approvedCouponCode}` : (approvedDiscount > 0 ? `manual_discount:${discountReasonCode}` : 'none');
+        const discountSource = approvedCouponCodes.length > 0
+            ? `coupons:[${approvedCouponCodes.join(',')}]`
+            : approvedDiscount > 0 ? `manual_discount:${discountReasonCode}` : 'none';
         console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} discount_source=${discountSource} by=${user.email}`);
+
         return Response.json({ order });
     } catch (error) {
         console.error('[POS] posCreateOrder error:', error);

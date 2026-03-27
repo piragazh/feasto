@@ -99,7 +99,15 @@
       "description": "Reason code for manual discount (e.g., loyalty_gesture, damage_compensation)"
     },
     "coupon_code": {
-      "type": "string"
+      "type": "string",
+      "description": "LEGACY: Single coupon code for backward compatibility. New orders use coupon_codes array. Kept for historic order queries (per-customer limit checks filter on this field)."
+    },
+    "coupon_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "CURRENT: Array of up to 3 validated coupon codes applied to this order. Populated server-side only. Never trust client-supplied values."
     },
     "total": {
       "type": "number"
@@ -302,6 +310,18 @@
       "type": "string",
       "format": "date-time",
       "description": "When the order was created in offline mode (local timestamp)"
+    },
+    "offline_created_by": {
+      "type": "string",
+      "description": "POS operator email/staff_id who created this offline order"
+    },
+    "offline_created_by_name": {
+      "type": "string",
+      "description": "POS operator full name (snapshot at creation time for audit readability)"
+    },
+    "offline_created_by_role": {
+      "type": "string",
+      "description": "POS operator role (cashier/waiter/manager/kitchen_staff) at time of order creation"
     },
     "offline_synced_at": {
       "type": "string",

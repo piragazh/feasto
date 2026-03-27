@@ -12,7 +12,7 @@
  *   - Minimum spend enforced (minimum_order)
  *   - Global usage_limit enforced
  *   - Per-customer limit enforced when customer_phone is provided (walk-in POS)
- *   - One coupon per order — enforced by caller (posCreateOrder)
+ *   - Validates a SINGLE coupon code; caller (posCreateOrder) enforces max-3 and stacking rules
  *   - Mutually exclusive with manual discount — if has_manual_discount=true, returns valid=false
  *   - Caller must be authenticated staff for this restaurant
  *

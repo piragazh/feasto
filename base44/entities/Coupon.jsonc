@@ -1,0 +1,84 @@
+{
+  "name": "Coupon",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Leave empty for platform-wide coupons"
+    },
+    "code": {
+      "type": "string",
+      "description": "Coupon code (e.g., SAVE20)"
+    },
+    "description": {
+      "type": "string"
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed",
+        "free_delivery",
+        "free_item",
+        "buy_one_get_one"
+      ],
+      "description": "Type of discount"
+    },
+    "discount_value": {
+      "type": "number",
+      "description": "Percentage (e.g., 20) or fixed amount (e.g., 5.00). 0 for free_delivery/bogo."
+    },
+    "free_item_name": {
+      "type": "string",
+      "description": "Name of the free item (for free_item type)"
+    },
+    "minimum_order": {
+      "type": "number",
+      "description": "Minimum order amount to use coupon"
+    },
+    "max_discount": {
+      "type": "number",
+      "description": "Maximum discount amount for percentage coupons"
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Exact expiration timestamp for redeemed reward coupons"
+    },
+    "usage_limit": {
+      "type": "number",
+      "description": "Total number of times this coupon can be used globally"
+    },
+    "usage_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times used so far"
+    },
+    "per_customer_limit": {
+      "type": "number",
+      "default": 1,
+      "description": "CRITICAL: Maximum times each customer can use this coupon. Prevents single user from draining entire budget. Default: 1 use per customer."
+    },
+    "stackable": {
+      "type": "boolean",
+      "default": false,
+      "description": "STACKING POLICY: If true, this coupon may be combined with other stackable coupons (up to 3 total per order). If false (default), this coupon cannot be combined with any other coupon. ALL coupons on an order must be stackable=true to allow stacking. Non-stackable coupons must be used alone."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "code",
+    "discount_type"
+  ]
+}

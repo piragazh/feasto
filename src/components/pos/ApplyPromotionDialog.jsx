@@ -27,19 +27,24 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tag, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
+const MAX_COUPONS = 3;
+
 export default function ApplyPromotionDialog({
     open,
     onClose,
-    onApplyCoupon,  // (couponResult) => void  — called with server-validated coupon
+    onApplyCoupon,       // (couponResult) => void  — called with server-validated coupon
     restaurantId,
     cartSubtotal,
-    customerPhone = null,   // optional — from phone order details
-    customerEmail = null,   // optional
+    customerPhone = null,    // optional — from phone order details
+    customerEmail = null,    // optional
     hasManualDiscount = false, // mutual exclusion: true when a manual discount is active
+    appliedCouponCount = 0,  // how many coupons already on this order
 }) {
     const [manualCode, setManualCode] = useState('');
-    const [validating, setValidating] = useState(null); // coupon id being validated
+    const [validating, setValidating] = useState(null); // coupon code being validated
     const [error, setError] = useState(null);
+
+    const couponLimitReached = appliedCouponCount >= MAX_COUPONS;
 
     // Fetch pre-filtered eligible coupons from server
     const { data: coupons = [], isLoading } = useQuery({
@@ -101,8 +106,23 @@ export default function ApplyPromotionDialog({
                     <DialogTitle className="text-white flex items-center gap-2">
                         <Tag className="h-4 w-4 text-orange-400" />
                         Apply Coupon
+                        {appliedCouponCount > 0 && (
+                            <span className="ml-auto text-xs text-gray-400 font-normal">
+                                {appliedCouponCount}/{MAX_COUPONS} applied
+                            </span>
+                        )}
                     </DialogTitle>
                 </DialogHeader>
+
+                {/* Coupon limit warning */}
+                {couponLimitReached && !hasManualDiscount && (
+                    <div className="flex items-start gap-2 bg-gray-500/10 border border-gray-500/30 rounded-lg px-3 py-2">
+                        <AlertCircle className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                        <p className="text-gray-300 text-xs">
+                            Maximum {MAX_COUPONS} coupons already applied. Remove one before adding another.
+                        </p>
+                    </div>
+                )}
 
                 {/* Mutual exclusion warning */}
                 {hasManualDiscount && (
@@ -121,13 +141,14 @@ export default function ApplyPromotionDialog({
                         <Input
                             value={manualCode}
                             onChange={e => { setManualCode(e.target.value.toUpperCase()); setError(null); }}
-                            onKeyDown={e => e.key === 'Enter' && handleManualApply()}
+                            onKeyDown={e => e.key === 'Enter' && !couponLimitReached && handleManualApply()}
                             placeholder="e.g. SAVE10"
                             className="bg-gray-700 border-gray-600 text-white uppercase"
+                            disabled={couponLimitReached || hasManualDiscount}
                         />
                         <Button
                             onClick={handleManualApply}
-                            disabled={!manualCode.trim() || validating === manualCode.trim().toUpperCase()}
+                            disabled={!manualCode.trim() || validating === manualCode.trim().toUpperCase() || couponLimitReached || hasManualDiscount}
                             className="bg-orange-500 hover:bg-orange-600 shrink-0"
                         >
                             {validating === manualCode.trim().toUpperCase()
@@ -193,7 +214,7 @@ export default function ApplyPromotionDialog({
                                             <Button
                                                 size="sm"
                                                 onClick={() => validateAndApply(coupon.code)}
-                                                disabled={!meetsMinimum || isValidating}
+                                                disabled={!meetsMinimum || isValidating || couponLimitReached || hasManualDiscount}
                                                 className="bg-green-600 hover:bg-green-700 disabled:opacity-40 shrink-0"
                                             >
                                                 {isValidating

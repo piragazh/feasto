@@ -1,22 +1,35 @@
+/**
+ * DiscountCodeInput — Checkout coupon + promotion entry
+ *
+ * Coupon stacking policy (mirrored from server):
+ *   - Up to 3 coupon codes per order (MAX_COUPONS)
+ *   - Duplicate codes blocked in UI
+ *   - Non-stackable combinations show a clear message
+ *   - Server is the authority — client-side checks are UX convenience only
+ */
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tag, Loader2, Check, X } from 'lucide-react';
+import { Tag, Loader2, Check, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { isWithinInterval } from 'date-fns';
 import { useEffect } from 'react';
+
+const MAX_COUPONS = 3; // Must match server MAX_COUPONS_PER_ORDER
 
 export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = [], onCouponApply, onPromotionApply }) {
     const [code, setCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [appliedCoupons, setAppliedCoupons] = useState([]);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
+    const [stackingError, setStackingError] = useState(null);
+
+    const couponLimitReached = appliedCoupons.length >= MAX_COUPONS;
 
     // Recalculate BOGO promotions when cart changes
     useEffect(() => {
         if (appliedPromotions.length === 0) return;
-
         let hasChanges = false;
         const updatedPromotions = appliedPromotions.map(promo => {
             if (promo.promotion_type === 'buy_one_get_one' || promo.promotion_type === 'buy_two_get_one') {
@@ -28,29 +41,21 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             }
             return promo;
         });
-
         if (hasChanges) {
             setAppliedPromotions(updatedPromotions);
             onPromotionApply(updatedPromotions);
         }
     }, [JSON.stringify(cartItems.map(item => ({ id: item.menu_item_id, qty: item.quantity })))]);
 
-
     const validateCode = async () => {
-        if (!code.trim()) {
-            toast.error('Please enter a code');
-            return;
-        }
-
+        if (!code.trim()) { toast.error('Please enter a code'); return; }
         setIsValidating(true);
+        setStackingError(null);
         const upperCode = code.toUpperCase().trim();
 
         try {
             // Try coupon first
-            const coupons = await base44.entities.Coupon.filter({ 
-                code: upperCode 
-            });
-
+            const coupons = await base44.entities.Coupon.filter({ code: upperCode });
             if (coupons.length > 0) {
                 await validateCoupon(coupons[0]);
                 setIsValidating(false);
@@ -58,12 +63,11 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             }
 
             // Try promotion code
-            const promotions = await base44.entities.Promotion.filter({ 
+            const promotions = await base44.entities.Promotion.filter({
                 restaurant_id: restaurantId,
                 promotion_code: upperCode,
                 is_active: true
             });
-
             if (promotions.length > 0) {
                 await validatePromotion(promotions[0], false, cartItems);
                 setIsValidating(false);
@@ -72,7 +76,6 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
 
             toast.error('Invalid code');
             setIsValidating(false);
-
         } catch (error) {
             toast.error('Failed to validate code');
             console.error(error);
@@ -81,68 +84,56 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
     };
 
     const validateCoupon = async (coupon) => {
-        // POLICY: Only one coupon code per order
-        if (appliedCoupons.length >= 1) {
-            toast.error('Only one coupon code can be applied per order. Remove the existing coupon first.');
+        // UI guard: max 3 coupons
+        if (couponLimitReached) {
+            toast.error(`Maximum ${MAX_COUPONS} coupon codes per order. Remove one to add another.`);
             return;
         }
 
-        // Check if already applied (same coupon re-submitted)
-        if (appliedCoupons.find(c => c.id === coupon.id)) {
-            toast.error('This coupon is already applied');
+        // Duplicate check
+        if (appliedCoupons.find(c => c.code === coupon.code)) {
+            toast.error('This coupon code is already applied');
             return;
         }
 
-        if (!coupon.is_active) {
-            toast.error('This coupon is no longer active');
-            return;
-        }
-
-        if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) {
-            toast.error('This coupon is not valid for this restaurant');
-            return;
-        }
-
-        if (coupon.minimum_order && subtotal < coupon.minimum_order) {
-            toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`);
-            return;
-        }
-
-        if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-            toast.error('This coupon has reached its usage limit');
-            return;
-        }
-
+        // Basic UX validation (server re-validates authoritatively at checkout)
+        if (!coupon.is_active) { toast.error('This coupon is no longer active'); return; }
+        if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) { toast.error('This coupon is not valid for this restaurant'); return; }
+        if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`); return; }
+        if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) { toast.error('This coupon has reached its usage limit'); return; }
         const now = new Date();
-        if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-            toast.error('This coupon is not yet valid');
-            return;
+        if (coupon.valid_from && new Date(coupon.valid_from) > now) { toast.error('This coupon is not yet valid'); return; }
+        if (coupon.valid_until && new Date(coupon.valid_until) < now) { toast.error('This coupon has expired'); return; }
+
+        // Stacking compatibility check (UX only — server enforces authoritatively)
+        if (appliedCoupons.length >= 1) {
+            const wouldBeNonStackable = !coupon.stackable || appliedCoupons.some(c => !c.stackable);
+            if (wouldBeNonStackable) {
+                const msg = !coupon.stackable
+                    ? `Coupon "${coupon.code}" cannot be combined with other coupons.`
+                    : 'One of the already-applied coupons cannot be combined with others.';
+                setStackingError(msg);
+                toast.error(msg);
+                return;
+            }
         }
 
-        if (coupon.valid_until && new Date(coupon.valid_until) < now) {
-            toast.error('This coupon has expired');
-            return;
-        }
+        setStackingError(null);
 
+        // Calculate preview discount
         let discount = 0;
         if (coupon.discount_type === 'percentage') {
             discount = (subtotal * coupon.discount_value) / 100;
-            if (coupon.max_discount && discount > coupon.max_discount) {
-                discount = coupon.max_discount;
-            }
+            if (coupon.max_discount && discount > coupon.max_discount) discount = coupon.max_discount;
         } else if (coupon.discount_type === 'fixed') {
             discount = coupon.discount_value || 0;
         } else if (coupon.discount_type === 'free_delivery') {
-            // Discount equals whatever delivery fee was passed (handled by parent via subtotal signal)
-            // We store a sentinel so parent can zero out the fee; fallback to discount_value
             discount = coupon.free_delivery_amount || coupon.discount_value || 0;
         } else if (coupon.discount_type === 'free_item') {
-            // Free item discount = price of the free item (stored as discount_value by restaurant)
             discount = coupon.discount_value || 0;
         } else {
             discount = coupon.discount_value || 0;
         }
-        // Discount cannot exceed subtotal
         discount = Math.min(discount, subtotal);
 
         const newCoupon = { ...coupon, discount };
@@ -151,81 +142,35 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             onCouponApply(updated);
             return updated;
         });
+        setCode('');
         toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
     };
 
     const calculateBogoDiscount = (promotion, cartItems) => {
-        if (!promotion.applicable_items || promotion.applicable_items.length === 0) {
-            return 0;
-        }
-
-        console.log('=== BOGO DISCOUNT CALCULATION ===');
-        console.log('Promotion:', promotion.name, promotion.promotion_type);
-        console.log('Applicable item IDs:', promotion.applicable_items);
-        console.log('Cart items:', cartItems);
-
-        // Get cart items that match the promotion
-        const eligibleItems = cartItems.filter(item => 
-            promotion.applicable_items.includes(item.menu_item_id)
-        );
-
-        console.log('Eligible items in cart:', eligibleItems);
-
-        if (eligibleItems.length === 0) {
-            console.log('No eligible items found');
-            return 0;
-        }
-
+        if (!promotion.applicable_items || promotion.applicable_items.length === 0) return 0;
+        const eligibleItems = cartItems.filter(item => promotion.applicable_items.includes(item.menu_item_id));
+        if (eligibleItems.length === 0) return 0;
         let totalDiscount = 0;
-
         eligibleItems.forEach(item => {
-            console.log(`Processing item: ${item.name}`);
-            console.log(`- Quantity: ${item.quantity}`);
-            console.log(`- Price per item: £${item.price}`);
-            
             let freeItems = 0;
-            if (promotion.promotion_type === 'buy_one_get_one') {
-                freeItems = Math.floor(item.quantity / 2);
-            } else if (promotion.promotion_type === 'buy_two_get_one') {
-                freeItems = Math.floor(item.quantity / 3);
-            }
-            
-            const itemDiscount = freeItems * item.price;
-            console.log(`- Free items: ${freeItems}`);
-            console.log(`- Discount: £${itemDiscount}`);
-            
-            totalDiscount += itemDiscount;
+            if (promotion.promotion_type === 'buy_one_get_one') freeItems = Math.floor(item.quantity / 2);
+            else if (promotion.promotion_type === 'buy_two_get_one') freeItems = Math.floor(item.quantity / 3);
+            totalDiscount += freeItems * item.price;
         });
-
-        console.log('TOTAL BOGO DISCOUNT:', totalDiscount);
         return totalDiscount;
     };
 
     const validatePromotion = async (promotion, isAuto = false, cartItems = []) => {
-        // Check if already applied
         if (appliedPromotions.find(p => p.id === promotion.id)) {
             if (!isAuto) toast.error('This promotion is already applied');
             return;
         }
-
         const now = new Date();
         const start = new Date(promotion.start_date);
         const end = new Date(promotion.end_date);
-        
-        if (!isWithinInterval(now, { start, end })) {
-            if (!isAuto) toast.error('This promotion has expired');
-            return;
-        }
-
-        if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) {
-            if (!isAuto) toast.error('This promotion has reached its usage limit');
-            return;
-        }
-
-        if (promotion.minimum_order && subtotal < promotion.minimum_order) {
-            if (!isAuto) toast.error(`Minimum order of £${promotion.minimum_order.toFixed(2)} required`);
-            return;
-        }
+        if (!isWithinInterval(now, { start, end })) { if (!isAuto) toast.error('This promotion has expired'); return; }
+        if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) { if (!isAuto) toast.error('This promotion has reached its usage limit'); return; }
+        if (promotion.minimum_order && subtotal < promotion.minimum_order) { if (!isAuto) toast.error(`Minimum order of £${promotion.minimum_order.toFixed(2)} required`); return; }
 
         let discount = 0;
         if (promotion.promotion_type === 'percentage_off') {
@@ -234,10 +179,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             discount = promotion.discount_value;
         } else if (promotion.promotion_type === 'buy_one_get_one' || promotion.promotion_type === 'buy_two_get_one') {
             discount = calculateBogoDiscount(promotion, cartItems);
-            if (discount === 0 && !isAuto) {
-                toast.error('No eligible items in cart for this promotion');
-                return;
-            }
+            if (discount === 0 && !isAuto) { toast.error('No eligible items in cart for this promotion'); return; }
         }
 
         const newPromotion = { ...promotion, discount };
@@ -254,6 +196,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             const updated = appliedCoupons.filter(c => c.id !== id);
             setAppliedCoupons(updated);
             onCouponApply(updated);
+            setStackingError(null);
         } else {
             const updated = appliedPromotions.filter(p => p.id !== id);
             setAppliedPromotions(updated);
@@ -266,7 +209,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
 
     return (
         <div className="space-y-3">
-            {/* Applied Discounts List */}
+            {/* Applied Discounts */}
             {allAppliedDiscounts.length > 0 && (
                 <div className="space-y-2">
                     {appliedCoupons.map((coupon) => (
@@ -279,6 +222,9 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                                     <p className="font-semibold text-green-900 text-sm">{coupon.code}</p>
                                     <p className="text-xs text-green-700">
                                         {coupon.description || `Saved £${coupon.discount.toFixed(2)}`}
+                                        {coupon.stackable && appliedCoupons.length > 1 && (
+                                            <span className="ml-1 text-green-500">· stackable</span>
+                                        )}
                                     </p>
                                 </div>
                             </div>
@@ -302,19 +248,11 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                                     <div className="flex items-center gap-2">
                                         <p className="font-semibold text-orange-900 text-sm">{promo.name}</p>
                                         {promo.badge_text && (
-                                            <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
-                                                {promo.badge_text}
-                                            </span>
+                                            <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">{promo.badge_text}</span>
                                         )}
                                     </div>
                                     <p className="text-xs text-orange-700 mt-1">
-                                        {promo.condition_text ? (
-                                            <>
-                                                {promo.condition_text} • Saved £{promo.discount.toFixed(2)}
-                                            </>
-                                        ) : (
-                                            <>Saved £{promo.discount.toFixed(2)}</>
-                                        )}
+                                        {promo.condition_text ? `${promo.condition_text} · Saved £${promo.discount.toFixed(2)}` : `Saved £${promo.discount.toFixed(2)}`}
                                     </p>
                                 </div>
                             </div>
@@ -331,35 +269,51 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                 </div>
             )}
 
-            {/* Input to add a discount code — only one coupon allowed per order */}
-            <div className="flex gap-2">
-                <div className="relative flex-1">
-                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                        placeholder={appliedCoupons.length >= 1 ? 'Remove current coupon to apply another' : 'Enter coupon or promo code'}
-                        value={code}
-                        onChange={(e) => setCode(e.target.value.toUpperCase())}
-                        onKeyPress={(e) => e.key === 'Enter' && validateCode()}
-                        className="pl-10 h-12 uppercase"
-                        disabled={isValidating || appliedCoupons.length >= 1}
-                    />
+            {/* Stacking error */}
+            {stackingError && (
+                <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    {stackingError}
                 </div>
-                <Button
-                    onClick={validateCode}
-                    disabled={isValidating || !code.trim() || appliedCoupons.length >= 1}
-                    className="h-12 px-6"
-                    variant="outline"
-                >
-                    {isValidating ? (
-                        <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Checking...
-                        </>
-                    ) : (
-                        'Apply'
-                    )}
-                </Button>
-            </div>
+            )}
+
+            {/* Input row — hidden when limit reached */}
+            {!couponLimitReached ? (
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder={appliedCoupons.length > 0 ? `Add another coupon (${MAX_COUPONS - appliedCoupons.length} remaining)` : 'Enter coupon or promo code'}
+                            value={code}
+                            onChange={(e) => { setCode(e.target.value.toUpperCase()); setStackingError(null); }}
+                            onKeyPress={(e) => e.key === 'Enter' && validateCode()}
+                            className="pl-10 h-12 uppercase"
+                            disabled={isValidating}
+                        />
+                    </div>
+                    <Button
+                        onClick={validateCode}
+                        disabled={isValidating || !code.trim()}
+                        className="h-12 px-6"
+                        variant="outline"
+                    >
+                        {isValidating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</> : 'Apply'}
+                    </Button>
+                </div>
+            ) : (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    Maximum {MAX_COUPONS} coupons applied. Remove one to add a different code.
+                </div>
+            )}
+
+            {appliedCoupons.length > 0 && appliedCoupons.length < MAX_COUPONS && (
+                <p className="text-xs text-gray-400 text-center">
+                    {appliedCoupons.every(c => c.stackable)
+                        ? `${MAX_COUPONS - appliedCoupons.length} more stackable coupon${MAX_COUPONS - appliedCoupons.length !== 1 ? 's' : ''} can be added`
+                        : 'Applied coupon is not stackable — remove it to use a different one'}
+                </p>
+            )}
         </div>
     );
 }

@@ -1,3 +1,11 @@
+/**
+ * CouponInput — Simple single-use coupon widget (legacy, used in some checkout flows)
+ *
+ * This component still supports only 1 coupon for simplicity.
+ * For full stacking support use DiscountCodeInput.
+ *
+ * Server re-validates all coupons at order creation — client checks are UX only.
+ */
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Input } from "@/components/ui/input";
@@ -11,71 +19,25 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
     const [appliedCoupon, setAppliedCoupon] = useState(null);
 
     const validateCoupon = async () => {
-        if (!code.trim()) {
-            toast.error('Please enter a coupon code');
-            return;
-        }
-
+        if (!code.trim()) { toast.error('Please enter a coupon code'); return; }
         setIsValidating(true);
-
         try {
-            const coupons = await base44.entities.Coupon.filter({ 
-                code: code.toUpperCase().trim() 
-            });
-
-            if (coupons.length === 0) {
-                toast.error('Invalid coupon code');
-                setIsValidating(false);
-                return;
-            }
+            const coupons = await base44.entities.Coupon.filter({ code: code.toUpperCase().trim() });
+            if (coupons.length === 0) { toast.error('Invalid coupon code'); setIsValidating(false); return; }
 
             const coupon = coupons[0];
-
-            // Validate coupon
-            if (!coupon.is_active) {
-                toast.error('This coupon is no longer active');
-                setIsValidating(false);
-                return;
-            }
-
-            if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) {
-                toast.error('This coupon is not valid for this restaurant');
-                setIsValidating(false);
-                return;
-            }
-
-            if (coupon.minimum_order && subtotal < coupon.minimum_order) {
-                toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`);
-                setIsValidating(false);
-                return;
-            }
-
-            if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-                toast.error('This coupon has reached its usage limit');
-                setIsValidating(false);
-                return;
-            }
-
+            if (!coupon.is_active) { toast.error('This coupon is no longer active'); setIsValidating(false); return; }
+            if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) { toast.error('This coupon is not valid for this restaurant'); setIsValidating(false); return; }
+            if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`); setIsValidating(false); return; }
+            if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) { toast.error('This coupon has reached its usage limit'); setIsValidating(false); return; }
             const now = new Date();
-            if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-                toast.error('This coupon is not yet valid');
-                setIsValidating(false);
-                return;
-            }
+            if (coupon.valid_from && new Date(coupon.valid_from) > now) { toast.error('This coupon is not yet valid'); setIsValidating(false); return; }
+            if (coupon.valid_until && new Date(coupon.valid_until) < now) { toast.error('This coupon has expired'); setIsValidating(false); return; }
 
-            if (coupon.valid_until && new Date(coupon.valid_until) < now) {
-                toast.error('This coupon has expired');
-                setIsValidating(false);
-                return;
-            }
-
-            // Calculate discount
             let discount = 0;
             if (coupon.discount_type === 'percentage') {
                 discount = (subtotal * coupon.discount_value) / 100;
-                if (coupon.max_discount && discount > coupon.max_discount) {
-                    discount = coupon.max_discount;
-                }
+                if (coupon.max_discount && discount > coupon.max_discount) discount = coupon.max_discount;
             } else if (coupon.discount_type === 'free_delivery') {
                 discount = coupon.free_delivery_amount || coupon.discount_value || 0;
             } else if (coupon.discount_type === 'free_item') {
@@ -83,13 +45,11 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
             } else {
                 discount = coupon.discount_value || 0;
             }
-            // Discount cannot exceed subtotal
             discount = Math.min(discount, subtotal);
 
             setAppliedCoupon({ ...coupon, discount });
             onCouponApply({ ...coupon, discount });
             toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
-
         } catch (error) {
             toast.error('Failed to validate coupon');
             console.error(error);
@@ -115,17 +75,10 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
                         </div>
                         <div>
                             <p className="font-semibold text-green-900">{appliedCoupon.code}</p>
-                            <p className="text-sm text-green-700">
-                                {appliedCoupon.description || `Saved £${appliedCoupon.discount.toFixed(2)}`}
-                            </p>
+                            <p className="text-sm text-green-700">{appliedCoupon.description || `Saved £${appliedCoupon.discount.toFixed(2)}`}</p>
                         </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={removeCoupon}
-                        className="text-green-600 hover:text-green-800"
-                    >
+                    <Button variant="ghost" size="icon" onClick={removeCoupon} className="text-green-600 hover:text-green-800">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -142,20 +95,8 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
                             disabled={isValidating}
                         />
                     </div>
-                    <Button
-                        onClick={validateCoupon}
-                        disabled={isValidating || !code.trim()}
-                        className="h-12 px-6"
-                        variant="outline"
-                    >
-                        {isValidating ? (
-                            <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Checking...
-                            </>
-                        ) : (
-                            'Apply'
-                        )}
+                    <Button onClick={validateCoupon} disabled={isValidating || !code.trim()} className="h-12 px-6" variant="outline">
+                        {isValidating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</> : 'Apply'}
                     </Button>
                 </div>
             )}
