@@ -504,10 +504,15 @@ export default function Checkout() {
                 if (response?.data?.clientSecret) {
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
+                } else {
+                    const errorMsg = response?.data?.error || 'Failed to initialize payment. Please try again.';
+                    toast.error(errorMsg);
+                    setClientSecret(''); // Clear to prevent stale state
                 }
             } catch (error) {
                 console.error('Payment init error:', error);
-                toast.error('Failed to initialize payment');
+                toast.error('Failed to initialize payment. Please refresh and try again.');
+                setClientSecret(''); // Prevent stale state on error
             } finally {
                 setInitializingPayment(false);
             }

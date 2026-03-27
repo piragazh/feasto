@@ -90,7 +90,8 @@ Deno.serve(async (req) => {
             paymentIntentId: paymentIntent.id
         });
     } catch (error) {
-        console.error('[PAYMENT] createPaymentIntent failed:', error.message);
-        return Response.json({ error: 'Payment initialisation failed. Please try again.' }, { status: 500 });
+        console.error('[PAYMENT] createPaymentIntent failed:', error.message, error.type);
+        const errorMsg = error?.raw?.message || error.message || 'Payment initialisation failed. Please try again.';
+        return Response.json({ error: errorMsg }, { status: 500 });
     }
 });
