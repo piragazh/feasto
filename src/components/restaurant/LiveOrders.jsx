@@ -104,51 +104,58 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         order.status === 'pending';
 
     // Auto-print using centralized printer config with channel routing
+    // All errors are caught — failure does not disrupt live order flow
     const autoPrintOrder = async (order, restaurant, cfg) => {
-        const centralized = cfg.centralized_printers || [];
-        const channel = getOrderChannel(order);
-        const services = [printerManager.printerA, printerManager.printerB];
+        try {
+            const centralized = cfg.centralized_printers || [];
+            const channel = getOrderChannel(order);
+            const services = [printerManager.printerA, printerManager.printerB];
 
-        if (centralized.length > 0) {
-            // Find printers assigned to handle this order channel.
-            // Kiosk orders fall back to online_order channel if no kiosk_order slot is configured.
-            const effectiveChannel = channel === 'kiosk_order' &&
-                !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
-                    ? 'online_order'
-                    : channel;
-            const assignedPrinters = centralized.filter(p =>
-                (p.assigned_channels || []).includes(effectiveChannel)
-            );
-            for (let i = 0; i < assignedPrinters.length; i++) {
-                const printerConfig = assignedPrinters[i];
-                // Find which slot index this printer is in
-                const slotIndex = centralized.indexOf(printerConfig);
-                const service = services[slotIndex] || printerManager.printerA;
-                if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
-                    if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
-                    if (service.isConnected()) {
-                        service.printReceipt(order, restaurant, { ...cfg, bluetooth_printer: printerConfig.bluetooth_printer }).catch(() => {
-                            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                        });
-                        return;
+            if (centralized.length > 0) {
+                // Find printers assigned to handle this order channel.
+                // Kiosk orders fall back to online_order channel if no kiosk_order slot is configured.
+                const effectiveChannel = channel === 'kiosk_order' &&
+                    !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
+                        ? 'online_order'
+                        : channel;
+                const assignedPrinters = centralized.filter(p =>
+                    (p.assigned_channels || []).includes(effectiveChannel)
+                );
+                for (let i = 0; i < assignedPrinters.length; i++) {
+                    const printerConfig = assignedPrinters[i];
+                    // Find which slot index this printer is in
+                    const slotIndex = centralized.indexOf(printerConfig);
+                    const service = services[slotIndex] || printerManager.printerA;
+                    if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
+                        if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+                        if (service.isConnected()) {
+                            service.printReceipt(order, restaurant, { ...cfg, bluetooth_printer: printerConfig.bluetooth_printer }).catch(() => {
+                                if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                            });
+                            return;
+                        }
                     }
                 }
-            }
-            // No bluetooth connected — browser fallback
-            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-        } else {
-            // Legacy fallback
-            if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
-                printerManager.printerA.printReceipt(order, restaurant, cfg).catch(() => {
-                    if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                });
-            } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
-                printerManager.printerB.printReceipt(order, restaurant, { ...cfg, ...cfg.printer_b_config }).catch(() => {
-                    if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                });
-            } else {
+                // No bluetooth connected — browser fallback
                 if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+            } else {
+                // Legacy fallback
+                if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
+                    printerManager.printerA.printReceipt(order, restaurant, cfg).catch(() => {
+                        if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                    });
+                } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
+                    printerManager.printerB.printReceipt(order, restaurant, { ...cfg, ...cfg.printer_b_config }).catch(() => {
+                        if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                    });
+                } else {
+                    if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+                }
             }
+        } catch (err) {
+            console.error('[autoPrintOrder] Error:', err);
+            // Fallback to browser print
+            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
         }
     };
 
@@ -511,8 +518,16 @@ Provide only the time range (e.g., "25-30 min").`;
             }
         }
 
-        // Browser print fallback
+        // Browser print fallback (non-crashing)
+        try {
+            browserPrintOrder(order, restaurant, config);
+        } catch (err) {
+            toast.error('Print failed — manual review needed');
+            console.error('[LiveOrders] Browser print error:', err);
+        }
+    };
 
+    const browserPrintOrder = (order, restaurant, config) => {
         const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
         const baseFontSize = config.font_size === 'small' ? '28px' : config.font_size === 'large' ? '38px' : '32px';
         const headerFontSize = config.font_size === 'small' ? '42px' : config.font_size === 'large' ? '56px' : '48px';
@@ -521,14 +536,23 @@ Provide only the time range (e.g., "25-30 min").`;
 
         const printWindow = window.open('', '', 'width=300,height=600');
         if (!printWindow) {
-            toast.error('Popup blocked. Please allow popups for this site to print.');
+            console.warn('[LiveOrders] Print window blocked by popup blocker');
+            toast.warning('Popup blocked — cannot print. Please allow popups and retry.');
+            return;
+        }
+
+        // Wrap document write/print to catch any errors
+        if (!printWindow.document) {
+            console.warn('[LiveOrders] Print window missing document object');
+            toast.error('Cannot access print window document');
             return;
         }
         const orderLabel = order.order_type === 'collection' && order.order_number 
             ? order.order_number 
             : `#${order.id.slice(-6)}`;
         
-        printWindow.document.write(`
+        try {
+            printWindow.document.write(`
             <html>
                 <head>
                     <title>Order ${orderLabel}</title>
@@ -559,7 +583,17 @@ Provide only the time range (e.g., "25-30 min").`;
                     <h2>${restaurant?.name || 'KITCHEN ORDER'}</h2>
                     ${order.order_type === 'collection' ? '<div class="collection-badge">🏪 COLLECTION ORDER</div>' : ''}
                     <div class="separator"></div>
-                    ${order.order_source === 'kiosk' ? '<div class="collection-badge" style="background:#e0e7ff;color:#3730a3;">🖥️ KIOSK ORDER</div>' : ''}
+                    ${order.order_source === 'kiosk' ? `
+                        <div class="collection-badge" style="background:#e0e7ff;color:#3730a3;border:2px solid #3730a3;">
+                            🖥️ KIOSK ORDER
+                        </div>
+                        ${order.payment_method === 'pay_at_counter' && order.payment_confirmed_at ? 
+                            `<div class="collection-badge" style="background:#d1fae5;color:#065f46;border:2px solid #10b981;">✓ PAYMENT CONFIRMED</div>` :
+                            order.payment_method === 'pay_at_counter' ?
+                            `<div class="collection-badge" style="background:#fef3c7;color:#92400e;border:2px solid #f59e0b;">⏳ AWAITING PAYMENT AT COUNTER</div>` :
+                            ''
+                        }
+                    ` : ''}
                     ${config.show_order_number !== false ? `<p><strong>Order:</strong> ${orderLabel}</p>` : ''}
                     <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : order.order_type === 'takeaway' ? 'TAKEAWAY' : order.order_type === 'dine_in' ? 'DINE IN' : 'DELIVERY'}</p>
                     <p><strong>Time:</strong> ${order.created_date ? format(new Date(order.created_date), 'HH:mm') : '--:--'}</p>
@@ -639,8 +673,15 @@ Provide only the time range (e.g., "25-30 min").`;
                 </body>
             </html>
         `);
-        printWindow.document.close();
-        printWindow.print();
+            printWindow.document.close();
+            printWindow.print();
+        } catch (err) {
+            console.error('[LiveOrders] Print document error:', err);
+            toast.error('Print formatting error — close window and retry');
+            if (printWindow && !printWindow.closed) {
+                printWindow.close();
+            }
+        }
     };
 
 
