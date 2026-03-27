@@ -522,7 +522,7 @@ export default function Checkout() {
         };
 
         initPayment();
-    }, [paymentMethod, clientSecret, cart.length]); // CRITICAL: Minimal deps to prevent infinite loop on form changes
+    }, [paymentMethod, clientSecret, total]); // Only re-init when method/total changes or payment completes
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
