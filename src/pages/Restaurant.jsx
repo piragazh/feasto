@@ -21,12 +21,14 @@ const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
 const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
 const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
 const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
-const RestaurantInfoDialog = lazy(() => import('@/components/restaurant/RestaurantInfoDialog'));
 const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
 const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
 const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
 const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
+
+// Import directly (non-lazy) to avoid Leaflet module issues
+import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 
 export default function Restaurant() {
     const navigate = useNavigate();
