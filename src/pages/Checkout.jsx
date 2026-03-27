@@ -1607,8 +1607,6 @@ export default function Checkout() {
                                             setClientSecret('');
                                             setShowStripeForm(false);
                                             setPaymentCompleted(false);
-                                            // Regenerate idempotency key so changing method doesn't reuse stale key
-                                            setIdempotencyKey(`order_${Date.now()}_${Math.random().toString(36).slice(2)}`);
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                                     />
