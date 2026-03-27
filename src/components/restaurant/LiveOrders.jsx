@@ -1409,25 +1409,13 @@ Provide only the time range (e.g., "25-30 min").`;
                                             {/* Kiosk ready for collection/takeaway */}
                                             {order.order_source === 'kiosk' && order.order_status === 'ready' && (
                                                 <>
-                                                    {order.order_type === 'dine_in' ? (
-                                                        <Button
-                                                            onClick={() => {
-                                                                updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'completed' } });
-                                                            }}
-                                                            className="flex-1 bg-green-600 hover:bg-green-700"
-                                                        >
-                                                            Mark as Served
-                                                        </Button>
-                                                    ) : (
-                                                        <Button
-                                                            onClick={() => {
-                                                                updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'completed' } });
-                                                            }}
-                                                            className="flex-1 bg-green-600 hover:bg-green-700"
-                                                        >
-                                                            Mark as Collected
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        disabled={true}
+                                                        className="flex-1 bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                                                        title="Kiosk order status transitions handled server-side"
+                                                    >
+                                                        {order.order_type === 'dine_in' ? 'Mark as Served' : 'Mark as Collected'}
+                                                    </Button>
                                                 </>
                                             )}
 
