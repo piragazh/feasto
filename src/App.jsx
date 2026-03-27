@@ -12,6 +12,7 @@ import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
 import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
 import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview';
+import AdminRestaurants from './pages/AdminRestaurants';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -85,6 +86,13 @@ const AuthenticatedApp = () => {
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="RestaurantOfflineRiskOverview">
                 <RestaurantOfflineRiskOverview />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/AdminRestaurants" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="AdminRestaurants">
+                <AdminRestaurants />
               </LayoutWrapper>
             </Suspense>
           } />
