@@ -34,7 +34,8 @@ import OfflineTemporalAnalytics from '@/components/superadmin/OfflineTemporalAna
 import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
 import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
 import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle, Scale } from 'lucide-react';
+import WeeklyOpsHealthDashboard from '@/components/superadmin/WeeklyOpsHealthDashboard';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -66,6 +67,7 @@ export default function SuperAdmin() {
             title: 'Core Management',
             items: [
                 { id: 'overview', label: 'Dashboard', icon: Activity },
+                { id: 'ops-health', label: 'Ops Health', icon: Heart },
                 { id: 'risk-digest', label: 'Risk Digest', icon: AlertCircle },
                 { id: 'orders', label: 'Order History', icon: Store },
                 { id: 'restaurants', label: 'Restaurants', icon: Store },
@@ -245,6 +247,7 @@ export default function SuperAdmin() {
                 {/* Page Content */}
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
                     {activeTab === 'overview' && <SystemOverview />}
+                    {activeTab === 'ops-health' && <WeeklyOpsHealthDashboard />}
                     {activeTab === 'risk-digest' && <OfflineRiskDigest />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
                     {activeTab === 'restaurants' && <RestaurantManagement />}
