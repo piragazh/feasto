@@ -34,7 +34,7 @@ import OfflineTemporalAnalytics from '@/components/superadmin/OfflineTemporalAna
 import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
 import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
 import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle, Scale } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -80,6 +80,7 @@ export default function SuperAdmin() {
                 { id: 'payouts', label: 'Payouts', icon: CreditCard },
                 { id: 'payout-history', label: 'Payout History', icon: DollarSign },
                 { id: 'refunds', label: 'Refunds', icon: Shield },
+                { id: 'reconciliation', label: 'Reconciliation', icon: Scale },
                 { id: 'analytics', label: 'Analytics', icon: LayoutDashboard },
             ]
         },
@@ -286,6 +287,15 @@ export default function SuperAdmin() {
                                 src={createPageUrl('AdminRestaurants')} 
                                 className="w-full h-full border-0"
                                 title="Admin Restaurants"
+                            />
+                        </div>
+                    )}
+                    {activeTab === 'reconciliation' && (
+                        <div className="w-full h-[calc(100vh-250px)] md:h-[calc(100vh-200px)] border-0 rounded-lg overflow-hidden">
+                            <iframe 
+                                src={createPageUrl('ReconciliationDashboard')} 
+                                className="w-full h-full border-0"
+                                title="Reconciliation Dashboard"
                             />
                         </div>
                     )}
