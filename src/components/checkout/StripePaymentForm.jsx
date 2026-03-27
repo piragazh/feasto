@@ -38,9 +38,17 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                 return false;
             }
             
-            console.log('🔵 Confirming payment (if_required redirect)...');
+            if (!clientSecret) {
+                console.log('🔴 No clientSecret available');
+                setErrorMessage('Payment session expired. Please refresh and try again.');
+                setIsProcessing(false);
+                return false;
+            }
+
+            console.log('🔵 Confirming payment with clientSecret:', clientSecret?.slice(0, 20) + '...');
             const result = await stripe.confirmPayment({
                 elements,
+                clientSecret,
                 redirect: 'if_required',
                 confirmParams: {
                     return_url: window.location.href
@@ -75,6 +83,9 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
             if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
                 console.log('✅ Payment succeeded:', result.paymentIntent.id);
                 setErrorMessage('');
+                // NOTE: Do NOT call setIsProcessing(false) here — 
+                // the button stays in "processing" state until order is created
+                // to prevent double-submission. Parent (handleStripeSuccess) controls the flow.
                 onSuccess(result.paymentIntent.id);
                 return true;
             }

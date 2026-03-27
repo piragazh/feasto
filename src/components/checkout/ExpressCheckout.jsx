@@ -19,27 +19,38 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [loadError, setLoadError] = useState(null);
 
     const handleChange = (e) => {
         if (e.error) {
             console.warn('[ExpressCheckout] Wallet error:', e.error);
+            setLoadError(e.error.message);
             if (onError && typeof onError === 'function') {
                 onError(String(e.error.message || 'Wallet payment failed'));
             }
             setIsProcessing(false);
+        } else {
+            setLoadError(null);
         }
     };
 
     const handleClick = (e) => {
         if (!stripe || !elements || !clientSecret || disabled || isProcessing) {
-            console.log('[ExpressCheckout] Click blocked - not ready');
+            console.log('[ExpressCheckout] Click blocked - not ready', { stripe: !!stripe, elements: !!elements, clientSecret: !!clientSecret, disabled, isProcessing });
             return;
         }
         console.log('[ExpressCheckout] Wallet checkout initiated');
         setIsProcessing(true);
     };
 
-    if (!stripe || !elements || !clientSecret) {
+    // CRITICAL: If no clientSecret or Stripe not ready, show nothing (but don't null out completely)
+    if (!stripe || !elements) {
+        console.log('[ExpressCheckout] Waiting for Stripe to initialize');
+        return null;
+    }
+
+    if (!clientSecret) {
+        console.log('[ExpressCheckout] Waiting for clientSecret from backend');
         return null;
     }
 
@@ -57,65 +68,69 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                 
                 <ExpressCheckoutElement
                     onConfirm={async (data) => {
-                        console.log('[ExpressCheckout] Payment confirmed by wallet');
+                        console.log('[ExpressCheckout] onConfirm fired by wallet element');
                         
-                        try {
-                            // Confirm payment using the PaymentIntent
-                            // Express Checkout Element already collected payment method
-                            // Just need to confirm the intent
-                            console.log('[ExpressCheckout] Confirming payment with clientSecret:', clientSecret?.slice(0, 20) + '...');
-                            const { error, paymentIntent } = await stripe.confirmPayment({
-                                elements,
-                                clientSecret,
-                                redirect: 'if_required',
-                                confirmParams: {
-                                    return_url: window.location.href,
-                                    payment_method_data: {
-                                        billing_details: {
-                                            name: data.billingDetails?.name || undefined,
-                                            email: data.billingDetails?.email || undefined,
-                                            phone: data.billingDetails?.phone || undefined,
-                                            address: data.billingDetails?.address || undefined,
-                                        },
-                                    },
-                                },
-                            });
-                            console.log('[ExpressCheckout] confirmPayment result:', { error: !!error, status: paymentIntent?.status });
+                        // CRITICAL: ExpressCheckoutElement automatically confirms the PaymentIntent
+                        // We receive confirmation via onConfirm callback with stripe attached
+                        // The wallet button's onConfirm is ONLY called when payment succeeds
+                        if (!data || !stripe) {
+                            console.error('[ExpressCheckout] Missing data or stripe in onConfirm');
+                            if (onError) onError('Payment verification failed');
+                            setIsProcessing(false);
+                            return;
+                        }
 
-                            if (error) {
-                                console.error('[ExpressCheckout] Payment error:', error);
-                                if (onError && typeof onError === 'function') {
-                                    onError(String(error.message || 'Payment failed'));
+                        try {
+                            // CRITICAL FIX: The ExpressCheckoutElement button auto-confirms
+                            // and passes the result via data.paymentIntent
+                            // Retrieve the confirmed intent from Stripe to get final status
+                            console.log('[ExpressCheckout] Retrieving payment intent status after wallet confirmation');
+                            
+                            let paymentIntent;
+                            if (data.paymentIntent) {
+                                // Primary path: ExpressCheckoutElement provides paymentIntent in callback
+                                paymentIntent = data.paymentIntent;
+                            } else {
+                                // Fallback: retrieve from Stripe using clientSecret
+                                console.log('[ExpressCheckout] No paymentIntent in callback data, retrieving via clientSecret');
+                                if (!clientSecret) {
+                                    throw new Error('No clientSecret available for verification');
                                 }
-                                setIsProcessing(false);
-                                return;
+                                const retrieveResult = await stripe.retrievePaymentIntent(clientSecret);
+                                if (retrieveResult.error) {
+                                    throw new Error(retrieveResult.error.message || 'Could not retrieve payment intent');
+                                }
+                                paymentIntent = retrieveResult.paymentIntent;
+                                if (!paymentIntent) {
+                                    throw new Error('PaymentIntent not found after retrieval');
+                                }
                             }
 
-                            // Success path: payment intent confirmed
+                            console.log('[ExpressCheckout] Payment intent retrieved:', {
+                                id: paymentIntent?.id?.slice(0, 20),
+                                status: paymentIntent?.status
+                            });
+
+                            // SUCCESS: Payment intent confirmed
                             if (paymentIntent && paymentIntent.status === 'succeeded') {
-                                console.log('[ExpressCheckout] ✅ Payment succeeded:', paymentIntent.id);
-                                // CRITICAL: Call onSuccess() to trigger order creation
-                                // This ensures wallet path uses same flow as card entry
+                                console.log('✅ [ExpressCheckout] Payment SUCCEEDED:', paymentIntent.id);
+                                // CRITICAL: Extract and pass the paymentIntentId to onSuccess
                                 if (onSuccess && typeof onSuccess === 'function') {
                                     onSuccess(String(paymentIntent.id));
                                 }
-                            } else if (paymentIntent) {
-                                console.warn('[ExpressCheckout] Unexpected status:', paymentIntent.status);
-                                if (onError && typeof onError === 'function') {
-                                    onError(`Payment ${paymentIntent.status}. Please try again.`);
-                                }
-                                setIsProcessing(false);
                             } else {
-                                console.error('[ExpressCheckout] No payment intent returned');
+                                // FAILURE: Unexpected status
+                                const status = paymentIntent?.status || 'unknown';
+                                console.error('[ExpressCheckout] Payment not succeeded. Status:', status);
                                 if (onError && typeof onError === 'function') {
-                                    onError('Payment processing failed. Please try again.');
+                                    onError(`Payment ${status}. Please try again.`);
                                 }
                                 setIsProcessing(false);
                             }
                         } catch (err) {
-                            console.error('[ExpressCheckout] Exception:', err);
+                            console.error('[ExpressCheckout] Exception in onConfirm:', err.message || err);
                             if (onError && typeof onError === 'function') {
-                                onError(String(err?.message || 'An error occurred. Please try again.'));
+                                onError(String(err?.message || 'Payment processing failed'));
                             }
                             setIsProcessing(false);
                         }
@@ -123,9 +138,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                     onChange={handleChange}
                     onClick={handleClick}
                     onLoadingChange={(isLoading) => {
-                        if (isLoading) {
-                            console.log('[ExpressCheckout] Express element loading');
-                        }
+                        console.log('[ExpressCheckout] Loading state:', isLoading);
                     }}
                     options={{
                         buttonAppearance: {

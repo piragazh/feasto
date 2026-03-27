@@ -131,28 +131,32 @@ Deno.serve(async (req) => {
         const { orderData, paymentIntentId, idempotency_key } = await req.json();
 
         // ── Order velocity throttle ───────────────────────────────────────────
-        const velocityResult = await base44.functions.invoke('orderVelocityThrottle', { orderData });
-        if (velocityResult?.data && !velocityResult.data.allowed) {
-            // Log failure for observability
-            await base44.asServiceRole.entities.FailureLog.create({
-                failure_type: 'payment_velocity_throttle',
-                severity: 'info',
-                restaurant_id: orderData.restaurant_id,
-                user_email: user?.email || 'guest',
-                guest_email: orderData.guest_email,
-                phone: orderData.phone,
-                error_message: velocityResult.data.error || 'Too many orders in short time',
-                context: {
-                    order_total: orderData.total,
-                    items_count: (orderData.items || []).length,
-                    http_status: 429,
-                }
-            }).catch(e => console.warn('[LOG] Failed to record velocity throttle:', e.message));
+        try {
+            const velocityResult = await base44.functions.invoke('orderVelocityThrottle', { orderData });
+            if (velocityResult?.data && !velocityResult.data.allowed) {
+                await base44.asServiceRole.entities.FailureLog.create({
+                    failure_type: 'payment_velocity_throttle',
+                    severity: 'info',
+                    restaurant_id: orderData.restaurant_id,
+                    user_email: user?.email || 'guest',
+                    guest_email: orderData.guest_email,
+                    phone: orderData.phone,
+                    error_message: velocityResult.data.error || 'Too many orders in short time',
+                    context: {
+                        order_total: orderData.total,
+                        items_count: (orderData.items || []).length,
+                        http_status: 429,
+                    }
+                }).catch(e => console.warn('[LOG] Failed to record velocity throttle:', e.message));
 
-            return new Response(
-                JSON.stringify({ error: velocityResult.data.error || 'Too many orders. Please wait.', success: false, refunded: false }),
-                { status: 429, headers: { 'Retry-After': String(velocityResult.data.retryAfter || 60) } }
-            );
+                return new Response(
+                    JSON.stringify({ error: velocityResult.data.error || 'Too many orders. Please wait.', success: false, refunded: false }),
+                    { status: 429, headers: { 'Retry-After': String(velocityResult.data.retryAfter || 60) } }
+                );
+            }
+        } catch (velocityErr) {
+            // Non-fatal: velocity check failure must not block legitimate orders
+            console.warn('[ORDER] Velocity throttle check failed (non-fatal):', velocityErr.message);
         }
 
         if (!orderData || !orderData.restaurant_id) {

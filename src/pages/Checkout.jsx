@@ -36,24 +36,44 @@ import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { useSEO } from '@/lib/useSEO';
 
 // Initialize Stripe - fetch public key from backend
+// stripeInstance holds the resolved Stripe object (not a promise) to avoid double-resolution bugs
 let stripePromise = null;
+let stripeInstance = null;
+
 const initializeStripe = async () => {
+    // Return cached resolved instance immediately
+    if (stripeInstance) return stripeInstance;
+    // Dedupe concurrent calls: if a promise is in-flight, await it
     if (stripePromise) return stripePromise;
     
-    try {
-        const response = await base44.functions.invoke('getStripePublicKey');
-        if (response?.data?.publicKey) {
-            console.log('✅ Stripe public key loaded:', response.data.publicKey.substring(0, 20) + '...');
-            stripePromise = loadStripe(response.data.publicKey);
-            return stripePromise;
-        } else {
-            console.error('❌ No public key in response');
+    stripePromise = (async () => {
+        try {
+            console.log('[Stripe] Fetching public key...');
+            
+            // Add timeout to prevent indefinite hang
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await base44.functions.invoke('getStripePublicKey');
+            clearTimeout(timeoutId);
+            
+            if (response?.data?.publicKey) {
+                console.log('✅ Stripe public key loaded:', response.data.publicKey.substring(0, 20) + '...');
+                stripeInstance = await loadStripe(response.data.publicKey);
+                return stripeInstance;
+            } else {
+                console.error('❌ No public key in response:', response?.data);
+                stripePromise = null; // Allow retry
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Failed to load Stripe key:', error.message);
+            stripePromise = null; // Allow retry on next call
             return null;
         }
-    } catch (error) {
-        console.error('❌ Failed to load Stripe key:', error);
-        return null;
-    }
+    })();
+    
+    return stripePromise;
 };
 
 // Main Checkout Component
@@ -94,6 +114,8 @@ export default function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState(''); // Selected payment method (no default)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
+    const [stripeReady, setStripeReady] = useState(false); // Tracks whether Stripe object is loaded
+    const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null); // The promise to pass to <Elements>
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Static: set once at mount
     
@@ -487,13 +509,23 @@ export default function Checkout() {
 
             setInitializingPayment(true);
             try {
-                const stripe = await initializeStripe();
-                if (!stripe) {
-                    toast.error('Payment system unavailable');
+                // Initialize Stripe and create payment intent in parallel for speed
+                console.log('[PaymentInit] Initializing Stripe and creating payment intent...');
+                
+                const stripeObj = await initializeStripe();
+                if (!stripeObj) {
+                    toast.error('Payment system unavailable. Please refresh and try again.');
                     setInitializingPayment(false);
                     return;
                 }
+                
+                // Store the loadStripe promise for <Elements> — must be a promise, not the instance
+                if (!stripeLoadedPromise) {
+                    setStripeLoadedPromise(Promise.resolve(stripeObj));
+                    setStripeReady(true);
+                }
 
+                console.log('[PaymentInit] Creating payment intent for amount:', total);
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
                     currency: 'gbp',
@@ -505,17 +537,21 @@ export default function Checkout() {
                 });
 
                 if (response?.data?.clientSecret) {
+                    console.log('[PaymentInit] ✅ Got clientSecret, showing Stripe form');
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
                 } else {
                     const errorMsg = response?.data?.error || 'Failed to initialize payment. Please try again.';
+                    console.error('[PaymentInit] ❌ No clientSecret:', errorMsg);
                     toast.error(errorMsg);
-                    setClientSecret(''); // Clear to prevent stale state
+                    setClientSecret('');
+                    setShowStripeForm(false);
                 }
             } catch (error) {
-                console.error('Payment init error:', error);
+                console.error('[PaymentInit] Exception:', error.message);
                 toast.error('Failed to initialize payment. Please refresh and try again.');
-                setClientSecret(''); // Prevent stale state on error
+                setClientSecret('');
+                setShowStripeForm(false);
             } finally {
                 setInitializingPayment(false);
             }
@@ -1048,18 +1084,31 @@ export default function Checkout() {
             setPaymentCompleted(false);
             return;
         }
+
+        // Prevent duplicate order creation (double-click / multiple callbacks)
+        if (paymentCompleted) {
+            console.warn('[Checkout] handleStripeSuccess called again — already processed:', paymentIntentId);
+            return;
+        }
         
-        console.log('[Checkout] Payment intent confirmed:', paymentIntentId);
+        console.log('[Checkout] ✅ Payment intent confirmed:', paymentIntentId);
         
-        // Mark payment as completed
+        // Mark payment as completed BEFORE creating order to block duplicates
         setPaymentCompleted(true);
-        toast.success('Payment successful!');
+        toast.success('Payment authorised! Creating your order...');
         
-        // CRITICAL: Call createOrder() with paymentIntentId
-        // This ensures BOTH normal card entry AND express checkout converge
-        // into the same secure order-creation path
-        console.log('[Checkout] Initiating order creation with payment intent:', paymentIntentId);
-        await createOrder(paymentIntentId);
+        try {
+            // CRITICAL: Call createOrder() with paymentIntentId
+            // This ensures BOTH normal card entry AND express checkout converge
+            // into the same secure order-creation path
+            console.log('[Checkout] Initiating order creation with paymentIntentId:', paymentIntentId);
+            await createOrder(paymentIntentId);
+        } catch (err) {
+            // If order creation throws unexpectedly, ensure UI is not stuck
+            console.error('[Checkout] Unexpected error after payment success:', err.message);
+            toast.error('Order creation failed after payment. Please contact support with reference: ' + paymentIntentId);
+            setIsSubmitting(false);
+        }
     };
 
 
@@ -1607,6 +1656,8 @@ export default function Checkout() {
                                         selectedMethod={paymentMethod}
                                         onMethodChange={(method) => {
                                             setPaymentMethod(method);
+                                            // Reset payment state when switching methods
+                                            // Keep stripeLoadedPromise intact — no need to re-initialize Stripe
                                             setClientSecret('');
                                             setShowStripeForm(false);
                                             setPaymentCompleted(false);
@@ -1622,9 +1673,9 @@ export default function Checkout() {
                                         <CardTitle>💳 Payment Details</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {stripePromise ? (
+                                        {stripeLoadedPromise && clientSecret ? (
                                             <Elements 
-                                               stripe={stripePromise} 
+                                               stripe={stripeLoadedPromise} 
                                                options={{ 
                                                    clientSecret,
                                                    appearance: {
@@ -1642,7 +1693,9 @@ export default function Checkout() {
                                         ) : (
                                             <div className="text-center py-4">
                                                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-500" />
-                                                <p className="text-sm text-gray-500 mt-2">Loading payment form...</p>
+                                                <p className="text-sm text-gray-500 mt-2">
+                                                    {initializingPayment ? 'Connecting to payment system...' : 'Loading payment form...'}
+                                                </p>
                                             </div>
                                         )}
                                     </CardContent>
