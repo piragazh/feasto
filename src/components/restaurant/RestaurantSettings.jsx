@@ -697,7 +697,7 @@ export default function RestaurantSettings({ restaurantId }) {
                             </div>
                             <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                                 <Switch
-                                    checked={formData.show_review_count !== false}
+                                    checked={formData.show_review_count}
                                     onCheckedChange={(checked) => setFormData({ ...formData, show_review_count: checked })}
                                 />
                                 <div>
