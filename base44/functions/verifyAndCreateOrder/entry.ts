@@ -126,7 +126,15 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        
+        let user = null;
+        try {
+            user = await base44.auth.me();
+        } catch (authErr) {
+            // Guest checkout - no auth token, continue as guest
+            console.log('[ORDER] Guest checkout detected');
+        }
+        
         const { orderData, paymentIntentId, idempotency_key } = await req.json();
 
         // ── Order velocity throttle ───────────────────────────────────────────
