@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import Stripe from 'npm:stripe';
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
@@ -18,6 +18,12 @@ Deno.serve(async (req) => {
 
         if (!amount || typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
             return Response.json({ error: 'Invalid amount' }, { status: 400 });
+        }
+
+        // CRITICAL: Convert to pence for Stripe
+        const amountInPence = Math.round(amount * 100);
+        if (amountInPence <= 0 || amountInPence > 50000) { // Max £500
+            return Response.json({ error: 'Amount exceeds maximum allowed (£500) or is invalid' }, { status: 400 });
         }
 
         // SECURITY: Enforce maximum payment amount (£500) to prevent abuse
@@ -59,7 +65,7 @@ Deno.serve(async (req) => {
 
         const paymentIntent = await stripe.paymentIntents.create(
             {
-                amount: Math.round(amount * 100),
+                amount: amountInPence,
                 currency: currency,
                 automatic_payment_methods: {
                     enabled: true,
@@ -68,13 +74,14 @@ Deno.serve(async (req) => {
                 metadata: {
                     user_email: user?.email || 'guest',
                     order_id: orderId || 'none',
+                    amount_gbp: String(amount),
                     ...metadata
                 }
             },
             { idempotencyKey: stripeIdempotencyKey }
         );
 
-        console.log(`[PAYMENT] PaymentIntent created: ${paymentIntent.id} amount=${Math.round(amount * 100)} user=${user?.email || 'guest'} order=${orderId || 'none'}`);
+        console.log(`[PAYMENT] PaymentIntent created: ${paymentIntent.id} amount=${amountInPence}p (£${amount}) user=${user?.email || 'guest'} order=${orderId || 'none'}`);
         return Response.json({
             clientSecret: paymentIntent.client_secret,
             paymentIntentId: paymentIntent.id

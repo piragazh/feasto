@@ -251,6 +251,8 @@ Deno.serve(async (req) => {
             let paymentIntent;
             try {
                 paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                console.log(`[PAYMENT] Retrieved intent=${paymentIntentId} status=${paymentIntent.status} amount=${paymentIntent.amount}p`);
+                
                 if (paymentIntent.status !== 'succeeded') {
                     console.error(`[PAYMENT] Intent not succeeded intent=${paymentIntentId} status=${paymentIntent.status}`);
                     await base44.asServiceRole.entities.FailureLog.create({
@@ -265,21 +267,28 @@ Deno.serve(async (req) => {
 
                     return new Response(JSON.stringify({ error: 'Payment not confirmed. Status: ' + paymentIntent.status, success: false }), { status: 400 });
                 }
-                const expectedAmountCents = Math.round(orderData.total * 100);
-                if (paymentIntent.amount !== expectedAmountCents) {
-                    console.error(`[PAYMENT] Amount mismatch intent=${paymentIntentId} expected=${expectedAmountCents} got=${paymentIntent.amount}`);
+                
+                // CRITICAL: Convert orderData.total to pence for accurate comparison
+                // Allow 1p tolerance for floating point rounding
+                const expectedAmountPence = Math.round(orderData.total * 100);
+                const actualAmountPence = paymentIntent.amount;
+                const penceDeviation = Math.abs(expectedAmountPence - actualAmountPence);
+                
+                if (penceDeviation > 1) {
+                    console.error(`[PAYMENT] Amount mismatch intent=${paymentIntentId} expected=${expectedAmountPence}p (£${orderData.total}) got=${actualAmountPence}p deviation=${penceDeviation}p`);
                     await base44.asServiceRole.entities.FailureLog.create({
                         failure_type: 'payment_amount_mismatch',
                         severity: 'critical',
                         restaurant_id: orderData.restaurant_id,
                         payment_intent_id: paymentIntentId,
                         user_email: user?.email || 'guest',
-                        error_message: `Payment amount mismatch: expected ${expectedAmountCents} pence, got ${paymentIntent.amount}`,
-                        context: { http_status: 400, expected: expectedAmountCents, actual: paymentIntent.amount }
+                        error_message: `Payment amount mismatch: expected ${expectedAmountPence}p (£${orderData.total}), got ${actualAmountPence}p (deviation ${penceDeviation}p)`,
+                        context: { http_status: 400, expected_pence: expectedAmountPence, actual_pence: actualAmountPence, deviation_pence: penceDeviation }
                     }).catch(e => console.warn('[LOG] Failed to record amount mismatch:', e.message));
 
                     return new Response(JSON.stringify({ error: 'Payment amount does not match order total', success: false }), { status: 400 });
                 }
+                console.log(`[PAYMENT] Amount verified: expected=${expectedAmountPence}p got=${actualAmountPence}p deviation=${penceDeviation}p ✓`);
                 console.log(`[PAYMENT] Verified intent=${paymentIntentId} amount=${paymentIntent.amount}`);
             } catch (stripeError) {
                 console.error(`[PAYMENT] Stripe verification failed intent=${paymentIntentId}:`, stripeError.message, stripeError.type || '');

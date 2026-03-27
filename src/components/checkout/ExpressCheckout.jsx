@@ -63,6 +63,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             // Confirm payment using the PaymentIntent
                             // Express Checkout Element already collected payment method
                             // Just need to confirm the intent
+                            console.log('[ExpressCheckout] Confirming payment with clientSecret:', clientSecret?.slice(0, 20) + '...');
                             const { error, paymentIntent } = await stripe.confirmPayment({
                                 elements,
                                 clientSecret,
@@ -79,6 +80,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                                     },
                                 },
                             });
+                            console.log('[ExpressCheckout] confirmPayment result:', { error: !!error, status: paymentIntent?.status });
 
                             if (error) {
                                 console.error('[ExpressCheckout] Payment error:', error);
