@@ -96,6 +96,7 @@ export default function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState(''); // Selected payment method (no default)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
+    const [stripeInstance, setStripeInstance] = useState(null); // Loaded Stripe instance
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Stable per-session key
     
@@ -495,6 +496,7 @@ export default function Checkout() {
                     setInitializingPayment(false);
                     return;
                 }
+                setStripeInstance(stripe);
 
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
@@ -1615,16 +1617,16 @@ export default function Checkout() {
                                         <CardTitle>💳 Payment Details</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {stripePromise ? (
+                                        {stripeInstance ? (
                                             <Elements 
-                                               stripe={stripePromise} 
+                                               stripe={stripeInstance} 
                                                options={{ 
-                                                   clientSecret,
-                                                   appearance: {
-                                                       theme: 'stripe'
-                                                   },
-                                                   loader: 'auto'
-                                               }}
+                                                    clientSecret,
+                                                    appearance: {
+                                                        theme: 'stripe'
+                                                    },
+                                                    loader: 'auto'
+                                                }}
                                             >
                                                 <StripePaymentForm
                                                     amount={total}
