@@ -96,7 +96,6 @@ export default function Restaurant() {
                 localStorage.setItem('cart', JSON.stringify(cart));
                 if (restaurantId) {
                     localStorage.setItem('cartRestaurantId', restaurantId);
-                    localStorage.setItem('cartRestaurantName', restaurant?.name || '');
                 }
             } else {
                 // Cart is empty — clean up storage
@@ -835,7 +834,7 @@ export default function Restaurant() {
             localStorage.setItem('cart', JSON.stringify(cart));
             localStorage.setItem('cartRestaurantId', restaurantId);
             localStorage.setItem('orderType', orderType);
-            localStorage.setItem('cartRestaurantName', restaurant.name);
+            localStorage.setItem('cartRestaurantName', restaurant?.name || '');
             if (appliedPromotions.length > 0) {
                 localStorage.setItem('appliedPromotions', JSON.stringify(appliedPromotions));
             } else {
