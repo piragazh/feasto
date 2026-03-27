@@ -139,8 +139,8 @@ export default function KioskPayment({
                 total: cartTotal,
                 payment_method: 'cash',
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                status: 'pending', // staff confirm payment at counter
-                notes: 'Kiosk order — pay at counter',
+                status: 'pending', // NOT paid — staff collect payment at counter before preparing
+                notes: 'Kiosk order — payment due at counter',
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
             const placedOrder = { ...order, order_number: orderNum };
@@ -483,13 +483,13 @@ export default function KioskPayment({
             id: 'card',
             label: 'Pay by Card',
             icon: CreditCard,
-            description: `Tap, insert or swipe your card on the ${terminalConfig?.reader_label || 'terminal'}`,
+            description: 'Tap, insert or swipe your card',
         }] : []),
         ...(allowCounter ? [{
             id: 'cash',
             label: 'Pay at Counter',
             icon: Banknote,
-            description: 'Bring your order number to the counter to pay',
+            description: 'Take your order number to the counter to pay',
         }] : []),
     ];
 
@@ -497,16 +497,11 @@ export default function KioskPayment({
     if (paymentMethods.length === 0) {
         return (
             <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-8 text-center">
-                <div className="w-28 h-28 rounded-3xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-8">
-                    <XCircle className="h-14 w-14 text-red-400" />
+                <div className="w-28 h-28 rounded-3xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mb-8">
+                    <UserRound className="h-14 w-14 text-orange-400" />
                 </div>
-                <h2 className="text-white text-3xl font-black mb-3">Payment Unavailable</h2>
-                <p className="text-gray-300 text-lg mb-8">We're unable to take payment at this kiosk right now.</p>
-                <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl px-6 py-5 mb-8 max-w-sm w-full">
-                    <UserRound className="h-8 w-8 text-orange-400 mx-auto mb-2" />
-                    <p className="text-orange-300 font-bold text-lg">Need help?</p>
-                    <p className="text-orange-300/70 text-sm mt-1">Please speak to a member of staff to place your order.</p>
-                </div>
+                <h2 className="text-white text-3xl font-black mb-4">Ordering is temporarily unavailable</h2>
+                <p className="text-gray-300 text-xl mb-10">Please ask staff for help.</p>
                 <button onClick={onBack} className="bg-gray-800 hover:bg-gray-700 text-white font-semibold px-8 py-4 rounded-2xl transition-colors">
                     ← Go Back
                 </button>
@@ -551,20 +546,13 @@ export default function KioskPayment({
                     </p>
                 </div>
 
-                {/* Operational notices */}
+                {/* Operational notices — customer-facing only, no technical details */}
                 <div className="w-full space-y-3 mb-4">
-                    {kioskConfig.payment_card_enabled && !terminalConfigured && (
+                    {(terminalUnavailable || (kioskConfig.payment_card_enabled && !terminalConfigured)) && allowCounter && (
                         <StaffHelpBanner
-                            icon={CreditCard}
+                            icon={Banknote}
                             color="yellow"
-                            message="Card payment is not available — no terminal configured. You can pay at the counter."
-                        />
-                    )}
-                    {terminalUnavailable && terminalConfigured && (
-                        <StaffHelpBanner
-                            icon={CreditCard}
-                            color="yellow"
-                            message="Card payment is temporarily unavailable. Please pay at the counter."
+                            message="Card payment is not available right now. Please pay at the counter."
                         />
                     )}
                     {printerWarning && (
