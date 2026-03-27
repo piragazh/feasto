@@ -94,9 +94,8 @@ export default function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState(''); // Selected payment method (no default)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
-    const [paymentInitFailed, setPaymentInitFailed] = useState(false); // Prevent re-attempting after failure
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
-    const [idempotencyKey, setIdempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Regenerated when payment method changes
+    const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Static: set once at mount
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
@@ -453,7 +452,6 @@ export default function Checkout() {
 
             if (clientSecret) return;
             if (initializingPayment) return;
-            if (paymentInitFailed) return; // CRITICAL: Don't retry after failure
 
             // ✅ COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
             
@@ -513,20 +511,18 @@ export default function Checkout() {
                     const errorMsg = response?.data?.error || 'Failed to initialize payment. Please try again.';
                     toast.error(errorMsg);
                     setClientSecret(''); // Clear to prevent stale state
-                    setPaymentInitFailed(true); // CRITICAL: Flag prevents infinite loop
                 }
             } catch (error) {
                 console.error('Payment init error:', error);
                 toast.error('Failed to initialize payment. Please refresh and try again.');
                 setClientSecret(''); // Prevent stale state on error
-                setPaymentInitFailed(true); // CRITICAL: Flag prevents infinite loop
             } finally {
                 setInitializingPayment(false);
             }
         };
 
         initPayment();
-    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType, zoneCheckComplete, deliveryZoneInfo, idempotencyKey, restaurantId, cart.length]);
+    }, [paymentMethod, clientSecret, cart.length]); // CRITICAL: Minimal deps to prevent infinite loop on form changes
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -1614,7 +1610,6 @@ export default function Checkout() {
                                             setClientSecret('');
                                             setShowStripeForm(false);
                                             setPaymentCompleted(false);
-                                            setPaymentInitFailed(false); // Reset flag to allow retry on method change
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                                     />
