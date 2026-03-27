@@ -15,7 +15,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={isAvailable ? { y: -2, scale: 1.01 } : {}}
-            className={`group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative min-h-[180px] ${
+            className={`group flex flex-col gap-4 p-5 rounded-3xl transition-all duration-300 relative h-full ${
                 isAvailable 
                     ? 'bg-white shadow-md hover:shadow-2xl border-0' 
                     : 'bg-gray-50 border border-gray-200 opacity-70 grayscale'
@@ -29,7 +29,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                 </div>
             )}
             
-            <div className="flex-1">
+            <div className="flex-1 flex flex-col">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <h3 className={`font-bold text-lg ${isAvailable ? 'text-gray-900' : 'text-gray-500'}`}>
                         {item.name}
@@ -64,7 +64,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                         )}
                     </div>
                 )}
-                <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-4 flex-wrap mt-auto">
                     <span className="font-extrabold text-xl text-gray-900 whitespace-nowrap">£{item.price?.toFixed(2)}</span>
                     <div className="flex items-center gap-2 flex-wrap">
                         {item.is_vegetarian && (
@@ -83,7 +83,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                 </div>
             </div>
             
-            <div className="relative flex-shrink-0">
+            <div className="relative flex-shrink-0 mx-auto">
                 {item.image_url ? (
                     <div className="relative">
                         <img
