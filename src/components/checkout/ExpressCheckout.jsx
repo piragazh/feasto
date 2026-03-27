@@ -77,7 +77,8 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         }
                         if (expressConfirmFiredRef) expressConfirmFiredRef.current = true;
 
-                        console.log('[ExpressCheckout] onConfirm fired by wallet element');
+                        console.log('[ExpressCheckout] onConfirm fired by wallet element', data);
+                        setIsProcessing(true);
                         
                         // CRITICAL: ExpressCheckoutElement automatically confirms the PaymentIntent
                         // We receive confirmation via onConfirm callback with stripe attached
@@ -149,6 +150,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                     onClick={handleClick}
                     onLoadingChange={(isLoading) => {
                         console.log('[ExpressCheckout] Loading state:', isLoading);
+                        setIsProcessing(isLoading);
                     }}
                     options={{
                         buttonAppearance: {
@@ -159,6 +161,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         layout: {
                             overflow: 'auto',
                         },
+                        clientSecret: clientSecret,
                     }}
                 />
                 
