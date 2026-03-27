@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, UtensilsCrossed, Printer } from 'lucide-react';
 
-export default function KioskConfirmation({ order, orderType, restaurant, onDone, printerFailed = false }) {
+export default function KioskConfirmation({ order, orderType, restaurant, onDone, printerFailed = false, paymentMethod }) {
     const [countdown, setCountdown] = useState(30);
     const orderNum = order?.order_number || order?.id?.slice(-4).toUpperCase();
 
@@ -27,10 +27,21 @@ export default function KioskConfirmation({ order, orderType, restaurant, onDone
 
             <h1 className="text-white text-4xl font-black mb-3">Order Placed!</h1>
             <p className="text-gray-400 text-xl mb-8 max-w-md">
-                {orderType === 'dine_in'
-                    ? 'Your food will be brought to your table'
-                    : 'Your order is being prepared. You\'ll be called when it\'s ready'}
+                {paymentMethod === 'pay_at_counter'
+                    ? 'Please go to the counter to pay. Your order will be prepared after payment is confirmed.'
+                    : orderType === 'dine_in'
+                        ? 'Your food will be brought to your table'
+                        : 'Your order is being prepared. You\'ll be called when it\'s ready'}
             </p>
+
+            {paymentMethod === 'pay_at_counter' && (
+                <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/30 rounded-2xl px-6 py-4 mb-6 max-w-sm w-full">
+                    <span className="text-2xl">🧾</span>
+                    <p className="text-orange-300 text-sm font-medium text-left">
+                        Take this order number to the counter and pay — kitchen will start once payment is confirmed.
+                    </p>
+                </div>
+            )}
 
             {/* Order Number */}
             <div className="bg-gray-900 border border-white/[0.06] rounded-3xl px-12 py-8 mb-4">

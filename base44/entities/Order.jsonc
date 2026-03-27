@@ -12,7 +12,7 @@
     },
     "payment_intent_id": {
       "type": "string",
-      "description": "Stripe PaymentIntent ID \u2014 used as dedup key to prevent double-payment creating two orders"
+      "description": "Stripe PaymentIntent ID or kiosk terminal transaction ref \u2014 used as dedup key to prevent double-payment creating two orders"
     },
     "restaurant_id": {
       "type": "string"
@@ -126,9 +126,11 @@
         "cash",
         "card",
         "apple_pay",
-        "google_pay"
+        "google_pay",
+        "pay_at_counter"
       ],
-      "default": "cash"
+      "default": "cash",
+      "description": "How the order was or will be paid. 'pay_at_counter' = kiosk order placed, payment NOT yet collected \u2014 staff must take payment before kitchen prepares. 'card' = paid via card (online Stripe or kiosk terminal \u2014 see payment_intent_id). 'cash' = cash on delivery (online orders only)."
     },
     "order_type": {
       "type": "string",
@@ -165,7 +167,8 @@
         "refund_under_platform_review",
         "refunded"
       ],
-      "default": "pending"
+      "default": "pending",
+      "description": "Order workflow status. For kiosk pay_at_counter orders: 'pending' means awaiting payment collection at counter \u2014 kitchen should NOT start until staff confirms payment and moves to 'confirmed'."
     },
     "rejection_reason": {
       "type": "string"

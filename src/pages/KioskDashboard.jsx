@@ -228,7 +228,8 @@ export default function KioskDashboard() {
                     orderType={orderType}
                     restaurant={restaurant}
                     onDone={resetKiosk}
-                    printerError={printerError}
+                    printerFailed={printerError}
+                    paymentMethod={placedOrder?.payment_method}
                 />
             )}
         </div>
