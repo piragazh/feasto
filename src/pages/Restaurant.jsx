@@ -56,6 +56,7 @@ export default function Restaurant() {
     const [previousCartData, setPreviousCartData] = useState(null);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
     const [showOutsideHoursConfirmation, setShowOutsideHoursConfirmation] = useState(false);
+    const lastAddedItemRef = useRef(null);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
@@ -426,7 +427,8 @@ export default function Restaurant() {
                 return [...prev, newItem];
             });
 
-            if (showToast) {
+            if (showToast && lastAddedItemRef.current !== item.id) {
+                lastAddedItemRef.current = item.id;
                 toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
                 duration: 3000,
                 style: {
