@@ -59,9 +59,12 @@ Deno.serve(async (req) => {
         }
 
         // Use idempotency key on Stripe to prevent double-charging on retries/double-clicks
-        // Falls back to a key derived from user+amount+orderId when not explicitly provided
-        const stripeIdempotencyKey = idempotency_key 
-            || `pi_${user?.email || 'guest'}_${orderId || 'noid'}_${Math.round(amount * 100)}`;
+        // Client MUST supply idempotency_key — regenerate on each payment method change to avoid Stripe conflicts
+        // (Stripe rejects idempotent keys when amount or params differ from first use)
+        if (!idempotency_key) {
+            return Response.json({ error: 'Missing idempotency_key - ensure frontend regenerates on payment method change' }, { status: 400 });
+        }
+        const stripeIdempotencyKey = idempotency_key;
 
         const paymentIntent = await stripe.paymentIntents.create(
             {

@@ -493,6 +493,7 @@ export default function Checkout() {
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
                     currency: 'gbp',
+                    idempotency_key: idempotencyKey,
                     metadata: {
                         restaurant_id: restaurantId,
                         restaurant_name: restaurantName
