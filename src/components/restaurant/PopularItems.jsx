@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import useEmblaCarousel from 'embla-carousel-react';
 import { base44 } from '@/api/base44Client';
 import { TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import MenuItemCard from './MenuItemCard';
@@ -7,13 +8,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
 export default function PopularItems({ restaurantId, onItemClick }) {
-    const [emblaRef, setEmblaRef] = React.useState(null);
-    const [emblaApi, setEmblaApi] = React.useState(null);
+    const [emblaRef, emblaApi] = useEmblaCarousel({
+        align: 'start',
+        slidesToScroll: 1,
+        skipSnaps: false,
+        breakpoints: {
+            '(max-width: 640px)': { slides: { perView: 1 } },
+            '(min-width: 641px)': { slides: { perView: 2 } },
+            '(min-width: 1024px)': { slides: { perView: 3 } },
+        }
+    });
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
 
     const scrollPrev = React.useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
     const scrollNext = React.useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+    React.useEffect(() => {
+        if (!emblaApi) return;
+        const updateButtons = () => {
+            setCanScrollPrev(emblaApi.canScrollPrev());
+            setCanScrollNext(emblaApi.canScrollNext());
+        };
+        updateButtons();
+        emblaApi.on('select', updateButtons);
+        return () => emblaApi.off('select', updateButtons);
+    }, [emblaApi]);
 
     const { data: orders = [] } = useQuery({
         queryKey: ['restaurant-orders', restaurantId],
@@ -109,8 +129,8 @@ export default function PopularItems({ restaurantId, onItemClick }) {
             </div>
 
             {showCarousel ? (
-                <div className="flex gap-4">
-                    <div className="overflow-hidden flex-1">
+                <div className="overflow-hidden" ref={emblaRef}>
+                    <div className="flex gap-4">
                         {popularItems.map((item, index) => (
                             <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
                                 <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
