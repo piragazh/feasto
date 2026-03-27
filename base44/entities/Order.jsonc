@@ -141,7 +141,51 @@
         "pay_at_counter"
       ],
       "default": "cash",
-      "description": "How the order was or will be paid. 'pay_at_counter' = kiosk order placed, payment NOT yet collected \u2014 staff must take payment before kitchen prepares. 'card' = paid via card (online Stripe or kiosk terminal \u2014 see payment_intent_id). 'cash' = cash on delivery (online orders only)."
+      "description": "How the order was or will be paid. 'pay_at_counter' = kiosk order placed, payment NOT yet collected. 'card' = paid via card (online Stripe or kiosk terminal). 'cash' = cash on delivery."
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending_payment",
+        "payment_confirmed",
+        "paid_card",
+        "failed_payment",
+        "cancelled_payment"
+      ],
+      "default": "pending_payment",
+      "description": "KIOSK: Explicit payment state, independent of order preparation. pending_payment=awaiting staff confirmation. payment_confirmed=staff confirmed counter payment. paid_card=card terminal authorized. For non-kiosk orders, follows payment_method (card/apple_pay\u2192paid_card, cash\u2192pending_payment until collected, etc.)"
+    },
+    "order_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "confirmed",
+        "preparing",
+        "ready",
+        "completed",
+        "cancelled"
+      ],
+      "default": "new",
+      "description": "KIOSK: Explicit order preparation state, independent of payment. new=order received, not yet confirmed by kitchen. confirmed=staff confirmed payment (kiosk) or order accepted. preparing=kitchen actively preparing. ready=ready for customer/delivery. completed=delivered/collected. cancelled=order voided. Standard orders use legacy 'status' field."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "preparing",
+        "out_for_delivery",
+        "ready_for_collection",
+        "delivered",
+        "collected",
+        "cancelled",
+        "refund_requested",
+        "refund_rejected_by_restaurant",
+        "refund_under_platform_review",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "LEGACY: Universal order workflow status. For non-kiosk orders. For kiosk orders, use order_status + payment_status instead."
     },
     "order_type": {
       "type": "string",
@@ -161,25 +205,6 @@
     "table_number": {
       "type": "string",
       "description": "Human-readable table number for dine-in orders (e.g., Table 5)"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending",
-        "confirmed",
-        "preparing",
-        "out_for_delivery",
-        "ready_for_collection",
-        "delivered",
-        "collected",
-        "cancelled",
-        "refund_requested",
-        "refund_rejected_by_restaurant",
-        "refund_under_platform_review",
-        "refunded"
-      ],
-      "default": "pending",
-      "description": "Order workflow status. For kiosk pay_at_counter orders: 'pending' means awaiting payment collection at counter \u2014 kitchen should NOT start until staff confirms payment and moves to 'confirmed'."
     },
     "rejection_reason": {
       "type": "string"

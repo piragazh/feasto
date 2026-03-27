@@ -21,7 +21,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [orderTypeFilter, setOrderTypeFilter] = useState('all');
-    const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'kiosk' | 'other'
+    const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'kiosk' | 'other' | 'unpaid_kiosk'
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [selectedOrders, setSelectedOrders] = useState([]);
@@ -198,6 +198,9 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
         if (statusFilter !== 'all' && order.status !== statusFilter) return false;
         if (orderTypeFilter !== 'all' && order.order_type !== orderTypeFilter) return false;
+        
+        // Source-based filtering
+        if (sourceFilter === 'unpaid_kiosk' && !(order.order_source === 'kiosk' && order.payment_status === 'pending_payment')) return false;
         if (sourceFilter === 'kiosk' && order.order_source !== 'kiosk') return false;
         if (sourceFilter === 'other' && order.order_source === 'kiosk') return false;
 
@@ -728,29 +731,36 @@ Provide only the time range (e.g., "25-30 min").`;
     return (
         <div>
             {/* Source filter tabs */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 flex-wrap">
                 {[
                     { key: 'all', label: 'All Orders' },
-                    { key: 'kiosk', label: '🖥️ Kiosk' },
+                    { key: 'unpaid_kiosk', label: '💳 Unpaid Kiosk', highlight: 'yellow' },
+                    { key: 'kiosk', label: '🖥️ All Kiosk' },
                     { key: 'other', label: 'Online / Other' },
-                ].map(tab => (
-                    <button
-                        key={tab.key}
-                        onClick={() => setSourceFilter(tab.key)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            sourceFilter === tab.key
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}
-                    >
-                        {tab.label}
-                        {tab.key === 'kiosk' && (
-                            <span className="ml-1.5 bg-indigo-500/20 text-indigo-100 text-xs px-1.5 py-0.5 rounded-full">
-                                {allOrders.filter(o => o.order_source === 'kiosk').length}
-                            </span>
-                        )}
-                    </button>
-                ))}
+                ].map(tab => {
+                    const unpaidCount = allOrders.filter(o => o.order_source === 'kiosk' && o.payment_status === 'pending_payment').length;
+                    const kioskCount = allOrders.filter(o => o.order_source === 'kiosk').length;
+                    const displayCount = tab.key === 'unpaid_kiosk' ? unpaidCount : tab.key === 'kiosk' ? kioskCount : null;
+                    
+                    return (
+                        <button
+                            key={tab.key}
+                            onClick={() => setSourceFilter(tab.key)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                sourceFilter === tab.key
+                                    ? `${tab.highlight === 'yellow' ? 'bg-yellow-600 text-white' : 'bg-indigo-600 text-white'}`
+                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                        >
+                            {tab.label}
+                            {displayCount !== null && (
+                                <span className={`ml-1.5 ${sourceFilter === tab.key ? 'bg-white/20' : 'bg-gray-200'} text-xs px-1.5 py-0.5 rounded-full`}>
+                                    {displayCount}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="flex items-center justify-between mb-6">
@@ -919,12 +929,33 @@ Provide only the time range (e.g., "25-30 min").`;
                                                        <Badge className={order.order_type === 'collection' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>
                                                            {order.order_type === 'collection' ? '🏪 Collection' : order.order_type === 'takeaway' ? '🥡 Takeaway' : order.order_type === 'dine_in' ? '🍽️ Dine In' : '🚚 Delivery'}
                                                        </Badge>
-                                                       <Badge className={getStatusColor(order.status)}>
-                                                           {order.status.replace(/_/g, ' ')}
-                                                       </Badge>
-                                                       {isKioskAwaitingPayment(order) && (
-                                                           <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 animate-pulse">
-                                                               💳 Awaiting Payment
+                                                       {/* Kiosk orders: show payment_status + order_status separately */}
+                                                       {order.order_source === 'kiosk' ? (
+                                                           <>
+                                                               <Badge className={
+                                                                   order.payment_status === 'pending_payment' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300 animate-pulse' :
+                                                                   order.payment_status === 'payment_confirmed' ? 'bg-green-100 text-green-800' :
+                                                                   order.payment_status === 'paid_card' ? 'bg-green-100 text-green-800' :
+                                                                   'bg-gray-100 text-gray-800'
+                                                               }>
+                                                                   {order.payment_status === 'pending_payment' ? '💳 Pending Payment' :
+                                                                    order.payment_status === 'payment_confirmed' ? '✓ Confirmed' :
+                                                                    order.payment_status === 'paid_card' ? 'Paid by Card' :
+                                                                    order.payment_status?.replace(/_/g, ' ') || 'Unknown'}
+                                                               </Badge>
+                                                               <Badge className={
+                                                                   order.order_status === 'new' ? 'bg-gray-100 text-gray-800' :
+                                                                   order.order_status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                                                                   order.order_status === 'preparing' ? 'bg-purple-100 text-purple-800' :
+                                                                   order.order_status === 'ready' ? 'bg-green-100 text-green-800' :
+                                                                   'bg-gray-100 text-gray-800'
+                                                               }>
+                                                                   {order.order_status?.replace(/_/g, ' ') || 'Unknown'}
+                                                               </Badge>
+                                                           </>
+                                                       ) : (
+                                                           <Badge className={getStatusColor(order.status)}>
+                                                               {order.status.replace(/_/g, ' ')}
                                                            </Badge>
                                                        )}
                                                    </CardTitle>
@@ -1126,34 +1157,66 @@ Provide only the time range (e.g., "25-30 min").`;
                                         <Separator />
 
                                         <div className="flex gap-2 flex-wrap">
-                                            {order.status === 'pending' && (
+                                            {/* Kiosk counter-pay awaiting payment confirmation */}
+                                            {order.order_source === 'kiosk' && order.payment_status === 'pending_payment' && (
                                                 <>
-                                                    {isKioskAwaitingPayment(order) ? (
-                                                        // Kiosk pay-at-counter: staff must confirm cash/card payment was taken
-                                                        <Button
-                                                            onClick={() => confirmKioskPaymentMutation.mutate(order.id)}
-                                                            disabled={confirmKioskPaymentMutation.isPending}
-                                                            className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                                                        >
-                                                            <BadgeCheck className="h-4 w-4 mr-2" />
-                                                            Confirm Payment Received
-                                                        </Button>
-                                                    ) : (
-                                                        <Button
-                                                            onClick={() => handleAccept(order.id)}
-                                                            className="flex-1 bg-green-600 hover:bg-green-700"
-                                                        >
-                                                            <CheckCircle className="h-4 w-4 mr-2" />
-                                                            Accept Order
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        onClick={() => confirmKioskPaymentMutation.mutate(order.id)}
+                                                        disabled={confirmKioskPaymentMutation.isPending}
+                                                        className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                                                    >
+                                                        <BadgeCheck className="h-4 w-4 mr-2" />
+                                                        Confirm Payment Received
+                                                    </Button>
                                                     <Button
                                                         onClick={() => setRejectingOrder(order)}
                                                         variant="destructive"
                                                         className="flex-1"
                                                     >
                                                         <XCircle className="h-4 w-4 mr-2" />
-                                                        {isKioskAwaitingPayment(order) ? 'Cancel Order' : 'Reject'}
+                                                        Cancel Order
+                                                    </Button>
+                                                </>
+                                            )}
+                                            
+                                            {/* Kiosk card-paid or counter-pay after payment confirmed: no payment button */}
+                                            {order.order_source === 'kiosk' && order.payment_status !== 'pending_payment' && order.order_status === 'new' && (
+                                                <>
+                                                    <Button
+                                                        onClick={() => handleAccept(order.id)}
+                                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                                    >
+                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                        Accept Order
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => setRejectingOrder(order)}
+                                                        variant="destructive"
+                                                        className="flex-1"
+                                                    >
+                                                        <XCircle className="h-4 w-4 mr-2" />
+                                                        Reject
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Legacy orders (non-kiosk) */}
+                                            {order.order_source !== 'kiosk' && order.status === 'pending' && (
+                                                <>
+                                                    <Button
+                                                        onClick={() => handleAccept(order.id)}
+                                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                                    >
+                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                        Accept Order
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => setRejectingOrder(order)}
+                                                        variant="destructive"
+                                                        className="flex-1"
+                                                    >
+                                                        <XCircle className="h-4 w-4 mr-2" />
+                                                        Reject
                                                     </Button>
                                                 </>
                                             )}

@@ -132,12 +132,12 @@ export default function KioskPayment({
                 delivery_fee: 0,
                 discount: 0,
                 total: cartTotal,
-                // pay_at_counter = order placed, NO payment taken yet.
-                // Kitchen must NOT start until staff confirms payment and moves status → confirmed.
                 payment_method: 'pay_at_counter',
                 order_source: 'kiosk',
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                status: 'pending',
+                // Explicit state separation: payment awaiting, order is new
+                payment_status: 'pending_payment',
+                order_status: 'new',
                 notes: 'Kiosk order — awaiting counter payment. Do not prepare until confirmed.',
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });
@@ -250,14 +250,13 @@ export default function KioskPayment({
                 delivery_fee: 0,
                 discount: 0,
                 total: cartTotal,
-                // SECURITY: payment_method stored as 'card_terminal', not generic 'card'
                 payment_method: 'card',
                 order_source: 'kiosk',
-                // SECURITY: store full authorization evidence
                 payment_intent_id: authResult.transaction_id,
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
-                // SECURITY: only 'confirmed' because we have authorization evidence
-                status: 'confirmed',
+                // Explicit state separation: paid by card, order is new (kitchen hasn't confirmed yet)
+                payment_status: 'paid_card',
+                order_status: 'new',
                 notes: `Kiosk order — terminal: ${authResult.terminal_label} — provider: ${authResult.provider} — auth: ${authResult.authorization_timestamp}`,
                 ...(selectedTable ? { table_id: selectedTable.id, table_number: selectedTable.table_number } : {}),
             });

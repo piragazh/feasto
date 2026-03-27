@@ -2,12 +2,12 @@
  * confirmKioskPayment — Hardened kiosk payment confirmation
  *
  * SECURITY REQUIREMENTS:
- *   1. Only kiosk orders with payment_method='pay_at_counter' and status='pending' can be confirmed
- *   2. Card-terminal authorized orders (payment_method='card') are rejected immediately
- *   3. Actor identity (staff email) is recorded
- *   4. Timestamp is recorded
- *   5. Full audit trail is maintained
- *   6. Status transitions to 'confirmed', triggering kitchen print
+ *   1. Only kiosk orders with payment_method='pay_at_counter' and payment_status='pending_payment' can be confirmed
+ *   2. Card-terminal authorized orders (payment_status='paid_card') are rejected immediately
+ *   3. Updates payment_status only, does NOT change order_status
+ *   4. Actor identity (staff email) is recorded
+ *   5. Timestamp is recorded
+ *   6. Full audit trail is maintained
  *   7. Authenticated user required (no guest confirmation)
  */
 
@@ -80,10 +80,10 @@ Deno.serve(async (req) => {
             );
         }
 
-        // CRITICAL: Order must be pending (not already confirmed or failed)
-        if (order.status !== 'pending') {
+        // CRITICAL: Order must have pending_payment (not already confirmed or failed)
+        if (order.payment_status !== 'pending_payment') {
             return Response.json(
-                { error: `Invalid state: Order status is '${order.status}', not 'pending'` },
+                { error: `Invalid state: Order payment_status is '${order.payment_status}', not 'pending_payment'` },
                 { status: 409 }
             );
         }
@@ -102,28 +102,17 @@ Deno.serve(async (req) => {
         const existingAudit = order.payment_audit_trail || [];
         const newAuditTrail = [...existingAudit, auditEntry];
 
-        // ── Update status history ─────────────────────────────────────────────
-        const existingStatusHistory = order.status_history || [];
-        const newStatusHistory = [
-            ...existingStatusHistory,
-            {
-                status: 'confirmed',
-                timestamp,
-                note: auditEntry.note,
-            },
-        ];
-
-        // ── Perform atomic update ─────────────────────────────────────────────
+        // ── Update payment state ONLY (do NOT change order_status) ────────────
+        // This ensures payment confirmation is independent of kitchen prep workflow
         const updated = await base44.asServiceRole.entities.Order.update(
             order_id,
             {
-                status: 'confirmed',
-                status_history: newStatusHistory,
+                // EXPLICIT: Only update payment fields
+                payment_status: 'payment_confirmed',
                 payment_audit_trail: newAuditTrail,
-                // Optional: Update payment_confirmed_at timestamp
-                // This helps with analytics and debugging
                 payment_confirmed_at: timestamp,
                 payment_confirmed_by: user.email,
+                // Note: order_status remains 'new' until kitchen accepts
             }
         );
 
@@ -136,8 +125,9 @@ Deno.serve(async (req) => {
             success: true,
             order_id,
             order_number: order.order_number,
-            previous_status: 'pending',
-            new_status: 'confirmed',
+            previous_payment_status: 'pending_payment',
+            new_payment_status: 'payment_confirmed',
+            order_status: order.order_status || 'new',
             confirmed_by: user.email,
             confirmed_at: timestamp,
             message: 'Payment confirmed — order sent to kitchen',
