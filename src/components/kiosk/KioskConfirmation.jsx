@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle, UtensilsCrossed } from 'lucide-react';
 
 export default function KioskConfirmation({ order, orderType, restaurant, onDone }) {
-    const [countdown, setCountdown] = useState(15);
+    const [countdown, setCountdown] = useState(30);
     const orderNum = order?.order_number || order?.id?.slice(-4).toUpperCase();
 
     useEffect(() => {

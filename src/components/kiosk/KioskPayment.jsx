@@ -33,6 +33,34 @@ const TERMINAL_TIMEOUT_MS = 90_000;
 // Prevent duplicate payment attempts: lock for 3s after any terminal attempt
 const RETRY_LOCK_MS = 3_000;
 
+// sessionStorage key — persists across page reload within same tab
+const SESSION_KEY = 'kiosk_payment_in_progress';
+
+/** Write a sentinel so that a mid-payment page reload can detect an interrupted session. */
+function markPaymentInProgress(transactionRef, amount) {
+    try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+            transactionRef,
+            amount,
+            startedAt: Date.now(),
+        }));
+    } catch { /* ignore */ }
+}
+
+/** Clear the sentinel when payment resolves (success, decline, cancel, or timeout). */
+function clearPaymentInProgress() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
+
+/** Returns interrupted payment info if a reload happened mid-payment, else null. */
+function getInterruptedPayment() {
+    try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch { return null; }
+}
+
 export default function KioskPayment({
     cart, cartTotal, orderType, restaurant, restaurantId,
     selectedTable, onBack, onOrderPlaced
@@ -42,6 +70,7 @@ export default function KioskPayment({
     const [terminalResult, setTerminalResult] = useState(null); // { transaction_id, provider, timestamp, ... }
     const [errorMessage, setErrorMessage] = useState('');
     const [retryLocked, setRetryLocked] = useState(false);
+    const [interruptedPayment, setInterruptedPayment] = useState(null); // detected on mount if reload happened
 
     const timeoutRef = useRef(null);
     const attemptIdRef = useRef(null); // guard stale responses from previous attempts
@@ -51,8 +80,23 @@ export default function KioskPayment({
     const allowCash = kioskConfig.allow_cash_payment !== false;
     const allowCard = kioskConfig.allow_card_payment !== false;
 
-    // Cleanup timeout on unmount
+    // On mount: detect if a prior payment was interrupted by a reload
     useEffect(() => {
+        const interrupted = getInterruptedPayment();
+        if (interrupted) {
+            // Stale if started >10 min ago (terminal definitely done either way)
+            const ageMs = Date.now() - interrupted.startedAt;
+            if (ageMs < 10 * 60 * 1000) {
+                setInterruptedPayment(interrupted);
+                setPaymentState('interrupted');
+                setErrorMessage(
+                    `A payment of £${Number(interrupted.amount).toFixed(2)} may have been started ` +
+                    `(ref: ${interrupted.transactionRef}) but the page reloaded before it finished. ` +
+                    `Check the terminal — if payment went through, speak to staff before retrying.`
+                );
+            }
+            clearPaymentInProgress();
+        }
         return () => clearTimeout(timeoutRef.current);
     }, []);
 
@@ -99,16 +143,22 @@ export default function KioskPayment({
 
         // Generate a unique attempt ID — used to discard stale responses
         const thisAttemptId = `KP-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const transactionRef = `KIOSK-${restaurantId.slice(-6).toUpperCase()}-${Date.now()}`;
         attemptIdRef.current = thisAttemptId;
 
         setPaymentState('initiating_payment');
         setErrorMessage('');
         setTerminalResult(null);
+        setInterruptedPayment(null);
+
+        // Write reload-recovery sentinel BEFORE calling the terminal
+        markPaymentInProgress(transactionRef, cartTotal);
 
         // Set hard timeout
         clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
             if (attemptIdRef.current === thisAttemptId) {
+                clearPaymentInProgress();
                 setPaymentState('timeout');
                 setErrorMessage('The terminal did not respond in time. Check the terminal before retrying.');
                 lockRetry();
@@ -116,7 +166,6 @@ export default function KioskPayment({
         }, TERMINAL_TIMEOUT_MS);
 
         try {
-            const transactionRef = `KIOSK-${restaurantId.slice(-6).toUpperCase()}-${Date.now()}`;
             setPaymentState('awaiting_card');
 
             const response = await base44.functions.invoke('processCardTerminal', {
@@ -133,25 +182,23 @@ export default function KioskPayment({
             const result = response?.data || response;
 
             if (result?.success && result?.status === 'approved') {
-                setTerminalResult({
+                clearPaymentInProgress(); // resolved — clear sentinel
+                const authResult = {
                     transaction_id: result.transactionRef || transactionRef,
                     provider: terminalConfig?.provider || 'card_terminal',
                     authorization_timestamp: result.timestamp || new Date().toISOString(),
                     terminal_label: result.terminal || terminalConfig?.reader_label || 'terminal',
-                });
+                };
+                setTerminalResult(authResult);
                 setPaymentState('authorized');
-                // Auto-create order immediately on authorization
-                await placeAuthorizedCardOrder({
-                    transaction_id: result.transactionRef || transactionRef,
-                    provider: terminalConfig?.provider || 'card_terminal',
-                    authorization_timestamp: result.timestamp || new Date().toISOString(),
-                    terminal_label: result.terminal || terminalConfig?.reader_label || 'terminal',
-                });
+                await placeAuthorizedCardOrder(authResult);
             } else if (result?.status === 'declined') {
+                clearPaymentInProgress();
                 setPaymentState('declined');
                 setErrorMessage(result.error || 'Card declined. Please try a different card.');
                 lockRetry();
             } else {
+                clearPaymentInProgress();
                 setPaymentState('failed');
                 setErrorMessage(result?.error || 'Payment could not be processed. Please try again.');
                 lockRetry();
@@ -159,6 +206,7 @@ export default function KioskPayment({
         } catch (err) {
             if (attemptIdRef.current !== thisAttemptId) return;
             clearTimeout(timeoutRef.current);
+            clearPaymentInProgress();
             setPaymentState('failed');
             setErrorMessage('Could not reach the payment terminal. Check your connection and try again.');
             lockRetry();
@@ -217,10 +265,12 @@ export default function KioskPayment({
 
     const handleCancel = () => {
         clearTimeout(timeoutRef.current);
+        clearPaymentInProgress();
         attemptIdRef.current = null; // discard any in-flight response
         setPaymentState('idle');
         setErrorMessage('');
         setTerminalResult(null);
+        setInterruptedPayment(null);
     };
 
     const handleProceed = () => {
@@ -232,6 +282,44 @@ export default function KioskPayment({
     };
 
     // ── Terminal payment screens ──────────────────────────────────────────────
+
+    // Reload-recovery screen: shown when page reloaded during an in-flight payment
+    if (paymentState === 'interrupted') {
+        return (
+            <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-8 text-center">
+                <div className="w-28 h-28 rounded-3xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mb-8">
+                    <AlertTriangle className="h-14 w-14 text-yellow-400" />
+                </div>
+                <h2 className="text-white text-3xl font-black mb-3">Payment Interrupted</h2>
+                <p className="text-gray-300 text-lg mb-3">The page reloaded during a payment attempt</p>
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl px-6 py-4 mb-10 max-w-md">
+                    <p className="text-yellow-300 text-sm font-medium leading-relaxed">
+                        ⚠️ Check the card terminal now. If a payment completed, <strong>do NOT retry</strong> — speak to a member of staff and quote reference:
+                    </p>
+                    {interruptedPayment?.transactionRef && (
+                        <p className="text-yellow-200 font-mono text-xs mt-2 bg-yellow-500/10 rounded-lg px-3 py-1.5">
+                            {interruptedPayment.transactionRef}
+                        </p>
+                    )}
+                </div>
+                <div className="flex gap-4 w-full max-w-sm">
+                    <button
+                        onClick={onBack}
+                        className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-4 rounded-2xl transition-colors"
+                    >
+                        ← Back to Cart
+                    </button>
+                    <button
+                        onClick={() => { setPaymentState('idle'); setErrorMessage(''); setInterruptedPayment(null); }}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2"
+                    >
+                        <RotateCcw className="h-4 w-4" />
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (paymentState === 'initiating_payment' || paymentState === 'awaiting_card') {
         return (
