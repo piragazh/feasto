@@ -141,9 +141,9 @@ export default function SuperAdmin() {
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
             {/* Logo */}
-            <div className="sticky top-0 bg-gradient-to-b from-slate-950 to-slate-900 p-5 border-b border-slate-700 flex items-center justify-between">
+            <div className="sticky top-0 bg-slate-950 p-5 border-b border-slate-700 flex items-center justify-between">
                 <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
-                    <div className="w-11 h-11 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <div className="w-11 h-11 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
                         <Shield className="h-6 w-6 text-white" />
                     </div>
                     {(sidebarOpen || isMobile) && <span className="font-bold text-lg text-white truncate">Admin Hub</span>}
@@ -172,7 +172,7 @@ export default function SuperAdmin() {
                                         }}
                                         className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-200 ${
                                             isActive
-                                                ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg scale-105'
+                                                ? 'bg-orange-500 text-white shadow-lg scale-105'
                                                 : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                                         } ${!sidebarOpen && !isMobile && 'justify-center'}`}
                                         title={!sidebarOpen && !isMobile ? item.label : ''}
@@ -189,7 +189,7 @@ export default function SuperAdmin() {
 
             {/* User Info */}
             {(sidebarOpen || isMobile) && (
-                <div className="p-5 border-t border-slate-700 bg-gradient-to-t from-slate-950 to-slate-900">
+                <div className="p-5 border-t border-slate-700 bg-slate-950">
                     <div className="text-xs text-slate-400 space-y-1">
                         <p className="truncate font-semibold text-slate-200">{user?.full_name}</p>
                         <p className="truncate text-slate-500 text-xs">{user?.email}</p>
@@ -200,9 +200,9 @@ export default function SuperAdmin() {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+        <div className="min-h-screen bg-gray-50 flex">
             {/* Desktop Sidebar */}
-            <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-gradient-to-b from-slate-900 to-slate-950 text-white transition-all duration-300 fixed h-screen shadow-xl z-40 flex-col border-r border-slate-800`}>
+            <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 fixed h-screen shadow-xl z-40 flex-col border-r border-slate-800`}>
                 <SidebarContent />
             </div>
 
@@ -215,7 +215,7 @@ export default function SuperAdmin() {
                         </Button>
                     </div>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 bg-gradient-to-b from-slate-900 to-slate-950 text-white p-0 border-0">
+                <SheetContent side="left" className="w-64 bg-slate-900 text-white p-0 border-0">
                     <SidebarContent />
                 </SheetContent>
             </Sheet>
