@@ -34,17 +34,6 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
         }
     };
 
-    const handleClick = (e) => {
-        if (!stripe || !elements || !clientSecret || disabled || isProcessing) {
-            console.log('[ExpressCheckout] Click blocked - not ready', { stripe: !!stripe, elements: !!elements, clientSecret: !!clientSecret, disabled, isProcessing });
-            return;
-        }
-        console.log('[ExpressCheckout] Wallet checkout initiated');
-        // Note: setIsProcessing NOT called here — Stripe's ExpressCheckoutElement
-        // handles the loading state internally. Manually setting isProcessing would
-        // block the button before the wallet sheet even opens.
-    };
-
     // CRITICAL: If no clientSecret or Stripe not ready, show nothing (but don't null out completely)
     if (!stripe || !elements) {
         console.log('[ExpressCheckout] Waiting for Stripe to initialize');
@@ -77,7 +66,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         }
                         if (expressConfirmFiredRef) expressConfirmFiredRef.current = true;
 
-                        console.log('[ExpressCheckout] onConfirm fired by wallet element', data);
+                        console.log('[ExpressCheckout] 🔵 onConfirm FIRED', data);
                         setIsProcessing(true);
                         
                         // CRITICAL: ExpressCheckoutElement automatically confirms the PaymentIntent
@@ -147,7 +136,6 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         }
                     }}
                     onChange={handleChange}
-                    onClick={handleClick}
                     onLoadingChange={(isLoading) => {
                         console.log('[ExpressCheckout] Loading state:', isLoading);
                         setIsProcessing(isLoading);
