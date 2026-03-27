@@ -906,16 +906,24 @@ export default function Checkout() {
 
             // CRITICAL SECURITY: Use backend verification function instead of direct create
              // This ensures payment is verified and restaurant is open
-             const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
-                 orderData,
-                 paymentIntentId: paymentIntentId || null,
-                 idempotency_key: idempotencyKey
-             });
+             let verificationResponse;
+             try {
+                 verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
+                     orderData,
+                     paymentIntentId: paymentIntentId || null,
+                     idempotency_key: idempotencyKey
+                 });
+             } catch (invokeError) {
+                 console.error('🔴 verifyAndCreateOrder invoke failed:', invokeError);
+                 toast.error('Order processing error. Please try again.');
+                 setIsSubmitting(false);
+                 return;
+             }
 
             if (!verificationResponse?.data?.success) {
                 const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
-                // Check if refund was issued (payment was taken but order failed)
                 const refunded = verificationResponse?.data?.refunded === true;
+                console.error('🔴 Order creation failed:', { errorMsg, refunded, fullResponse: verificationResponse?.data });
                 if (refunded) {
                     toast.error(errorMsg + ' — Your payment has been automatically refunded.');
                 } else {
@@ -1033,7 +1041,7 @@ export default function Checkout() {
                 navigate(createPageUrl('Orders'));
             }, 2000);
             } catch (error) {
-                console.error('Order creation error:', error);
+                console.error('🔴 Order creation exception:', { error: error?.message, stack: error?.stack });
                 const errorMessage = error?.message || 'Failed to place order. Please check your connection and try again.';
                 toast.error(errorMessage);
             } finally {
