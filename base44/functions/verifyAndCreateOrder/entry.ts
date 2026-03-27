@@ -126,7 +126,8 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        let user = null;
+        try { user = await base44.auth.me(); } catch (_) { /* guest user */ }
         const { orderData, paymentIntentId, idempotency_key } = await req.json();
 
         // ── Order velocity throttle ───────────────────────────────────────────
@@ -858,13 +859,23 @@ Deno.serve(async (req) => {
         }
 
         // ── Coupon usage_count increment (after order committed) ──────────────
-         // CRITICAL: Await all coupon updates to prevent race conditions
+         // CRITICAL: Re-fetch each coupon before incrementing to avoid read-modify-write race
+         // (two concurrent orders with the same coupon would both read the same count and overwrite each other)
          const couponUpdatePromises = [];
          for (let i = 0; i < verifiedCouponIds.length; i++) {
              couponUpdatePromises.push(
-                 base44.asServiceRole.entities.Coupon.update(verifiedCouponIds[i], {
-                     usage_count: couponUsageCounts[i] + 1
-                 }).catch(e => console.warn(`[COUPON] Failed to increment usage_count for ${verifiedCouponIds[i]}:`, e))
+                 (async () => {
+                     try {
+                         // Re-read current count at commit time to be atomic
+                         const fresh = await base44.asServiceRole.entities.Coupon.filter({ id: verifiedCouponIds[i] });
+                         const freshCount = fresh?.[0]?.usage_count || 0;
+                         await base44.asServiceRole.entities.Coupon.update(verifiedCouponIds[i], {
+                             usage_count: freshCount + 1
+                         });
+                     } catch (e) {
+                         console.warn(`[COUPON] Failed to increment usage_count for ${verifiedCouponIds[i]}:`, e);
+                     }
+                 })()
              );
          }
          if (couponUpdatePromises.length > 0) {

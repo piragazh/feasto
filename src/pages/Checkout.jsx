@@ -512,7 +512,7 @@ export default function Checkout() {
         };
 
         initPayment();
-    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType]);
+    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType, zoneCheckComplete, deliveryZoneInfo]);
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
