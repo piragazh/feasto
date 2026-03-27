@@ -47,7 +47,7 @@ export default function KioskSettings({ restaurantId }) {
                 payment_card_enabled: true,
                 payment_counter_enabled: true,
                 kiosk_idle_media_enabled: true,
-                kiosk_idle_media_timeout_seconds: 60,
+                kiosk_idle_media_timeout_seconds: 60, // 15–600 seconds enforced by input validation
                 idle_media_screen_name: 'Kiosk Promo',
             });
         }
@@ -223,39 +223,58 @@ export default function KioskSettings({ restaurantId }) {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        📺 Idle Media Mode
+                        📺 Idle Promotional Display
                     </CardTitle>
                     <CardDescription>
-                        Show promotions fullscreen when kiosk is inactive. Any touch returns to ordering.
+                        Automatically show promotions when the kiosk is idle. Returns to ordering on any touch.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {/* Admin info banner */}
+                    <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-blue-800">
+                            When the kiosk is inactive, promotions will display automatically until the next customer touches the screen.
+                        </p>
+                    </div>
+
+                    {/* Enable toggle */}
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
-                            <p className="font-medium">Enable Idle Media Mode</p>
-                            <p className="text-sm text-gray-500">Display promotions during kiosk inactivity</p>
+                            <p className="font-medium">Enable Idle Promotional Display</p>
+                            <p className="text-sm text-gray-500">Show media during kiosk inactivity</p>
                         </div>
                         <Switch
                             checked={kioskConfig.kiosk_idle_media_enabled !== false}
                             onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, kiosk_idle_media_enabled: v })}
                         />
                     </div>
+
                     {kioskConfig.kiosk_idle_media_enabled !== false && (
                         <>
+                            {/* Idle timeout input with validation feedback */}
                             <div>
                                 <Label>Idle Timeout (seconds)</Label>
                                 <Input
                                     type="number"
-                                    min={30}
-                                    max={300}
+                                    min={15}
+                                    max={600}
                                     value={kioskConfig.kiosk_idle_media_timeout_seconds ?? 60}
-                                    onChange={(e) => setKioskConfig({ ...kioskConfig, kiosk_idle_media_timeout_seconds: parseInt(e.target.value) || 60 })}
+                                    onChange={(e) => {
+                                        let val = parseInt(e.target.value);
+                                        if (isNaN(val)) val = 60;
+                                        if (val < 15) val = 15;
+                                        if (val > 600) val = 600;
+                                        setKioskConfig({ ...kioskConfig, kiosk_idle_media_timeout_seconds: val });
+                                    }}
                                     className="max-w-xs mt-1"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Seconds of no interaction before showing media (30–300)
+                                    How long (15–600 seconds) before showing promotional media. Default: 60 seconds.
                                 </p>
                             </div>
+
+                            {/* Media screen selection */}
                             <div>
                                 <Label>Media Screen Name</Label>
                                 <Input
@@ -265,11 +284,12 @@ export default function KioskSettings({ restaurantId }) {
                                     className="max-w-xs mt-1"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Name of the media screen to display (must exist in your media screens)
+                                    Name of the media screen to display (must exist in Media Screens)
                                 </p>
                             </div>
                         </>
                     )}
+
                     <Button onClick={handleSaveGeneral} disabled={updateMutation.isPending} className="w-full">
                         <Save className="h-4 w-4 mr-2" />
                         Save Idle Media Settings
