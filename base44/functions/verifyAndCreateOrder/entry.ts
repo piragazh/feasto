@@ -558,7 +558,7 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'Order contains no items', success: false }), { status: 400 });
         }
         const menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: orderData.restaurant_id });
-        const menuItemsMap = new Map(menuItems.map(item => [item.id, item]));
+        const menuItemsMap = new Map((menuItems || []).map(item => [item.id, item]));
         for (const cartItem of orderData.items) {
             if (!menuItemsMap.has(cartItem.menu_item_id)) {
                 await base44.asServiceRole.entities.FailureLog.create({
