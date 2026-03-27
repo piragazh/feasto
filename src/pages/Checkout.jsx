@@ -1631,6 +1631,13 @@ export default function Checkout() {
                                                     amount={total}
                                                     clientSecret={clientSecret}
                                                     onSuccess={handleStripeSuccess}
+                                                    isFormValid={(() => {
+                                                        if (orderType === 'delivery') {
+                                                            return !!(formData.delivery_address && formData.phone && deliveryCoordinates?.lat && deliveryCoordinates?.lng && zoneCheckComplete && deliveryZoneInfo?.available !== false && (!isExistingAddress ? formData.door_number : true));
+                                                        } else {
+                                                            return !!formData.phone;
+                                                        }
+                                                    })()}
                                                 />
                                             </Elements>
                                         ) : (

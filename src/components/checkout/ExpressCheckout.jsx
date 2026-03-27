@@ -3,7 +3,7 @@ import { PaymentRequestButtonElement, useStripe } from '@stripe/react-stripe-js'
 import { Card } from "@/components/ui/card";
 import { Loader2, Smartphone } from 'lucide-react';
 
-export default function ExpressCheckout({ amount, onSuccess, onError, disabled, clientSecret }) {
+export default function ExpressCheckout({ amount, onSuccess, onError, disabled, clientSecret, isFormValid }) {
     const stripe = useStripe();
     const [paymentRequest, setPaymentRequest] = useState(null);
     const [canMakePayment, setCanMakePayment] = useState(false);
@@ -11,7 +11,8 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
     const [debugInfo, setDebugInfo] = useState('');
 
     useEffect(() => {
-        if (!stripe || !amount || disabled || !clientSecret) {
+        // CRITICAL: Block express checkout if form is not valid (address/phone/restaurant check)
+        if (!stripe || !amount || disabled || !clientSecret || !isFormValid) {
             setCanMakePayment(false);
             setPaymentRequest(null);
             return;
@@ -119,7 +120,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
         return () => {
             pr.off('paymentmethod');
         };
-    }, [stripe, amount, clientSecret, disabled, onSuccess, onError]);
+    }, [stripe, amount, clientSecret, disabled, onSuccess, onError, isFormValid]);
 
     // Show debugging info in dev mode
     if (import.meta.env.DEV && debugInfo) {

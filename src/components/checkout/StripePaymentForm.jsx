@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 import ExpressCheckout from './ExpressCheckout';
 
-export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
+export default function StripePaymentForm({ onSuccess, amount, clientSecret, isFormValid = true }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -106,13 +106,14 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                 <ExpressCheckout
                     amount={amount}
                     clientSecret={clientSecret}
+                    isFormValid={isFormValid}
                     onSuccess={(paymentIntentId) => {
                         onSuccess(paymentIntentId);
                     }}
                     onError={(error) => {
                         setErrorMessage(String(error || 'Payment failed'));
                     }}
-                    disabled={isProcessing}
+                    disabled={isProcessing || !isFormValid}
                 />
             )}
             
