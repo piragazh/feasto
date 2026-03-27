@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { printerManager } from '@/components/restaurant/PrinterService';
@@ -724,6 +724,29 @@ Provide only the time range (e.g., "25-30 min").`;
         setDateTo('');
     };
 
+    // Sort orders: unpaid kiosk first, then by status, then by age
+    const sortedOrders = React.useMemo(() => {
+        const sorted = [...orders];
+        sorted.sort((a, b) => {
+            // Priority 1: Unpaid kiosk orders at top
+            const aUnpaidKiosk = a.order_source === 'kiosk' && a.payment_status === 'pending_payment' ? 0 : 1;
+            const bUnpaidKiosk = b.order_source === 'kiosk' && b.payment_status === 'pending_payment' ? 0 : 1;
+            if (aUnpaidKiosk !== bUnpaidKiosk) return aUnpaidKiosk - bUnpaidKiosk;
+
+            // Priority 2: Pending/new orders (awaiting action)
+            const statusPriority = { 'pending': 0, 'new': 0, 'confirmed': 1, 'preparing': 2, 'ready_for_collection': 3, 'out_for_delivery': 3 };
+            const aStatus = a.order_source === 'kiosk' ? a.order_status : a.status;
+            const bStatus = b.order_source === 'kiosk' ? b.order_status : b.status;
+            const aPriority = statusPriority[aStatus] ?? 4;
+            const bPriority = statusPriority[bStatus] ?? 4;
+            if (aPriority !== bPriority) return aPriority - bPriority;
+
+            // Priority 3: Oldest first (most urgent)
+            return new Date(a.created_date) - new Date(b.created_date);
+        });
+        return sorted;
+    }, [orders]);
+
     if (isLoading) {
         return <div className="text-center py-8">Loading orders...</div>;
     }
@@ -764,7 +787,14 @@ Provide only the time range (e.g., "25-30 min").`;
             </div>
 
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Live Orders ({orders.length})</h2>
+                <div>
+                    <h2 className="text-2xl font-bold">Live Orders ({orders.length})</h2>
+                    {sourceFilter === 'all' && allOrders.filter(o => o.order_source === 'kiosk' && o.payment_status === 'pending_payment').length > 0 && (
+                        <p className="text-xs text-orange-600 font-semibold mt-1">
+                            ⚠️ {allOrders.filter(o => o.order_source === 'kiosk' && o.payment_status === 'pending_payment').length} unpaid kiosk orders
+                        </p>
+                    )}
+                </div>
                 {selectedOrders.length > 0 && (
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">{selectedOrders.length} selected</span>
@@ -897,14 +927,21 @@ Provide only the time range (e.g., "25-30 min").`;
                     )}
 
                     <div className="grid gap-4">
-                        {orders.map((order, index) => (
+                        {sortedOrders.map((order, index) => (
                             <motion.div
                                 key={order.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
                             >
-                                <Card className={`${isKioskAwaitingPayment(order) ? 'border-2 border-indigo-500 shadow-lg shadow-indigo-100' : order.status === 'pending' ? 'border-2 border-red-500 shadow-lg' : ''} ${selectedOrders.includes(order.id) ? 'ring-2 ring-orange-500' : ''}`}>
+                                <Card className={`
+                                    ${isKioskAwaitingPayment(order) 
+                                        ? 'border-2 border-orange-500 shadow-lg shadow-orange-200 bg-orange-50/30' 
+                                        : order.status === 'pending' && order.order_source !== 'kiosk'
+                                        ? 'border-2 border-red-500 shadow-lg' 
+                                        : 'border border-gray-200'}
+                                    ${selectedOrders.includes(order.id) ? 'ring-2 ring-orange-500' : ''}
+                                `}>
                                     <CardHeader>
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-start gap-3">
@@ -914,51 +951,64 @@ Provide only the time range (e.g., "25-30 min").`;
                                                     className="mt-1"
                                                 />
                                                 <div>
-                                                   <CardTitle className="flex items-center gap-2 flex-wrap">
-                                                       {order.order_type === 'collection' && order.order_number ? (
-                                                           <span className="text-2xl font-bold text-blue-600">{order.order_number}</span>
-                                                       ) : (
-                                                           <>Order #{order.id.slice(-6)}</>
-                                                       )}
+                                                   <div className="flex items-center gap-2 flex-wrap">
+                                                       <CardTitle className="flex items-center gap-0">
+                                                           {order.order_type === 'collection' && order.order_number ? (
+                                                               <span className="text-2xl font-bold text-blue-600">{order.order_number}</span>
+                                                           ) : (
+                                                               <>Order #{order.id.slice(-6)}</>
+                                                           )}
+                                                       </CardTitle>
+                                                       {/* Compact badge row for source and status */}
                                                        {order.order_source === 'kiosk' && (
-                                                           <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-300 flex items-center gap-1">
-                                                               <MonitorSmartphone className="h-3 w-3" />
-                                                               Kiosk
+                                                           <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-300 gap-0.5" size="sm">
+                                                               🖥️ Kiosk
                                                            </Badge>
                                                        )}
-                                                       <Badge className={order.order_type === 'collection' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>
-                                                           {order.order_type === 'collection' ? '🏪 Collection' : order.order_type === 'takeaway' ? '🥡 Takeaway' : order.order_type === 'dine_in' ? '🍽️ Dine In' : '🚚 Delivery'}
+                                                       <Badge className={`text-xs gap-0.5 ${order.order_type === 'collection' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`} size="sm">
+                                                           {order.order_type === 'collection' ? '🏪' : order.order_type === 'takeaway' ? '🥡' : order.order_type === 'dine_in' ? '🍽️' : '🚚'}
                                                        </Badge>
-                                                       {/* Kiosk orders: show payment_status + order_status separately */}
-                                                       {order.order_source === 'kiosk' ? (
+                                                       {/* Kiosk: payment + order status badges */}
+                                                       {order.order_source === 'kiosk' && (
                                                            <>
-                                                               <Badge className={
-                                                                   order.payment_status === 'pending_payment' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300 animate-pulse' :
+                                                               <Badge className={`text-xs ${
+                                                                   order.payment_status === 'pending_payment' ? 'bg-orange-200 text-orange-900 border border-orange-400 animate-pulse font-bold' :
                                                                    order.payment_status === 'payment_confirmed' ? 'bg-green-100 text-green-800' :
                                                                    order.payment_status === 'paid_card' ? 'bg-green-100 text-green-800' :
                                                                    'bg-gray-100 text-gray-800'
-                                                               }>
-                                                                   {order.payment_status === 'pending_payment' ? '💳 Pending Payment' :
-                                                                    order.payment_status === 'payment_confirmed' ? '✓ Confirmed' :
-                                                                    order.payment_status === 'paid_card' ? 'Paid by Card' :
-                                                                    order.payment_status?.replace(/_/g, ' ') || 'Unknown'}
+                                                               }`} size="sm">
+                                                                   {order.payment_status === 'pending_payment' ? '💳' :
+                                                                    order.payment_status === 'payment_confirmed' ? '✓' :
+                                                                    order.payment_status === 'paid_card' ? '💰' :
+                                                                    '?'}
                                                                </Badge>
-                                                               <Badge className={
+                                                               <Badge className={`text-xs ${
                                                                    order.order_status === 'new' ? 'bg-gray-100 text-gray-800' :
                                                                    order.order_status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
                                                                    order.order_status === 'preparing' ? 'bg-purple-100 text-purple-800' :
                                                                    order.order_status === 'ready' ? 'bg-green-100 text-green-800' :
                                                                    'bg-gray-100 text-gray-800'
-                                                               }>
-                                                                   {order.order_status?.replace(/_/g, ' ') || 'Unknown'}
+                                                               }`} size="sm">
+                                                                   {order.order_status === 'new' ? 'New' :
+                                                                    order.order_status === 'confirmed' ? 'Conf' :
+                                                                    order.order_status === 'preparing' ? 'Prep' :
+                                                                    order.order_status === 'ready' ? 'Ready' :
+                                                                    '?'}
                                                                </Badge>
                                                            </>
-                                                       ) : (
-                                                           <Badge className={getStatusColor(order.status)}>
-                                                               {order.status.replace(/_/g, ' ')}
+                                                       )}
+                                                       {/* Legacy orders: single status badge */}
+                                                       {order.order_source !== 'kiosk' && (
+                                                           <Badge className={`text-xs ${getStatusColor(order.status)}`} size="sm">
+                                                               {order.status === 'pending' ? 'Pending' :
+                                                                order.status === 'confirmed' ? 'Conf' :
+                                                                order.status === 'preparing' ? 'Prep' :
+                                                                order.status === 'out_for_delivery' ? 'Delivery' :
+                                                                order.status === 'ready_for_collection' ? 'Ready' :
+                                                                order.status.replace(/_/g, ' ')}
                                                            </Badge>
                                                        )}
-                                                   </CardTitle>
+                                                   </div>
                                                    <p className="text-sm text-gray-500 mt-1">
                                                        {order.created_date ? format(new Date(order.created_date), 'MMM d, h:mm a') : '—'}
                                                    </p>
