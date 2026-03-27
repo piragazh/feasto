@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { StaffHelpScreen } from './KioskStaffHelp';
 
@@ -50,8 +51,14 @@ export default function KioskWelcome({ restaurant, onStart, onLogoTap }) {
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
-                {/* Logo */}
-                <div className="mb-8 cursor-pointer" onClick={onLogoTap}>
+                {/* Logo with fade-in animation */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="mb-8 cursor-pointer"
+                    onClick={onLogoTap}
+                >
                     {restaurant.logo_url ? (
                         <img
                             src={restaurant.logo_url}
@@ -63,24 +70,53 @@ export default function KioskWelcome({ restaurant, onStart, onLogoTap }) {
                             <UtensilsCrossed className="h-14 w-14 text-white" />
                         </div>
                     )}
-                </div>
+                </motion.div>
 
-                <h1 className="text-white text-5xl font-black mb-3 tracking-tight">
+                <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="text-white text-5xl font-black mb-3 tracking-tight"
+                >
                     {restaurant.name}
-                </h1>
+                </motion.h1>
                 {restaurant.description && (
-                    <p className="text-gray-400 text-xl mb-2 max-w-xl">{restaurant.description}</p>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        className="text-gray-400 text-xl mb-2 max-w-xl"
+                    >
+                        {restaurant.description}
+                    </motion.p>
                 )}
                 {restaurant.cuisine_type && (
-                    <span className="inline-block bg-orange-500/10 border border-orange-500/30 text-orange-400 text-sm font-medium px-4 py-1.5 rounded-full mb-12">
+                    <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        className="inline-block bg-orange-500/10 border border-orange-500/30 text-orange-400 text-sm font-medium px-4 py-1.5 rounded-full mb-12"
+                    >
                         {restaurant.cuisine_type}
-                    </span>
+                    </motion.span>
                 )}
 
-                <p className="text-gray-300 text-2xl font-semibold mb-10">How would you like to order?</p>
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                    className="text-gray-300 text-2xl font-semibold mb-10"
+                >
+                    How would you like to order?
+                </motion.p>
 
-                {/* Order Type Buttons */}
-                <div className="flex gap-6 w-full max-w-2xl">
+                {/* Order Type Buttons with staggered animation */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.6 }}
+                    className="flex gap-6 w-full max-w-2xl"
+                >
                     <button
                         onClick={() => onStart('dine_in')}
                         className="flex-1 bg-white/5 hover:bg-orange-500 border border-white/10 hover:border-orange-500 rounded-3xl p-10 flex flex-col items-center gap-4 transition-all duration-300 group hover:shadow-2xl hover:shadow-orange-500/30 active:scale-95"
@@ -106,18 +142,39 @@ export default function KioskWelcome({ restaurant, onStart, onLogoTap }) {
                             <p className="text-gray-400 group-hover:text-white/70 text-sm mt-1 transition-colors">Take your food to go</p>
                         </div>
                     </button>
-                </div>
+                </motion.div>
 
-                {/* Touch prompt */}
-                <div className="mt-16 flex flex-col items-center gap-2 animate-pulse">
-                    <div className="w-1 h-1 rounded-full bg-gray-600" />
+                {/* Touch prompt with pulse animation */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.8 }}
+                    className="mt-16 flex flex-col items-center gap-2"
+                >
+                    <motion.div
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-1 h-1 rounded-full bg-gray-600"
+                    />
                     <div className="flex gap-1">
-                        <div className="w-1 h-1 rounded-full bg-gray-500" />
-                        <div className="w-1 h-1 rounded-full bg-gray-500" />
-                        <div className="w-1 h-1 rounded-full bg-gray-500" />
+                        <motion.div
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+                            className="w-1 h-1 rounded-full bg-gray-500"
+                        />
+                        <motion.div
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                            className="w-1 h-1 rounded-full bg-gray-500"
+                        />
+                        <motion.div
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+                            className="w-1 h-1 rounded-full bg-gray-500"
+                        />
                     </div>
-                    <p className="text-gray-500 text-sm mt-2">Touch to get started</p>
-                </div>
+                    <p className="text-gray-500 text-sm mt-2">Tap to get started</p>
+                </motion.div>
             </div>
 
             {/* Footer */}

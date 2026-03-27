@@ -13,13 +13,14 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import KioskWelcome from '@/components/kiosk/KioskWelcome';
 import KioskMenu from '@/components/kiosk/KioskMenu';
 import KioskCart from '@/components/kiosk/KioskCart';
 import KioskPayment from '@/components/kiosk/KioskPayment';
 import KioskConfirmation from '@/components/kiosk/KioskConfirmation';
 import KioskAdminPanel from '@/components/kiosk/KioskAdminPanel';
-import ScreenDisplay from '@/components/mediascreen/ScreenDisplay';
+import KioskIdleMediaOverlay from '@/components/kiosk/KioskIdleMediaOverlay';
 import { resolveRestaurantId } from '@/lib/kioskDeviceBinding';
 
 // SCREENS: welcome → menu → cart → payment → confirmation
@@ -212,87 +213,121 @@ export default function KioskDashboard() {
         />
     );
 
-    // Idle media mode: show promotions fullscreen, exit on any touch
+    // Idle media mode: show promotions fullscreen with smooth transitions
     if (mode === 'idle_media') {
         return (
-            <div
-                className="min-h-screen bg-gray-950 cursor-pointer"
-                onClick={() => {
+            <KioskIdleMediaOverlay
+                restaurantId={restaurantId}
+                screenName={restaurant?.kiosk_config?.idle_media_screen_name || 'Kiosk Promo'}
+                onExit={() => {
                     setMode('ordering');
                     setScreen('welcome');
                 }}
-                onTouchStart={() => {
-                    setMode('ordering');
-                    setScreen('welcome');
-                }}
-            >
-                <ScreenDisplay
-                    restaurantId={restaurantId}
-                    screenName={restaurant?.kiosk_config?.idle_media_screen_name || 'Kiosk Promo'}
-                />
-            </div>
+            />
         );
     }
 
     return (
         <div className="min-h-screen bg-gray-950 overflow-hidden select-none">
-            {screen === 'welcome' && (
-                <KioskWelcome
-                    restaurant={restaurant}
-                    onStart={(type) => { setOrderType(type); setScreen('menu'); }}
-                    onLogoTap={handleLogoTap}
-                />
-            )}
-            {screen === 'menu' && (
-                <KioskMenu
-                    restaurant={restaurant}
-                    restaurantId={restaurantId}
-                    cart={cart}
-                    cartTotal={cartTotal}
-                    cartCount={cartCount}
-                    orderType={orderType}
-                    onAddItem={addToCart}
-                    onViewCart={() => setScreen('cart')}
-                    onBack={resetKiosk}
-                />
-            )}
-            {screen === 'cart' && (
-                <KioskCart
-                    cart={cart}
-                    cartTotal={cartTotal}
-                    orderType={orderType}
-                    restaurant={restaurant}
-                    selectedTable={selectedTable}
-                    onUpdateQuantity={updateQuantity}
-                    onRemoveItem={removeItem}
-                    onEditItem={editItem}
-                    onBack={() => setScreen('menu')}
-                    onCheckout={() => setScreen('payment')}
-                    onClearCart={() => setCart([])}
-                />
-            )}
-            {screen === 'payment' && (
-                <KioskPayment
-                    cart={cart}
-                    cartTotal={cartTotal}
-                    orderType={orderType}
-                    restaurant={restaurant}
-                    restaurantId={restaurantId}
-                    selectedTable={selectedTable}
-                    onBack={() => setScreen('cart')}
-                    onOrderPlaced={handleOrderPlaced}
-                />
-            )}
-            {screen === 'confirmation' && (
-                <KioskConfirmation
-                    order={placedOrder}
-                    orderType={orderType}
-                    restaurant={restaurant}
-                    onDone={resetKiosk}
-                    printerFailed={printerError}
-                    paymentMethod={placedOrder?.payment_method}
-                />
-            )}
+            <AnimatePresence mode="wait">
+                {screen === 'welcome' && (
+                    <motion.div
+                        key="welcome"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <KioskWelcome
+                            restaurant={restaurant}
+                            onStart={(type) => { setOrderType(type); setScreen('menu'); }}
+                            onLogoTap={handleLogoTap}
+                        />
+                    </motion.div>
+                )}
+                {screen === 'menu' && (
+                    <motion.div
+                        key="menu"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <KioskMenu
+                            restaurant={restaurant}
+                            restaurantId={restaurantId}
+                            cart={cart}
+                            cartTotal={cartTotal}
+                            cartCount={cartCount}
+                            orderType={orderType}
+                            onAddItem={addToCart}
+                            onViewCart={() => setScreen('cart')}
+                            onBack={resetKiosk}
+                        />
+                    </motion.div>
+                )}
+                {screen === 'cart' && (
+                    <motion.div
+                        key="cart"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <KioskCart
+                            cart={cart}
+                            cartTotal={cartTotal}
+                            orderType={orderType}
+                            restaurant={restaurant}
+                            selectedTable={selectedTable}
+                            onUpdateQuantity={updateQuantity}
+                            onRemoveItem={removeItem}
+                            onEditItem={editItem}
+                            onBack={() => setScreen('menu')}
+                            onCheckout={() => setScreen('payment')}
+                            onClearCart={() => setCart([])}
+                        />
+                    </motion.div>
+                )}
+                {screen === 'payment' && (
+                    <motion.div
+                        key="payment"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <KioskPayment
+                            cart={cart}
+                            cartTotal={cartTotal}
+                            orderType={orderType}
+                            restaurant={restaurant}
+                            restaurantId={restaurantId}
+                            selectedTable={selectedTable}
+                            onBack={() => setScreen('cart')}
+                            onOrderPlaced={handleOrderPlaced}
+                        />
+                    </motion.div>
+                )}
+                {screen === 'confirmation' && (
+                    <motion.div
+                        key="confirmation"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <KioskConfirmation
+                            order={placedOrder}
+                            orderType={orderType}
+                            restaurant={restaurant}
+                            onDone={resetKiosk}
+                            printerFailed={printerError}
+                            paymentMethod={placedOrder?.payment_method}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
