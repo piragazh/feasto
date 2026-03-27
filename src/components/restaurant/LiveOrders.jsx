@@ -383,36 +383,24 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     const assignDriverMutation = useMutation({
         mutationFn: async ({ orderId, driverId }) => {
-            const driver = availableDrivers.find(d => d.id === driverId);
-            
-            const etaPrompt = `Calculate estimated delivery time for a food delivery order.
-Distance: Assume 3-5 km average urban delivery.
-Traffic: Consider it's ${new Date().getHours()}:00, adjust for peak hours (12-14, 18-21).
-Vehicle: ${driver.vehicle_type}
-Provide only the time range (e.g., "25-30 min").`;
-            
-            const etaResponse = await base44.integrations.Core.InvokeLLM({
-                prompt: etaPrompt
+            // SECURITY: Route through hardened backend function with role checks
+            const response = await base44.functions.invoke('assignOrderDriver', {
+                orderId,
+                driverId,
+                restaurantId,
             });
-            
-            await base44.entities.Order.update(orderId, { 
-                driver_id: driverId,
-                estimated_delivery: etaResponse,
-                status: 'out_for_delivery'
-            });
-            
-            await base44.entities.Driver.update(driverId, {
-                current_order_id: orderId,
-                is_available: false
-            });
-            
-            return { driver };
+            return response?.data || response;
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries(['live-orders']);
             queryClient.invalidateQueries(['available-drivers']);
-            toast.success(`Driver ${data.driver.full_name} assigned - Customer notified`);
+            toast.success(`Driver ${data.driver_name} assigned - Order dispatched`);
             if (onOrderUpdate) onOrderUpdate();
+        },
+        onError: (error) => {
+            const message = error?.response?.data?.error || error?.message || 'Failed to assign driver';
+            toast.error(message);
+            console.error('[assignDriver] Error:', message);
         },
     });
 

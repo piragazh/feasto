@@ -27,6 +27,7 @@ import { run as runOfflineSyncIdempotency } from './suites/offlineSyncIdempotenc
 import { run as runLiveOrdersAccessControl } from './suites/liveOrdersAccessControl.smoke.js';
 import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 import { run as runKioskCardAuthTrust } from './suites/kioskCardAuthTrust.smoke.js';
+import { run as runAssignOrderDriver } from './suites/assignOrderDriver.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -40,6 +41,7 @@ const SUITES = {
     liveOrdersAccessControl: runLiveOrdersAccessControl,
     promotionDiscountIntegrity: runPromotionDiscountIntegrity,
     kioskCardAuthTrust: runKioskCardAuthTrust,
+    assignOrderDriver: runAssignOrderDriver,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
