@@ -26,10 +26,16 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [dateTo, setDateTo] = useState('');
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
     const queryClient = useQueryClient();
     const prevOrderIds = useRef(new Set());
     const restaurantRef = useRef(null);
     const printOrderDetailsRef = useRef(null);
+
+    // Load current user to check role for payment confirmation
+    useEffect(() => {
+        base44.auth.me().then(user => setCurrentUser(user)).catch(() => {});
+    }, []);
 
     // Load restaurant config once so auto-print can reference it
     useEffect(() => {
@@ -101,7 +107,14 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const isKioskAwaitingPayment = (order) =>
         order.order_source === 'kiosk' &&
         order.payment_method === 'pay_at_counter' &&
-        order.status === 'pending';
+        order.payment_status === 'pending_payment';
+
+    // Can current user confirm kiosk payments? (role check)
+    const canConfirmPayment = (user) => {
+        if (!user) return false;
+        const allowedRoles = ['admin', 'manager', 'cashier', 'waiter', 'kitchen_staff'];
+        return allowedRoles.includes(user.role);
+    };
 
     // Auto-print using centralized printer config with channel routing
     // All errors are caught — failure does not disrupt live order flow
@@ -161,22 +174,44 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     const confirmKioskPaymentMutation = useMutation({
         mutationFn: async (orderId) => {
+            // Role check before calling backend
+            if (!canConfirmPayment(currentUser)) {
+                throw new Error(`Role '${currentUser?.role || 'guest'}' cannot confirm payments`);
+            }
             // Call hardened backend function with strict validation
             const response = await base44.functions.invoke('confirmKioskPayment', {
                 order_id: orderId,
             });
             return response?.data || response;
         },
+        onMutate: async (orderId) => {
+            // Optimistic update: mark order as payment_confirmed in cache
+            await queryClient.cancelQueries({ queryKey: ['live-orders', restaurantId] });
+            const previous = queryClient.getQueryData(['live-orders', restaurantId]);
+            
+            queryClient.setQueryData(['live-orders', restaurantId], (old) => 
+                old.map(o => 
+                    o.id === orderId 
+                        ? { ...o, payment_status: 'payment_confirmed' }
+                        : o
+                )
+            );
+            return { previous };
+        },
         onSuccess: (data) => {
             queryClient.invalidateQueries(['live-orders']);
-            toast.success(`✓ Payment confirmed — order ${data.order_number} sent to kitchen`);
+            toast.success(`✓ Payment confirmed for order ${data.order_number}`);
             if (data.order_id) {
                 setTimeout(() => printOrderDetails(data.order_id), 500);
             }
             if (onOrderUpdate) onOrderUpdate();
         },
-        onError: (error) => {
-            const message = error?.response?.data?.error || error?.message || 'Failed to confirm payment';
+        onError: (error, orderId, context) => {
+            // Rollback optimistic update on error
+            if (context?.previous) {
+                queryClient.setQueryData(['live-orders', restaurantId], context.previous);
+            }
+            const message = error?.message || error?.response?.data?.error || 'Failed to confirm payment';
             toast.error(message);
             console.error('[confirmKioskPayment] Error:', message);
         },
@@ -1210,31 +1245,41 @@ Provide only the time range (e.g., "25-30 min").`;
                                             {/* Kiosk counter-pay awaiting payment confirmation */}
                                             {order.order_source === 'kiosk' && order.payment_status === 'pending_payment' && (
                                                 <>
-                                                    <Button
-                                                        onClick={() => confirmKioskPaymentMutation.mutate(order.id)}
-                                                        disabled={confirmKioskPaymentMutation.isPending}
-                                                        className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                                                    >
-                                                        <BadgeCheck className="h-4 w-4 mr-2" />
-                                                        Confirm Payment Received
-                                                    </Button>
+                                                    {canConfirmPayment(currentUser) ? (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => confirmKioskPaymentMutation.mutate(order.id)}
+                                                                disabled={confirmKioskPaymentMutation.isPending}
+                                                                className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                                                                title="Confirm customer paid at counter (locked to authorized roles)"
+                                                            >
+                                                                <BadgeCheck className="h-4 w-4 mr-2" />
+                                                                {confirmKioskPaymentMutation.isPending ? 'Confirming...' : 'Confirm Payment'}
+                                                            </Button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex-1 p-2 bg-gray-100 rounded text-xs text-gray-600 text-center">
+                                                            Only managers/cashiers can confirm
+                                                        </div>
+                                                    )}
                                                     <Button
                                                         onClick={() => setRejectingOrder(order)}
                                                         variant="destructive"
                                                         className="flex-1"
                                                     >
                                                         <XCircle className="h-4 w-4 mr-2" />
-                                                        Cancel Order
+                                                        Cancel
                                                     </Button>
                                                 </>
                                             )}
                                             
-                                            {/* Kiosk card-paid or counter-pay after payment confirmed: no payment button */}
+                                            {/* Kiosk card-paid or counter-pay after payment confirmed: no payment button, straight to prep flow */}
                                             {order.order_source === 'kiosk' && order.payment_status !== 'pending_payment' && order.order_status === 'new' && (
                                                 <>
                                                     <Button
                                                         onClick={() => handleAccept(order.id)}
                                                         className="flex-1 bg-green-600 hover:bg-green-700"
+                                                        title={order.payment_status === 'paid_card' ? 'Payment already authorized at terminal' : 'Payment confirmed by staff'}
                                                     >
                                                         <CheckCircle className="h-4 w-4 mr-2" />
                                                         Accept Order
