@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import React, { useState, useRef } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
