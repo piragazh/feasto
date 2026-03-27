@@ -491,13 +491,11 @@ export default function Checkout() {
             try {
                 const stripe = await initializeStripe();
                 if (!stripe) {
-                    console.error('❌ Stripe initialization failed');
                     toast.error('Payment system unavailable');
                     setInitializingPayment(false);
                     return;
                 }
 
-                console.log('🔵 Creating payment intent...');
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
                     currency: 'gbp',
@@ -507,14 +505,9 @@ export default function Checkout() {
                     }
                 });
 
-                console.log('🔵 Payment intent response:', { hasSecret: !!response?.data?.clientSecret, status: response?.status });
-                if (response?.data?.clientSecret && typeof response.data.clientSecret === 'string') {
+                if (response?.data?.clientSecret) {
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
-                    console.log('✅ Client secret set, form should display');
-                } else {
-                    console.error('❌ No valid clientSecret in response:', response?.data);
-                    toast.error('Failed to initialize payment. Please try again.');
                 }
             } catch (error) {
                 console.error('Payment init error:', error);
@@ -887,8 +880,8 @@ export default function Checkout() {
                 delivery_fee: deliveryFee,
                 small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
-                coupon_codes: appliedCoupons.map(c => c.code),
-                applied_promotion_id: appliedPromotions.length > 0 ? appliedPromotions[0].id : null,
+                coupon_codes: appliedCoupons.map(c => c.code).join(', '),
+                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name).join(', '),
                 total,
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
@@ -913,24 +906,16 @@ export default function Checkout() {
 
             // CRITICAL SECURITY: Use backend verification function instead of direct create
              // This ensures payment is verified and restaurant is open
-             let verificationResponse;
-             try {
-                 verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
-                     orderData,
-                     paymentIntentId: paymentIntentId || null,
-                     idempotency_key: idempotencyKey
-                 });
-             } catch (invokeError) {
-                 console.error('🔴 verifyAndCreateOrder invoke failed:', invokeError);
-                 toast.error('Order processing error. Please try again.');
-                 setIsSubmitting(false);
-                 return;
-             }
+             const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
+                 orderData,
+                 paymentIntentId: paymentIntentId || null,
+                 idempotency_key: idempotencyKey
+             });
 
             if (!verificationResponse?.data?.success) {
                 const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
+                // Check if refund was issued (payment was taken but order failed)
                 const refunded = verificationResponse?.data?.refunded === true;
-                console.error('🔴 Order creation failed:', { errorMsg, refunded, fullResponse: verificationResponse?.data });
                 if (refunded) {
                     toast.error(errorMsg + ' — Your payment has been automatically refunded.');
                 } else {
@@ -1048,7 +1033,7 @@ export default function Checkout() {
                 navigate(createPageUrl('Orders'));
             }, 2000);
             } catch (error) {
-                console.error('🔴 Order creation exception:', { error: error?.message, stack: error?.stack });
+                console.error('Order creation error:', error);
                 const errorMessage = error?.message || 'Failed to place order. Please check your connection and try again.';
                 toast.error(errorMessage);
             } finally {
@@ -1631,16 +1616,16 @@ export default function Checkout() {
                                         <CardTitle>💳 Payment Details</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {stripePromise && clientSecret ? (
+                                        {stripePromise ? (
                                             <Elements 
-                                                stripe={stripePromise} 
-                                                options={{ 
-                                                    clientSecret: String(clientSecret).trim(),
-                                                    appearance: {
-                                                        theme: 'stripe'
-                                                    },
-                                                    loader: 'auto'
-                                                }}
+                                               stripe={stripePromise} 
+                                               options={{ 
+                                                   clientSecret,
+                                                   appearance: {
+                                                       theme: 'stripe'
+                                                   },
+                                                   loader: 'auto'
+                                               }}
                                             >
                                                 <StripePaymentForm
                                                     amount={total}
