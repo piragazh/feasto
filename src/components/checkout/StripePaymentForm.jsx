@@ -21,8 +21,8 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
         setErrorMessage('');
 
         if (!stripe || !elements) {
-            console.log('🔴 Stripe not ready');
-            setErrorMessage('Payment system not ready. Please wait a moment.');
+            console.error('❌ Stripe SDK error:', { stripe: !!stripe, elements: !!elements });
+            setErrorMessage('Payment system not ready. Please refresh the page and try again.');
             return false;
         }
 
@@ -142,11 +142,16 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                     }
                 }}
                 onChange={(e) => {
+                    console.log('PaymentElement onChange:', { complete: e.complete, value: !!e.value });
                     setIsFormComplete(e.complete);
                     if (e.complete) setErrorMessage('');
                 }}
                 onReady={() => {
                     console.log('✅ Payment Element ready');
+                }}
+                onLoadError={(e) => {
+                    console.error('❌ Payment Element load error:', e);
+                    setErrorMessage(`Payment form failed to load: ${e?.message || 'Unknown error'}. Please refresh and try again.`);
                 }}
             />
             <Button

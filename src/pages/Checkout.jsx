@@ -38,7 +38,9 @@ import { useSEO } from '@/lib/useSEO';
 // Initialize Stripe - fetch public key from backend
 let stripePromise = null;
 const initializeStripe = async () => {
-    if (stripePromise) return stripePromise;
+// CRITICAL: Never reuse stale Stripe instance across multiple payment sessions
+// This fixes "processing error" when clientSecret expires
+// if (stripePromise) return stripePromise;
     
     try {
         const response = await base44.functions.invoke('getStripePublicKey');
@@ -127,6 +129,10 @@ export default function Checkout() {
     // INITIALIZATION - Runs when page loads
     // ============================================
     useEffect(() => {
+        // CRITICAL: Clear stale payment state on mount (fixes "processing error")
+        localStorage.removeItem('stalePaymentIntentId');
+        localStorage.removeItem('staleClientSecret');
+        
         // Check if user is logged in or guest
         checkAuthStatus();
         
