@@ -1,120 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { PaymentRequestButtonElement, useStripe } from '@stripe/react-stripe-js';
+import React, { useState } from 'react';
+import { ExpressCheckoutElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Card } from "@/components/ui/card";
 import { Loader2, Smartphone } from 'lucide-react';
 
+/**
+ * ExpressCheckout — Stripe Express Checkout Element
+ * 
+ * Modern wallet integration (Apple Pay, Google Pay, Link)
+ * Replaces deprecated PaymentRequestButtonElement
+ * 
+ * Safety guarantees:
+ * - Uses Stripe's built-in PaymentIntent confirmation
+ * - onSuccess() only fires when payment actually succeeded
+ * - Converges into same order-creation path as card entry
+ * - No silent payment-success-but-order-failure scenarios
+ */
 export default function ExpressCheckout({ amount, onSuccess, onError, disabled, clientSecret }) {
     const stripe = useStripe();
-    const [paymentRequest, setPaymentRequest] = useState(null);
-    const [canMakePayment, setCanMakePayment] = useState(false);
+    const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
-    const [debugInfo, setDebugInfo] = useState('');
 
-    useEffect(() => {
-        if (!stripe || !amount || disabled || !clientSecret) {
-            setCanMakePayment(false);
-            setPaymentRequest(null);
+    const handleChange = (e) => {
+        if (e.error) {
+            console.warn('[ExpressCheckout] Wallet error:', e.error);
+            if (onError && typeof onError === 'function') {
+                onError(String(e.error.message || 'Wallet payment failed'));
+            }
+            setIsProcessing(false);
+        }
+    };
+
+    const handleClick = (e) => {
+        if (!stripe || !elements || !clientSecret || disabled || isProcessing) {
+            console.log('[ExpressCheckout] Click blocked - not ready');
             return;
         }
+        console.log('[ExpressCheckout] Wallet checkout initiated');
+        setIsProcessing(true);
+    };
 
-        const pr = stripe.paymentRequest({
-            country: 'GB',
-            currency: 'gbp',
-            total: {
-                label: 'Total',
-                amount: Math.round(amount * 100),
-            },
-            requestPayerName: true,
-            requestPayerEmail: true,
-            requestPayerPhone: true,
-        });
-
-        pr.canMakePayment().then(result => {
-            if (result) {
-                console.log('✅ Express checkout available:', result);
-                setDebugInfo(`Available: Apple Pay=${!!result.applePay}, Google Pay=${!!result.googlePay}`);
-                setPaymentRequest(pr);
-                setCanMakePayment(true);
-            } else {
-                console.log('❌ Express checkout not available on this device/browser');
-                setDebugInfo('Not available on this device (try Safari/Chrome on iOS/Android)');
-                setCanMakePayment(false);
-                setPaymentRequest(null);
-            }
-        }).catch((err) => {
-            console.error('❌ Express checkout error:', err);
-            setDebugInfo(`Error: ${err?.message || 'Unknown'}`);
-            setCanMakePayment(false);
-            setPaymentRequest(null);
-        });
-
-        pr.on('paymentmethod', async (ev) => {
-            setIsProcessing(true);
-            try {
-                const { error, paymentIntent } = await stripe.confirmPayment({
-                    elements: undefined,
-                    clientSecret,
-                    payment_method: ev.paymentMethod.id,
-                    redirect: 'if_required',
-                    confirmParams: {
-                        return_url: window.location.href,
-                        payment_method_data: {
-                            billing_details: {
-                                name: ev.payerName || undefined,
-                                email: ev.payerEmail || undefined,
-                            },
-                        },
-                    },
-                });
-
-                if (error) {
-                    ev.complete('fail');
-                    if (onError && typeof onError === 'function') {
-                        onError(String(error.message || 'Payment failed'));
-                    }
-                    setIsProcessing(false);
-                    return;
-                }
-
-                ev.complete('success');
-                
-                if (paymentIntent && paymentIntent.status === 'succeeded' && paymentIntent.id) {
-                    if (onSuccess && typeof onSuccess === 'function') {
-                        onSuccess(String(paymentIntent.id));
-                    }
-                }
-            } catch (error) {
-                ev.complete('fail');
-                if (onError && typeof onError === 'function') {
-                    onError(String(error?.message || 'Payment failed'));
-                }
-            } finally {
-                setIsProcessing(false);
-            }
-        });
-
-        return () => {
-            pr.off('paymentmethod');
-        };
-    }, [stripe, amount, clientSecret, disabled]);
-
-    // Show debugging info in dev mode
-    if (import.meta.env.DEV && debugInfo) {
-        console.log('[ExpressCheckout]', debugInfo);
-    }
-
-    // Only render if payment request is available
-    if (!canMakePayment || !paymentRequest) {
-        // Return empty in production, but show hint in dev
-        if (import.meta.env.DEV) {
-            return (
-                <Card className="p-3 mb-4 bg-gray-100 border border-gray-300">
-                    <p className="text-xs text-gray-600">
-                        💳 Express Payment: {debugInfo || 'Loading...'}
-                    </p>
-                </Card>
-            );
-        }
+    if (!stripe || !elements || !clientSecret) {
         return null;
     }
 
@@ -128,21 +53,90 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                     </div>
                     {isProcessing && <Loader2 className="h-4 w-4 animate-spin text-orange-600" />}
                 </div>
-                <p className="text-xs text-gray-600">Pay with Apple Pay or Google Pay</p>
-                {paymentRequest && (
-                    <PaymentRequestButtonElement
-                        options={{
-                            paymentRequest,
-                            style: {
-                                paymentRequestButton: {
-                                    type: 'default',
-                                    theme: 'dark',
-                                    height: '48px',
+                <p className="text-xs text-gray-600">Pay with Apple Pay, Google Pay, or Link</p>
+                
+                <ExpressCheckoutElement
+                    onConfirm={async (data) => {
+                        console.log('[ExpressCheckout] Payment confirmed by wallet');
+                        
+                        try {
+                            // Confirm payment using the PaymentIntent
+                            // Express Checkout Element already collected payment method
+                            // Just need to confirm the intent
+                            const { error, paymentIntent } = await stripe.confirmPayment({
+                                elements,
+                                clientSecret,
+                                redirect: 'if_required',
+                                confirmParams: {
+                                    return_url: window.location.href,
+                                    payment_method_data: {
+                                        billing_details: {
+                                            name: data.billingDetails?.name || undefined,
+                                            email: data.billingDetails?.email || undefined,
+                                            phone: data.billingDetails?.phone || undefined,
+                                            address: data.billingDetails?.address || undefined,
+                                        },
+                                    },
                                 },
-                            },
-                        }}
-                    />
-                )}
+                            });
+
+                            if (error) {
+                                console.error('[ExpressCheckout] Payment error:', error);
+                                if (onError && typeof onError === 'function') {
+                                    onError(String(error.message || 'Payment failed'));
+                                }
+                                setIsProcessing(false);
+                                return;
+                            }
+
+                            // Success path: payment intent confirmed
+                            if (paymentIntent && paymentIntent.status === 'succeeded') {
+                                console.log('[ExpressCheckout] ✅ Payment succeeded:', paymentIntent.id);
+                                // CRITICAL: Call onSuccess() to trigger order creation
+                                // This ensures wallet path uses same flow as card entry
+                                if (onSuccess && typeof onSuccess === 'function') {
+                                    onSuccess(String(paymentIntent.id));
+                                }
+                            } else if (paymentIntent) {
+                                console.warn('[ExpressCheckout] Unexpected status:', paymentIntent.status);
+                                if (onError && typeof onError === 'function') {
+                                    onError(`Payment ${paymentIntent.status}. Please try again.`);
+                                }
+                                setIsProcessing(false);
+                            } else {
+                                console.error('[ExpressCheckout] No payment intent returned');
+                                if (onError && typeof onError === 'function') {
+                                    onError('Payment processing failed. Please try again.');
+                                }
+                                setIsProcessing(false);
+                            }
+                        } catch (err) {
+                            console.error('[ExpressCheckout] Exception:', err);
+                            if (onError && typeof onError === 'function') {
+                                onError(String(err?.message || 'An error occurred. Please try again.'));
+                            }
+                            setIsProcessing(false);
+                        }
+                    }}
+                    onChange={handleChange}
+                    onClick={handleClick}
+                    onLoadingChange={(isLoading) => {
+                        if (isLoading) {
+                            console.log('[ExpressCheckout] Express element loading');
+                        }
+                    }}
+                    options={{
+                        buttonAppearance: {
+                            type: 'default',
+                            theme: 'dark',
+                            height: '48px',
+                        },
+                        layout: {
+                            overflow: 'auto',
+                        },
+                    }}
+                />
+                
                 <div className="flex items-center gap-2">
                     <div className="flex-1 border-t border-gray-300"></div>
                     <span className="text-xs text-gray-500 font-medium">OR</span>

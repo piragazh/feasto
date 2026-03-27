@@ -762,6 +762,7 @@ export default function Checkout() {
     const createOrder = async (paymentIntentId = null) => {
         // ABSOLUTE CRITICAL: Block any order creation if card payment was initiated but not completed
         if (clientSecret && !paymentIntentId) {
+            console.error('[Checkout] Order creation blocked: payment initiated but not completed');
             toast.error('❌ Card payment was initiated. Please complete payment or refresh the page.');
             setIsSubmitting(false);
             return;
@@ -769,11 +770,13 @@ export default function Checkout() {
 
         // ABSOLUTE CRITICAL: Block any order creation if card was selected without payment
         if (paymentMethod === 'card' && !paymentIntentId) {
+            console.error('[Checkout] Order creation blocked: card payment selected but not completed');
             toast.error('❌ Payment required. Please complete card payment first.');
             setIsSubmitting(false);
             return;
         }
         
+        console.log('[Checkout] Creating order with payment method:', paymentMethod, 'and payment intent ID:', paymentIntentId || 'none');
         setIsSubmitting(true);
 
         try {
@@ -899,15 +902,17 @@ export default function Checkout() {
             }
 
             // CRITICAL SECURITY: Use backend verification function instead of direct create
-             // This ensures payment is verified and restaurant is open
-             const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
-                 orderData,
-                 paymentIntentId: paymentIntentId || null,
-                 idempotency_key: idempotencyKey
-             });
+              // This ensures payment is verified and restaurant is open
+              console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId);
+              const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
+                  orderData,
+                  paymentIntentId: paymentIntentId || null,
+                  idempotency_key: idempotencyKey
+              });
 
             if (!verificationResponse?.data?.success) {
                 const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
+                console.error('[Checkout] Order creation failed:', errorMsg, 'Refunded:', verificationResponse?.data?.refunded);
                 // Check if refund was issued (payment was taken but order failed)
                 const refunded = verificationResponse?.data?.refunded === true;
                 if (refunded) {
@@ -918,6 +923,8 @@ export default function Checkout() {
                 setIsSubmitting(false);
                 return;
             }
+
+            console.log('[Checkout] ✅ Order created successfully:', verificationResponse?.data?.order_id);
             
             if (!verificationResponse?.data?.order_id) {
                 throw new Error('Order ID not returned');
@@ -1038,15 +1045,23 @@ export default function Checkout() {
     const handleStripeSuccess = async (paymentIntentId) => {
         // Validate payment intent before proceeding
         if (!paymentIntentId || typeof paymentIntentId !== 'string') {
+            console.error('[Checkout] Invalid payment intent ID:', paymentIntentId);
             toast.error('Invalid payment confirmation. Please try again.');
             setIsSubmitting(false);
             setPaymentCompleted(false);
             return;
         }
         
+        console.log('[Checkout] Payment intent confirmed:', paymentIntentId);
+        
         // Mark payment as completed
         setPaymentCompleted(true);
         toast.success('Payment successful!');
+        
+        // CRITICAL: Call createOrder() with paymentIntentId
+        // This ensures BOTH normal card entry AND express checkout converge
+        // into the same secure order-creation path
+        console.log('[Checkout] Initiating order creation with payment intent:', paymentIntentId);
         await createOrder(paymentIntentId);
     };
 

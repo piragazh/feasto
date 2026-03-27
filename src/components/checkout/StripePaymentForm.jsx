@@ -105,10 +105,13 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                     amount={amount}
                     clientSecret={clientSecret}
                     onSuccess={(paymentIntentId) => {
+                        console.log('[StripePaymentForm] Express Checkout success, calling onSuccess()');
                         onSuccess(paymentIntentId);
                     }}
                     onError={(error) => {
+                        console.log('[StripePaymentForm] Express Checkout error:', error);
                         setErrorMessage(String(error || 'Payment failed'));
+                        setIsProcessing(false);
                     }}
                     disabled={isProcessing}
                 />
