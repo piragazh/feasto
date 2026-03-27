@@ -8,7 +8,7 @@
 // - Order validation and submission
 // - Delivery zone checking
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client'; // SDK to interact with backend
 import { useNavigate, Link } from 'react-router-dom'; // Navigation tools
 import { createPageUrl } from '@/utils'; // Helper to create page URLs
@@ -35,22 +35,30 @@ import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { useSEO } from '@/lib/useSEO';
 
-// Initialize Stripe - fetch public key from backend
-// stripeInstance holds the resolved Stripe object (not a promise) to avoid double-resolution bugs
-let stripePromise = null;
-let stripeInstance = null;
+// ─────────────────────────────────────────────────────────────────────
+// STRIPE INITIALIZATION — Atomic singleton guard (useRef in component)
+// Module-level cache: survives re-renders, prevents concurrent init
+// ─────────────────────────────────────────────────────────────────────
+let _stripeInitState = {
+    instance: null,      // Resolved Stripe object
+    promise: null,       // In-flight initialization promise
+    initialized: false   // Atomic flag
+};
 
 const initializeStripe = async () => {
-    // Return cached resolved instance immediately
-    if (stripeInstance) return stripeInstance;
-    // Dedupe concurrent calls: if a promise is in-flight, await it
-    if (stripePromise) return stripePromise;
+    // Return cached instance immediately (no async required)
+    if (_stripeInitState.initialized && _stripeInitState.instance) {
+        return _stripeInitState.instance;
+    }
+    // Dedupe concurrent calls — return the same promise
+    if (_stripeInitState.promise) {
+        return _stripeInitState.promise;
+    }
     
-    stripePromise = (async () => {
+    _stripeInitState.promise = (async () => {
         try {
             console.log('[Stripe] Fetching public key...');
             
-            // Add timeout to prevent indefinite hang
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             
@@ -58,22 +66,24 @@ const initializeStripe = async () => {
             clearTimeout(timeoutId);
             
             if (response?.data?.publicKey) {
-                console.log('✅ Stripe public key loaded:', response.data.publicKey.substring(0, 20) + '...');
-                stripeInstance = await loadStripe(response.data.publicKey);
-                return stripeInstance;
+                console.log('✅ Stripe public key loaded');
+                const instance = await loadStripe(response.data.publicKey);
+                _stripeInitState.instance = instance;
+                _stripeInitState.initialized = true;
+                return instance;
             } else {
-                console.error('❌ No public key in response:', response?.data);
-                stripePromise = null; // Allow retry
+                console.error('❌ No public key in response');
+                _stripeInitState.promise = null; // Allow retry
                 return null;
             }
         } catch (error) {
             console.error('❌ Failed to load Stripe key:', error.message);
-            stripePromise = null; // Allow retry on next call
+            _stripeInitState.promise = null; // Allow retry on next call
             return null;
         }
     })();
     
-    return stripePromise;
+    return _stripeInitState.promise;
 };
 
 // Main Checkout Component
@@ -118,6 +128,10 @@ export default function Checkout() {
     const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null); // The promise to pass to <Elements>
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Static: set once at mount
+    // Atomic guard: prevents concurrent payment initialization calls creating conflicting state
+    const paymentInitInFlightRef = useRef(false);
+    // Atomic guard: prevents Express Checkout onConfirm from firing twice
+    const expressConfirmFiredRef = useRef(false);
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
@@ -473,67 +487,70 @@ export default function Checkout() {
             }
 
             if (clientSecret) return;
-            if (initializingPayment) return;
 
-            // ✅ COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
-            
-            // Guest checkout validation
+            // ATOMIC GUARD: prevent concurrent init calls
+            if (paymentInitInFlightRef.current) return;
+
+            // COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
             if (isGuest && (!formData.guest_name || !formData.guest_email)) return;
-            
-            // Phone always required
             if (!formData.phone) return;
             
-            // Delivery address validation
             if (orderType === 'delivery') {
-                // Address must be present and valid string
                 if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') return;
-                
-                // Door number required for new addresses only
                 if (!isExistingAddress && (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '')) return;
-                
-                // Coordinates MUST exist
                 if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) return;
-                
-                // Zone check MUST be complete
                 if (!zoneCheckComplete) return;
-                
-                // Zone MUST be available
                 if (deliveryZoneInfo && deliveryZoneInfo.available === false) return;
             }
             
-            // Scheduled orders validation
             if (isScheduled && !scheduledFor) return;
-
-            // CRITICAL: Prevent payment init if cart is empty or total is invalid
             if (!cart || cart.length === 0 || total <= 0 || isNaN(total)) return;
 
+            // Set both state AND ref atomically
+            paymentInitInFlightRef.current = true;
             setInitializingPayment(true);
+
             try {
-                // Initialize Stripe and create payment intent in parallel for speed
                 console.log('[PaymentInit] Initializing Stripe and creating payment intent...');
                 
                 const stripeObj = await initializeStripe();
                 if (!stripeObj) {
                     toast.error('Payment system unavailable. Please refresh and try again.');
-                    setInitializingPayment(false);
                     return;
                 }
                 
-                // Store the loadStripe promise for <Elements> — must be a promise, not the instance
                 if (!stripeLoadedPromise) {
                     setStripeLoadedPromise(Promise.resolve(stripeObj));
                     setStripeReady(true);
                 }
+
+                // Build full address for metadata
+                const fullAddress = orderType === 'delivery'
+                    ? (isExistingAddress
+                        ? formData.delivery_address
+                        : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
+                    : (restaurant?.address || 'Collection');
 
                 console.log('[PaymentInit] Creating payment intent for amount:', total);
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
                     currency: 'gbp',
                     idempotency_key: idempotencyKey,
-                    metadata: {
-                        restaurant_id: restaurantId,
-                        restaurant_name: restaurantName
-                    }
+                    // CRITICAL: Pass full order metadata for webhook recovery
+                    restaurant_id: restaurantId,
+                    items: cart,
+                    subtotal,
+                    delivery_fee: deliveryFee,
+                    discount,
+                    order_type: orderType,
+                    delivery_address: fullAddress,
+                    delivery_coordinates: deliveryCoordinates,
+                    phone: formData.phone,
+                    guest_name: formData.guest_name,
+                    guest_email: formData.guest_email,
+                    notes: formData.notes,
+                    is_scheduled: isScheduled,
+                    scheduled_for: scheduledFor || null
                 });
 
                 if (response?.data?.clientSecret) {
@@ -553,12 +570,13 @@ export default function Checkout() {
                 setClientSecret('');
                 setShowStripeForm(false);
             } finally {
+                paymentInitInFlightRef.current = false;
                 setInitializingPayment(false);
             }
         };
 
         initPayment();
-    }, [paymentMethod, clientSecret, total]); // Only re-init when method/total changes or payment completes
+    }, [paymentMethod, clientSecret, total]); // Only re-init when method/total changes
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -1688,6 +1706,7 @@ export default function Checkout() {
                                                     amount={total}
                                                     clientSecret={clientSecret}
                                                     onSuccess={handleStripeSuccess}
+                                                    expressConfirmFiredRef={expressConfirmFiredRef}
                                                 />
                                             </Elements>
                                         ) : (

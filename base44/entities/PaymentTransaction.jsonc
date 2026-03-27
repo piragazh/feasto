@@ -1,123 +1,93 @@
 {
   "name": "PaymentTransaction",
+  "description": "Complete payment transaction audit trail with refund tracking",
   "type": "object",
   "properties": {
     "payment_intent_id": {
       "type": "string",
-      "description": "Stripe PaymentIntent ID \u2014 primary dedup key. Format: pi_xxx"
+      "description": "Stripe PaymentIntent ID (dedup key)"
     },
     "idempotency_key": {
       "type": "string",
-      "description": "Client-supplied idempotency key from the checkout session"
+      "description": "Client-supplied idempotency key"
     },
     "restaurant_id": {
       "type": "string",
-      "description": "Restaurant this payment was for"
+      "description": "Reference to restaurant"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Reference to created Order (populated after order creation)"
     },
     "amount": {
       "type": "number",
-      "description": "Authorized amount in GBP (e.g. 15.50)"
+      "description": "Amount in GBP"
     },
     "currency": {
       "type": "string",
       "default": "gbp",
-      "description": "ISO currency code"
+      "description": "Currency code"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Authenticated user email (null for guests)"
+    },
+    "guest_email": {
+      "type": "string",
+      "description": "Guest email if not authenticated"
+    },
+    "guest_phone": {
+      "type": "string",
+      "description": "Guest phone if not authenticated"
     },
     "status": {
       "type": "string",
       "enum": [
         "authorized",
         "order_created",
-        "refund_initiated",
         "refunded",
-        "refund_failed",
         "needs_review"
       ],
-      "description": "authorized=payment captured, order not yet created. order_created=happy path complete. refund_initiated=refund attempt in-flight. refunded=full refund confirmed by Stripe. refund_failed=refund attempt failed, needs manual review. needs_review=unrecoverable state."
+      "description": "Payment transaction status"
     },
-    "order_id": {
+    "failure_reason": {
       "type": "string",
-      "description": "Linked Order ID \u2014 null until order successfully created"
+      "description": "Reason if payment failed or refund failed"
     },
-    "order_number": {
+    "stripe_verified_at": {
       "type": "string",
-      "description": "Human-readable order number \u2014 for support lookups"
+      "format": "date-time",
+      "description": "When Stripe payment was verified"
+    },
+    "order_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When order was created"
     },
     "refund_id": {
       "type": "string",
-      "description": "Stripe Refund ID \u2014 populated after refund attempt"
+      "description": "Stripe refund ID if refunded"
     },
     "refund_amount": {
       "type": "number",
       "description": "Amount refunded in GBP"
     },
-    "failure_reason": {
-      "type": "string",
-      "description": "Error message from the failed order creation or refund attempt"
-    },
-    "failure_stage": {
-      "type": "string",
-      "enum": [
-        "restaurant_validation",
-        "hours_check",
-        "delivery_zone",
-        "minimum_order",
-        "cart_validation",
-        "coupon_validation",
-        "total_mismatch",
-        "order_create",
-        "unknown"
-      ],
-      "description": "Which stage of order creation failed, for triage"
-    },
-    "user_email": {
-      "type": "string",
-      "description": "Authenticated user email, or null for guests"
-    },
-    "guest_email": {
-      "type": "string",
-      "description": "Guest-supplied email (unverified)"
-    },
-    "guest_phone": {
-      "type": "string",
-      "description": "Normalized guest phone number"
-    },
-    "stripe_verified_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When Stripe confirmed the payment intent as succeeded"
-    },
-    "order_created_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When the Order entity was successfully created"
-    },
     "refund_attempted_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When the refund was first attempted"
+      "description": "When refund was first attempted"
     },
     "refund_confirmed_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When Stripe confirmed the refund succeeded"
-    },
-    "review_notes": {
-      "type": "string",
-      "description": "Internal notes from manual review of needs_review records"
-    },
-    "reviewed_by": {
-      "type": "string",
-      "description": "Admin email who reviewed this record"
-    },
-    "reviewed_at": {
-      "type": "string",
-      "format": "date-time"
+      "description": "When refund was confirmed complete"
     }
   },
   "required": [
     "payment_intent_id",
+    "restaurant_id",
     "amount",
+    "currency",
     "status"
   ]
 }

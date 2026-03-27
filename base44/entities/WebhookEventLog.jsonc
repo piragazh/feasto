@@ -1,0 +1,44 @@
+{
+  "name": "WebhookEventLog",
+  "description": "Log of all processed Stripe webhook events for deduplication and audit trail",
+  "type": "object",
+  "properties": {
+    "stripe_event_id": {
+      "type": "string",
+      "description": "Unique Stripe event ID (dedup key)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "payment_intent.succeeded",
+        "payment_intent.payment_failed",
+        "charge.refunded"
+      ],
+      "description": "Type of webhook event"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "processed",
+        "failed",
+        "duplicate_ignored"
+      ],
+      "description": "Processing status"
+    },
+    "details": {
+      "type": "object",
+      "description": "Details of processing (result, error, etc.)"
+    },
+    "processed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event was processed"
+    }
+  },
+  "required": [
+    "stripe_event_id",
+    "event_type",
+    "status",
+    "processed_at"
+  ]
+}

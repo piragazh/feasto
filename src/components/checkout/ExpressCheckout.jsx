@@ -15,7 +15,7 @@ import { Loader2, Smartphone } from 'lucide-react';
  * - Converges into same order-creation path as card entry
  * - No silent payment-success-but-order-failure scenarios
  */
-export default function ExpressCheckout({ amount, onSuccess, onError, disabled, clientSecret }) {
+export default function ExpressCheckout({ amount, onSuccess, onError, disabled, clientSecret, expressConfirmFiredRef }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -68,6 +68,13 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                 
                 <ExpressCheckoutElement
                     onConfirm={async (data) => {
+                        // ATOMIC GUARD: prevent double-fire from browser quirks or double-tap
+                        if (expressConfirmFiredRef?.current) {
+                            console.warn('[ExpressCheckout] onConfirm already fired — ignoring duplicate');
+                            return;
+                        }
+                        if (expressConfirmFiredRef) expressConfirmFiredRef.current = true;
+
                         console.log('[ExpressCheckout] onConfirm fired by wallet element');
                         
                         // CRITICAL: ExpressCheckoutElement automatically confirms the PaymentIntent
@@ -129,6 +136,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             }
                         } catch (err) {
                             console.error('[ExpressCheckout] Exception in onConfirm:', err.message || err);
+                            if (expressConfirmFiredRef) expressConfirmFiredRef.current = false; // Allow retry on error
                             if (onError && typeof onError === 'function') {
                                 onError(String(err?.message || 'Payment processing failed'));
                             }

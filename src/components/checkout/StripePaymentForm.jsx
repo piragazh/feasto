@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 import ExpressCheckout from './ExpressCheckout';
 
-export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
+export default function StripePaymentForm({ onSuccess, amount, clientSecret, expressConfirmFiredRef }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    // Local ref for manual card submit dedup
+    const submitFiredRef = useRef(false);
 
     const handleSubmit = async (e) => {
         if (e) {
@@ -17,12 +19,20 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
             e.stopPropagation();
         }
 
+        // ATOMIC GUARD: prevent double-click / double-submit
+        if (submitFiredRef.current) {
+            console.warn('🟡 Submit already in progress — ignoring duplicate');
+            return false;
+        }
+        submitFiredRef.current = true;
+
         console.log('🔵 Payment form submitted');
         setErrorMessage('');
 
         if (!stripe || !elements) {
             console.log('🔴 Stripe not ready');
             setErrorMessage('Payment system not ready. Please wait a moment.');
+            submitFiredRef.current = false;
             return false;
         }
 
@@ -77,6 +87,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                 
                 setErrorMessage(msg);
                 setIsProcessing(false);
+                submitFiredRef.current = false; // Unlock on failure
                 return false;
             }
             
@@ -105,6 +116,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
             console.log('🔴 Exception:', err);
             setErrorMessage(String(err?.message || 'An error occurred. Please try again.'));
             setIsProcessing(false);
+            submitFiredRef.current = false; // Unlock on failure
             return false;
         }
     };
@@ -115,6 +127,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                 <ExpressCheckout
                     amount={amount}
                     clientSecret={clientSecret}
+                    expressConfirmFiredRef={expressConfirmFiredRef}
                     onSuccess={(paymentIntentId) => {
                         console.log('[StripePaymentForm] Express Checkout success, calling onSuccess()');
                         onSuccess(paymentIntentId);
