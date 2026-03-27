@@ -61,7 +61,8 @@ export async function run(env) {
         const syncData = await syncRes.json();
         assertExists(syncData.order, 'Response should include order');
         assertEquals(syncData.order.offline_id, offlineId, 'Order should have offline_id persisted');
-        assertEquals(syncData.isDuplicate, undefined, 'First sync should not be marked as duplicate');
+        assertEquals(syncData.isDuplicate, false, 'First sync should not be marked as duplicate');
+        assertEquals(syncData.success, true, 'First sync should return success=true');
         
         const firstOrderId = syncData.order.id;
         trackResult('offline_sync_first_sync_accepted', true, `Order ${firstOrderId} synced successfully`);
