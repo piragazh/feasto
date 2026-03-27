@@ -40,7 +40,9 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
             return;
         }
         console.log('[ExpressCheckout] Wallet checkout initiated');
-        setIsProcessing(true);
+        // Note: setIsProcessing NOT called here — Stripe's ExpressCheckoutElement
+        // handles the loading state internally. Manually setting isProcessing would
+        // block the button before the wallet sheet even opens.
     };
 
     // CRITICAL: If no clientSecret or Stripe not ready, show nothing (but don't null out completely)
