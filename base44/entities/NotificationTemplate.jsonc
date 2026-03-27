@@ -1,0 +1,46 @@
+{
+  "name": "NotificationTemplate",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this template belongs to"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "whatsapp"
+      ],
+      "description": "Notification channel"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "preparing",
+        "ready",
+        "out_for_delivery",
+        "delivered",
+        "ready_for_collection",
+        "cancelled"
+      ],
+      "description": "Order status that triggers this template"
+    },
+    "template_text": {
+      "type": "string",
+      "description": "Template with variables: {order_number}, {restaurant_name}, {eta}, {delivery_address}, {customer_name}, {items_count}"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this template is enabled"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "channel",
+    "status",
+    "template_text"
+  ]
+}
