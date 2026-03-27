@@ -359,7 +359,7 @@ export default function Restaurant() {
             setSelectedItem(item);
             setCustomizationModalOpen(true);
         } else {
-            addToCartDirect(item, false);
+            addToCartDirect(item);
         }
     };
 
