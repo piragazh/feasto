@@ -1,4 +1,4 @@
-// SuperAdmin cache bust
+// Rebuild timestamp: 2026-03-27T18:58:50Z
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
