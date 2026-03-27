@@ -906,8 +906,21 @@ export default function Checkout() {
                  idempotency_key: idempotencyKey
              });
 
-            if (!verificationResponse?.data?.success || !verificationResponse?.data?.order_id) {
-                throw new Error(verificationResponse?.data?.error || 'Order creation failed');
+            if (!verificationResponse?.data?.success) {
+                const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
+                // Check if refund was issued (payment was taken but order failed)
+                const refunded = verificationResponse?.data?.refunded === true;
+                if (refunded) {
+                    toast.error(errorMsg + ' — Your payment has been automatically refunded.');
+                } else {
+                    toast.error(errorMsg);
+                }
+                setIsSubmitting(false);
+                return;
+            }
+            
+            if (!verificationResponse?.data?.order_id) {
+                throw new Error('Order ID not returned');
             }
 
             const newOrder = { 

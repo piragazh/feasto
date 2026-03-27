@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
             }).catch(e => console.warn('[LOG] Failed to record velocity throttle:', e.message));
 
             return new Response(
-                JSON.stringify({ error: velocityResult.data.error || 'Too many orders. Please wait.', success: false }),
+                JSON.stringify({ error: velocityResult.data.error || 'Too many orders. Please wait.', success: false, refunded: false }),
                 { status: 429, headers: { 'Retry-After': String(velocityResult.data.retryAfter || 60) } }
             );
         }
@@ -490,7 +490,7 @@ Deno.serve(async (req) => {
                 }).catch(e => console.warn('[LOG] Failed to record zone check:', e.message));
 
                 await compensate(base44, stripe, paymentIntentId, 'delivery_zone', 'Delivery location outside all zones');
-                return new Response(JSON.stringify({ error: 'Delivery not available to selected location', success: false }), { status: 400 });
+                return new Response(JSON.stringify({ error: 'Delivery not available to selected location', success: false, refunded: true }), { status: 400 });
             }
         }
 
