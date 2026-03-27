@@ -78,9 +78,16 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
 
                 ev.complete('success');
                 
-                if (paymentIntent && paymentIntent.status === 'succeeded' && paymentIntent.id) {
+                // Handle both 'succeeded' and 'processing' states (express methods return before settling)
+                if (paymentIntent && paymentIntent.id && ['succeeded', 'processing', 'requires_action'].includes(paymentIntent.status)) {
+                    console.log(`✅ Payment intent ${paymentIntent.status}: ${paymentIntent.id}`);
                     if (onSuccess && typeof onSuccess === 'function') {
                         onSuccess(String(paymentIntent.id));
+                    }
+                } else if (paymentIntent) {
+                    console.error(`❌ Unexpected payment status: ${paymentIntent.status}, intent: ${paymentIntent.id}`);
+                    if (onError && typeof onError === 'function') {
+                        onError(`Payment status: ${paymentIntent.status}`);
                     }
                 }
             } catch (error) {

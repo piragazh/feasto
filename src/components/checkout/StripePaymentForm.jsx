@@ -72,9 +72,11 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret }) {
                 return false;
             }
             
-            if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-                console.log('✅ Payment succeeded:', result.paymentIntent.id);
+            // Handle both 'succeeded' and 'processing' states
+            if (result.paymentIntent && result.paymentIntent.id && ['succeeded', 'processing', 'requires_action'].includes(result.paymentIntent.status)) {
+                console.log(`✅ Payment ${result.paymentIntent.status}: ${result.paymentIntent.id}`);
                 setErrorMessage('');
+                setIsProcessing(false);
                 onSuccess(result.paymentIntent.id);
                 return true;
             }
