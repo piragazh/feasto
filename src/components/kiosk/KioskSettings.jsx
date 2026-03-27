@@ -9,11 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
     Printer, CreditCard, Save, TabletSmartphone, CheckCircle,
-    AlertCircle, Settings, ExternalLink, Info, ShieldCheck, Circle
+    AlertCircle, Settings, ExternalLink, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
+import KioskPaymentSettings from '@/components/kiosk/KioskPaymentSettings';
 
 export default function KioskSettings({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -68,11 +69,16 @@ export default function KioskSettings({ restaurantId }) {
     };
 
     const handleSaveGeneral = () => {
-        // Validation: block save if both payment methods are disabled
-        if (!kioskConfig.payment_card_enabled && kioskConfig.payment_counter_enabled === false) {
-            toast.error('At least one payment method must be enabled before saving.');
-            return;
-        }
+        updateMutation.mutate({
+            kiosk_config: {
+                ...kioskConfig,
+                card_terminal: cardTerminal,
+            }
+        });
+    };
+
+    // Shared save handler passed into KioskPaymentSettings
+    const handleSavePayment = () => {
         updateMutation.mutate({
             kiosk_config: {
                 ...kioskConfig,
@@ -149,88 +155,8 @@ export default function KioskSettings({ restaurantId }) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Payment Methods */}
-                    <div className="space-y-3">
-                        <p className="text-sm font-semibold text-gray-700">Kiosk Payment Methods</p>
-
-                        {/* Pay by Card */}
-                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                                <p className="font-medium">Pay by Card</p>
-                                <p className="text-sm text-gray-500">Customers pay using a card reader at the kiosk</p>
-                            </div>
-                            <Switch
-                                checked={kioskConfig.payment_card_enabled === true}
-                                onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, payment_card_enabled: v })}
-                            />
-                        </div>
-
-                        {/* Warning A: card enabled, no reader configured */}
-                        {kioskConfig.payment_card_enabled && !cardTerminal?.reader_id && (
-                            <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-yellow-800">
-                                    <strong>Card payment is enabled, but no card reader is configured.</strong> Customers will not be able to pay by card until a Reader ID is saved below.
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Warning C: card enabled, terminal flagged unavailable */}
-                        {kioskConfig.payment_card_enabled && cardTerminal?.reader_id && kioskConfig.terminal_unavailable && (
-                            <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-yellow-800">
-                                    <strong>Card reader is currently marked as unavailable.</strong> The kiosk will fall back to Pay at Counter if it is enabled.
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Pay at Counter */}
-                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                                <p className="font-medium">Pay at Counter</p>
-                                <p className="text-sm text-gray-500">Customers place an order at the kiosk and pay staff at the counter</p>
-                            </div>
-                            <Switch
-                                checked={kioskConfig.payment_counter_enabled !== false}
-                                onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, payment_counter_enabled: v })}
-                            />
-                        </div>
-
-                        {/* Info D: counter is the only active method */}
-                        {!kioskConfig.payment_card_enabled && kioskConfig.payment_counter_enabled !== false && (
-                            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-blue-800">
-                                    Customers will place orders at the kiosk and pay at the counter.
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Warning B: both disabled */}
-                        {!kioskConfig.payment_card_enabled && kioskConfig.payment_counter_enabled === false && (
-                            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-red-800">
-                                    <strong>At least one kiosk payment method should be enabled.</strong> Customers will be blocked at checkout until this is fixed.
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Runtime unavailable toggle — staff-facing, separate from customer-facing config */}
-                        {kioskConfig.payment_card_enabled && cardTerminal?.reader_id && (
-                            <div className="flex items-center justify-between p-3 border border-dashed rounded-lg bg-gray-50">
-                                <div>
-                                    <p className="font-medium text-sm">Mark Card Reader as Unavailable</p>
-                                    <p className="text-xs text-gray-500">Use this if the reader is offline or broken — hides card payment from customers without changing your config</p>
-                                </div>
-                                <Switch
-                                    checked={kioskConfig.terminal_unavailable === true}
-                                    onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, terminal_unavailable: v })}
-                                />
-                            </div>
-                        )}
-                    </div>
+                    {/* Payment methods moved to dedicated KioskPaymentSettings cards below */}
+                    <p className="text-xs text-gray-400 italic">Payment method settings are in the "Kiosk Payment Methods" section below.</p>
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                             <p className="font-medium">Auto-Print Receipt</p>
@@ -290,75 +216,15 @@ export default function KioskSettings({ restaurantId }) {
                 </CardContent>
             </Card>
 
-            {/* Hardware Readiness */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <ShieldCheck className="h-5 w-5" />
-                        Hardware Readiness
-                    </CardTitle>
-                    <CardDescription>
-                        Quick status overview — check this before opening the kiosk to customers
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {/* Card Reader */}
-                    {(() => {
-                        const readerId = restaurant?.kiosk_config?.card_terminal?.reader_id;
-                        const unavailable = restaurant?.kiosk_config?.terminal_unavailable;
-                        const label = restaurant?.kiosk_config?.card_terminal?.reader_label;
-                        if (!readerId) return (
-                            <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
-                                <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Card Reader</p>
-                                    <p className="text-xs text-gray-400">Not configured — add a Reader ID below to enable card payments</p>
-                                </div>
-                            </div>
-                        );
-                        if (unavailable) return (
-                            <div className="flex items-center gap-3 p-3 rounded-lg border border-yellow-200 bg-yellow-50">
-                                <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
-                                <div>
-                                    <p className="text-sm font-medium text-yellow-800">Card Reader — Unavailable</p>
-                                    <p className="text-xs text-yellow-600">{label || readerId} · Marked offline. Card payment hidden from customers.</p>
-                                </div>
-                            </div>
-                        );
-                        return (
-                            <div className="flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50">
-                                <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                <div>
-                                    <p className="text-sm font-medium text-green-800">Card Reader — Configured</p>
-                                    <p className="text-xs text-green-600">
-                                        {label || readerId} · {restaurant?.kiosk_config?.card_terminal?.provider}
-                                        {restaurant?.kiosk_config?.card_terminal?.test_mode ? ' · Test Mode' : ' · Live'}
-                                    </p>
-                                </div>
-                            </div>
-                        );
-                    })()}
-
-                    {/* Printer */}
-                    {restaurant?.kiosk_config?.kiosk_printer?.name ? (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50">
-                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            <div>
-                                <p className="text-sm font-medium text-green-800">Receipt Printer — Configured</p>
-                                <p className="text-xs text-green-600">{restaurant.kiosk_config.kiosk_printer.name}</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
-                            <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Receipt Printer</p>
-                                <p className="text-xs text-gray-400">Not configured — orders will be confirmed on screen only</p>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+            {/* Payment Methods + Hardware Readiness — extracted component */}
+            <KioskPaymentSettings
+                kioskConfig={kioskConfig}
+                setKioskConfig={setKioskConfig}
+                cardTerminal={cardTerminal}
+                savedRestaurant={restaurant}
+                onSave={handleSavePayment}
+                isSaving={updateMutation.isPending}
+            />
 
             {/* Kiosk Printer */}
             <Card>
