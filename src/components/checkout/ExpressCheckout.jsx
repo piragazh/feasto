@@ -51,8 +51,9 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
         pr.on('paymentmethod', async (ev) => {
             setIsProcessing(true);
             try {
+                console.log('🔵 Express checkout payment method received');
+                
                 const { error, paymentIntent } = await stripe.confirmPayment({
-                    elements: undefined,
                     clientSecret,
                     payment_method: ev.paymentMethod.id,
                     redirect: 'if_required',
@@ -68,6 +69,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                 });
 
                 if (error) {
+                    console.error('❌ Express payment error:', error);
                     ev.complete('fail');
                     if (onError && typeof onError === 'function') {
                         onError(String(error.message || 'Payment failed'));
@@ -76,21 +78,35 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                     return;
                 }
 
-                ev.complete('success');
-                
-                // Handle both 'succeeded' and 'processing' states (express methods return before settling)
-                if (paymentIntent && paymentIntent.id && ['succeeded', 'processing', 'requires_action'].includes(paymentIntent.status)) {
-                    console.log(`✅ Payment intent ${paymentIntent.status}: ${paymentIntent.id}`);
+                // CRITICAL: Only mark success AFTER payment is confirmed
+                // Handle 'succeeded' and 'processing' (express methods may return before final settlement)
+                if (paymentIntent && paymentIntent.id && ['succeeded', 'processing'].includes(paymentIntent.status)) {
+                    console.log(`✅ Express payment ${paymentIntent.status}: ${paymentIntent.id}`);
+                    ev.complete('success');
                     if (onSuccess && typeof onSuccess === 'function') {
                         onSuccess(String(paymentIntent.id));
                     }
+                } else if (paymentIntent?.status === 'requires_action') {
+                    console.log('⚠️ Express payment requires additional action (3D Secure)');
+                    ev.complete('fail');
+                    if (onError && typeof onError === 'function') {
+                        onError('Payment requires verification. Please use the card form instead.');
+                    }
                 } else if (paymentIntent) {
-                    console.error(`❌ Unexpected payment status: ${paymentIntent.status}, intent: ${paymentIntent.id}`);
+                    console.error(`❌ Unexpected express payment status: ${paymentIntent.status}`);
+                    ev.complete('fail');
                     if (onError && typeof onError === 'function') {
                         onError(`Payment status: ${paymentIntent.status}`);
                     }
+                } else {
+                    console.error('❌ No payment intent returned from confirmPayment');
+                    ev.complete('fail');
+                    if (onError && typeof onError === 'function') {
+                        onError('Payment processing failed. Please try again.');
+                    }
                 }
             } catch (error) {
+                console.error('❌ Express checkout exception:', error);
                 ev.complete('fail');
                 if (onError && typeof onError === 'function') {
                     onError(String(error?.message || 'Payment failed'));
@@ -103,7 +119,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
         return () => {
             pr.off('paymentmethod');
         };
-    }, [stripe, amount, clientSecret, disabled]);
+    }, [stripe, amount, clientSecret, disabled, onSuccess, onError]);
 
     // Show debugging info in dev mode
     if (import.meta.env.DEV && debugInfo) {
