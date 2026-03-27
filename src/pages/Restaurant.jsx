@@ -56,7 +56,6 @@ export default function Restaurant() {
     const [previousCartData, setPreviousCartData] = useState(null);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
     const [showOutsideHoursConfirmation, setShowOutsideHoursConfirmation] = useState(false);
-    const toastedItemsRef = useRef(new Set());
 
     // Load cart from localStorage with error handling
     useEffect(() => {
@@ -427,9 +426,8 @@ export default function Restaurant() {
                 return [...prev, newItem];
             });
 
-            if (showToast && !toastedItemsRef.current.has(item.id)) {
-                toastedItemsRef.current.add(item.id);
-                setTimeout(() => toastedItemsRef.current.delete(item.id), 0);
+            // Only show toast when adding a NEW item (not updating quantity)
+            if (showToast && !itemExists) {
                 toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
                 duration: 3000,
                 style: {
