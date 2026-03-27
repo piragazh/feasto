@@ -618,8 +618,11 @@ Deno.serve(async (req) => {
              return itemMap;
          })();
 
-         // If menuItemsMap is a Response (error path), return it immediately
-         if (menuItemsMap instanceof Response) return menuItemsMap;
+         // If menuItemsMap is an error, return it immediately
+         if (menuItemsMap instanceof Response) {
+             console.error('[MENU] menuItemsMap is Response object — critical error in fetch logic');
+             return menuItemsMap;
+         }
         for (const cartItem of orderData.items) {
             // Skip deal items — they use synthetic IDs like 'deal_xyz' and are not in MenuItem table
             const isDealItem = String(cartItem.menu_item_id || '').startsWith('deal_');

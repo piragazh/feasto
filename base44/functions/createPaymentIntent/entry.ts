@@ -55,9 +55,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Amount exceeds maximum allowed (£50,000)' }, { status: 400 });
         }
 
-        if (!idempotency_key) {
+        const idempotencyKeyStr = String(idempotency_key || '').trim();
+        if (!idempotencyKeyStr || idempotencyKeyStr.length < 8) {
             return Response.json({
-                error: 'Missing idempotency_key - ensure frontend regenerates on payment method change'
+                error: 'Invalid idempotency_key: must be at least 8 characters'
             }, { status: 400 });
         }
 
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
                 },
                 metadata: enrichedMetadata
             },
-            { idempotencyKey: idempotency_key }
+            { idempotencyKey: idempotencyKeyStr }
         );
 
         console.log(`[PAYMENT] PaymentIntent created: ${paymentIntent.id} amount=${amountInPence}p metadata enriched`);
