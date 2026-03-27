@@ -390,6 +390,13 @@ export default function Restaurant() {
                 }
             }
 
+            const itemExists = cart.some(i => 
+                i.menu_item_id === item.id && 
+                !i.customizations && 
+                !i.itemQuantities &&
+                !i.is_deal
+            );
+
             setCart(prev => {
                 const existing = prev.find(i => 
                     i.menu_item_id === item.id && 
@@ -417,19 +424,20 @@ export default function Restaurant() {
                     newItem.promotion_name = activePromotion.name;
                 }
                 return [...prev, newItem];
-                });
-                if (showToast) {
-                    toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
-                    duration: 3000,
-                    style: {
-                        background: activePromotion ? '#8b5cf6' : '#10b981',
-                        color: '#fff',
-                        fontWeight: '600',
-                        padding: '16px',
-                        borderRadius: '12px'
-                    }
-                    });
+            });
+
+            if (showToast) {
+                toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
+                duration: 3000,
+                style: {
+                    background: activePromotion ? '#8b5cf6' : '#10b981',
+                    color: '#fff',
+                    fontWeight: '600',
+                    padding: '16px',
+                    borderRadius: '12px'
                 }
+                });
+            }
         } catch (error) {
             if (showToast) toast.error('Failed to add item to cart');
         }
