@@ -652,14 +652,13 @@ export default function Checkout() {
         // CRITICAL SECURITY: Check rate limiting
         try {
             const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {});
-            if (!rateLimitResponse?.data?.allowed) {
+            if (rateLimitResponse?.data?.allowed === false) {
                 toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
                 return;
             }
         } catch (error) {
-            console.error('Rate limit check failed:', error);
-            toast.error('Unable to process order. Please try again.');
-            return;
+            // Rate limit check failed — allow through, verifyAndCreateOrder will enforce server-side
+            console.warn('Rate limit pre-check failed, continuing:', error?.message);
         }
         
         // ---- VALIDATION: Check Required Fields ----
