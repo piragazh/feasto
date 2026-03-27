@@ -251,7 +251,7 @@ export default function RestaurantSettings({ restaurantId }) {
             },
             collection_enabled: formData.collection_enabled,
             accepts_cash_on_delivery: formData.accepts_cash_on_delivery,
-            show_review_count: formData.show_review_count,
+            show_review_count: Boolean(formData.show_review_count),
             logo_url: formData.logo_url,
             food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
             food_hygiene_certificate_url: formData.food_hygiene_certificate_url,
