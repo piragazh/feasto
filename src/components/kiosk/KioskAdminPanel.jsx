@@ -18,7 +18,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { X, BarChart3, ShoppingBag, Clock, DollarSign, Shield, AlertTriangle, Lock, LogOut } from 'lucide-react';
+import { X, BarChart3, ShoppingBag, Clock, DollarSign, Shield, AlertTriangle, Lock, LogOut, Link2, Unlink, CheckCircle2 } from 'lucide-react';
+import { bindDevice, unbindDevice, getBindingMeta } from '@/lib/kioskDeviceBinding';
 
 // Module-level rate limit state — persists across re-renders, reset only on page reload
 // This prevents an attacker from unmounting/remounting to bypass attempt counting
@@ -34,12 +35,17 @@ const ADMIN_AUTO_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes inactivity → auto-lo
 // Default fallback PIN — no hint shown, should be changed in kiosk_config
 const FALLBACK_DEFAULT_PIN = '0000';
 
-export default function KioskAdminPanel({ restaurant, onClose }) {
+export default function KioskAdminPanel({ restaurant, onClose, onRebind }) {
     const [pin, setPin] = useState('');
     const [unlocked, setUnlocked] = useState(false);
     const [error, setError] = useState('');
     const [, forceUpdate] = useState(0); // used to re-render lockout countdown
     const autoLogoutRef = useRef(null);
+    const [rebindId, setRebindId] = useState('');
+    const [rebinding, setRebinding] = useState(false);
+    const [rebindError, setRebindError] = useState('');
+    const [rebindSuccess, setRebindSuccess] = useState(false);
+    const bindingMeta = getBindingMeta();
 
     // Get configured admin PIN from restaurant settings
     const configuredPin = restaurant?.kiosk_config?.admin_pin || FALLBACK_DEFAULT_PIN;
@@ -144,6 +150,35 @@ export default function KioskAdminPanel({ restaurant, onClose }) {
 
     const totalRevenue = todayOrders.reduce((s, o) => s + (o.total || 0), 0);
     const avgOrder = todayOrders.length ? totalRevenue / todayOrders.length : 0;
+
+    const handleRebind = async () => {
+        const id = rebindId.trim();
+        if (!id) { setRebindError('Enter a restaurant ID'); return; }
+        setRebinding(true);
+        setRebindError('');
+        try {
+            const results = await base44.entities.Restaurant.filter({ id });
+            if (!results?.[0]) {
+                setRebindError('Restaurant not found. Check the ID and try again.');
+                setRebinding(false);
+                return;
+            }
+            bindDevice(id, 'admin_rebind');
+            setRebindSuccess(true);
+            setTimeout(() => {
+                onRebind?.(id);
+                handleExit('rebind');
+            }, 1500);
+        } catch {
+            setRebindError('Failed to verify restaurant. Check connection.');
+            setRebinding(false);
+        }
+    };
+
+    const handleUnbind = () => {
+        unbindDevice();
+        handleExit('unbind');
+    };
 
     // ── Lockout screen ────────────────────────────────────────────────────────
     if (isLocked()) {
@@ -285,6 +320,66 @@ export default function KioskAdminPanel({ restaurant, onClose }) {
                             </div>
                         );
                     })}
+                </div>
+
+                {/* Device Binding */}
+                <div className="bg-gray-900 border border-white/[0.06] rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Link2 className="h-5 w-5 text-orange-400" />
+                        <h2 className="text-white font-bold text-lg">Device Binding</h2>
+                    </div>
+
+                    {/* Current binding info */}
+                    <div className="bg-gray-800 rounded-xl px-4 py-3 text-sm space-y-1">
+                        <p className="text-gray-400">Currently bound to:</p>
+                        <p className="text-white font-bold">{restaurant.name}</p>
+                        {bindingMeta && (
+                            <p className="text-gray-600 text-xs">
+                                Bound {new Date(bindingMeta.bound_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · via {bindingMeta.source === 'admin_rebind' ? 'admin' : 'initial setup'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Rebind to different restaurant */}
+                    <div>
+                        <p className="text-gray-400 text-sm mb-2">Rebind to a different restaurant:</p>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Restaurant ID"
+                                value={rebindId}
+                                onChange={e => { setRebindId(e.target.value); setRebindError(''); setRebindSuccess(false); }}
+                                className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-3 py-2.5 placeholder-gray-600 focus:outline-none focus:border-orange-500"
+                            />
+                            <button
+                                onClick={handleRebind}
+                                disabled={rebinding || rebindSuccess}
+                                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-1.5"
+                            >
+                                {rebindSuccess
+                                    ? <><CheckCircle2 className="h-4 w-4" /> Done</>
+                                    : rebinding
+                                    ? 'Verifying...'
+                                    : 'Rebind'}
+                            </button>
+                        </div>
+                        {rebindError && <p className="text-red-400 text-xs mt-2">{rebindError}</p>}
+                        {rebindSuccess && <p className="text-green-400 text-xs mt-2">Device rebound. Reloading kiosk...</p>}
+                    </div>
+
+                    {/* Unbind (clear binding) */}
+                    <div className="pt-2 border-t border-white/[0.06]">
+                        <button
+                            onClick={handleUnbind}
+                            className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                        >
+                            <Unlink className="h-4 w-4" />
+                            Unbind this device (return to unconfigured state)
+                        </button>
+                        <p className="text-gray-700 text-xs mt-1">
+                            The kiosk will show an "unconfigured" screen until a new restaurant_id is provided.
+                        </p>
+                    </div>
                 </div>
 
                 <div>

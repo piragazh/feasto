@@ -1,6 +1,17 @@
+/**
+ * KioskDashboard — Device-bound kiosk
+ *
+ * RESTAURANT RESOLUTION ORDER:
+ *   1. localStorage binding (authoritative — set at first setup or by admin rebind)
+ *   2. URL ?restaurant_id= (first-time setup only — auto-persisted to localStorage)
+ *   3. Unconfigured fallback screen (no URL param, no binding)
+ *
+ * URL param changes during normal operation are IGNORED.
+ * Only an authenticated admin action can rebind the device.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import KioskWelcome from '@/components/kiosk/KioskWelcome';
 import KioskMenu from '@/components/kiosk/KioskMenu';
@@ -8,11 +19,12 @@ import KioskCart from '@/components/kiosk/KioskCart';
 import KioskPayment from '@/components/kiosk/KioskPayment';
 import KioskConfirmation from '@/components/kiosk/KioskConfirmation';
 import KioskAdminPanel from '@/components/kiosk/KioskAdminPanel';
+import { resolveRestaurantId } from '@/lib/kioskDeviceBinding';
 
 // SCREENS: welcome → menu → cart → payment → confirmation
 export default function KioskDashboard() {
     const [screen, setScreen] = useState('welcome');
-    const [orderType, setOrderType] = useState('takeaway'); // 'takeaway' | 'dine_in'
+    const [orderType, setOrderType] = useState('takeaway');
     const [cart, setCart] = useState([]);
     const [placedOrder, setPlacedOrder] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
@@ -21,16 +33,15 @@ export default function KioskDashboard() {
     const [adminTapCount, setAdminTapCount] = useState(0);
     const [selectedTable, setSelectedTable] = useState(null);
 
-    // Get restaurantId from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const restaurantId = urlParams.get('restaurant_id') || urlParams.get('restaurantId');
+    // Resolve restaurant ID from binding (localStorage-first, URL only for first setup)
+    const { restaurantId } = resolveRestaurantId();
 
     useEffect(() => {
-        if (restaurantId) loadRestaurant();
+        if (restaurantId) loadRestaurant(restaurantId);
         else setLoading(false);
     }, [restaurantId]);
 
-    // Auto-reset to welcome after inactivity (reset timer on any interaction)
+    // Auto-reset to welcome after inactivity
     useEffect(() => {
         if (screen === 'welcome' || screen === 'confirmation') return;
         const reset = () => {
@@ -52,10 +63,10 @@ export default function KioskDashboard() {
         };
     }, [screen]);
 
-    const loadRestaurant = async () => {
+    const loadRestaurant = async (id) => {
         try {
-            const [r] = await base44.entities.Restaurant.filter({ id: restaurantId });
-            setRestaurant(r);
+            const [r] = await base44.entities.Restaurant.filter({ id });
+            setRestaurant(r || null);
         } catch (e) {
             toast.error('Failed to load restaurant');
         } finally {
@@ -113,6 +124,13 @@ export default function KioskDashboard() {
         });
     };
 
+    // Callback for admin rebind — reload restaurant from new binding
+    const handleAdminRebind = (newRestaurantId) => {
+        setLoading(true);
+        setRestaurant(null);
+        loadRestaurant(newRestaurantId);
+    };
+
     if (loading) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center">
             <div className="text-center">
@@ -122,12 +140,21 @@ export default function KioskDashboard() {
         </div>
     );
 
+    // Unconfigured device fallback
     if (!restaurantId || !restaurant) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center text-center px-8">
             <div>
                 <div className="text-6xl mb-4">🍽️</div>
-                <h2 className="text-white text-2xl font-bold mb-2">Kiosk Setup Required</h2>
-                <p className="text-gray-400 mb-6">Add <code className="bg-gray-800 px-2 py-1 rounded text-orange-400">?restaurant_id=YOUR_ID</code> to the URL</p>
+                <h2 className="text-white text-2xl font-bold mb-2">Kiosk Not Configured</h2>
+                <p className="text-gray-400 mb-3 max-w-sm">
+                    This device has not been bound to a restaurant yet.
+                </p>
+                <p className="text-gray-600 text-sm mb-6">
+                    For initial setup, add{' '}
+                    <code className="bg-gray-800 px-2 py-1 rounded text-orange-400">?restaurant_id=YOUR_ID</code>{' '}
+                    to the URL. Once set, the device remembers its restaurant and ignores URL changes.
+                </p>
+                <p className="text-gray-700 text-xs">Ask your system administrator to configure this device.</p>
             </div>
         </div>
     );
@@ -137,8 +164,9 @@ export default function KioskDashboard() {
             restaurant={restaurant}
             onClose={() => {
                 setShowAdmin(false);
-                resetKiosk(); // wipe cart + session — no state leaks into or out of admin
+                resetKiosk(); // wipe cart + session — no state leaks
             }}
+            onRebind={handleAdminRebind}
         />
     );
 
