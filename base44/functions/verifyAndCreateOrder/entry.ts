@@ -544,43 +544,75 @@ Deno.serve(async (req) => {
         }
 
         // ── Cart Item Validation ──────────────────────────────────────────────
-        if (!orderData.items || orderData.items.length === 0) {
-            await base44.asServiceRole.entities.FailureLog.create({
-                failure_type: 'cart_validation',
-                severity: 'warning',
-                restaurant_id: orderData.restaurant_id,
-                user_email: user?.email || 'guest',
-                error_message: 'Order contains no items',
-                context: { http_status: 400, items_count: 0 }
-            }).catch(e => console.warn('[LOG] Failed to record empty cart:', e.message));
+         if (!orderData.items || orderData.items.length === 0) {
+             await base44.asServiceRole.entities.FailureLog.create({
+                 failure_type: 'cart_validation',
+                 severity: 'warning',
+                 restaurant_id: orderData.restaurant_id,
+                 user_email: user?.email || 'guest',
+                 error_message: 'Order contains no items',
+                 context: { http_status: 400, items_count: 0 }
+             }).catch(e => console.warn('[LOG] Failed to record empty cart:', e.message));
 
-            await compensate(base44, stripe, paymentIntentId, 'cart_validation', 'Empty cart');
-            return new Response(JSON.stringify({ error: 'Order contains no items', success: false }), { status: 400 });
-        }
-        // Fetch all menu items for this restaurant
-        // Use both filter and direct ID lookup as fallback for reliability
-        let menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: orderData.restaurant_id });
-        if (!Array.isArray(menuItems)) menuItems = [];
-        
-        // If filter returned nothing, try individual item lookups by ID (fallback)
-        if (menuItems.length === 0 && orderData.items.length > 0) {
-            const uniqueIds = [...new Set(orderData.items
-                .filter(i => !String(i.menu_item_id || '').startsWith('deal_'))
-                .map(i => i.menu_item_id)
-                .filter(Boolean))];
-            
-            const individualFetches = await Promise.all(
-                uniqueIds.map(id => 
-                    base44.asServiceRole.entities.MenuItem.filter({ id })
-                        .then(res => Array.isArray(res) ? res[0] : null)
-                        .catch(() => null)
-                )
-            );
-            menuItems = individualFetches.filter(Boolean);
-        }
-        
-        console.log(`[MENU] Fetched ${menuItems.length} items`);
-        const menuItemsMap = new Map(menuItems.map(item => [item.id, item]));
+             await compensate(base44, stripe, paymentIntentId, 'cart_validation', 'Empty cart');
+             return new Response(JSON.stringify({ error: 'Order contains no items', success: false }), { status: 400 });
+         }
+
+         // ── PAGINATION-AWARE MENU ITEM FETCH ──────────────────────────────────
+         // Fetch ALL items for this restaurant (handles restaurants with >50 items)
+         // Using pagination to bypass the default 50-item limit
+         const menuItemsMap = await (async () => {
+             const itemMap = new Map();
+             const PAGE_SIZE = 50;
+             let offset = 0;
+             let hasMore = true;
+
+             while (hasMore) {
+                 try {
+                     // Try to fetch with offset (if SDK supports it)
+                     const batch = await base44.asServiceRole.entities.MenuItem.filter(
+                         { restaurant_id: orderData.restaurant_id },
+                         null,
+                         PAGE_SIZE,
+                         offset
+                     );
+
+                     if (!Array.isArray(batch) || batch.length === 0) {
+                         hasMore = false;
+                         break;
+                     }
+
+                     for (const item of batch) {
+                         if (item && item.id) itemMap.set(item.id, item);
+                     }
+
+                     if (batch.length < PAGE_SIZE) {
+                         hasMore = false;
+                     } else {
+                         offset += PAGE_SIZE;
+                     }
+                 } catch (err) {
+                     // Fallback: if offset not supported, try single fetch (may be capped at 50)
+                     console.warn(`[MENU] Pagination offset not supported, using single fetch: ${err.message}`);
+                     try {
+                         const fallbackBatch = await base44.asServiceRole.entities.MenuItem.filter(
+                             { restaurant_id: orderData.restaurant_id }
+                         );
+                         if (Array.isArray(fallbackBatch)) {
+                             for (const item of fallbackBatch) {
+                                 if (item && item.id) itemMap.set(item.id, item);
+                             }
+                         }
+                     } catch (fallbackErr) {
+                         console.error(`[MENU] Fallback fetch failed: ${fallbackErr.message}`);
+                     }
+                     hasMore = false;
+                 }
+             }
+
+             console.log(`[MENU] Fetched ${itemMap.size} items for restaurant=${orderData.restaurant_id}`);
+             return itemMap;
+         })();
         for (const cartItem of orderData.items) {
             // Skip deal items — they use synthetic IDs like 'deal_xyz' and are not in MenuItem table
             const isDealItem = String(cartItem.menu_item_id || '').startsWith('deal_');

@@ -78,14 +78,62 @@ Deno.serve(async (req) => {
         }
         
         // Validate items against menu (prevent fraud)
-        // Skip deal items (synthetic IDs like 'deal_xyz') — they have no MenuItem record
-        const regularItems = items.filter(item => !String(item.menu_item_id || '').startsWith('deal_'));
-        let menuItems = [];
-        if (regularItems.length > 0) {
-            menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id });
-            if (!Array.isArray(menuItems)) menuItems = [];
-        }
-        const menuMap = new Map(menuItems.map(m => [m.id, m]));
+         // Skip deal items (synthetic IDs like 'deal_xyz') — they have no MenuItem record
+         const regularItems = items.filter(item => !String(item.menu_item_id || '').startsWith('deal_'));
+
+         // ── PAGINATION-AWARE FETCH ──────────────────────────────────────────────
+         // Handles restaurants with >50 menu items by using pagination
+         const menuMap = await (async () => {
+             const itemMap = new Map();
+             if (regularItems.length === 0) return itemMap; // No items to validate
+
+             const PAGE_SIZE = 50;
+             let offset = 0;
+             let hasMore = true;
+
+             while (hasMore) {
+                 try {
+                     const batch = await base44.asServiceRole.entities.MenuItem.filter(
+                         { restaurant_id },
+                         null,
+                         PAGE_SIZE,
+                         offset
+                     );
+
+                     if (!Array.isArray(batch) || batch.length === 0) {
+                         hasMore = false;
+                         break;
+                     }
+
+                     for (const item of batch) {
+                         if (item && item.id) itemMap.set(item.id, item);
+                     }
+
+                     if (batch.length < PAGE_SIZE) {
+                         hasMore = false;
+                     } else {
+                         offset += PAGE_SIZE;
+                     }
+                 } catch (err) {
+                     // Fallback to single fetch
+                     console.warn(`[MENU] Pagination failed: ${err.message}, using fallback`);
+                     try {
+                         const fallback = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id });
+                         if (Array.isArray(fallback)) {
+                             for (const item of fallback) {
+                                 if (item && item.id) itemMap.set(item.id, item);
+                             }
+                         }
+                     } catch (e) {
+                         console.error(`[MENU] Fallback failed: ${e.message}`);
+                     }
+                     hasMore = false;
+                 }
+             }
+
+             console.log(`[MENU] Fetched ${itemMap.size} items for webhook recovery`);
+             return itemMap;
+         })();
         
         for (const item of regularItems) {
             if (!menuMap.has(item.menu_item_id)) {
