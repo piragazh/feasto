@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
+import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -26,9 +27,6 @@ const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
 const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
 const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
-
-// Import directly (non-lazy) to avoid Leaflet module issues
-import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 
 export default function Restaurant() {
     const navigate = useNavigate();
@@ -1338,13 +1336,11 @@ export default function Restaurant() {
                 onAddItem={addToCartDirect}
                 />
 
-                <Suspense fallback={null}>
-                    <RestaurantInfoDialog
-                        open={showInfoDialog}
-                        onClose={() => setShowInfoDialog(false)}
-                        restaurant={restaurant}
-                    />
-                </Suspense>
+                <RestaurantInfoDialog
+                    open={showInfoDialog}
+                    onClose={() => setShowInfoDialog(false)}
+                    restaurant={restaurant}
+                />
 
                 {/* Time Warning Dialog */}
             {showTimeWarning && (
