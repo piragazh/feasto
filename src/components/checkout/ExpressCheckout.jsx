@@ -91,18 +91,21 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                 } else if (paymentIntent?.status === 'requires_action') {
                     console.log('⚠️ Express payment requires additional action (3D Secure)');
                     ev.complete('fail');
+                    setIsProcessing(false);
                     if (onError && typeof onError === 'function') {
                         onError('Payment requires verification. Please use the card form instead.');
                     }
                 } else if (paymentIntent) {
                     console.error(`❌ Unexpected express payment status: ${paymentIntent.status}`);
                     ev.complete('fail');
+                    setIsProcessing(false);
                     if (onError && typeof onError === 'function') {
                         onError(`Payment status: ${paymentIntent.status}`);
                     }
                 } else {
                     console.error('❌ No payment intent returned from confirmPayment');
                     ev.complete('fail');
+                    setIsProcessing(false);
                     if (onError && typeof onError === 'function') {
                         onError('Payment processing failed. Please try again.');
                     }

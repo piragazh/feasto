@@ -1027,7 +1027,7 @@ export default function Checkout() {
                 ).catch(() => {})
             );
 
-            Promise.allSettled(backgroundTasks);
+            await Promise.allSettled(backgroundTasks);
 
             setTimeout(() => {
                 navigate(createPageUrl('Orders'));
