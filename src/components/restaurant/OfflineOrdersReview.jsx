@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import OfflineOrderReviewAction from './OfflineOrderReviewAction';
 import OfflineReviewHealthIndicator from './OfflineReviewHealthIndicator';
 import OfflineReviewAnalytics from './OfflineReviewAnalytics';
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 
 /**
  * Offline Orders Review
@@ -131,13 +131,13 @@ export default function OfflineOrdersReview({ restaurantId }) {
             
             {/* Analytics tab */}
             <Tabs defaultValue="orders" className="w-full">
-                <div className="flex gap-2 mb-4">
+                <TabsList className="mb-4">
                     <TabsTrigger value="orders" className="gap-2">Orders</TabsTrigger>
                     <TabsTrigger value="analytics" className="gap-2">
                         <BarChart3 className="h-4 w-4" />
                         Analysis
                     </TabsTrigger>
-                </div>
+                </TabsList>
 
                 <TabsContent value="orders">
             <Card>
