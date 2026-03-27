@@ -128,8 +128,8 @@ export default function RestaurantSettings({ restaurantId }) {
                     lower_minimum_fee: restaurant.tiered_delivery?.lower_minimum_fee || ''
                 },
                 collection_enabled: restaurant.collection_enabled || false,
-                accepts_cash_on_delivery: restaurant.accepts_cash_on_delivery !== false,
-                show_review_count: restaurant.show_review_count !== false,
+                accepts_cash_on_delivery: restaurant.accepts_cash_on_delivery ?? true,
+                show_review_count: restaurant.show_review_count ?? true,
                 logo_url: restaurant.logo_url || '',
                 food_hygiene_rating: restaurant.food_hygiene_rating || '',
                 food_hygiene_certificate_url: restaurant.food_hygiene_certificate_url || '',
