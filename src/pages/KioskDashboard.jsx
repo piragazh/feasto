@@ -133,7 +133,13 @@ export default function KioskDashboard() {
     );
 
     if (showAdmin) return (
-        <KioskAdminPanel restaurant={restaurant} onClose={() => setShowAdmin(false)} />
+        <KioskAdminPanel
+            restaurant={restaurant}
+            onClose={() => {
+                setShowAdmin(false);
+                resetKiosk(); // wipe cart + session — no state leaks into or out of admin
+            }}
+        />
     );
 
     return (

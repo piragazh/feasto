@@ -185,6 +185,24 @@ export default function KioskSettings({ restaurantId }) {
                         />
                     </div>
                     <div>
+                        <Label>Admin PIN</Label>
+                        <Input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            placeholder="4-digit PIN (default: 0000)"
+                            value={kioskConfig.admin_pin || ''}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                setKioskConfig({ ...kioskConfig, admin_pin: val });
+                            }}
+                            className="max-w-xs mt-1 font-mono tracking-widest"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            4-digit PIN for kiosk staff access. Set a unique PIN before going live.
+                        </p>
+                    </div>
+                    <div>
                         <Label>Inactivity Timeout (seconds)</Label>
                         <Input
                             type="number"
