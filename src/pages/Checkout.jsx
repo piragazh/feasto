@@ -450,7 +450,8 @@ export default function Checkout() {
                 return;
             }
 
-            if (clientSecret || initializingPayment) return;
+            if (clientSecret) return;
+            if (initializingPayment) return;
 
             // ✅ COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
             
@@ -513,7 +514,7 @@ export default function Checkout() {
         };
 
         initPayment();
-    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType, zoneCheckComplete, deliveryZoneInfo]);
+    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType, zoneCheckComplete, deliveryZoneInfo, idempotencyKey]);
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
