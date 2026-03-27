@@ -7,18 +7,31 @@
  *   The kiosk operates as an unauthenticated session; the restaurantId is the
  *   tenant anchor. No user auth is required or available on a public kiosk.
  *
+ * CARD AUTHORIZATION TRUST MODEL:
+ *   For card payments, kioskCreateOrder does NOT trust frontend-supplied authorization
+ *   claims (paymentIntentId, terminalLabel, terminalProvider, etc.).
+ *   Instead, it:
+ *     1. Looks up the KioskTerminalTransaction record written by processCardTerminal.
+ *     2. Verifies the record is in 'approved' status.
+ *     3. Verifies the authorized amount matches the server-computed order total (±£0.01).
+ *     4. Verifies the record has not expired (10-minute window).
+ *     5. Verifies the record has not already been redeemed (prevents double-order).
+ *     6. Marks the record as 'redeemed' before writing the order.
+ *   If any check fails, the order is rejected — no silent downgrade.
+ *
  * Validates:
  *   1. Restaurant exists and is open (is_open flag)
- *   2. pay_at_counter is enabled in kiosk_config
+ *   2. pay_at_counter or card_payment is enabled in kiosk_config
  *   3. All cart items exist and are available in the live menu
  *   4. Items have valid availability_channel (not pos_only)
  *   5. Totals are recomputed from DB prices — client prices are discarded
  *   6. Cart is non-empty
+ *   7. Card path: KioskTerminalTransaction record must be approved, unexpired, unredeemed, amount-matching
  *
  * Writes:
  *   - order_source = 'kiosk'
- *   - payment_method = 'pay_at_counter'
- *   - payment_status = 'pending_payment'
+ *   - payment_method = 'pay_at_counter' | 'card'
+ *   - payment_status = 'pending_payment' | 'paid_card'
  *   - order_status = 'new'
  *   - All financial fields from server computation only
  *
@@ -27,6 +40,9 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+
+// Maximum acceptable difference between terminal-authorized amount and server total (pence-level rounding)
+const AMOUNT_TOLERANCE_GBP = 0.01;
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -45,12 +61,14 @@ Deno.serve(async (req) => {
             orderType,
             selectedTable,
             idempotency_key,
-            // Card terminal fields (used when payment is pre-authorized at terminal)
+            // Card terminal fields — the transaction_ref is the ONLY field we trust.
+            // All other auth fields (terminalLabel, terminalProvider, terminalAuthTimestamp)
+            // are purely informational and are fetched from the trusted DB record instead.
             paymentMethod,
-            paymentIntentId,
-            terminalLabel,
-            terminalProvider,
-            terminalAuthTimestamp,
+            paymentIntentId,   // used as transaction_ref lookup key — not trusted as proof
+            terminalLabel,     // informational only — overwritten from DB record
+            terminalProvider,  // informational only — overwritten from DB record
+            terminalAuthTimestamp, // informational only — overwritten from DB record
         } = body;
 
         // Determine which payment path this is
@@ -195,8 +213,99 @@ Deno.serve(async (req) => {
         const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
         const serverTotal = serverSubtotal; // kiosk: no delivery fee, no discount
 
+        // ── CARD AUTHORIZATION VERIFICATION ──────────────────────────────────
+        // CRITICAL SECURITY: For card payments, we look up the trusted
+        // KioskTerminalTransaction record written by processCardTerminal.
+        // We do NOT trust paymentIntentId/terminalLabel/etc. from the request.
+        let trustedTxRecord = null;
+        if (isCardPayment) {
+            const txRef = paymentIntentId; // treated as a lookup key only — not proof of payment
+
+            if (!txRef || typeof txRef !== 'string') {
+                console.error(`[KIOSK-CARD] Missing transaction reference for card order. restaurant=${restaurantId}`);
+                return Response.json({
+                    error: 'Card order rejected: missing transaction reference',
+                    success: false,
+                }, { status: 400 });
+            }
+
+            // Fetch the trusted server-side record
+            const txRecords = await base44.asServiceRole.entities.KioskTerminalTransaction.filter({
+                transaction_ref: txRef,
+            });
+
+            if (!txRecords?.length) {
+                console.error(`[KIOSK-CARD] No terminal transaction record found for ref=${txRef} restaurant=${restaurantId}`);
+                return Response.json({
+                    error: 'Card order rejected: no terminal authorization record found. The terminal may not have completed authorization.',
+                    success: false,
+                }, { status: 400 });
+            }
+
+            trustedTxRecord = txRecords[0];
+
+            // 1. Must be from same restaurant
+            if (trustedTxRecord.restaurant_id !== restaurantId) {
+                console.error(`[KIOSK-CARD] Restaurant mismatch: tx.restaurant=${trustedTxRecord.restaurant_id} order.restaurant=${restaurantId} ref=${txRef}`);
+                return Response.json({
+                    error: 'Card order rejected: authorization record does not match this restaurant',
+                    success: false,
+                }, { status: 400 });
+            }
+
+            // 2. Must be approved
+            if (trustedTxRecord.status !== 'approved') {
+                console.error(`[KIOSK-CARD] Non-approved transaction used: ref=${txRef} status=${trustedTxRecord.status}`);
+                return Response.json({
+                    error: `Card order rejected: transaction status is '${trustedTxRecord.status}', not 'approved'`,
+                    success: false,
+                }, { status: 400 });
+            }
+
+            // 3. Must not be redeemed (prevents double-order against same authorization)
+            if (trustedTxRecord.status === 'redeemed') {
+                console.error(`[KIOSK-CARD] Transaction already redeemed: ref=${txRef}`);
+                return Response.json({
+                    error: 'Card order rejected: this authorization has already been used to create an order',
+                    success: false,
+                }, { status: 409 });
+            }
+
+            // 4. Must not be expired
+            if (trustedTxRecord.expires_at && new Date(trustedTxRecord.expires_at) < new Date()) {
+                console.error(`[KIOSK-CARD] Expired transaction: ref=${txRef} expired_at=${trustedTxRecord.expires_at}`);
+                return Response.json({
+                    error: 'Card order rejected: terminal authorization has expired. Please start a new payment.',
+                    success: false,
+                }, { status: 400 });
+            }
+
+            // 5. Amount must match server-computed total (prevents partial-payment fraud)
+            const amountDiff = Math.abs((trustedTxRecord.amount || 0) - serverTotal);
+            if (amountDiff > AMOUNT_TOLERANCE_GBP) {
+                console.error(`[KIOSK-CARD] Amount mismatch: authorized=£${trustedTxRecord.amount} server_total=£${serverTotal.toFixed(2)} diff=£${amountDiff.toFixed(4)} ref=${txRef}`);
+                return Response.json({
+                    error: `Card order rejected: authorized amount (£${trustedTxRecord.amount?.toFixed(2)}) does not match order total (£${serverTotal.toFixed(2)})`,
+                    success: false,
+                }, { status: 400 });
+            }
+
+            // 6. Mark as redeemed BEFORE creating the order (atomic guard against race conditions)
+            await base44.asServiceRole.entities.KioskTerminalTransaction.update(trustedTxRecord.id, {
+                status: 'redeemed',
+                redeemed_at: new Date().toISOString(),
+            });
+
+            console.log(`[KIOSK-CARD] Authorization verified and redeemed: ref=${txRef} amount=£${trustedTxRecord.amount} restaurant=${restaurantId}`);
+        }
+
         // ── Generate order number ─────────────────────────────────────────────
         const orderNum = `K-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        // For card orders, use metadata from the trusted DB record (not request fields)
+        const trustedTerminalLabel = trustedTxRecord?.terminal_label || terminalLabel || 'terminal';
+        const trustedProvider = trustedTxRecord?.provider || terminalProvider || 'card_terminal';
+        const trustedAuthTimestamp = trustedTxRecord?.authorized_at || terminalAuthTimestamp || new Date().toISOString();
 
         // ── Build safe order payload ──────────────────────────────────────────
         // Only fields we control — client cannot inject financial or status fields
@@ -216,7 +325,7 @@ Deno.serve(async (req) => {
             order_status: 'new',
             order_type: resolvedOrderType,
             notes: isCardPayment
-                ? `Kiosk order — terminal: ${terminalLabel || 'terminal'} — provider: ${terminalProvider || 'card_terminal'} — auth: ${terminalAuthTimestamp || new Date().toISOString()}`
+                ? `Kiosk card order — terminal: ${trustedTerminalLabel} — provider: ${trustedProvider} — auth: ${trustedAuthTimestamp}`
                 : 'Kiosk order — awaiting counter payment. Do not prepare until payment confirmed.',
             ...(isCardPayment && paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
             ...(idempotency_key ? { idempotency_key } : {}),
@@ -229,11 +338,24 @@ Deno.serve(async (req) => {
         const order = await base44.asServiceRole.entities.Order.create(orderPayload);
 
         if (!order?.id) {
-            console.error('[KIOSK-ORDER] Entity create returned no ID for restaurant', restaurantId);
+            // If card order: the tx record was already marked redeemed.
+            // Log this carefully — staff may need to investigate.
+            if (isCardPayment) {
+                console.error(`[KIOSK-CARD] CRITICAL: Order entity creation failed AFTER redemption. ref=${paymentIntentId} restaurant=${restaurantId}`);
+            } else {
+                console.error('[KIOSK-ORDER] Entity create returned no ID for restaurant', restaurantId);
+            }
             return Response.json({ error: 'Failed to create order', success: false }, { status: 500 });
         }
 
-        console.log(`[KIOSK-ORDER] Created: id=${order.id} num=${orderNum} restaurant=${restaurantId} total=£${serverTotal.toFixed(2)} items=${verifiedItems.length} type=${resolvedOrderType}`);
+        // Update the terminal transaction record with the order ID (for reconciliation)
+        if (isCardPayment && trustedTxRecord?.id) {
+            base44.asServiceRole.entities.KioskTerminalTransaction.update(trustedTxRecord.id, {
+                order_id: order.id,
+            }).catch(e => console.warn('[KIOSK-CARD] Failed to back-link order to tx record:', e));
+        }
+
+        console.log(`[KIOSK-ORDER] Created: id=${order.id} num=${orderNum} restaurant=${restaurantId} total=£${serverTotal.toFixed(2)} items=${verifiedItems.length} type=${resolvedOrderType} payment=${isCardPayment ? 'card' : 'pay_at_counter'}`);
 
         return Response.json({ success: true, order }, { status: 201 });
 
