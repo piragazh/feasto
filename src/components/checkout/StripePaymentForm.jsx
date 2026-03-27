@@ -152,7 +152,8 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, isF
                 }}
                 onLoadError={(e) => {
                     console.error('❌ Payment Element load error:', e);
-                    setErrorMessage(`Payment form failed to load: ${e?.message || 'Unknown error'}. Please refresh and try again.`);
+                    const errorMsg = e?.message || (typeof e === 'string' ? e : 'Unknown error');
+                    setErrorMessage(`Payment form failed to load: ${String(errorMsg).slice(0, 100)}. Please refresh and try again.`);
                 }}
             />
             <Button
