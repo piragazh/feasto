@@ -30,6 +30,7 @@ import { run as runAssignOrderDriver } from './suites/assignOrderDriver.smoke.js
 import { run as runLiveOrdersKioskVisibility } from './suites/liveOrdersKioskVisibility.smoke.js';
 import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 import { run as runTerminalProviderArchitecture } from './suites/terminalProviderArchitecture.smoke.js';
+import { run as runStripeTerminalIntegration } from './suites/stripeTerminalIntegration.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -46,6 +47,7 @@ const SUITES = {
     assignOrderDriver: runAssignOrderDriver,
     liveOrdersKioskVisibility: runLiveOrdersKioskVisibility,
     terminalProviderArchitecture: runTerminalProviderArchitecture,
+    stripeTerminalIntegration: runStripeTerminalIntegration,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
