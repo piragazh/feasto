@@ -1,0 +1,128 @@
+{
+  "name": "FailureLog",
+  "type": "object",
+  "properties": {
+    "failure_type": {
+      "type": "string",
+      "enum": [
+        "payment_velocity_throttle",
+        "payment_intent_verification",
+        "payment_amount_mismatch",
+        "restaurant_validation",
+        "restaurant_closed",
+        "hours_check",
+        "delivery_zone",
+        "minimum_order",
+        "cart_validation",
+        "coupon_validation",
+        "coupon_per_customer_limit",
+        "coupon_stacking",
+        "promotion_validation",
+        "total_mismatch",
+        "order_create",
+        "refund_initiate",
+        "stripe_api_error"
+      ],
+      "description": "Category of failure for grouping and alerting"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "warning",
+      "description": "info=expected rejection, warning=unexpected error, critical=payment taken but order failed"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Affected restaurant"
+    },
+    "payment_intent_id": {
+      "type": "string",
+      "description": "Stripe PI if payment-related"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Order ID if available"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Authenticated user or 'guest'"
+    },
+    "guest_email": {
+      "type": "string",
+      "description": "Guest email if guest checkout"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Customer phone for contact"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Human-readable error message"
+    },
+    "error_details": {
+      "type": "object",
+      "description": "Raw error object or additional context (e.g. {field: 'coupon_code', value: 'INVALID'})"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "order_total": {
+          "type": "number"
+        },
+        "items_count": {
+          "type": "number"
+        },
+        "attempted_coupons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "http_status": {
+          "type": "number",
+          "description": "HTTP response code that would be sent"
+        }
+      },
+      "description": "Contextual data from the request"
+    },
+    "stack_trace": {
+      "type": "string",
+      "description": "Stack trace if exception occurred (for critical failures)"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent of the request"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Correlation ID for linking related failures"
+    },
+    "logged_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "alert_triggered": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this failure triggered an automated alert"
+    },
+    "alert_condition": {
+      "type": "string",
+      "enum": [
+        "payment_success_order_failed",
+        "repeated_failures",
+        "high_failure_rate",
+        "critical_payment_issue"
+      ],
+      "description": "Which alert condition was triggered, if any"
+    }
+  },
+  "required": [
+    "failure_type",
+    "error_message"
+  ]
+}
