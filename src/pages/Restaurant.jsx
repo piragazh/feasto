@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy, useCallback, useRef } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -56,7 +56,6 @@ export default function Restaurant() {
     const [previousCartData, setPreviousCartData] = useState(null);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
     const [showOutsideHoursConfirmation, setShowOutsideHoursConfirmation] = useState(false);
-    const prevCartRef = useRef([]);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
@@ -103,38 +102,6 @@ export default function Restaurant() {
             toast.error('Unable to save cart. Storage may be full.');
         }
     }, [cart, restaurantId]);
-
-    // Detect new items added to cart and show toast
-    useEffect(() => {
-        if (cart.length > prevCartRef.current.length) {
-            const newItems = cart.filter(item => 
-                !prevCartRef.current.some(prev => 
-                    prev.menu_item_id === item.menu_item_id &&
-                    JSON.stringify(prev.customizations) === JSON.stringify(item.customizations) &&
-                    JSON.stringify(prev.itemQuantities) === JSON.stringify(item.itemQuantities)
-                )
-            );
-            
-            newItems.forEach(item => {
-                const activePromo = getActivePromotionForItem(item.menu_item_id);
-                const promoMsg = activePromo ? 
-                    (activePromo.promotion_type === 'buy_one_get_one' ? ' - Buy 1 Get 1 Free! 🎉' : ' - Buy 2 Get 1 Free! 🎉') 
-                    : '';
-                
-                toast.success(`🛒 ${item.name} added to cart${promoMsg}`, {
-                    duration: 3000,
-                    style: {
-                        background: activePromo ? '#8b5cf6' : '#10b981',
-                        color: '#fff',
-                        fontWeight: '600',
-                        padding: '16px',
-                        borderRadius: '12px'
-                    }
-                });
-            });
-        }
-        prevCartRef.current = cart;
-    }, [cart]);
 
     const handleKeepOldCart = () => {
         setShowCartConflictDialog(false);
@@ -396,15 +363,15 @@ export default function Restaurant() {
         }
     };
 
-    const addToCartDirect = (item, showToast = true) => {
+    const addToCartDirect = (item) => {
         try {
             if (!item || !item.id || !item.name || item.price == null) {
-                if (showToast) toast.error('Invalid item data');
+                toast.error('Invalid item data');
                 return;
             }
 
             if (item.is_available === false) {
-                if (showToast) toast.error(`${item.name} is currently unavailable`);
+                toast.error(`${item.name} is currently unavailable`);
                 return;
             }
 
@@ -422,13 +389,6 @@ export default function Restaurant() {
                     promoMessage = ' - Buy 2 Get 1 Free! 🎉';
                 }
             }
-
-            const itemExists = cart.some(i => 
-                i.menu_item_id === item.id && 
-                !i.customizations && 
-                !i.itemQuantities &&
-                !i.is_deal
-            );
 
             setCart(prev => {
                 const existing = prev.find(i => 
@@ -457,11 +417,19 @@ export default function Restaurant() {
                     newItem.promotion_name = activePromotion.name;
                 }
                 return [...prev, newItem];
-            });
-
-
+                });
+                toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
+                duration: 3000,
+                style: {
+                    background: activePromotion ? '#8b5cf6' : '#10b981',
+                    color: '#fff',
+                    fontWeight: '600',
+                    padding: '16px',
+                    borderRadius: '12px'
+                }
+                });
         } catch (error) {
-            if (showToast) toast.error('Failed to add item to cart');
+            toast.error('Failed to add item to cart');
         }
     };
 
