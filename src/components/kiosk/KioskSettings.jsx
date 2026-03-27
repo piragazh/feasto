@@ -46,6 +46,9 @@ export default function KioskSettings({ restaurantId }) {
                 idle_timeout_seconds: 120,
                 payment_card_enabled: true,
                 payment_counter_enabled: true,
+                kiosk_idle_media_enabled: true,
+                kiosk_idle_media_timeout_seconds: 60,
+                idle_media_screen_name: 'Kiosk Promo',
             });
         }
     }, [restaurant]);
@@ -212,6 +215,64 @@ export default function KioskSettings({ restaurantId }) {
                     <Button onClick={handleSaveGeneral} disabled={updateMutation.isPending} className="w-full">
                         <Save className="h-4 w-4 mr-2" />
                         Save General Settings
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Idle Media Mode Configuration */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        📺 Idle Media Mode
+                    </CardTitle>
+                    <CardDescription>
+                        Show promotions fullscreen when kiosk is inactive. Any touch returns to ordering.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                            <p className="font-medium">Enable Idle Media Mode</p>
+                            <p className="text-sm text-gray-500">Display promotions during kiosk inactivity</p>
+                        </div>
+                        <Switch
+                            checked={kioskConfig.kiosk_idle_media_enabled !== false}
+                            onCheckedChange={(v) => setKioskConfig({ ...kioskConfig, kiosk_idle_media_enabled: v })}
+                        />
+                    </div>
+                    {kioskConfig.kiosk_idle_media_enabled !== false && (
+                        <>
+                            <div>
+                                <Label>Idle Timeout (seconds)</Label>
+                                <Input
+                                    type="number"
+                                    min={30}
+                                    max={300}
+                                    value={kioskConfig.kiosk_idle_media_timeout_seconds ?? 60}
+                                    onChange={(e) => setKioskConfig({ ...kioskConfig, kiosk_idle_media_timeout_seconds: parseInt(e.target.value) || 60 })}
+                                    className="max-w-xs mt-1"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Seconds of no interaction before showing media (30–300)
+                                </p>
+                            </div>
+                            <div>
+                                <Label>Media Screen Name</Label>
+                                <Input
+                                    placeholder="Kiosk Promo"
+                                    value={kioskConfig.idle_media_screen_name || 'Kiosk Promo'}
+                                    onChange={(e) => setKioskConfig({ ...kioskConfig, idle_media_screen_name: e.target.value })}
+                                    className="max-w-xs mt-1"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Name of the media screen to display (must exist in your media screens)
+                                </p>
+                            </div>
+                        </>
+                    )}
+                    <Button onClick={handleSaveGeneral} disabled={updateMutation.isPending} className="w-full">
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Idle Media Settings
                     </Button>
                 </CardContent>
             </Card>

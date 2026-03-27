@@ -19,11 +19,14 @@ import KioskCart from '@/components/kiosk/KioskCart';
 import KioskPayment from '@/components/kiosk/KioskPayment';
 import KioskConfirmation from '@/components/kiosk/KioskConfirmation';
 import KioskAdminPanel from '@/components/kiosk/KioskAdminPanel';
+import ScreenDisplay from '@/components/mediascreen/ScreenDisplay';
 import { resolveRestaurantId } from '@/lib/kioskDeviceBinding';
 
 // SCREENS: welcome → menu → cart → payment → confirmation
+// MODES: ordering (show kiosk) | idle_media (show promotions fullscreen)
 export default function KioskDashboard() {
     const [screen, setScreen] = useState('welcome');
+    const [mode, setMode] = useState('ordering'); // 'ordering' | 'idle_media'
     const [orderType, setOrderType] = useState('takeaway');
     const [cart, setCart] = useState([]);
     const [placedOrder, setPlacedOrder] = useState(null);
@@ -42,27 +45,63 @@ export default function KioskDashboard() {
         else setLoading(false);
     }, [restaurantId]);
 
-    // Auto-reset to welcome after inactivity
+    // Inactivity tracking: reset on interaction, transition to idle_media after timeout
     useEffect(() => {
-        if (screen === 'welcome' || screen === 'confirmation') return;
-        const reset = () => {
-            clearTimeout(window.__kioskInactivityTimer);
-            window.__kioskInactivityTimer = setTimeout(() => {
-                setScreen('welcome');
+        if (!restaurant) return;
+
+        // Config: idle media settings (defaults if not set)
+        const kioskConfig = restaurant.kiosk_config || {};
+        const idleMediaEnabled = kioskConfig.kiosk_idle_media_enabled !== false; // default true
+        const idleMediaTimeout = (kioskConfig.kiosk_idle_media_timeout_seconds ?? 60) * 1000;
+        const orderResetTimeout = (kioskConfig.idle_timeout_seconds ?? 120) * 1000;
+
+        // Don't set inactivity timers during payment, confirmation, or if idle_media disabled
+        const isPaymentOrConfirm = screen === 'payment' || screen === 'confirmation';
+        if (isPaymentOrConfirm || !idleMediaEnabled) return;
+
+        const handleActivity = () => {
+            // Reset all timers on any interaction
+            clearTimeout(window.__kioskIdleMediaTimer);
+            clearTimeout(window.__kioskResetTimer);
+            
+            // Exit media mode immediately on interaction
+            if (mode === 'idle_media') {
+                setMode('ordering');
+            }
+
+            // Set idle_media timeout (60s by default)
+            window.__kioskIdleMediaTimer = setTimeout(() => {
+                // Clear session before showing media
                 setCart([]);
+                setPlacedOrder(null);
+                setPrinterError(false);
                 setOrderType('takeaway');
                 setSelectedTable(null);
-            }, 120000); // 2 min
+                setScreen('welcome');
+                setMode('idle_media');
+                
+                // Set order reset timer (if media is shown, full reset happens after this time)
+                window.__kioskResetTimer = setTimeout(() => {
+                    if (mode === 'idle_media') {
+                        setMode('ordering');
+                        setScreen('welcome');
+                    }
+                }, orderResetTimeout);
+            }, idleMediaTimeout);
         };
-        reset();
-        window.addEventListener('touchstart', reset);
-        window.addEventListener('click', reset);
+
+        // Trigger on any interaction
+        handleActivity();
+        window.addEventListener('touchstart', handleActivity);
+        window.addEventListener('click', handleActivity);
+        
         return () => {
-            clearTimeout(window.__kioskInactivityTimer);
-            window.removeEventListener('touchstart', reset);
-            window.removeEventListener('click', reset);
+            clearTimeout(window.__kioskIdleMediaTimer);
+            clearTimeout(window.__kioskResetTimer);
+            window.removeEventListener('touchstart', handleActivity);
+            window.removeEventListener('click', handleActivity);
         };
-    }, [screen]);
+    }, [screen, mode, restaurant]);
 
     const loadRestaurant = async (id) => {
         try {
@@ -172,6 +211,28 @@ export default function KioskDashboard() {
             onRebind={handleAdminRebind}
         />
     );
+
+    // Idle media mode: show promotions fullscreen, exit on any touch
+    if (mode === 'idle_media') {
+        return (
+            <div
+                className="min-h-screen bg-gray-950 cursor-pointer"
+                onClick={() => {
+                    setMode('ordering');
+                    setScreen('welcome');
+                }}
+                onTouchStart={() => {
+                    setMode('ordering');
+                    setScreen('welcome');
+                }}
+            >
+                <ScreenDisplay
+                    restaurantId={restaurantId}
+                    screenName={restaurant?.kiosk_config?.idle_media_screen_name || 'Kiosk Promo'}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-950 overflow-hidden select-none">
