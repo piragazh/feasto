@@ -126,6 +126,11 @@
     "review_count": {
       "type": "number"
     },
+    "show_review_count": {
+      "type": "boolean",
+      "default": true,
+      "description": "Display the number of reviews in the rating badge"
+    },
     "delivery_time": {
       "type": "string"
     },

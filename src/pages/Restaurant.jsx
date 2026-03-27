@@ -984,7 +984,9 @@ export default function Restaurant() {
                             <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
                                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
                                 <span className="text-white font-semibold text-sm">{restaurant.rating?.toFixed(1) || '4.5'}</span>
-                                <span className="text-white/70 text-xs">({restaurant.review_count || 0})</span>
+                                {restaurant.show_review_count !== false && (
+                                    <span className="text-white/70 text-xs">({restaurant.review_count || 0})</span>
+                                )}
                             </div>
                             <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
                                 <Clock className="h-4 w-4 text-white/80 flex-shrink-0" />
