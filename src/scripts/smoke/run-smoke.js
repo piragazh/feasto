@@ -23,6 +23,7 @@ import { run as runPermissions } from './suites/enforceRestaurantPermissions.smo
 import { run as runPaymentIntent } from './suites/createPaymentIntent.smoke.js';
 import { run as runCreateOrder } from './suites/verifyAndCreateOrder.smoke.js';
 import { run as runKioskCreateOrder } from './suites/kioskCreateOrder.smoke.js';
+import { run as runOfflineSyncIdempotency } from './suites/offlineSyncIdempotency.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -32,6 +33,7 @@ const SUITES = {
     createPaymentIntent: runPaymentIntent,
     verifyAndCreateOrder: runCreateOrder,
     kioskCreateOrder: runKioskCreateOrder,
+    offlineSyncIdempotency: runOfflineSyncIdempotency,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────

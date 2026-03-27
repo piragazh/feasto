@@ -385,6 +385,10 @@
       "type": "string",
       "description": "External platform order ID (e.g. Uber Eats) \u2014 dedup key for webhook retries"
     },
+    "offline_id": {
+      "type": "string",
+      "description": "Unique UUID generated at offline order creation time \u2014 used for idempotent sync (prevents duplicates)"
+    },
     "offline_created": {
       "type": "boolean",
       "default": false,
