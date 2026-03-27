@@ -132,7 +132,7 @@ export default function PopularItems({ restaurantId, onItemClick }) {
                 <div className="overflow-hidden" ref={emblaRef}>
                     <div className="flex gap-4">
                         {popularItems.map((item, index) => (
-                            <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)] h-[320px]">
+                            <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
                                 <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
                                     {index + 1}
                                 </div>
@@ -142,10 +142,10 @@ export default function PopularItems({ restaurantId, onItemClick }) {
                     </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-5">
                     {displayItems.map((item, index) => (
-                        <div key={item.id} className="relative h-[320px]">
-                            <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
+                        <div key={item.id} className="relative">
+                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
                                 {index + 1}
                             </div>
                             <MenuItemCard item={item} onAddToCart={onItemClick} />
