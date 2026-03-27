@@ -917,12 +917,22 @@ export default function Checkout() {
                     .slice(0, 500); // Cap length
             };
 
+            // CRITICAL: Ensure cart items have required fields (ID mapping from cart structure)
+            const validatedItems = cart.map(item => ({
+                menu_item_id: item.id || item.menu_item_id, // Handle both 'id' and 'menu_item_id' keys
+                name: item.name || 'Unknown item',
+                price: item.price || 0,
+                quantity: item.quantity || 1,
+                customizations: item.customizations || {},
+                itemQuantities: item.itemQuantities || {}
+            }));
+
             const orderData = {
                 order_number: orderNumber,
                 restaurant_id: restaurantId,
                 restaurant_name: restaurantName,
                 loyalty_points_earned: pointsToEarn,
-                items: cart,
+                items: validatedItems,
                 subtotal,
                 delivery_fee: deliveryFee,
                 small_order_surcharge: smallOrderSurcharge,
