@@ -491,11 +491,13 @@ export default function Checkout() {
             try {
                 const stripe = await initializeStripe();
                 if (!stripe) {
+                    console.error('❌ Stripe initialization failed');
                     toast.error('Payment system unavailable');
                     setInitializingPayment(false);
                     return;
                 }
 
+                console.log('🔵 Creating payment intent...');
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
                     currency: 'gbp',
@@ -505,9 +507,14 @@ export default function Checkout() {
                     }
                 });
 
-                if (response?.data?.clientSecret) {
+                console.log('🔵 Payment intent response:', { hasSecret: !!response?.data?.clientSecret, status: response?.status });
+                if (response?.data?.clientSecret && typeof response.data.clientSecret === 'string') {
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
+                    console.log('✅ Client secret set, form should display');
+                } else {
+                    console.error('❌ No valid clientSecret in response:', response?.data);
+                    toast.error('Failed to initialize payment. Please try again.');
                 }
             } catch (error) {
                 console.error('Payment init error:', error);
@@ -1624,16 +1631,16 @@ export default function Checkout() {
                                         <CardTitle>💳 Payment Details</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {stripePromise ? (
+                                        {stripePromise && clientSecret ? (
                                             <Elements 
-                                               stripe={stripePromise} 
-                                               options={{ 
-                                                   clientSecret,
-                                                   appearance: {
-                                                       theme: 'stripe'
-                                                   },
-                                                   loader: 'auto'
-                                               }}
+                                                stripe={stripePromise} 
+                                                options={{ 
+                                                    clientSecret: String(clientSecret).trim(),
+                                                    appearance: {
+                                                        theme: 'stripe'
+                                                    },
+                                                    loader: 'auto'
+                                                }}
                                             >
                                                 <StripePaymentForm
                                                     amount={total}
