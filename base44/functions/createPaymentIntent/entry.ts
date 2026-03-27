@@ -15,9 +15,11 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         
         let user = null;
+        let isGuest = false;
         try {
             user = await base44.auth.me();
         } catch (_) {
+            isGuest = true;
             /* guest user */
         }
 
@@ -61,11 +63,12 @@ Deno.serve(async (req) => {
 
         // ─────────────────────────────────────────────────────────────────────
         // CRITICAL: Build comprehensive metadata for webhook recovery
+        // No auth calls needed — all data from request body
         // ─────────────────────────────────────────────────────────────────────
         const enrichedMetadata = {
             ...metadata,
-            user_email: user?.email || guest_email || 'guest',
-            user_id: user?.id || 'guest',
+            user_email: !isGuest ? user?.email : (guest_email || 'guest'),
+            user_id: !isGuest ? user?.id : 'guest',
             idempotency_key,
             restaurant_id,
             items_json: JSON.stringify(items),
