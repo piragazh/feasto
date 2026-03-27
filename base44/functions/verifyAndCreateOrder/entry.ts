@@ -67,47 +67,49 @@ function validateSingleCoupon(coupon, code, now, serverSubtotal, deliveryFee, re
 }
 
 // ── Helper: check per-customer limit for a single coupon ─────────────────────
-// Returns null (ok) or an error string
+// Returns null (ok) or an error string.
+//
+// COMPATIBILITY: Orders can be stored with either:
+//   - coupon_code (string): legacy single-code orders AND the "first code" for new stacked orders
+//   - coupon_codes (array): new multi-coupon orders (all codes)
+//
+// To correctly count usage across mixed datasets we must query BOTH fields and
+// deduplicate by order ID to avoid double-counting orders that have both fields set
+// (all new orders written by posCreateOrder/verifyAndCreateOrder set both).
+//
 async function checkPerCustomerLimit(base44, coupon, user, normalizedGuestEmail, normalizedPhone) {
     if (!coupon.per_customer_limit || coupon.per_customer_limit <= 0) return null;
 
+    const code = coupon.code;
+    const limitMsg = `You have already used coupon "${code}" the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`;
+
+    // Helper: count unique orders across legacy + array fields, deduplicating by order ID
+    async function countUniqueBothFields(identityFilter) {
+        const [legacyOrders, arrayOrders] = await Promise.all([
+            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_code: code }),
+            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $contains: code } }),
+        ]);
+        const ids = new Set();
+        for (const o of (legacyOrders || [])) ids.add(o.id);
+        for (const o of (arrayOrders || [])) ids.add(o.id);
+        return ids.size;
+    }
+
     if (user?.email) {
-        const authOrders = await base44.asServiceRole.entities.Order.filter({
-            created_by: user.email,
-            coupon_code: coupon.code
-        });
-        const authCount = Array.isArray(authOrders) ? authOrders.length : 0;
-        if (authCount >= coupon.per_customer_limit) {
-            return `You have already used coupon "${coupon.code}" the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`;
-        }
-        // Also check coupon_codes array field for multi-coupon orders
-        const authOrdersArr = await base44.asServiceRole.entities.Order.filter({
-            created_by: user.email,
-            coupon_codes: { $contains: coupon.code }
-        });
-        const authCountArr = Array.isArray(authOrdersArr) ? authOrdersArr.length : 0;
-        if ((authCount + authCountArr) >= coupon.per_customer_limit) {
-            return `You have already used coupon "${coupon.code}" the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`;
-        }
+        const count = await countUniqueBothFields({ created_by: user.email });
+        if (count >= coupon.per_customer_limit) return limitMsg;
     } else {
-        let guestUsageCount = 0;
+        // Guest — check by phone and email separately, take the higher count
+        let guestCount = 0;
         if (normalizedGuestEmail) {
-            const byEmail = await base44.asServiceRole.entities.Order.filter({
-                guest_email: normalizedGuestEmail,
-                coupon_code: coupon.code
-            });
-            guestUsageCount = Math.max(guestUsageCount, Array.isArray(byEmail) ? byEmail.length : 0);
+            const c = await countUniqueBothFields({ guest_email: normalizedGuestEmail });
+            guestCount = Math.max(guestCount, c);
         }
         if (normalizedPhone) {
-            const byPhone = await base44.asServiceRole.entities.Order.filter({
-                phone: normalizedPhone,
-                coupon_code: coupon.code
-            });
-            guestUsageCount = Math.max(guestUsageCount, Array.isArray(byPhone) ? byPhone.length : 0);
+            const c = await countUniqueBothFields({ phone: normalizedPhone });
+            guestCount = Math.max(guestCount, c);
         }
-        if (guestUsageCount >= coupon.per_customer_limit) {
-            return `You have already used coupon "${coupon.code}" the maximum number of times (${coupon.per_customer_limit} use${coupon.per_customer_limit === 1 ? '' : 's'} per customer).`;
-        }
+        if (guestCount >= coupon.per_customer_limit) return limitMsg;
 
         // Guest phone abuse throttle (unchanged)
         if (normalizedPhone) {

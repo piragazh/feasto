@@ -150,24 +150,27 @@ Deno.serve(async (req) => {
             const normalizedEmail = _normalizeEmail(customer_email);
 
             if (normalizedPhone || normalizedEmail) {
-                // Query orders that used this coupon, filtering by available identity signals
-                // Use phone as primary (stronger signal), email as secondary
-                let usageCount = 0;
-
-                if (normalizedPhone) {
-                    const phoneOrders = await base44.asServiceRole.entities.Order.filter({
-                        coupon_code: normalizedCode,
-                        phone: normalizedPhone,
-                    });
-                    usageCount = Math.max(usageCount, phoneOrders?.length || 0);
+                // COMPATIBILITY: query both legacy coupon_code field and new coupon_codes array,
+                // then deduplicate by order ID to avoid double-counting orders that have both.
+                async function valCountUniqueBothFields(identityFilter) {
+                    const [legacyOrders, arrayOrders] = await Promise.all([
+                        base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_code: normalizedCode }),
+                        base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $contains: normalizedCode } }),
+                    ]);
+                    const ids = new Set();
+                    for (const o of (legacyOrders || [])) ids.add(o.id);
+                    for (const o of (arrayOrders || [])) ids.add(o.id);
+                    return ids.size;
                 }
 
+                let usageCount = 0;
+                if (normalizedPhone) {
+                    const c = await valCountUniqueBothFields({ phone: normalizedPhone });
+                    usageCount = Math.max(usageCount, c);
+                }
                 if (normalizedEmail) {
-                    const emailOrders = await base44.asServiceRole.entities.Order.filter({
-                        coupon_code: normalizedCode,
-                        guest_email: normalizedEmail,
-                    });
-                    usageCount = Math.max(usageCount, emailOrders?.length || 0);
+                    const c = await valCountUniqueBothFields({ guest_email: normalizedEmail });
+                    usageCount = Math.max(usageCount, c);
                 }
 
                 if (usageCount >= perCustomerLimit) {

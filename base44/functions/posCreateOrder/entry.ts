@@ -181,16 +181,29 @@ Deno.serve(async (req) => {
                 }
 
                 // Per-customer limit (when identity available)
+                // COMPATIBILITY: query both legacy coupon_code field and new coupon_codes array,
+                // deduplicate by order ID to avoid double-counting orders that have both fields set.
                 const perCustomerLimit = coupon.per_customer_limit ?? 1;
                 if (perCustomerLimit > 0 && (normalizedPhone || normalizedEmail)) {
+                    async function posCountUniqueBothFields(identityFilter) {
+                        const [legacyOrders, arrayOrders] = await Promise.all([
+                            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_code: code }),
+                            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $contains: code } }),
+                        ]);
+                        const ids = new Set();
+                        for (const o of (legacyOrders || [])) ids.add(o.id);
+                        for (const o of (arrayOrders || [])) ids.add(o.id);
+                        return ids.size;
+                    }
+
                     let customerUsageCount = 0;
                     if (normalizedPhone) {
-                        const phoneOrders = await base44.asServiceRole.entities.Order.filter({ coupon_code: code, phone: normalizedPhone });
-                        customerUsageCount = Math.max(customerUsageCount, phoneOrders?.length || 0);
+                        const c = await posCountUniqueBothFields({ phone: normalizedPhone });
+                        customerUsageCount = Math.max(customerUsageCount, c);
                     }
                     if (normalizedEmail) {
-                        const emailOrders = await base44.asServiceRole.entities.Order.filter({ coupon_code: code, guest_email: normalizedEmail });
-                        customerUsageCount = Math.max(customerUsageCount, emailOrders?.length || 0);
+                        const c = await posCountUniqueBothFields({ guest_email: normalizedEmail });
+                        customerUsageCount = Math.max(customerUsageCount, c);
                     }
                     if (customerUsageCount >= perCustomerLimit) {
                         return Response.json({ error: `Coupon "${code}" has already been used the maximum number of times for this customer` }, { status: 400 });

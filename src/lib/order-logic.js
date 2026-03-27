@@ -148,12 +148,23 @@ export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new D
  *
  * SYNC RULE: Keep in sync with the per-customer check in functions/verifyAndCreateOrder.
  *
- * @param {object} coupon               - coupon record from DB
- * @param {string|null} customerEmail   - authenticated user email (authoritative) or guest email (weak)
- * @param {Function} getOrderCount      - async (filter) => number — injected for testability
+ * COMPATIBILITY: Orders may be stored with either or both of:
+ *   - coupon_code (string): legacy single-code orders AND first code of new stacked orders
+ *   - coupon_codes (array): new multi-coupon orders (all applied codes)
+ *
+ * The injected `getUniqueOrderCount` must query BOTH fields and return a deduplicated count
+ * so that orders with both fields set are not double-counted. The function signature is:
+ *   async (customerEmail: string, couponCode: string) => number
+ *
+ * For tests that only model one field, passing a simple count function is sufficient
+ * provided the test data does not include mixed legacy/new orders.
+ *
+ * @param {object}   coupon                 - coupon record from DB
+ * @param {string|null} customerEmail       - authenticated user email or guest email
+ * @param {Function} getUniqueOrderCount    - async (email, code) => number — injected for testability
  * @returns {Promise<{ blocked: boolean, reason: string|null }>}
  */
-export async function checkPerCustomerLimit(coupon, customerEmail, getOrderCount) {
+export async function checkPerCustomerLimit(coupon, customerEmail, getUniqueOrderCount) {
     if (!coupon.per_customer_limit || coupon.per_customer_limit <= 0) {
         return { blocked: false, reason: null };
     }
@@ -161,50 +172,105 @@ export async function checkPerCustomerLimit(coupon, customerEmail, getOrderCount
         // No identifier — cannot enforce. Caller decides how to handle.
         return { blocked: false, reason: 'no_identifier' };
     }
-    const count = await getOrderCount({ customer_email: customerEmail, coupon_code: coupon.code });
+    const count = await getUniqueOrderCount(customerEmail, coupon.code);
     if (count >= coupon.per_customer_limit) {
         return { blocked: true, reason: 'per_customer_limit_reached' };
     }
     return { blocked: false, reason: null };
 }
 
+// Stacking constants — must match functions/verifyAndCreateOrder and functions/posCreateOrder
+const MAX_COUPONS_PER_ORDER = 3;
+const MAX_COUPON_DISCOUNT_RATIO = 0.50; // 50% of subtotal cap
+
 /**
- * Apply the coupon policy to a coupon_codes string.
- * Policy: exactly 0 or 1 codes are allowed.
+ * Apply the coupon stacking policy to an array or comma-separated string of coupon codes.
  *
- * @param {string|undefined} couponCodesString - comma-separated codes from orderData
- * @param {number}           serverSubtotal
- * @param {string}           restaurantId
- * @param {Function}         getCoupon   - async (code) => coupon|null (injected for testability)
- * @param {Date}             [now]
- * @returns {Promise<{ error: string|null, discount: number }>}
+ * Policy (mirrors functions/verifyAndCreateOrder):
+ *   - 0 codes: skipped (no coupon discount)
+ *   - 1–3 codes: each validated individually; all must be stackable=true if > 1
+ *   - > 3 codes: rejected (MAX_EXCEEDED)
+ *   - Duplicate codes: rejected (DUPLICATE)
+ *   - Not found: rejected (NOT_FOUND)
+ *   - Invalid coupon: rejected (reason code from validateCoupon)
+ *   - Combined discount capped at 50% of serverSubtotal
+ *   - Application order: percentage coupons first (sorted by code asc), then fixed/other
+ *
+ * SYNC RULE: Keep in sync with the coupon stacking block in functions/verifyAndCreateOrder.
+ *
+ * @param {string|string[]|undefined} couponCodesInput - array or comma-separated codes
+ * @param {number}   serverSubtotal
+ * @param {string}   restaurantId
+ * @param {Function} getCoupon   - async (code) => coupon|null (injected for testability)
+ * @param {Date}     [now]
+ * @returns {Promise<{ error: string|null, discount: number, appliedCodes?: string[], skipped?: boolean }>}
  */
-export async function resolveCouponDiscount(couponCodesString, serverSubtotal, restaurantId, getCoupon, now = new Date()) {
-    if (!couponCodesString) {
+export async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date()) {
+    if (!couponCodesInput || (Array.isArray(couponCodesInput) && couponCodesInput.length === 0)) {
         return { error: null, discount: 0, skipped: true };
     }
 
-    const codes = couponCodesString.split(',').map(c => c.trim()).filter(Boolean);
-
-    if (codes.length > 1) {
-        return { error: 'STACKING', discount: 0 };
+    // Normalise to array of upper-cased trimmed codes
+    let codes;
+    if (Array.isArray(couponCodesInput)) {
+        codes = couponCodesInput.map(c => String(c).trim().toUpperCase()).filter(Boolean);
+    } else {
+        codes = String(couponCodesInput).split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
     }
 
     if (codes.length === 0) {
         return { error: null, discount: 0, skipped: true };
     }
 
-    const coupon = await getCoupon(codes[0]);
-    if (!coupon) {
-        return { error: 'NOT_FOUND', discount: 0 };
+    // A) Max 3 coupons
+    if (codes.length > MAX_COUPONS_PER_ORDER) {
+        return { error: 'MAX_EXCEEDED', discount: 0 };
     }
 
-    const result = validateCoupon(coupon, serverSubtotal, restaurantId, now);
-    if (!result.valid) {
-        return { error: result.reason.toUpperCase(), discount: 0 };
+    // B) No duplicates
+    if (new Set(codes).size !== codes.length) {
+        return { error: 'DUPLICATE', discount: 0 };
     }
 
-    return { error: null, discount: result.discount };
+    // C) Fetch and validate each coupon
+    const validatedCoupons = [];
+    for (const code of codes) {
+        const coupon = await getCoupon(code);
+        if (!coupon) return { error: 'NOT_FOUND', discount: 0 };
+
+        const result = validateCoupon(coupon, serverSubtotal, restaurantId, now);
+        if (!result.valid) return { error: result.reason.toUpperCase(), discount: 0 };
+
+        validatedCoupons.push({ coupon, rawDiscount: result.discount });
+    }
+
+    // D) Stacking check: if > 1 coupon, all must have stackable=true
+    if (validatedCoupons.length > 1) {
+        const nonStackable = validatedCoupons.filter(vc => !vc.coupon.stackable);
+        if (nonStackable.length > 0) return { error: 'STACKING', discount: 0 };
+    }
+
+    // E) Deterministic application order: percentage first (sorted by code asc), then fixed/other
+    const percentageCoupons = validatedCoupons
+        .filter(vc => vc.coupon.discount_type === 'percentage')
+        .sort((a, b) => a.coupon.code.localeCompare(b.coupon.code));
+    const otherCoupons = validatedCoupons
+        .filter(vc => vc.coupon.discount_type !== 'percentage')
+        .sort((a, b) => a.coupon.code.localeCompare(b.coupon.code));
+    const orderedCoupons = [...percentageCoupons, ...otherCoupons];
+
+    // Apply cap: total coupon discount cannot exceed MAX_COUPON_DISCOUNT_RATIO of subtotal
+    const maxDiscount = serverSubtotal * MAX_COUPON_DISCOUNT_RATIO;
+    let accumulated = 0;
+    const appliedCodes = [];
+
+    for (const vc of orderedCoupons) {
+        const remaining = maxDiscount - accumulated;
+        accumulated += Math.min(vc.rawDiscount, remaining);
+        appliedCodes.push(vc.coupon.code);
+    }
+
+    return { error: null, discount: accumulated, appliedCodes };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

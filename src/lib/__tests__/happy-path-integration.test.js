@@ -50,16 +50,17 @@ const getCoupon = async (code) => couponDB[code] ?? null;
 
 // ─── Pipeline helper (mirrors verifyAndCreateOrder logic) ─────────────────────
 
-async function runServerPipeline({ cartItems, couponCodesString, promotionDiscount = 0, clientTotal }) {
+async function runServerPipeline({ cartItems, couponCodesString, couponCodesInput, promotionDiscount = 0, clientTotal }) {
     // 1. Recompute subtotal from menu prices
     const { serverSubtotal, unavailableItem } = recomputeSubtotal(cartItems, menuItemsMap);
     if (unavailableItem) return { error: `${unavailableItem} is unavailable`, serverTotal: null };
 
-    // 2. Resolve discount
+    // 2. Resolve discount — accept either old couponCodesString or new couponCodesInput
+    const couponInput = couponCodesInput ?? couponCodesString;
     let discount = 0;
-    if (couponCodesString) {
+    if (couponInput) {
         const couponResult = await resolveCouponDiscount(
-            couponCodesString, serverSubtotal, RESTAURANT_ID, getCoupon
+            couponInput, serverSubtotal, RESTAURANT_ID, getCoupon
         );
         if (couponResult.error) return { error: couponResult.error, serverTotal: null };
         discount = couponResult.discount;
@@ -210,15 +211,135 @@ describe('Regression: client price tampering is ignored', () => {
     });
 });
 
-describe('Regression: coupon stacking still blocked in pipeline', () => {
-    it('two codes in the pipeline returns a stacking error, not a discount', async () => {
+describe('Stacking: two non-stackable coupons blocked in pipeline', () => {
+    it('two non-stackable codes returns a STACKING error', async () => {
+        // SAVE20PCT and FLAT3OFF are defined in couponDB without stackable=true
         const items = cart([['burger-01', 1, 10.99]]);
         const result = await runServerPipeline({
             cartItems: items,
-            couponCodesString: 'SAVE20PCT,FLAT3OFF',
+            couponCodesInput: ['SAVE20PCT', 'FLAT3OFF'],
             clientTotal: 10.00,
         });
         expect(result.error).toBe('STACKING');
         expect(result.serverTotal).toBeNull();
+    });
+});
+
+describe('Stacking: two stackable coupons accepted in pipeline', () => {
+    const stackableCouponDB = {
+        'SAVE20PCT': {
+            id: 'c-1', code: 'SAVE20PCT', is_active: true,
+            discount_type: 'percentage', discount_value: 20,
+            max_discount: null, minimum_order: null, usage_limit: null,
+            usage_count: 0, valid_from: null, valid_until: null, restaurant_id: null,
+            stackable: true,
+        },
+        'FLAT3OFF': {
+            id: 'c-2', code: 'FLAT3OFF', is_active: true,
+            discount_type: 'fixed', discount_value: 3.00,
+            max_discount: null, minimum_order: null, usage_limit: null,
+            usage_count: 0, valid_from: null, valid_until: null, restaurant_id: null,
+            stackable: true,
+        },
+        'FLAT2OFF': {
+            id: 'c-3', code: 'FLAT2OFF', is_active: true,
+            discount_type: 'fixed', discount_value: 2.00,
+            max_discount: null, minimum_order: null, usage_limit: null,
+            usage_count: 0, valid_from: null, valid_until: null, restaurant_id: null,
+            stackable: true,
+        },
+    };
+    const getStackableCoupon = async (code) => stackableCouponDB[code] ?? null;
+
+    async function runStackablePipeline({ cartItems, couponCodesInput, promotionDiscount = 0, clientTotal }) {
+        const { serverSubtotal, unavailableItem } = recomputeSubtotal(cartItems, menuItemsMap);
+        if (unavailableItem) return { error: `${unavailableItem} is unavailable`, serverTotal: null };
+
+        let discount = 0;
+        if (couponCodesInput) {
+            const couponResult = await resolveCouponDiscount(couponCodesInput, serverSubtotal, RESTAURANT_ID, getStackableCoupon);
+            if (couponResult.error) return { error: couponResult.error, serverTotal: null };
+            discount = couponResult.discount;
+        } else {
+            discount = capPromotionDiscount(promotionDiscount, serverSubtotal);
+        }
+
+        const { serverTotal, mismatch } = computeAndVerifyTotal(
+            { serverSubtotal, deliveryFee: DELIVERY_FEE, discount }, clientTotal
+        );
+        if (mismatch) return { error: 'TOTAL_MISMATCH', serverTotal };
+        return { error: null, serverTotal, discount, serverSubtotal };
+    }
+
+    it('percentage + fixed stackable coupons both applied (percentage first)', async () => {
+        // burger x2 = £21.98. SAVE20PCT=20%=£4.396, FLAT3OFF=£3. Total discount=£7.396.
+        const items = cart([['burger-01', 2, 0]]);
+        const serverSubtotal = 10.99 * 2; // £21.98
+        const couponDiscount = serverSubtotal * 0.20 + 3.00; // £4.396 + £3 = £7.396
+        const clientTotal = serverSubtotal + DELIVERY_FEE - couponDiscount;
+
+        const result = await runStackablePipeline({
+            cartItems: items,
+            couponCodesInput: ['SAVE20PCT', 'FLAT3OFF'],
+            clientTotal,
+        });
+
+        expect(result.error).toBeNull();
+        expect(result.discount).toBeCloseTo(7.396);
+        expect(result.serverTotal).toBeCloseTo(clientTotal);
+    });
+
+    it('three stackable coupons all applied correctly', async () => {
+        // burger x2 = £21.98. SAVE20PCT=20%=£4.396, FLAT3OFF=£3, FLAT2OFF=£2. Total=£9.396. Cap=50%=£10.99 → within cap.
+        const items = cart([['burger-01', 2, 0]]);
+        const serverSubtotal = 10.99 * 2; // £21.98
+        const couponDiscount = serverSubtotal * 0.20 + 3.00 + 2.00; // £9.396
+        const clientTotal = serverSubtotal + DELIVERY_FEE - couponDiscount;
+
+        const result = await runStackablePipeline({
+            cartItems: items,
+            couponCodesInput: ['SAVE20PCT', 'FLAT3OFF', 'FLAT2OFF'],
+            clientTotal,
+        });
+
+        expect(result.error).toBeNull();
+        expect(result.discount).toBeCloseTo(9.396);
+        expect(result.serverTotal).toBeCloseTo(clientTotal);
+    });
+
+    it('50% cap enforced: three coupons exceeding cap are truncated', async () => {
+        // drink £2.49. Cap=50%=£1.245. SAVE20PCT=20%=£0.498. FLAT3OFF=£3 → remaining=£0.747. FLAT2OFF=£2 → remaining=0. Total=£1.245.
+        const items = cart([['drink-01', 1, 0]]);
+        const serverSubtotal = 2.49;
+        const cappedDiscount = serverSubtotal * 0.50; // £1.245
+        const clientTotal = serverSubtotal + DELIVERY_FEE - cappedDiscount;
+
+        const result = await runStackablePipeline({
+            cartItems: items,
+            couponCodesInput: ['SAVE20PCT', 'FLAT3OFF', 'FLAT2OFF'],
+            clientTotal,
+        });
+
+        expect(result.error).toBeNull();
+        expect(result.discount).toBeCloseTo(cappedDiscount);
+    });
+
+    it('promotion + two stackable coupons: promotion is separate from coupon stack', async () => {
+        // The server pipeline takes couponCodesInput OR promotionDiscount — mutually exclusive.
+        // This test verifies they don't interfere: promotion path applies capPromotionDiscount.
+        const items = cart([['burger-01', 1, 0]]);
+        const serverSubtotal = 10.99;
+        const promoDiscount = capPromotionDiscount(2.00, serverSubtotal); // £2
+        const clientTotal = serverSubtotal + DELIVERY_FEE - promoDiscount;
+
+        const result = await runStackablePipeline({
+            cartItems: items,
+            couponCodesInput: undefined,
+            promotionDiscount: 2.00,
+            clientTotal,
+        });
+
+        expect(result.error).toBeNull();
+        expect(result.discount).toBeCloseTo(2.00);
     });
 });

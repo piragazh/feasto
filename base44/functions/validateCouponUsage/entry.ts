@@ -50,20 +50,34 @@ Deno.serve(async (req) => {
 
         const coupon = coupons[0];
 
-        // CRITICAL: Check per-user coupon usage limit
+        // CRITICAL: Check per-user coupon usage limit.
         // Prevents single user from draining entire coupon budget.
         //
-        // FIX: The Order entity stores coupon as coupon_code (singular string),
-        // NOT coupon_codes (array). The previous filter used $includes on a non-existent
-        // array field, silently returning 0 results every time and making per-customer
-        // limits entirely unenforced. Fixed to filter on the correct field.
+        // COMPATIBILITY: Orders may be stored with either or both of:
+        //   - coupon_code (string): legacy single-code orders AND first code of new stacked orders
+        //   - coupon_codes (array): new multi-coupon orders (all applied codes)
+        //
+        // We query both fields and deduplicate by order ID to avoid double-counting
+        // orders that have both fields set (all orders created by the new stacking
+        // implementation set both). Without deduplication, a customer who used a
+        // code once would appear to have used it twice and be incorrectly blocked.
         if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
-            const userOrders = await base44.asServiceRole.entities.Order.filter({
-                created_by: user.email,
-                coupon_code: coupon.code
-            });
+            const [legacyOrders, arrayOrders] = await Promise.all([
+                base44.asServiceRole.entities.Order.filter({
+                    created_by: user.email,
+                    coupon_code: coupon.code,
+                }),
+                base44.asServiceRole.entities.Order.filter({
+                    created_by: user.email,
+                    coupon_codes: { $contains: coupon.code },
+                }),
+            ]);
 
-            const userUsageCount = Array.isArray(userOrders) ? userOrders.length : 0;
+            // Deduplicate by order ID — new orders have both fields, legacy only have coupon_code
+            const uniqueOrderIds = new Set();
+            for (const o of (legacyOrders || [])) uniqueOrderIds.add(o.id);
+            for (const o of (arrayOrders || [])) uniqueOrderIds.add(o.id);
+            const userUsageCount = uniqueOrderIds.size;
             
             if (userUsageCount >= coupon.per_customer_limit) {
                 return new Response(
