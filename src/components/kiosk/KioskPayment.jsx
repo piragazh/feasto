@@ -135,6 +135,7 @@ export default function KioskPayment({
                 // pay_at_counter = order placed, NO payment taken yet.
                 // Kitchen must NOT start until staff confirms payment and moves status → confirmed.
                 payment_method: 'pay_at_counter',
+                order_source: 'kiosk',
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',
                 status: 'pending',
                 notes: 'Kiosk order — awaiting counter payment. Do not prepare until confirmed.',
@@ -251,6 +252,7 @@ export default function KioskPayment({
                 total: cartTotal,
                 // SECURITY: payment_method stored as 'card_terminal', not generic 'card'
                 payment_method: 'card',
+                order_source: 'kiosk',
                 // SECURITY: store full authorization evidence
                 payment_intent_id: authResult.transaction_id,
                 order_type: orderType === 'dine_in' ? 'dine_in' : 'takeaway',

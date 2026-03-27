@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp, User, MonitorSmartphone, BadgeCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -21,6 +21,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [orderTypeFilter, setOrderTypeFilter] = useState('all');
+    const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'kiosk' | 'other'
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [selectedOrders, setSelectedOrders] = useState([]);
@@ -88,13 +89,19 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         prevOrderIds.current = newIds;
     }, [allOrders]);
 
-    // Determine order channel for routing
+    // Determine order channel for printer routing
     const getOrderChannel = (order) => {
+        if (order.order_source === 'kiosk') return 'kiosk_order';
         if (order.order_type === 'dine_in') return 'pos_order';
         if (order.order_type === 'collection' || order.order_type === 'takeaway') return 'online_order';
-        // POS orders don't come through LiveOrders normally, so default to online_order
         return 'online_order';
     };
+
+    // Is this a kiosk order awaiting manual payment confirmation?
+    const isKioskAwaitingPayment = (order) =>
+        order.order_source === 'kiosk' &&
+        order.payment_method === 'pay_at_counter' &&
+        order.status === 'pending';
 
     // Auto-print using centralized printer config with channel routing
     const autoPrintOrder = async (order, restaurant, cfg) => {
@@ -103,9 +110,14 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         const services = [printerManager.printerA, printerManager.printerB];
 
         if (centralized.length > 0) {
-            // Find printers assigned to handle this order channel
+            // Find printers assigned to handle this order channel.
+            // Kiosk orders fall back to online_order channel if no kiosk_order slot is configured.
+            const effectiveChannel = channel === 'kiosk_order' &&
+                !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
+                    ? 'online_order'
+                    : channel;
             const assignedPrinters = centralized.filter(p =>
-                (p.assigned_channels || []).includes(channel)
+                (p.assigned_channels || []).includes(effectiveChannel)
             );
             for (let i = 0; i < assignedPrinters.length; i++) {
                 const printerConfig = assignedPrinters[i];
@@ -140,6 +152,27 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         }
     };
 
+    const confirmKioskPaymentMutation = useMutation({
+        mutationFn: async (orderId) => {
+            const order = allOrders.find(o => o.id === orderId);
+            const statusHistory = [...(order?.status_history || []), {
+                status: 'confirmed',
+                timestamp: new Date().toISOString(),
+                note: 'Payment confirmed at counter by staff',
+            }];
+            return base44.entities.Order.update(orderId, {
+                status: 'confirmed',
+                status_history: statusHistory,
+            });
+        },
+        onSuccess: (_, orderId) => {
+            queryClient.invalidateQueries(['live-orders']);
+            toast.success('Payment confirmed — order sent to kitchen');
+            printOrderDetails(orderId);
+            if (onOrderUpdate) onOrderUpdate();
+        },
+    });
+
     // Filter orders
     const orders = allOrders.filter(order => {
         if (searchQuery) {
@@ -156,6 +189,8 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
         if (statusFilter !== 'all' && order.status !== statusFilter) return false;
         if (orderTypeFilter !== 'all' && order.order_type !== orderTypeFilter) return false;
+        if (sourceFilter === 'kiosk' && order.order_source !== 'kiosk') return false;
+        if (sourceFilter === 'other' && order.order_source === 'kiosk') return false;
 
         if (dateFrom) {
             const orderDate = new Date(order.created_date);
@@ -423,7 +458,11 @@ Provide only the time range (e.g., "25-30 min").`;
 
         // Try centralized printers first (channel-aware)
         if (centralized.length > 0) {
-            const assignedPrinters = centralized.filter(p => (p.assigned_channels || []).includes(channel));
+            const effectiveChannel = channel === 'kiosk_order' &&
+                !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
+                    ? 'online_order'
+                    : channel;
+            const assignedPrinters = centralized.filter(p => (p.assigned_channels || []).includes(effectiveChannel));
             // If none assigned to this channel, try all printers
             const printersToTry = assignedPrinters.length > 0 ? assignedPrinters : centralized;
             for (const printerConfig of printersToTry) {
@@ -518,8 +557,9 @@ Provide only the time range (e.g., "25-30 min").`;
                     <h2>${restaurant?.name || 'KITCHEN ORDER'}</h2>
                     ${order.order_type === 'collection' ? '<div class="collection-badge">🏪 COLLECTION ORDER</div>' : ''}
                     <div class="separator"></div>
+                    ${order.order_source === 'kiosk' ? '<div class="collection-badge" style="background:#e0e7ff;color:#3730a3;">🖥️ KIOSK ORDER</div>' : ''}
                     ${config.show_order_number !== false ? `<p><strong>Order:</strong> ${orderLabel}</p>` : ''}
-                    <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : 'DELIVERY'}</p>
+                    <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : order.order_type === 'takeaway' ? 'TAKEAWAY' : order.order_type === 'dine_in' ? 'DINE IN' : 'DELIVERY'}</p>
                     <p><strong>Time:</strong> ${order.created_date ? format(new Date(order.created_date), 'HH:mm') : '--:--'}</p>
                     <div class="separator"></div>
                     <h3>ITEMS:</h3>
@@ -643,6 +683,32 @@ Provide only the time range (e.g., "25-30 min").`;
 
     return (
         <div>
+            {/* Source filter tabs */}
+            <div className="flex gap-2 mb-4">
+                {[
+                    { key: 'all', label: 'All Orders' },
+                    { key: 'kiosk', label: '🖥️ Kiosk' },
+                    { key: 'other', label: 'Online / Other' },
+                ].map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setSourceFilter(tab.key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            sourceFilter === tab.key
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                    >
+                        {tab.label}
+                        {tab.key === 'kiosk' && (
+                            <span className="ml-1.5 bg-indigo-500/20 text-indigo-100 text-xs px-1.5 py-0.5 rounded-full">
+                                {allOrders.filter(o => o.order_source === 'kiosk').length}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Live Orders ({orders.length})</h2>
                 {selectedOrders.length > 0 && (
@@ -784,7 +850,7 @@ Provide only the time range (e.g., "25-30 min").`;
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
                             >
-                                <Card className={`${order.status === 'pending' ? 'border-2 border-red-500 shadow-lg' : ''} ${selectedOrders.includes(order.id) ? 'ring-2 ring-orange-500' : ''}`}>
+                                <Card className={`${isKioskAwaitingPayment(order) ? 'border-2 border-indigo-500 shadow-lg shadow-indigo-100' : order.status === 'pending' ? 'border-2 border-red-500 shadow-lg' : ''} ${selectedOrders.includes(order.id) ? 'ring-2 ring-orange-500' : ''}`}>
                                     <CardHeader>
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-start gap-3">
@@ -800,12 +866,23 @@ Provide only the time range (e.g., "25-30 min").`;
                                                        ) : (
                                                            <>Order #{order.id.slice(-6)}</>
                                                        )}
+                                                       {order.order_source === 'kiosk' && (
+                                                           <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-300 flex items-center gap-1">
+                                                               <MonitorSmartphone className="h-3 w-3" />
+                                                               Kiosk
+                                                           </Badge>
+                                                       )}
                                                        <Badge className={order.order_type === 'collection' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>
-                                                           {order.order_type === 'collection' ? '🏪 Collection' : '🚚 Delivery'}
+                                                           {order.order_type === 'collection' ? '🏪 Collection' : order.order_type === 'takeaway' ? '🥡 Takeaway' : order.order_type === 'dine_in' ? '🍽️ Dine In' : '🚚 Delivery'}
                                                        </Badge>
                                                        <Badge className={getStatusColor(order.status)}>
-                                                           {order.status.replace('_', ' ')}
+                                                           {order.status.replace(/_/g, ' ')}
                                                        </Badge>
+                                                       {isKioskAwaitingPayment(order) && (
+                                                           <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 animate-pulse">
+                                                               💳 Awaiting Payment
+                                                           </Badge>
+                                                       )}
                                                    </CardTitle>
                                                    <p className="text-sm text-gray-500 mt-1">
                                                        {order.created_date ? format(new Date(order.created_date), 'MMM d, h:mm a') : '—'}
@@ -1007,20 +1084,32 @@ Provide only the time range (e.g., "25-30 min").`;
                                         <div className="flex gap-2 flex-wrap">
                                             {order.status === 'pending' && (
                                                 <>
-                                                    <Button
-                                                        onClick={() => handleAccept(order.id)}
-                                                        className="flex-1 bg-green-600 hover:bg-green-700"
-                                                    >
-                                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                                        Accept Order
-                                                    </Button>
+                                                    {isKioskAwaitingPayment(order) ? (
+                                                        // Kiosk pay-at-counter: staff must confirm cash/card payment was taken
+                                                        <Button
+                                                            onClick={() => confirmKioskPaymentMutation.mutate(order.id)}
+                                                            disabled={confirmKioskPaymentMutation.isPending}
+                                                            className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                                                        >
+                                                            <BadgeCheck className="h-4 w-4 mr-2" />
+                                                            Confirm Payment Received
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            onClick={() => handleAccept(order.id)}
+                                                            className="flex-1 bg-green-600 hover:bg-green-700"
+                                                        >
+                                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                                            Accept Order
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         onClick={() => setRejectingOrder(order)}
                                                         variant="destructive"
                                                         className="flex-1"
                                                     >
                                                         <XCircle className="h-4 w-4 mr-2" />
-                                                        Reject
+                                                        {isKioskAwaitingPayment(order) ? 'Cancel Order' : 'Reject'}
                                                     </Button>
                                                 </>
                                             )}

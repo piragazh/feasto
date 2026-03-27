@@ -6,6 +6,17 @@
       "type": "string",
       "description": "Unique order number for collection orders (e.g., C-1234)"
     },
+    "order_source": {
+      "type": "string",
+      "enum": [
+        "online",
+        "pos",
+        "kiosk",
+        "third_party"
+      ],
+      "default": "online",
+      "description": "Channel through which the order was placed. 'kiosk' = self-service kiosk terminal. Used for display, filtering, and kitchen ticket labelling."
+    },
     "idempotency_key": {
       "type": "string",
       "description": "Client-supplied key to prevent duplicate order creation on double-submit"
