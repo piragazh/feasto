@@ -28,6 +28,7 @@ import { run as runLiveOrdersAccessControl } from './suites/liveOrdersAccessCont
 import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 import { run as runKioskCardAuthTrust } from './suites/kioskCardAuthTrust.smoke.js';
 import { run as runAssignOrderDriver } from './suites/assignOrderDriver.smoke.js';
+import { run as runLiveOrdersKioskVisibility } from './suites/liveOrdersKioskVisibility.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -42,6 +43,7 @@ const SUITES = {
     promotionDiscountIntegrity: runPromotionDiscountIntegrity,
     kioskCardAuthTrust: runKioskCardAuthTrust,
     assignOrderDriver: runAssignOrderDriver,
+    liveOrdersKioskVisibility: runLiveOrdersKioskVisibility,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────

@@ -16,6 +16,17 @@ import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
 import DriverLocationMap from '@/components/driver/DriverLocationMap';
 
+// ── Canonical visibility helper ──────────────────────────────────────────
+// Maps kiosk (order_status) and legacy (status) to unified operational state
+const getOrderOperationalStatus = (order) => {
+    if (order.order_source === 'kiosk') {
+        // Kiosk uses order_status for operational progression
+        return order.order_status || order.status || 'unknown';
+    }
+    // Legacy/online/pos use status field
+    return order.status || 'unknown';
+};
+
 export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [rejectingOrder, setRejectingOrder] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -217,7 +228,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         },
     });
 
-    // Filter orders
+    // Filter orders (with canonical status mapping)
     const orders = allOrders.filter(order => {
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
@@ -231,7 +242,12 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             if (!matchesSearch) return false;
         }
 
-        if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+        // Status filter: use canonical helper to work with both kiosk and legacy models
+        if (statusFilter !== 'all') {
+            const operationalStatus = getOrderOperationalStatus(order);
+            if (operationalStatus !== statusFilter) return false;
+        }
+
         if (orderTypeFilter !== 'all' && order.order_type !== orderTypeFilter) return false;
         
         // Source-based filtering
@@ -456,17 +472,18 @@ Provide only the time range (e.g., "25-30 min").`;
             }
         }
         
-        // SECURITY: Use backend function
+        // SECURITY: Use backend function — works with both status (legacy) and order_status (kiosk) fields
         updateOrderMutation.mutate({ orderId, status: newStatus });
         const statusLabels = {
             confirmed: 'Order accepted',
             preparing: 'Preparing order',
             out_for_delivery: 'Order dispatched - Driver assigned',
             ready_for_collection: 'Order ready for collection',
+            ready: 'Order ready for collection',
             delivered: 'Order delivered',
             collected: 'Order collected'
         };
-        toast.success(`${statusLabels[newStatus]} - Customer notified via SMS`);
+        toast.success(`${statusLabels[newStatus] || newStatus} - Customer notified via SMS`);
     };
 
     const printOrderDetails = async (orderId) => {
@@ -711,11 +728,17 @@ Provide only the time range (e.g., "25-30 min").`;
 
     const getStatusColor = (status) => {
         const colors = {
+            // Legacy status values
             pending: 'bg-yellow-100 text-yellow-800',
             confirmed: 'bg-blue-100 text-blue-800',
             preparing: 'bg-purple-100 text-purple-800',
             out_for_delivery: 'bg-orange-100 text-orange-800',
             ready_for_collection: 'bg-green-100 text-green-800',
+            // Kiosk order_status values (map to compatible colors)
+            new: 'bg-gray-100 text-gray-800',
+            ready: 'bg-green-100 text-green-800',
+            completed: 'bg-green-100 text-green-800',
+            collected: 'bg-green-100 text-green-800',
         };
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
@@ -741,19 +764,19 @@ Provide only the time range (e.g., "25-30 min").`;
         setDateTo('');
     };
 
-    // Sort orders: unpaid kiosk first, then by status, then by age
+    // Sort orders: unpaid kiosk first, then by operational status, then by age
     const sortedOrders = React.useMemo(() => {
         const sorted = [...orders];
         sorted.sort((a, b) => {
-            // Priority 1: Unpaid kiosk orders at top
+            // Priority 1: Unpaid kiosk orders at top (highest visibility for staff)
             const aUnpaidKiosk = a.order_source === 'kiosk' && a.payment_status === 'pending_payment' ? 0 : 1;
             const bUnpaidKiosk = b.order_source === 'kiosk' && b.payment_status === 'pending_payment' ? 0 : 1;
             if (aUnpaidKiosk !== bUnpaidKiosk) return aUnpaidKiosk - bUnpaidKiosk;
 
-            // Priority 2: Pending/new orders (awaiting action)
-            const statusPriority = { 'pending': 0, 'new': 0, 'confirmed': 1, 'preparing': 2, 'ready_for_collection': 3, 'out_for_delivery': 3 };
-            const aStatus = a.order_source === 'kiosk' ? a.order_status : a.status;
-            const bStatus = b.order_source === 'kiosk' ? b.order_status : b.status;
+            // Priority 2: Pending/new orders (awaiting action) — use canonical helper
+            const statusPriority = { 'new': 0, 'pending': 0, 'confirmed': 1, 'preparing': 2, 'ready': 3, 'ready_for_collection': 3, 'out_for_delivery': 3, 'completed': 4, 'collected': 4, 'cancelled': 5 };
+            const aStatus = getOrderOperationalStatus(a);
+            const bStatus = getOrderOperationalStatus(b);
             const aPriority = statusPriority[aStatus] ?? 4;
             const bPriority = statusPriority[bStatus] ?? 4;
             if (aPriority !== bPriority) return aPriority - bPriority;
@@ -999,13 +1022,7 @@ Provide only the time range (e.g., "25-30 min").`;
                                                                     order.payment_status === 'paid_card' ? '💰' :
                                                                     '?'}
                                                                </Badge>
-                                                               <Badge className={`text-xs ${
-                                                                   order.order_status === 'new' ? 'bg-gray-100 text-gray-800' :
-                                                                   order.order_status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                                                                   order.order_status === 'preparing' ? 'bg-purple-100 text-purple-800' :
-                                                                   order.order_status === 'ready' ? 'bg-green-100 text-green-800' :
-                                                                   'bg-gray-100 text-gray-800'
-                                                               }`} size="sm">
+                                                               <Badge className={`text-xs ${getStatusColor(order.order_status)}`} size="sm">
                                                                    {order.order_status === 'new' ? 'New' :
                                                                     order.order_status === 'confirmed' ? 'Conf' :
                                                                     order.order_status === 'preparing' ? 'Prep' :
@@ -1014,15 +1031,18 @@ Provide only the time range (e.g., "25-30 min").`;
                                                                </Badge>
                                                            </>
                                                        )}
-                                                       {/* Legacy orders: single status badge */}
+                                                       {/* Legacy orders: single status badge (uses canonical helper) */}
                                                        {order.order_source !== 'kiosk' && (
-                                                           <Badge className={`text-xs ${getStatusColor(order.status)}`} size="sm">
-                                                               {order.status === 'pending' ? 'Pending' :
-                                                                order.status === 'confirmed' ? 'Conf' :
-                                                                order.status === 'preparing' ? 'Prep' :
-                                                                order.status === 'out_for_delivery' ? 'Delivery' :
-                                                                order.status === 'ready_for_collection' ? 'Ready' :
-                                                                order.status.replace(/_/g, ' ')}
+                                                           <Badge className={`text-xs ${getStatusColor(getOrderOperationalStatus(order))}`} size="sm">
+                                                               {(() => {
+                                                                   const status = getOrderOperationalStatus(order);
+                                                                   const labels = {
+                                                                       'pending': 'Pending', 'confirmed': 'Conf', 'preparing': 'Prep',
+                                                                       'out_for_delivery': 'Delivery', 'ready_for_collection': 'Ready',
+                                                                       'completed': 'Done', 'cancelled': 'Cancel'
+                                                                   };
+                                                                   return labels[status] || status.replace(/_/g, ' ');
+                                                               })()}
                                                            </Badge>
                                                        )}
                                                    </div>
