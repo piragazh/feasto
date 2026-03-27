@@ -107,7 +107,7 @@ export default function Restaurant() {
         } catch (error) {
             toast.error('Unable to save cart. Storage may be full.');
         }
-    }, [cart, restaurantId, restaurant?.name]);
+    }, [cart, restaurantId]);
 
     const handleKeepOldCart = () => {
         setShowCartConflictDialog(false);
