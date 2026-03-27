@@ -154,22 +154,24 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     const confirmKioskPaymentMutation = useMutation({
         mutationFn: async (orderId) => {
-            const order = allOrders.find(o => o.id === orderId);
-            const statusHistory = [...(order?.status_history || []), {
-                status: 'confirmed',
-                timestamp: new Date().toISOString(),
-                note: 'Payment confirmed at counter by staff',
-            }];
-            return base44.entities.Order.update(orderId, {
-                status: 'confirmed',
-                status_history: statusHistory,
+            // Call hardened backend function with strict validation
+            const response = await base44.functions.invoke('confirmKioskPayment', {
+                order_id: orderId,
             });
+            return response?.data || response;
         },
-        onSuccess: (_, orderId) => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries(['live-orders']);
-            toast.success('Payment confirmed — order sent to kitchen');
-            printOrderDetails(orderId);
+            toast.success(`✓ Payment confirmed — order ${data.order_number} sent to kitchen`);
+            if (data.order_id) {
+                setTimeout(() => printOrderDetails(data.order_id), 500);
+            }
             if (onOrderUpdate) onOrderUpdate();
+        },
+        onError: (error) => {
+            const message = error?.response?.data?.error || error?.message || 'Failed to confirm payment';
+            toast.error(message);
+            console.error('[confirmKioskPayment] Error:', message);
         },
     });
 
@@ -673,6 +675,7 @@ Provide only the time range (e.g., "25-30 min").`;
         setSearchQuery('');
         setStatusFilter('all');
         setOrderTypeFilter('all');
+        setSourceFilter('all');
         setDateFrom('');
         setDateTo('');
     };

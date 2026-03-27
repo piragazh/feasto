@@ -260,6 +260,51 @@
         }
       }
     },
+    "payment_audit_trail": {
+      "type": "array",
+      "description": "Audit trail for manual payment confirmations (kiosk counter-pay only)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "payment_confirmed_at_counter"
+            ],
+            "description": "Action performed"
+          },
+          "actor_email": {
+            "type": "string",
+            "description": "Staff member email who confirmed"
+          },
+          "actor_name": {
+            "type": "string",
+            "description": "Staff member full name"
+          },
+          "actor_role": {
+            "type": "string",
+            "description": "Staff role at time of confirmation"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "description": "Human-readable note"
+          }
+        }
+      }
+    },
+    "payment_confirmed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when counter-payment was confirmed by staff"
+    },
+    "payment_confirmed_by": {
+      "type": "string",
+      "description": "Email of staff member who confirmed counter-payment"
+    },
     "delivery_address": {
       "type": "string"
     },
