@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Info, CheckCircle } from 'lucide-react';
 
 const REJECTION_REASONS = [
   "Restaurant is too busy",
@@ -15,9 +15,10 @@ const REJECTION_REASONS = [
   "Other (specify below)"
 ];
 
-export default function RejectOrderDialog({ open, onClose, onReject, orderNumber }) {
+export default function RejectOrderDialog({ open, onClose, onReject, orderNumber, paymentMethod, paymentIntentId }) {
     const [selectedReason, setSelectedReason] = useState(REJECTION_REASONS[0]);
     const [customReason, setCustomReason] = useState('');
+    const isCardPayment = paymentMethod === 'card' && !!paymentIntentId;
 
     const handleReject = () => {
         const finalReason = selectedReason === "Other (specify below)" 
@@ -43,6 +44,18 @@ export default function RejectOrderDialog({ open, onClose, onReject, orderNumber
                     <p className="text-sm text-gray-600">
                         Please select a reason for rejecting this order. The customer will be notified.
                     </p>
+                    
+                    {isCardPayment && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded flex items-start gap-2">
+                            <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-semibold text-blue-900">Auto-Refund Enabled</p>
+                                <p className="text-xs text-blue-800">
+                                    Since this order was paid by card, an automatic refund will be issued immediately upon rejection.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     
                     <RadioGroup value={selectedReason} onValueChange={setSelectedReason}>
                         {REJECTION_REASONS.map((reason) => (

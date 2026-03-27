@@ -67,21 +67,13 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
 
     const updateOrderMutation = useMutation({
         mutationFn: async ({ orderId, status, rejection_reason }) => {
-            const updateData = { status };
-            if (rejection_reason) {
-                updateData.rejection_reason = rejection_reason;
-            }
-            
-            const order = orders.find(o => o.id === orderId);
-            const statusHistory = order?.status_history || [];
-            statusHistory.push({
-                status,
-                timestamp: new Date().toISOString(),
-                note: rejection_reason || ''
+            // Use hardened updateOrderStatus endpoint instead of direct entity write
+            const result = await base44.functions.invoke('updateOrderStatus', {
+                order_id: orderId,
+                new_status: status,
+                rejection_reason: rejection_reason || null,
             });
-            updateData.status_history = statusHistory;
-            
-            return base44.entities.Order.update(orderId, updateData);
+            return result?.data?.order;
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['order-queue']);
@@ -130,13 +122,30 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         }
     };
 
-    const handleReject = (orderId, reason) => {
-        updateOrderMutation.mutate({ 
-            orderId, 
-            status: 'cancelled',
-            rejection_reason: reason
-        });
-        toast.success('Order rejected');
+    const handleReject = async (orderId, reason) => {
+        try {
+            const result = await base44.functions.invoke('rejectOrderWithRefund', {
+                order_id: orderId,
+                rejection_reason: reason,
+            });
+
+            if (result?.data?.success) {
+                const refundMsg = result.data.refunded
+                    ? `Order rejected and refunded (ID: ${result.data.refund_id})`
+                    : 'Order rejected. Payment pending manual review.';
+                toast.success(refundMsg);
+                queryClient.invalidateQueries(['order-queue']);
+            } else {
+                const errorMsg = result?.data?.requires_manual_action
+                    ? 'Order rejected. Refund failed — manual review required.'
+                    : `Order rejected. ${result?.data?.message || 'Please check payment status.'}`;
+                toast.error(errorMsg);
+                queryClient.invalidateQueries(['order-queue']);
+            }
+        } catch (error) {
+            console.error('Rejection failed:', error);
+            toast.error('Failed to reject order. Please try again.');
+        }
     };
 
     const handleStatusChange = (orderId, newStatus) => {
@@ -663,6 +672,8 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                 onClose={() => setRejectingOrder(null)}
                 onReject={(reason) => handleReject(rejectingOrder.id, reason)}
                 orderNumber={rejectingOrder?.id.slice(-6)}
+                paymentMethod={rejectingOrder?.payment_method}
+                paymentIntentId={rejectingOrder?.payment_intent_id}
             />
         </div>
     );
