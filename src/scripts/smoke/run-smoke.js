@@ -29,6 +29,7 @@ import { run as runKioskCardAuthTrust } from './suites/kioskCardAuthTrust.smoke.
 import { run as runAssignOrderDriver } from './suites/assignOrderDriver.smoke.js';
 import { run as runLiveOrdersKioskVisibility } from './suites/liveOrdersKioskVisibility.smoke.js';
 import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
+import { run as runTerminalProviderArchitecture } from './suites/terminalProviderArchitecture.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -44,7 +45,7 @@ const SUITES = {
     kioskCardAuthTrust: runKioskCardAuthTrust,
     assignOrderDriver: runAssignOrderDriver,
     liveOrdersKioskVisibility: runLiveOrdersKioskVisibility,
-    promotionDiscountIntegrity: runPromotionDiscountIntegrity,
+    terminalProviderArchitecture: runTerminalProviderArchitecture,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────

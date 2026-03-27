@@ -82,10 +82,12 @@ Deno.serve(async (req) => {
             });
         }
 
-        const result = await processTerminalTransaction({
+        // ── Use provider-based terminal authorization ───────────────────────────
+        // Routes through MockTerminalProvider (deterministic) or real provider SDK
+        const result = await processTerminalWithProvider({
             amount,
-            terminal: terminalConfig || {},
             transactionRef: ref,
+            terminal: terminalConfig || {},
             provider,
         });
 
@@ -120,59 +122,193 @@ Deno.serve(async (req) => {
 });
 
 /**
- * Normalized terminal transaction processor.
- *
- * Always returns:
- *   { success, status, transactionRef, amount, provider, terminal, timestamp, error? }
- *
- * status values: 'approved' | 'declined' | 'failed' | 'timeout'
+ * Process terminal authorization via provider abstraction.
+ * 
+ * REPLACES OLD processTerminalTransaction which had:
+ *   ❌ Math.random() in production path
+ *   ❌ Hardcoded 95% approval rate
+ *   ❌ No provider abstraction
+ * 
+ * NEW ARCHITECTURE:
+ *   ✅ Provider interface abstraction (MockTerminalProvider for now)
+ *   ✅ Deterministic behavior (no Math.random in production)
+ *   ✅ Supports future real providers (Stripe, SumUp, Square, Worldpay)
+ *   ✅ Clear separation between mock (for development) and real (for production)
  */
-async function processTerminalTransaction({ amount, terminal, transactionRef, provider }) {
-    // ── Provider-specific routing ────────────────────────────────────────────
-    // Uncomment and implement when integrating a real terminal SDK.
+async function processTerminalWithProvider({ amount, transactionRef, terminal, provider }) {
+    // Route to appropriate provider
+    if (provider === 'stripe_terminal') {
+        return await processStripeTerminalProvider({ amount, transactionRef, terminal });
+    }
+    if (provider === 'sumup') {
+        return await processSumUpProvider({ amount, transactionRef, terminal });
+    }
+    if (provider === 'square') {
+        return await processSquareProvider({ amount, transactionRef, terminal });
+    }
+    if (provider === 'worldpay') {
+        return await processWorldpayProvider({ amount, transactionRef, terminal });
+    }
 
-    // if (provider === 'stripe_terminal') {
-    //   return await processStripeTerminal({ amount, terminal, transactionRef });
-    // }
-    // if (provider === 'sumup') {
-    //   return await processSumUp({ amount, terminal, transactionRef });
-    // }
-    // if (provider === 'square') {
-    //   return await processSquareTerminal({ amount, terminal, transactionRef });
-    // }
+    // Default: use MockTerminalProvider (deterministic, non-production)
+    if (provider === 'simulation' || provider === 'mock' || !provider) {
+        return await processMockTerminal({ amount, transactionRef, terminal });
+    }
 
-    // ── Simulation (used when no real terminal SDK is configured) ─────────────
-    // 95% approval, 5% decline — for development and test_mode.
-    const processingDelayMs = 1500 + Math.random() * 2000;
+    // Unknown provider
+    return {
+        success: false,
+        status: 'failed',
+        transactionRef,
+        amount,
+        provider,
+        error: `Unknown terminal provider: ${provider}`,
+    };
+}
 
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const approved = Math.random() < 0.95;
-            const timestamp = new Date().toISOString();
+/**
+ * Mock Terminal Provider — Deterministic for development/testing
+ * 
+ * ✅ DETERMINISTIC: No Math.random() in production path
+ * ✅ TEST-FRIENDLY: Behavior fully controlled by input
+ * ✅ CLEARLY MARKED NON-PRODUCTION
+ * ✅ FUTURE-PROOF: Real provider functions follow same interface
+ * 
+ * Deterministic scenarios (input-based):
+ *   - transactionRef includes "DECLINE_" → always declines
+ *   - transactionRef includes "FAIL_" → always fails
+ *   - transactionRef includes "TIMEOUT_" → simulates timeout
+ *   - amount == 6.66 → always declines
+ *   - amount == 9.99 → always fails
+ *   - otherwise → always approves (deterministic)
+ */
+async function processMockTerminal({ amount, transactionRef, terminal }) {
+    const NON_PRODUCTION_WARNING = `
+⚠️  MOCK TERMINAL PROVIDER IN USE
+This is a non-production simulated terminal. For production, use a real provider:
+  - stripe_terminal: Stripe Terminal SDK
+  - sumup: SumUp Kiosk API
+  - square: Square Terminal API
+  - worldpay: Worldpay POS API
+`;
 
-            if (approved) {
-                resolve({
-                    success: true,
-                    status: 'approved',
-                    transactionRef,
-                    amount,
-                    provider,
-                    terminal: terminal.reader_label || terminal.reader_id || 'kiosk-terminal',
-                    timestamp,
-                    message: 'Transaction approved',
-                });
-            } else {
-                resolve({
-                    success: false,
-                    status: 'declined',
-                    transactionRef,
-                    amount,
-                    provider,
-                    terminal: terminal.reader_label || terminal.reader_id || 'kiosk-terminal',
-                    timestamp,
-                    error: 'Card declined — please try a different card or payment method',
-                });
-            }
-        }, processingDelayMs);
-    });
+    console.warn(NON_PRODUCTION_WARNING);
+    console.log(`[MOCK-TERMINAL] Authorizing £${amount.toFixed(2)} ref=${transactionRef}`);
+
+    // Deterministic scenario matching (input-driven, not random)
+    if (transactionRef.includes('DECLINE_')) {
+        return {
+            success: false,
+            status: 'declined',
+            transactionRef,
+            amount,
+            provider: 'mock',
+            terminal: terminal.reader_label || 'mock-terminal',
+            timestamp: new Date().toISOString(),
+            error: 'Card declined (deterministic test scenario)',
+        };
+    }
+
+    if (transactionRef.includes('FAIL_')) {
+        return {
+            success: false,
+            status: 'failed',
+            transactionRef,
+            amount,
+            provider: 'mock',
+            terminal: terminal.reader_label || 'mock-terminal',
+            timestamp: new Date().toISOString(),
+            error: 'Terminal processing failed (deterministic test scenario)',
+        };
+    }
+
+    if (transactionRef.includes('TIMEOUT_')) {
+        return {
+            success: false,
+            status: 'timeout',
+            transactionRef,
+            amount,
+            provider: 'mock',
+            terminal: terminal.reader_label || 'mock-terminal',
+            timestamp: new Date().toISOString(),
+            error: 'Terminal did not respond (deterministic test scenario)',
+        };
+    }
+
+    // Amount-based deterministic scenarios
+    if (Math.abs(amount - 6.66) < 0.01) { // Magic amount for decline
+        return {
+            success: false,
+            status: 'declined',
+            transactionRef,
+            amount,
+            provider: 'mock',
+            terminal: terminal.reader_label || 'mock-terminal',
+            timestamp: new Date().toISOString(),
+            error: 'Card declined (magic test amount)',
+        };
+    }
+
+    if (Math.abs(amount - 9.99) < 0.01) { // Magic amount for failure
+        return {
+            success: false,
+            status: 'failed',
+            transactionRef,
+            amount,
+            provider: 'mock',
+            terminal: terminal.reader_label || 'mock-terminal',
+            timestamp: new Date().toISOString(),
+            error: 'Terminal processing failed (magic test amount)',
+        };
+    }
+
+    // Default: ALWAYS APPROVE (deterministic — no Math.random)
+    return {
+        success: true,
+        status: 'approved',
+        transactionRef,
+        amount,
+        provider: 'mock',
+        terminal: terminal.reader_label || terminal.reader_id || 'mock-terminal',
+        timestamp: new Date().toISOString(),
+        message: 'Card approved (mock terminal)',
+    };
+}
+
+/**
+ * PLACEHOLDER: Stripe Terminal Provider
+ * 
+ * To integrate real Stripe Terminal:
+ * 1. Install Stripe SDK: npm install stripe
+ * 2. Get API key from environment
+ * 3. Call Stripe Terminal API to authorize payment
+ * 4. Return normalized response (same interface as MockTerminalProvider)
+ */
+async function processStripeTerminalProvider({ amount, transactionRef, terminal }) {
+    // TODO: Implement real Stripe Terminal integration
+    // const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
+    // const intent = await stripe.terminal.readers.processPaymentIntent(...);
+    // return { success: true, status: 'approved', transactionRef, amount, ... };
+    throw new Error('Stripe Terminal provider not yet implemented');
+}
+
+/**
+ * PLACEHOLDER: SumUp Provider
+ */
+async function processSumUpProvider({ amount, transactionRef, terminal }) {
+    throw new Error('SumUp provider not yet implemented');
+}
+
+/**
+ * PLACEHOLDER: Square Provider
+ */
+async function processSquareProvider({ amount, transactionRef, terminal }) {
+    throw new Error('Square provider not yet implemented');
+}
+
+/**
+ * PLACEHOLDER: Worldpay Provider
+ */
+async function processWorldpayProvider({ amount, transactionRef, terminal }) {
+    throw new Error('Worldpay provider not yet implemented');
 }
