@@ -256,25 +256,16 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     const bulkUpdateStatus = useMutation({
         mutationFn: async ({ orderIds, newStatus }) => {
-            return Promise.all(
-                orderIds.map(orderId => {
-                    const order = allOrders.find(o => o.id === orderId);
-                    const statusHistory = order?.status_history || [];
-                    statusHistory.push({
-                        status: newStatus,
-                        timestamp: new Date().toISOString(),
-                        note: `Bulk updated to ${newStatus}`
-                    });
-                    return base44.entities.Order.update(orderId, { 
-                        status: newStatus,
-                        status_history: statusHistory
-                    });
-                })
-            );
+            const response = await base44.functions.invoke('bulkUpdateOrderStatus', {
+                order_ids: orderIds,
+                new_status: newStatus,
+            });
+            return response?.data || response;
         },
-        onSuccess: async (_, { orderIds, newStatus }) => {
+        onSuccess: async (data, { orderIds, newStatus }) => {
             queryClient.invalidateQueries(['live-orders']);
             
+            // Send notifications for each order
             for (const orderId of orderIds) {
                 const order = allOrders.find(o => o.id === orderId);
                 if (order) {
@@ -282,39 +273,40 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                 }
             }
             
-            toast.success(`${orderIds.length} orders updated to ${newStatus}`);
+            toast.success(`${data.updated_count} orders updated to ${newStatus}`);
             setSelectedOrders([]);
             if (onOrderUpdate) onOrderUpdate();
+        },
+        onError: (error) => {
+            const message = error?.response?.data?.error || error?.message || 'Failed to update orders';
+            toast.error(message);
+            console.error('[bulkUpdateStatus] Error:', message);
         },
     });
 
     const updateOrderMutation = useMutation({
-        mutationFn: async ({ orderId, status, rejection_reason, notify = true, extraFields = {} }) => {
-            const updateData = { status, ...extraFields };
-            if (rejection_reason) {
-                updateData.rejection_reason = rejection_reason;
-            }
-            
-            const order = allOrders.find(o => o.id === orderId);
-            const statusHistory = order?.status_history || [];
-            statusHistory.push({
-                status,
-                timestamp: new Date().toISOString(),
-                note: rejection_reason || ''
+        mutationFn: async ({ orderId, status, rejection_reason, notify = true }) => {
+            // SECURITY: Route through hardened backend function with role checks
+            const response = await base44.functions.invoke('updateOrderStatus', {
+                order_id: orderId,
+                new_status: status,
+                rejection_reason: rejection_reason || undefined,
             });
-            updateData.status_history = statusHistory;
-            
-            const result = await base44.entities.Order.update(orderId, updateData);
+            return response?.data || response;
+        },
+        onSuccess: async (data, { orderId, status, rejection_reason, notify = true }) => {
+            queryClient.invalidateQueries(['live-orders']);
             
             if (notify) {
                 await sendCustomerNotification(orderId, status, rejection_reason);
             }
             
-            return result;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries(['live-orders']);
             if (onOrderUpdate) onOrderUpdate();
+        },
+        onError: (error) => {
+            const message = error?.response?.data?.error || error?.message || 'Failed to update order';
+            toast.error(message);
+            console.error('[updateOrderStatus] Error:', message);
         },
     });
 
@@ -434,7 +426,8 @@ Provide only the time range (e.g., "25-30 min").`;
                     is_available: true
                 }).catch(e => console.error('Failed to reset driver:', e));
             }
-            updateOrderMutation.mutate({ orderId, status: newStatus, extraFields: { actual_delivery_time: new Date().toISOString() } });
+            // SECURITY: Use backend function (extraFields no longer supported, only status + rejection_reason)
+            updateOrderMutation.mutate({ orderId, status: newStatus });
             const statusLabels = { delivered: 'Order delivered', collected: 'Order collected' };
             toast.success(`${statusLabels[newStatus]} - Customer notified`);
             return;
@@ -475,6 +468,7 @@ Provide only the time range (e.g., "25-30 min").`;
             }
         }
         
+        // SECURITY: Use backend function
         updateOrderMutation.mutate({ orderId, status: newStatus });
         const statusLabels = {
             confirmed: 'Order accepted',
@@ -1320,11 +1314,9 @@ Provide only the time range (e.g., "25-30 min").`;
                                             {order.order_source === 'kiosk' && order.order_status === 'confirmed' && (
                                                 <>
                                                     <Button
-                                                        onClick={() => {
-                                                            const newOrder = { ...order, order_status: 'preparing' };
-                                                            updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'preparing' } });
-                                                        }}
-                                                        className="flex-1 bg-purple-600 hover:bg-purple-700"
+                                                        disabled={true}
+                                                        className="flex-1 bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                                                        title="Kiosk order status transitions handled server-side"
                                                     >
                                                         Start Preparing
                                                     </Button>
@@ -1355,10 +1347,9 @@ Provide only the time range (e.g., "25-30 min").`;
                                             {order.order_source === 'kiosk' && order.order_status === 'preparing' && (
                                                 <>
                                                     <Button
-                                                        onClick={() => {
-                                                            updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'ready' } });
-                                                        }}
-                                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                                        disabled={true}
+                                                        className="flex-1 bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                                                        title="Kiosk order status transitions handled server-side"
                                                     >
                                                         Mark Ready
                                                     </Button>

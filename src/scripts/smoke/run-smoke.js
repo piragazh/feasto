@@ -24,6 +24,7 @@ import { run as runPaymentIntent } from './suites/createPaymentIntent.smoke.js';
 import { run as runCreateOrder } from './suites/verifyAndCreateOrder.smoke.js';
 import { run as runKioskCreateOrder } from './suites/kioskCreateOrder.smoke.js';
 import { run as runOfflineSyncIdempotency } from './suites/offlineSyncIdempotency.smoke.js';
+import { run as runLiveOrdersAccessControl } from './suites/liveOrdersAccessControl.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -34,6 +35,7 @@ const SUITES = {
     verifyAndCreateOrder: runCreateOrder,
     kioskCreateOrder: runKioskCreateOrder,
     offlineSyncIdempotency: runOfflineSyncIdempotency,
+    liveOrdersAccessControl: runLiveOrdersAccessControl,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
