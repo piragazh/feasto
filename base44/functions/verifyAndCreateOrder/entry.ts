@@ -486,9 +486,40 @@ Deno.serve(async (req) => {
             verifiedDiscount = accumulatedDiscount;
             console.log(`[COUPON] Stack validated: codes=[${verifiedCouponCodes.join(',')}] totalDiscount=£${verifiedDiscount.toFixed(2)} cap=£${maxCouponDiscount.toFixed(2)}`);
 
+        } else if (orderData.applied_promotion_id) {
+            // ── PROMOTION DISCOUNT: Server-validate and compute ──────────────────────
+            // CRITICAL SECURITY: Never trust client-supplied promotion discount amounts.
+            // Fetch and validate the promotion record server-side.
+            try {
+                const promRes = await base44.functions.invoke('validateAndApplyPromotion', {
+                    promotion_id: orderData.applied_promotion_id,
+                    restaurant_id: orderData.restaurant_id,
+                    server_subtotal: serverSubtotal,
+                    delivery_fee: deliveryFee
+                });
+                
+                if (promRes?.data?.valid && typeof promRes.data.discount === 'number') {
+                    verifiedDiscount = promRes.data.discount;
+                    console.log(`[PROMOTION] Validated and applied: id=${orderData.applied_promotion_id} discount=£${verifiedDiscount.toFixed(2)}`);
+                } else {
+                    // Promotion validation failed — disallow order
+                    const promError = promRes?.data?.error || 'Promotion validation failed';
+                    console.warn(`[PROMOTION] Validation failed: id=${orderData.applied_promotion_id} error=${promError}`);
+                    return new Response(
+                        JSON.stringify({ error: `Promotion: ${promError}`, success: false }),
+                        { status: 400 }
+                    );
+                }
+            } catch (promErr) {
+                console.error('[PROMOTION] Validation error:', promErr.message);
+                return new Response(
+                    JSON.stringify({ error: 'Promotion validation failed. Please try again.', success: false }),
+                    { status: 500 }
+                );
+            }
         } else {
-            // No coupon codes: allow restaurant promotion discount, capped at 50% of subtotal
-            verifiedDiscount = Math.min(clientDiscount, serverSubtotal * 0.5);
+            // No promotion, no coupon: no discount
+            verifiedDiscount = 0;
         }
 
         const discount = verifiedDiscount;

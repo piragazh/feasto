@@ -25,6 +25,7 @@ import { run as runCreateOrder } from './suites/verifyAndCreateOrder.smoke.js';
 import { run as runKioskCreateOrder } from './suites/kioskCreateOrder.smoke.js';
 import { run as runOfflineSyncIdempotency } from './suites/offlineSyncIdempotency.smoke.js';
 import { run as runLiveOrdersAccessControl } from './suites/liveOrdersAccessControl.smoke.js';
+import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -36,6 +37,7 @@ const SUITES = {
     kioskCreateOrder: runKioskCreateOrder,
     offlineSyncIdempotency: runOfflineSyncIdempotency,
     liveOrdersAccessControl: runLiveOrdersAccessControl,
+    promotionDiscountIntegrity: runPromotionDiscountIntegrity,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
