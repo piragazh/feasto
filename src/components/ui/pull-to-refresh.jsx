@@ -11,8 +11,8 @@ export function PullToRefresh({ onRefresh, children }) {
     const containerRef = useRef(null);
     const controls = useAnimation();
 
-    const threshold = 150;
-    const maxPull = 200;
+    const threshold = 60;
+    const maxPull = 100;
 
     const handleTouchStart = (e) => {
         if (window.scrollY === 0) {
@@ -29,7 +29,7 @@ export function PullToRefresh({ onRefresh, children }) {
 
         if (distance > 0 && window.scrollY === 0) {
             setPullDistance(Math.min(distance, maxPull));
-            if (distance > 50) {
+            if (distance > 8) {
                 e.preventDefault();
             }
         }
