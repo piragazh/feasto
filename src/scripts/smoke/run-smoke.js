@@ -34,6 +34,7 @@ import { run as runStripeTerminalIntegration } from './suites/stripeTerminalInte
 import { run as runOrphanPaymentCompensation } from './suites/orphanPaymentCompensation.smoke.js';
 import { run as runFailureObservability } from './suites/failureObservability.smoke.js';
 import { run as runReconciliationDashboard } from './suites/reconciliationDashboard.smoke.js';
+import { run as runOnlineOrderingRegression } from './suites/onlineOrderingRegression.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -54,6 +55,7 @@ const SUITES = {
     orphanPaymentCompensation: runOrphanPaymentCompensation,
     failureObservability: runFailureObservability,
     reconciliationDashboard: runReconciliationDashboard,
+    onlineOrderingRegression: runOnlineOrderingRegression,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
