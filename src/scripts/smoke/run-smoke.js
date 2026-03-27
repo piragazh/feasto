@@ -33,6 +33,7 @@ import { run as runTerminalProviderArchitecture } from './suites/terminalProvide
 import { run as runStripeTerminalIntegration } from './suites/stripeTerminalIntegration.smoke.js';
 import { run as runOrphanPaymentCompensation } from './suites/orphanPaymentCompensation.smoke.js';
 import { run as runFailureObservability } from './suites/failureObservability.smoke.js';
+import { run as runReconciliationDashboard } from './suites/reconciliationDashboard.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -52,6 +53,7 @@ const SUITES = {
     stripeTerminalIntegration: runStripeTerminalIntegration,
     orphanPaymentCompensation: runOrphanPaymentCompensation,
     failureObservability: runFailureObservability,
+    reconciliationDashboard: runReconciliationDashboard,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────

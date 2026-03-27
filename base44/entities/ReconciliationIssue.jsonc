@@ -1,0 +1,168 @@
+{
+  "name": "ReconciliationIssue",
+  "type": "object",
+  "properties": {
+    "issue_type": {
+      "type": "string",
+      "enum": [
+        "orphan_payment",
+        "unpaid_order",
+        "duplicate_payment",
+        "duplicate_order",
+        "amount_mismatch",
+        "refund_failed",
+        "ambiguous_match",
+        "payment_timeout",
+        "order_timeout"
+      ],
+      "description": "Category of reconciliation issue"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "warning",
+        "info"
+      ],
+      "default": "warning",
+      "description": "Operational priority"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "reviewed",
+        "resolved",
+        "escalated",
+        "closed"
+      ],
+      "default": "open",
+      "description": "Resolution state: open=new, reviewed=seen by ops, resolved=fixed, escalated=to support, closed=done"
+    },
+    "payment_transaction_id": {
+      "type": "string",
+      "description": "Link to PaymentTransaction record"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Link to Order record (nullable if no order found)"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Affected restaurant"
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "stripe",
+        "square",
+        "sumup",
+        "cash",
+        "kiosk",
+        "unknown"
+      ],
+      "default": "stripe",
+      "description": "Payment provider where issue originated"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Transaction amount in GBP"
+    },
+    "currency": {
+      "type": "string",
+      "default": "gbp",
+      "description": "ISO currency code"
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the issue was first detected"
+    },
+    "detected_by": {
+      "type": "string",
+      "enum": [
+        "automated_reconciliation",
+        "automated_alert",
+        "manual_report",
+        "staff_escalation"
+      ],
+      "description": "How the issue was discovered"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When resolution was completed"
+    },
+    "resolved_by": {
+      "type": "string",
+      "description": "Email of operator who resolved"
+    },
+    "resolution_action": {
+      "type": "string",
+      "enum": [
+        "manual_refund_issued",
+        "payment_linked_to_order",
+        "order_cancelled",
+        "duplicate_removed",
+        "customer_contacted",
+        "escalated_to_support",
+        "marked_acceptable",
+        "none"
+      ],
+      "description": "What action was taken to resolve"
+    },
+    "resolution_notes": {
+      "type": "string",
+      "description": "Operator notes on how issue was resolved"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "payment_intent_id": {
+          "type": "string"
+        },
+        "order_number": {
+          "type": "string"
+        },
+        "customer_email": {
+          "type": "string"
+        },
+        "customer_phone": {
+          "type": "string"
+        },
+        "failure_reason": {
+          "type": "string"
+        },
+        "failure_stage": {
+          "type": "string"
+        },
+        "refund_id": {
+          "type": "string"
+        },
+        "stripe_error": {
+          "type": "string"
+        },
+        "context": {
+          "type": "object"
+        }
+      },
+      "description": "Contextual data from payment/order/failure records"
+    },
+    "suggested_action": {
+      "type": "string",
+      "description": "AI/system-suggested next step for operator"
+    },
+    "requires_escalation": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, needs senior staff or support team handling"
+    }
+  },
+  "required": [
+    "issue_type",
+    "severity",
+    "payment_transaction_id",
+    "restaurant_id",
+    "detected_at"
+  ]
+}

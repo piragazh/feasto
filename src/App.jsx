@@ -13,6 +13,7 @@ import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
 import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
 import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview';
 import AdminRestaurants from './pages/AdminRestaurants';
+import ReconciliationDashboard from './pages/ReconciliationDashboard';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -93,6 +94,13 @@ const AuthenticatedApp = () => {
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="AdminRestaurants">
                 <AdminRestaurants />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/ReconciliationDashboard" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="ReconciliationDashboard">
+                <ReconciliationDashboard />
               </LayoutWrapper>
             </Suspense>
           } />
