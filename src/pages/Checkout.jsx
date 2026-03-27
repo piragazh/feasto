@@ -579,7 +579,7 @@ export default function Checkout() {
 
         initPayment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [paymentMethod, clientSecret, total, zoneCheckComplete]); // Re-init on method/total/zone changes
+    }, [paymentMethod, total, zoneCheckComplete, cart]); // Re-init on method/total/zone/cart changes — CRITICAL: cart added to reset PI on cart edit
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -1689,12 +1689,13 @@ export default function Checkout() {
                                         selectedMethod={paymentMethod}
                                         onMethodChange={(method) => {
                                             setPaymentMethod(method);
-                                            // Reset payment state when switching methods
+                                            // CRITICAL: Reset ALL payment state AND refs when switching methods
                                             setClientSecret('');
                                             setShowStripeForm(false);
                                             setPaymentCompleted(false);
                                             expressConfirmFiredRef.current = false;
                                             paymentInitInFlightRef.current = false;
+                                            setInitializingPayment(false); // Unlock UI
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                                     />

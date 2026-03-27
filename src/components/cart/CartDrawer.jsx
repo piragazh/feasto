@@ -16,17 +16,19 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
         setOptimisticCart(cart);
     }, [cart]);
 
-    const handleQuantityChange = (itemId, newQuantity) => {
-        // Optimistic update
+    const handleQuantityChange = (itemId, newQuantity, customizationKey = null) => {
+        // Optimistic update — use customization key for precise matching
         setOptimisticCart(prev => 
-            prev.map(item => 
-                item.menu_item_id === itemId 
+            prev.map((item, idx) => {
+                const itemKey = `${item.menu_item_id}_${customizationKey || JSON.stringify({ customizations: item.customizations || {}, itemQuantities: item.itemQuantities || {} })}`;
+                const compareKey = `${itemId}_${customizationKey || JSON.stringify({ customizations: {}, itemQuantities: {} })}`;
+                return itemKey === compareKey
                     ? { ...item, quantity: newQuantity }
-                    : item
-            )
+                    : item;
+            })
         );
         // Actual update
-        updateQuantity(itemId, newQuantity);
+        updateQuantity(itemId, newQuantity, customizationKey);
     };
 
     const subtotal = optimisticCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -232,8 +234,16 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                                             </button>
                                             <div className="flex items-center gap-2 bg-white rounded-full border px-1" role="group" aria-label={`Quantity for ${item.name}`}>
-                                                <button
-                                                    onClick={() => handleQuantityChange(item.menu_item_id, item.quantity - 1)}
+                                                 <button
+                                                     onClick={() => {
+                                                         const customizationKey = (item.customizations || item.itemQuantities) 
+                                                             ? JSON.stringify({
+                                                                 customizations: item.customizations || {},
+                                                                 itemQuantities: item.itemQuantities || {}
+                                                             })
+                                                             : null;
+                                                         handleQuantityChange(item.menu_item_id, item.quantity - 1, customizationKey);
+                                                     }}
                                                     aria-label={`Decrease quantity of ${item.name}`}
                                                     className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
                                                 >
@@ -241,7 +251,15 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                 </button>
                                                 <span className="w-6 text-center font-medium text-sm" aria-live="polite" aria-atomic="true">{item.quantity}</span>
                                                 <button
-                                                    onClick={() => handleQuantityChange(item.menu_item_id, item.quantity + 1)}
+                                                    onClick={() => {
+                                                        const customizationKey = (item.customizations || item.itemQuantities) 
+                                                            ? JSON.stringify({
+                                                                customizations: item.customizations || {},
+                                                                itemQuantities: item.itemQuantities || {}
+                                                            })
+                                                            : null;
+                                                        handleQuantityChange(item.menu_item_id, item.quantity + 1, customizationKey);
+                                                    }}
                                                     aria-label={`Increase quantity of ${item.name}`}
                                                     className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
                                                 >
