@@ -141,25 +141,25 @@ export default function SuperAdmin() {
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
             {/* Logo */}
-            <div className="sticky top-0 bg-slate-950 p-4 border-b border-slate-700 flex items-center justify-between">
+            <div className="sticky top-0 bg-gradient-to-b from-slate-950 to-slate-900 p-5 border-b border-slate-700 flex items-center justify-between">
                 <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
-                    <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Shield className="h-6 w-6" />
+                    <div className="w-11 h-11 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <Shield className="h-6 w-6 text-white" />
                     </div>
-                    {(sidebarOpen || isMobile) && <span className="font-bold text-lg truncate">Admin</span>}
+                    {(sidebarOpen || isMobile) && <span className="font-bold text-lg text-white truncate">Admin Hub</span>}
                 </div>
             </div>
 
             {/* Menu Groups */}
-            <nav className="p-4 space-y-6 flex-1 overflow-y-auto">
+            <nav className="p-5 space-y-7 flex-1 overflow-y-auto">
                 {menuGroups.map((group) => (
                     <div key={group.title}>
                         {(sidebarOpen || isMobile) && (
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">
                                 {group.title}
                             </p>
                         )}
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                             {group.items.map((item) => {
                                 const IconComponent = item.icon;
                                 const isActive = activeTab === item.id;
@@ -170,15 +170,15 @@ export default function SuperAdmin() {
                                             setActiveTab(item.id);
                                             setMobileSheetOpen(false);
                                         }}
-                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-200 ${
                                             isActive
-                                                ? 'bg-orange-500 text-white shadow-lg'
-                                                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                                ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg scale-105'
+                                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                                         } ${!sidebarOpen && !isMobile && 'justify-center'}`}
                                         title={!sidebarOpen && !isMobile ? item.label : ''}
                                     >
                                         <IconComponent className="h-5 w-5 flex-shrink-0" />
-                                        {(sidebarOpen || isMobile) && <span className="text-sm font-medium truncate">{item.label}</span>}
+                                        {(sidebarOpen || isMobile) && <span className="text-sm font-semibold truncate">{item.label}</span>}
                                     </button>
                                 );
                             })}
@@ -189,10 +189,10 @@ export default function SuperAdmin() {
 
             {/* User Info */}
             {(sidebarOpen || isMobile) && (
-                <div className="p-4 border-t border-slate-700 bg-slate-950">
-                    <div className="text-xs text-slate-400">
-                        <p className="truncate font-semibold">{user?.full_name}</p>
-                        <p className="truncate text-slate-500">{user?.email}</p>
+                <div className="p-5 border-t border-slate-700 bg-gradient-to-t from-slate-950 to-slate-900">
+                    <div className="text-xs text-slate-400 space-y-1">
+                        <p className="truncate font-semibold text-slate-200">{user?.full_name}</p>
+                        <p className="truncate text-slate-500 text-xs">{user?.email}</p>
                     </div>
                 </div>
             )}
@@ -200,9 +200,9 @@ export default function SuperAdmin() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-100 flex">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
             {/* Desktop Sidebar */}
-            <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 fixed h-screen shadow-lg z-40 flex-col`}>
+            <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-gradient-to-b from-slate-900 to-slate-950 text-white transition-all duration-300 fixed h-screen shadow-xl z-40 flex-col border-r border-slate-800`}>
                 <SidebarContent />
             </div>
 
@@ -210,12 +210,12 @@ export default function SuperAdmin() {
             <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
                 <SheetTrigger asChild>
                     <div className="md:hidden fixed top-20 left-4 z-30">
-                        <Button size="icon" variant="ghost" className="rounded-lg">
-                            <Menu className="h-6 w-6" />
+                        <Button size="icon" variant="ghost" className="rounded-lg hover:bg-gray-200">
+                            <Menu className="h-6 w-6 text-gray-700" />
                         </Button>
                     </div>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 bg-slate-900 text-white p-0 border-0">
+                <SheetContent side="left" className="w-64 bg-gradient-to-b from-slate-900 to-slate-950 text-white p-0 border-0">
                     <SidebarContent />
                 </SheetContent>
             </Sheet>
@@ -224,8 +224,8 @@ export default function SuperAdmin() {
             <div className={`${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} flex-1 transition-all duration-300 pt-20 md:pt-0`}>
                 {/* Top Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
-                    <div className="px-4 md:px-6 py-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+                    <div className="px-6 md:px-8 py-5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                             <button
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
                                 className="hidden md:block p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
@@ -233,19 +233,19 @@ export default function SuperAdmin() {
                                 <Menu className="h-5 w-5 text-gray-600" />
                             </button>
                             <div className="min-w-0">
-                                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Super Admin</h1>
-                                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">System Management</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">Super Admin</h1>
+                                <p className="text-sm text-gray-500 hidden sm:block">System Management & Operations</p>
                             </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                            <p className="text-sm font-medium text-gray-900 hidden sm:block">{user?.full_name}</p>
+                            <p className="text-sm font-semibold text-gray-900 hidden sm:block">{user?.full_name}</p>
                             <p className="text-xs text-gray-500 hidden sm:block">Admin</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Page Content */}
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
+                <div className="px-6 md:px-8 py-8 md:py-10">
                     {activeTab === 'overview' && <SystemOverview />}
                     {activeTab === 'ops-health' && <WeeklyOpsHealthDashboard />}
                     {activeTab === 'risk-digest' && <OfflineRiskDigest />}
