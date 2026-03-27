@@ -482,8 +482,8 @@ export default function Checkout() {
             // Scheduled orders validation
             if (isScheduled && !scheduledFor) return;
 
-            // CRITICAL: Prevent payment init if cart/total is invalid (likely still loading)
-            if (total <= 0 || isNaN(total)) return;
+            // CRITICAL: Prevent payment init if cart is empty or total is invalid
+            if (!cart || cart.length === 0 || total <= 0 || isNaN(total)) return;
 
             setInitializingPayment(true);
             try {
@@ -522,7 +522,7 @@ export default function Checkout() {
         };
 
         initPayment();
-    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType, zoneCheckComplete, deliveryZoneInfo, idempotencyKey]);
+    }, [paymentMethod, formData.phone, formData.delivery_address, formData.guest_name, formData.guest_email, total, isScheduled, scheduledFor, isExistingAddress, orderType, zoneCheckComplete, deliveryZoneInfo, idempotencyKey, restaurantId, cart.length]);
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
