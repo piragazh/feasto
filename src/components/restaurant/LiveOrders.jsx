@@ -1221,7 +1221,23 @@ Provide only the time range (e.g., "25-30 min").`;
                                                 </>
                                             )}
                                             
-                                            {order.status === 'confirmed' && (
+                                            {/* Kiosk orders in confirmed state */}
+                                            {order.order_source === 'kiosk' && order.order_status === 'confirmed' && (
+                                                <>
+                                                    <Button
+                                                        onClick={() => {
+                                                            const newOrder = { ...order, order_status: 'preparing' };
+                                                            updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'preparing' } });
+                                                        }}
+                                                        className="flex-1 bg-purple-600 hover:bg-purple-700"
+                                                    >
+                                                        Start Preparing
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Legacy orders in confirmed state */}
+                                            {order.order_source !== 'kiosk' && order.status === 'confirmed' && (
                                                 <>
                                                     <Button
                                                         onClick={() => handleStatusChange(order.id, 'preparing')}
@@ -1240,7 +1256,22 @@ Provide only the time range (e.g., "25-30 min").`;
                                                 </>
                                             )}
 
-                                            {order.status === 'preparing' && (
+                                            {/* Kiosk orders preparing */}
+                                            {order.order_source === 'kiosk' && order.order_status === 'preparing' && (
+                                                <>
+                                                    <Button
+                                                        onClick={() => {
+                                                            updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'ready' } });
+                                                        }}
+                                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                                    >
+                                                        Mark Ready
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Legacy orders preparing */}
+                                            {order.order_source !== 'kiosk' && order.status === 'preparing' && (
                                                 <>
                                                     {order.order_type === 'collection' ? (
                                                         <Button
@@ -1289,7 +1320,33 @@ Provide only the time range (e.g., "25-30 min").`;
                                                 </Button>
                                             )}
 
-                                            {order.status === 'ready_for_collection' && (
+                                            {/* Kiosk ready for collection/takeaway */}
+                                            {order.order_source === 'kiosk' && order.order_status === 'ready' && (
+                                                <>
+                                                    {order.order_type === 'dine_in' ? (
+                                                        <Button
+                                                            onClick={() => {
+                                                                updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'completed' } });
+                                                            }}
+                                                            className="flex-1 bg-green-600 hover:bg-green-700"
+                                                        >
+                                                            Mark as Served
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            onClick={() => {
+                                                                updateOrderMutation.mutate({ orderId: order.id, status: order.status, extraFields: { order_status: 'completed' } });
+                                                            }}
+                                                            className="flex-1 bg-green-600 hover:bg-green-700"
+                                                        >
+                                                            Mark as Collected
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* Legacy ready for collection */}
+                                            {order.order_source !== 'kiosk' && order.status === 'ready_for_collection' && (
                                                 <Button
                                                     onClick={() => handleStatusChange(order.id, 'collected')}
                                                     className="flex-1 bg-green-600 hover:bg-green-700"
