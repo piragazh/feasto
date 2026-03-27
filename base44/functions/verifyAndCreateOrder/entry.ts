@@ -749,7 +749,8 @@ Deno.serve(async (req) => {
 
         const serverTotal = Math.max(0, serverSubtotal + deliveryFee - verifiedDiscount);
 
-        if (Math.abs(serverTotal - orderData.total) > 0.50) {
+        // Use 1p (£0.01) tolerance — consistent with the Stripe amount verification above
+        if (Math.abs(serverTotal - orderData.total) > 0.01) {
             const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total}`;
             console.error(`[SECURITY] ${mismatchMsg}`);
             await base44.asServiceRole.entities.FailureLog.create({

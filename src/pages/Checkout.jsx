@@ -95,7 +95,7 @@ export default function Checkout() {
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [initializingPayment, setInitializingPayment] = useState(false);
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
-    const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Stable per-session key
+    const [idempotencyKey, setIdempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Regenerated when payment method changes
     
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
@@ -780,35 +780,21 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
-            // CRITICAL: Determine actual payment method based on paymentIntentId presence
+            // Determine actual payment method based on paymentIntentId presence
             const actualPaymentMethod = paymentIntentId ? 'card' : paymentMethod;
-            
-            // CRITICAL: If no paymentIntentId, verify it's NOT a card payment
-            if (!paymentIntentId && actualPaymentMethod === 'card') {
-                toast.error('❌ Card payment required but not completed.');
+
+            // Validate payment intent format if provided
+            if (paymentIntentId && (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_'))) {
+                toast.error('❌ Invalid payment verification. Please try again.');
                 setIsSubmitting(false);
                 return;
             }
-            
-            // CRITICAL SECURITY: Backend MUST verify payment before accepting order
-            // This is a critical security check that MUST be enforced server-side
-            if (paymentIntentId) {
-                // Verify payment intent is well-formed (safety check only)
-                if (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
-                    toast.error('❌ Invalid payment verification. Please try again.');
-                    setIsSubmitting(false);
-                    return;
-                }
-            }
-            
-            // CRITICAL: If paymentIntentId exists, this MUST be a card payment
-            if (paymentIntentId) {
-                // Verify payment intent is valid
-                if (typeof paymentIntentId !== 'string' || paymentIntentId.length < 10) {
-                    toast.error('Invalid payment verification. Please try again.');
-                    setIsSubmitting(false);
-                    return;
-                }
+
+            // Guard: only 'cash' and 'card' are valid at this point
+            if (!['cash', 'card'].includes(actualPaymentMethod)) {
+                toast.error('Please select a valid payment method.');
+                setIsSubmitting(false);
+                return;
             }
 
             // Validate cart
@@ -1614,6 +1600,8 @@ export default function Checkout() {
                                             setClientSecret('');
                                             setShowStripeForm(false);
                                             setPaymentCompleted(false);
+                                            // Regenerate idempotency key so changing method doesn't reuse stale key
+                                            setIdempotencyKey(`order_${Date.now()}_${Math.random().toString(36).slice(2)}`);
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                                     />
