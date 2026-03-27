@@ -85,9 +85,13 @@ async function checkPerCustomerLimit(base44, coupon, user, normalizedGuestEmail,
 
     // Helper: count unique orders across legacy + array fields, deduplicating by order ID
     async function countUniqueBothFields(identityFilter) {
+        // NOTE: Base44 SDK does NOT support $contains on array fields.
+        // The correct operator is $all (matches arrays containing all specified elements).
+        // Using $all with a single-element array [code] correctly finds orders where
+        // coupon_codes contains `code` at any position (position 1, 2, or 3).
         const [legacyOrders, arrayOrders] = await Promise.all([
             base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_code: code }),
-            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $contains: code } }),
+            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $all: [code] } }),
         ]);
         const ids = new Set();
         for (const o of (legacyOrders || [])) ids.add(o.id);

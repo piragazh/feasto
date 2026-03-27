@@ -153,9 +153,11 @@ Deno.serve(async (req) => {
                 // COMPATIBILITY: query both legacy coupon_code field and new coupon_codes array,
                 // then deduplicate by order ID to avoid double-counting orders that have both.
                 async function valCountUniqueBothFields(identityFilter) {
+                    // $all with a single-element array is the correct Base44 operator for
+                    // "array field contains this value". $contains is NOT supported.
                     const [legacyOrders, arrayOrders] = await Promise.all([
                         base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_code: normalizedCode }),
-                        base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $contains: normalizedCode } }),
+                        base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $all: [normalizedCode] } }),
                     ]);
                     const ids = new Set();
                     for (const o of (legacyOrders || [])) ids.add(o.id);

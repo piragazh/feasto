@@ -62,6 +62,8 @@ Deno.serve(async (req) => {
         // implementation set both). Without deduplication, a customer who used a
         // code once would appear to have used it twice and be incorrectly blocked.
         if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
+            // $all with a single-element array is the correct Base44 operator for
+            // "array field contains this value". $contains is NOT supported.
             const [legacyOrders, arrayOrders] = await Promise.all([
                 base44.asServiceRole.entities.Order.filter({
                     created_by: user.email,
@@ -69,7 +71,7 @@ Deno.serve(async (req) => {
                 }),
                 base44.asServiceRole.entities.Order.filter({
                     created_by: user.email,
-                    coupon_codes: { $contains: coupon.code },
+                    coupon_codes: { $all: [coupon.code] },
                 }),
             ]);
 

@@ -186,9 +186,11 @@ Deno.serve(async (req) => {
                 const perCustomerLimit = coupon.per_customer_limit ?? 1;
                 if (perCustomerLimit > 0 && (normalizedPhone || normalizedEmail)) {
                     async function posCountUniqueBothFields(identityFilter) {
+                        // $all with a single-element array is the correct Base44 operator for
+                        // "array field contains this value". $contains is NOT supported.
                         const [legacyOrders, arrayOrders] = await Promise.all([
                             base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_code: code }),
-                            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $contains: code } }),
+                            base44.asServiceRole.entities.Order.filter({ ...identityFilter, coupon_codes: { $all: [code] } }),
                         ]);
                         const ids = new Set();
                         for (const o of (legacyOrders || [])) ids.add(o.id);
