@@ -31,6 +31,7 @@ import { run as runLiveOrdersKioskVisibility } from './suites/liveOrdersKioskVis
 import { run as runPromotionDiscountIntegrity } from './suites/promotionDiscountIntegrity.smoke.js';
 import { run as runTerminalProviderArchitecture } from './suites/terminalProviderArchitecture.smoke.js';
 import { run as runStripeTerminalIntegration } from './suites/stripeTerminalIntegration.smoke.js';
+import { run as runOrphanPaymentCompensation } from './suites/orphanPaymentCompensation.smoke.js';
 
 const SUITES = {
     getManifest: runGetManifest,
@@ -48,6 +49,7 @@ const SUITES = {
     liveOrdersKioskVisibility: runLiveOrdersKioskVisibility,
     terminalProviderArchitecture: runTerminalProviderArchitecture,
     stripeTerminalIntegration: runStripeTerminalIntegration,
+    orphanPaymentCompensation: runOrphanPaymentCompensation,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
