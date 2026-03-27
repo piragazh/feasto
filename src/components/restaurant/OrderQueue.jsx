@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,23 +83,21 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
 
     const bulkUpdateMutation = useMutation({
         mutationFn: async ({ orderIds, status }) => {
-            const promises = orderIds.map(orderId => {
-                const order = orders.find(o => o.id === orderId);
-                const statusHistory = order?.status_history || [];
-                statusHistory.push({
-                    status,
-                    timestamp: new Date().toISOString(),
-                    note: 'Bulk action'
-                });
-                return base44.entities.Order.update(orderId, { status, status_history: statusHistory });
+            // SECURITY: Use backend function for all bulk updates to enforce validation
+            const result = await base44.functions.invoke('bulkUpdateOrderStatus', {
+                order_ids: orderIds,
+                new_status: status,
             });
-            await Promise.all(promises);
+            return result;
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['order-queue']);
             setSelectedOrders(new Set());
             toast.success('Orders updated successfully');
             if (onOrderUpdate) onOrderUpdate();
+        },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to update orders');
         },
     });
 

@@ -57,6 +57,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required field: new_status' }, { status: 400 });
     }
 
+    // SECURITY: Block 'cancelled' status — must use rejectOrderWithRefund instead
+    if (new_status === 'cancelled') {
+      return Response.json(
+        { error: 'Bulk cancellation not allowed. Use rejectOrderWithRefund for individual order rejection to ensure refund processing.' },
+        { status: 400 }
+      );
+    }
+
     if (order_ids.length > 100) {
       return Response.json(
         { error: 'Bulk update limited to 100 orders per request' },

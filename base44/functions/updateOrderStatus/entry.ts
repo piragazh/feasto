@@ -86,6 +86,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // SECURITY: Block 'cancelled' status — must use rejectOrderWithRefund instead
+    if (new_status === 'cancelled') {
+      return Response.json(
+        { error: 'Order cancellation must use rejectOrderWithRefund function to ensure refund processing for card payments' },
+        { status: 400 }
+      );
+    }
+
     // Build safe update data — allowlist only permitted fields
     const updateData = { status: new_status };
 

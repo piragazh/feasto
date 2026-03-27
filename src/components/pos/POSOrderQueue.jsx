@@ -46,10 +46,30 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
-            await base44.entities.Order.update(orderId, { status: newStatus });
+            // SECURITY: Route card order cancellations through rejectOrderWithRefund
+            const order = orders.find(o => o.id === orderId);
+            if (newStatus === 'cancelled' && order?.payment_method === 'card' && order?.payment_intent_id) {
+                // Use refund workflow for card payments
+                const result = await base44.functions.invoke('rejectOrderWithRefund', {
+                    order_id: orderId,
+                    rejection_reason: 'Cancelled by staff (POS)',
+                });
+                if (result?.data?.success) {
+                    const msg = result.data.refunded 
+                        ? `Order cancelled and refunded (ID: ${result.data.refund_id})`
+                        : 'Order cancelled. Refund pending manual review.';
+                    toast.success(msg);
+                } else {
+                    toast.error(result?.data?.message || 'Failed to cancel order');
+                }
+            } else {
+                // Non-card or non-cancelled: use regular status update
+                await base44.entities.Order.update(orderId, { status: newStatus });
+                toast.success('Order status updated');
+            }
             refetch();
-            toast.success('Order status updated');
         } catch (error) {
+            console.error('Failed to update order:', error);
             toast.error('Failed to update order');
         }
     };
