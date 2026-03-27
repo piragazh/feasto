@@ -87,6 +87,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                     if (onSuccess && typeof onSuccess === 'function') {
                         onSuccess(String(paymentIntent.id));
                     }
+                    setIsProcessing(false);
                 } else if (paymentIntent?.status === 'requires_action') {
                     console.log('⚠️ Express payment requires additional action (3D Secure)');
                     ev.complete('fail');
