@@ -309,20 +309,37 @@ Deno.serve(async (req) => {
             // ── WRITE PaymentTransaction: status=authorized ───────────────────
             // From this point on, customer has been charged.
             // Any failure MUST trigger compensation (refund) before returning an error.
-            const ptRecord = await base44.asServiceRole.entities.PaymentTransaction.create({
-                payment_intent_id: paymentIntentId,
-                idempotency_key: idempotency_key || null,
-                restaurant_id: orderData.restaurant_id,
-                amount: orderData.total,
-                currency: 'gbp',
-                status: 'authorized',
-                user_email: user?.email || null,
-                guest_email: orderData.guest_email || null,
-                guest_phone: _normalizePhone(orderData.phone),
-                stripe_verified_at: new Date().toISOString(),
-            });
-
-            console.log(`[PT] Created PaymentTransaction id=${ptRecord?.id} intent=${paymentIntentId} status=authorized`);
+            let ptRecord;
+            try {
+                ptRecord = await base44.asServiceRole.entities.PaymentTransaction.create({
+                    payment_intent_id: paymentIntentId,
+                    idempotency_key: idempotency_key || null,
+                    restaurant_id: orderData.restaurant_id,
+                    amount: orderData.total,
+                    currency: 'gbp',
+                    status: 'authorized',
+                    user_email: user?.email || null,
+                    guest_email: _normalizeEmail(orderData.guest_email),
+                    guest_phone: _normalizePhone(orderData.phone),
+                    stripe_verified_at: new Date().toISOString(),
+                });
+                console.log(`[PT] Created PaymentTransaction id=${ptRecord?.id} intent=${paymentIntentId} status=authorized`);
+            } catch (ptCreateErr) {
+                // PT creation failed — payment was taken but we can't track it
+                console.error(`[PT] CRITICAL: PaymentTransaction.create failed intent=${paymentIntentId}:`, ptCreateErr.message);
+                await base44.asServiceRole.entities.FailureLog.create({
+                    failure_type: 'payment_transaction_create',
+                    severity: 'critical',
+                    restaurant_id: orderData.restaurant_id,
+                    payment_intent_id: paymentIntentId,
+                    user_email: user?.email || 'guest',
+                    error_message: `PaymentTransaction creation failed: ${ptCreateErr.message}`,
+                    context: { http_status: 500, alert_triggered: true }
+                }).catch(e => console.warn('[LOG] Failed to record PT creation error:', e.message));
+                // Refund immediately — no PT record means no way to track this charge
+                await attemptRefund(stripe, paymentIntentId, `PT creation failed: ${ptCreateErr.message}`);
+                return new Response(JSON.stringify({ error: 'Payment processing error. Please contact support.', success: false, refunded: true }), { status: 500 });
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -553,6 +570,20 @@ Deno.serve(async (req) => {
                 return new Response(JSON.stringify({ error: `Item ${cartItem.name} is no longer available`, success: false }), { status: 400 });
             }
             const menuItem = menuItemsMap.get(cartItem.menu_item_id);
+            // CRITICAL: Enforce channel restrictions (POS-only items cannot be ordered online)
+            if (menuItem.availability_channel === 'pos_only') {
+                await base44.asServiceRole.entities.FailureLog.create({
+                    failure_type: 'cart_validation',
+                    severity: 'warning',
+                    restaurant_id: orderData.restaurant_id,
+                    user_email: user?.email || 'guest',
+                    error_message: `POS-only item ordered online: ${cartItem.name}`,
+                    context: { http_status: 400, menu_item_id: cartItem.menu_item_id }
+                }).catch(e => console.warn('[LOG] Failed to record channel violation:', e.message));
+
+                await compensate(base44, stripe, paymentIntentId, 'cart_validation', `Item ${cartItem.name} is not available for online ordering`);
+                return new Response(JSON.stringify({ error: `${cartItem.name} is not available for online ordering`, success: false }), { status: 400 });
+            }
             if (menuItem.is_available === false) {
                 await base44.asServiceRole.entities.FailureLog.create({
                     failure_type: 'cart_validation',
@@ -849,12 +880,26 @@ Deno.serve(async (req) => {
             const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId });
             const ptId = pts?.[0]?.id;
             if (ptId) {
-                await base44.asServiceRole.entities.PaymentTransaction.update(ptId, {
-                    status: 'order_created',
-                    order_id: newOrder.id,
-                    order_number: newOrder.order_number || null,
-                    order_created_at: new Date().toISOString(),
-                }).catch(e => console.error('[PT] Failed to update PT to order_created:', e.message));
+                try {
+                    await base44.asServiceRole.entities.PaymentTransaction.update(ptId, {
+                        status: 'order_created',
+                        order_id: newOrder.id,
+                        order_number: newOrder.order_number || null,
+                        order_created_at: new Date().toISOString(),
+                    });
+                } catch (ptUpdateErr) {
+                    // Log but don't fail — order is created, this is just status tracking
+                    console.error('[PT] Failed to update PT to order_created:', ptUpdateErr.message);
+                    await base44.asServiceRole.entities.FailureLog.create({
+                        failure_type: 'payment_transaction_update',
+                        severity: 'warning',
+                        restaurant_id: orderData.restaurant_id,
+                        payment_intent_id: paymentIntentId,
+                        user_email: user?.email || 'guest',
+                        error_message: `PT status update failed but order created: ${ptUpdateErr.message}`,
+                        context: { http_status: 500, order_id: newOrder.id }
+                    }).catch(e => console.warn('[LOG] Failed to record PT update error:', e.message));
+                }
             }
         }
 
