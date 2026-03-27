@@ -43,12 +43,24 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
     const [acting, setActing] = useState(false);
 
     const elapsedMins = getElapsedMins(order.created_date);
-    const urgency = getUrgency(elapsedMins, isReady);
+    const isKiosk = order.order_source === 'kiosk';
+    const unpaidKiosk = isKiosk && order.payment_status === 'pending_payment';
+
+    // Unpaid kiosk orders have higher urgency
+    let urgency = getUrgency(elapsedMins, isReady);
+    if (unpaidKiosk && urgency !== URGENCY.urgent) {
+        urgency = URGENCY.urgent; // Highlight unpaid orders
+    }
+
     const typeConfig = ORDER_TYPE_ICONS[order.order_type] || ORDER_TYPE_ICONS.takeaway;
     const TypeIcon = typeConfig.icon;
 
     const handleAction = async () => {
         if (!onAction) return;
+        // Block prep for unpaid kiosk orders
+        if (unpaidKiosk && actionLabel?.includes('Preparing')) {
+            return;
+        }
         setActing(true);
         await onAction(order.id);
         setActing(false);
@@ -81,6 +93,17 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
                         <TypeIcon className="h-3 w-3 mr-1" />
                         {typeConfig.label}
                     </Badge>
+
+                    {/* Kiosk payment status badge */}
+                    {isKiosk && (
+                        <Badge className={`text-xs border ${
+                            unpaidKiosk
+                                ? 'bg-red-500/20 text-red-300 border-red-500/30 font-bold animate-pulse'
+                                : 'bg-green-500/20 text-green-300 border-green-500/30'
+                        }`}>
+                            {unpaidKiosk ? '💳 Awaiting Payment' : '✓ Paid'}
+                        </Badge>
+                    )}
 
                     {/* Timer */}
                     <div className={`flex items-center gap-1 font-mono font-bold text-base tabular-nums ${urgency.timer}`}>
@@ -143,11 +166,17 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
                 <div className="px-3 pb-3">
                     <Button
                         onClick={handleAction}
-                        disabled={acting}
-                        className={`w-full font-bold text-base h-11 rounded-lg ${ACTION_COLORS[actionColor]}`}
+                        disabled={acting || unpaidKiosk}
+                        title={unpaidKiosk ? 'Cannot prep — payment awaiting confirmation at counter' : ''}
+                        className={`w-full font-bold text-base h-11 rounded-lg ${ACTION_COLORS[actionColor]} ${
+                            unpaidKiosk ? 'opacity-40 cursor-not-allowed' : ''
+                        }`}
                     >
                         {acting ? '…' : actionLabel}
                     </Button>
+                    {unpaidKiosk && (
+                        <p className="text-center text-xs text-red-400 mt-1">⚠️ Awaiting payment confirmation</p>
+                    )}
                 </div>
             )}
 

@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UtensilsCrossed, Volume2, VolumeX, Maximize, RefreshCw, Clock, LogOut } from 'lucide-react';
 
-const ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery'];
+const ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery', 'new'];
+const KIOSK_ACTIVE_STATUSES = ['new', 'confirmed', 'preparing', 'ready'];
 
 export default function KitchenDisplaySystem({ restaurant }) {
     const [orders, setOrders] = useState([]);
@@ -16,6 +17,24 @@ export default function KitchenDisplaySystem({ restaurant }) {
     const [tick, setTick] = useState(0); // forces re-render every 30s for timer updates
     const [view, setView] = useState('board'); // 'board' | 'list'
     const audioCtxRef = useRef(null);
+
+    // Check if order is eligible for prep (not awaiting payment)
+    const canPrepareOrder = (order) => {
+        // Kiosk orders: only if payment is NOT pending
+        if (order.order_source === 'kiosk') {
+            return order.payment_status !== 'pending_payment';
+        }
+        // Non-kiosk: always eligible
+        return true;
+    };
+
+    // Get display status for kiosk orders
+    const getDisplayStatus = (order) => {
+        if (order.order_source === 'kiosk') {
+            return order.order_status || order.status;
+        }
+        return order.status;
+    };
 
     // Live clock tick every 30 seconds to update timers
     useEffect(() => {
@@ -34,14 +53,23 @@ export default function KitchenDisplaySystem({ restaurant }) {
             if (event.data?.restaurant_id !== restaurant.id) return;
 
             if (event.type === 'create') {
-                if (ACTIVE_STATUSES.includes(event.data?.status)) {
+                const isActive = event.data?.order_source === 'kiosk'
+                    ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
+                    : ACTIVE_STATUSES.includes(event.data?.status);
+                if (isActive) {
                     setOrders(prev => [event.data, ...prev]);
-                    playNewOrderSound();
+                    // Only play sound if ready for prep (not awaiting payment)
+                    if (canPrepareOrder(event.data)) {
+                        playNewOrderSound();
+                    }
                 }
             } else if (event.type === 'update') {
                 setOrders(prev => {
                     const exists = prev.find(o => o.id === event.id);
-                    if (ACTIVE_STATUSES.includes(event.data?.status)) {
+                    const isActive = event.data?.order_source === 'kiosk'
+                        ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
+                        : ACTIVE_STATUSES.includes(event.data?.status);
+                    if (isActive) {
                         if (exists) return prev.map(o => o.id === event.id ? event.data : o);
                         return [event.data, ...prev];
                     } else {
@@ -59,9 +87,19 @@ export default function KitchenDisplaySystem({ restaurant }) {
     const fetchOrders = async () => {
         try {
             const all = await base44.entities.Order.filter({ restaurant_id: restaurant.id });
-            const active = all.filter(o => ACTIVE_STATUSES.includes(o.status));
-            // Sort oldest first (kitchen should see oldest at top)
-            active.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+            const active = all.filter(o => {
+                if (o.order_source === 'kiosk') {
+                    return KIOSK_ACTIVE_STATUSES.includes(o.order_status);
+                }
+                return ACTIVE_STATUSES.includes(o.status);
+            });
+            // Sort: unpaid kiosk first, then oldest first
+            active.sort((a, b) => {
+                const aUnpaid = a.order_source === 'kiosk' && a.payment_status === 'pending_payment' ? 0 : 1;
+                const bUnpaid = b.order_source === 'kiosk' && b.payment_status === 'pending_payment' ? 0 : 1;
+                if (aUnpaid !== bUnpaid) return aUnpaid - bUnpaid;
+                return new Date(a.created_date) - new Date(b.created_date);
+            });
             setOrders(active);
         } catch (e) {
             console.error('KDS fetch error', e);
@@ -91,13 +129,36 @@ export default function KitchenDisplaySystem({ restaurant }) {
     }, [soundEnabled]);
 
     const updateOrderStatus = async (orderId, newStatus) => {
-        await base44.entities.Order.update(orderId, { status: newStatus });
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        // Kiosk orders use order_status field
+        if (order.order_source === 'kiosk') {
+            // Block prep if awaiting payment
+            if (newStatus === 'preparing' && order.payment_status === 'pending_payment') {
+                return;
+            }
+            await base44.entities.Order.update(orderId, { order_status: newStatus });
+        } else {
+            // Legacy orders use status field
+            await base44.entities.Order.update(orderId, { status: newStatus });
+        }
         // Real-time subscription handles the UI update
     };
 
-    const pendingOrders = orders.filter(o => ['pending', 'confirmed'].includes(o.status));
-    const preparingOrders = orders.filter(o => o.status === 'preparing');
-    const readyOrders = orders.filter(o => ['ready_for_collection', 'out_for_delivery'].includes(o.status));
+    // Filter by kiosk or legacy status
+    const pendingOrders = orders.filter(o => {
+        const status = getDisplayStatus(o);
+        return ['pending', 'confirmed', 'new'].includes(status);
+    });
+    const preparingOrders = orders.filter(o => {
+        const status = getDisplayStatus(o);
+        return status === 'preparing';
+    });
+    const readyOrders = orders.filter(o => {
+        const status = getDisplayStatus(o);
+        return ['ready_for_collection', 'out_for_delivery', 'ready'].includes(status);
+    });
 
     const totalActive = orders.length;
     const urgentCount = orders.filter(o => {
