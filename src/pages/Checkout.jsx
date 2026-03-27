@@ -877,8 +877,8 @@ export default function Checkout() {
                 delivery_fee: deliveryFee,
                 small_order_surcharge: smallOrderSurcharge,
                 discount: discount,
-                coupon_codes: appliedCoupons.map(c => c.code).join(', '),
-                promotion_codes: appliedPromotions.map(p => p.promotion_code || p.name).join(', '),
+                coupon_codes: appliedCoupons.length > 0 ? appliedCoupons.map(c => c.code) : [],
+                promotion_codes: appliedPromotions.length > 0 ? appliedPromotions.map(p => p.promotion_code || p.name) : [],
                 total,
                 payment_method: actualPaymentMethod,
                 order_type: orderType,
@@ -1028,7 +1028,8 @@ export default function Checkout() {
                 ).catch(() => {})
             );
 
-            Promise.allSettled(backgroundTasks);
+            // Wait for all background tasks to complete before redirecting
+            await Promise.allSettled(backgroundTasks);
 
             setTimeout(() => {
                 navigate(createPageUrl('Orders'));

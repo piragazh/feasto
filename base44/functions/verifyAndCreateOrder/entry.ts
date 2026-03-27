@@ -857,11 +857,18 @@ Deno.serve(async (req) => {
         }
 
         // ── Coupon usage_count increment (after order committed) ──────────────
-        for (let i = 0; i < verifiedCouponIds.length; i++) {
-            base44.asServiceRole.entities.Coupon.update(verifiedCouponIds[i], {
-                usage_count: couponUsageCounts[i] + 1
-            }).catch(e => console.warn(`[COUPON] Failed to increment usage_count for ${verifiedCouponIds[i]}:`, e));
-        }
+         // CRITICAL: Await all coupon updates to prevent race conditions
+         const couponUpdatePromises = [];
+         for (let i = 0; i < verifiedCouponIds.length; i++) {
+             couponUpdatePromises.push(
+                 base44.asServiceRole.entities.Coupon.update(verifiedCouponIds[i], {
+                     usage_count: couponUsageCounts[i] + 1
+                 }).catch(e => console.warn(`[COUPON] Failed to increment usage_count for ${verifiedCouponIds[i]}:`, e))
+             );
+         }
+         if (couponUpdatePromises.length > 0) {
+             await Promise.all(couponUpdatePromises);
+         }
 
         console.log(`[ORDER] Created: id=${newOrder.id} num=${newOrder.order_number} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} coupons=[${verifiedCouponCodes.join(',')}] type=${orderData.order_type} payment=${orderData.payment_method}`);
 
