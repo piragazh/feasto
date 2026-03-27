@@ -558,61 +558,68 @@ Deno.serve(async (req) => {
              return new Response(JSON.stringify({ error: 'Order contains no items', success: false }), { status: 400 });
          }
 
-         // ── PAGINATION-AWARE MENU ITEM FETCH ──────────────────────────────────
-         // Fetch ALL items for this restaurant (handles restaurants with >50 items)
-         // Using pagination to bypass the default 50-item limit
+         // ── SAFE MENU ITEM FETCH (SDK skip/limit pagination, no fallback) ──────
+         // Only fetches items that are actually in the cart — efficient and safe.
+         // SDK pagination: filter(query, sort, limit, skip) — 'skip' is 4th param.
+         const cartItemIds = orderData.items
+             .filter(i => !String(i.menu_item_id || '').startsWith('deal_'))
+             .map(i => i.menu_item_id)
+             .filter(Boolean);
+
          const menuItemsMap = await (async () => {
              const itemMap = new Map();
+             if (cartItemIds.length === 0) return itemMap;
+
+             const uniqueIds = [...new Set(cartItemIds)];
              const PAGE_SIZE = 50;
-             let offset = 0;
+             let skip = 0;
              let hasMore = true;
 
-             while (hasMore) {
+             console.log(`[MENU] Fetching ${uniqueIds.length} cart items for restaurant=${orderData.restaurant_id}`);
+
+             while (hasMore && itemMap.size < uniqueIds.length) {
+                 let batch;
                  try {
-                     // Try to fetch with offset (if SDK supports it)
-                     const batch = await base44.asServiceRole.entities.MenuItem.filter(
+                     // Official SDK: filter(query, sort, limit, skip)
+                     batch = await base44.asServiceRole.entities.MenuItem.filter(
                          { restaurant_id: orderData.restaurant_id },
                          null,
                          PAGE_SIZE,
-                         offset
+                         skip
                      );
-
-                     if (!Array.isArray(batch) || batch.length === 0) {
-                         hasMore = false;
-                         break;
-                     }
-
-                     for (const item of batch) {
-                         if (item && item.id) itemMap.set(item.id, item);
-                     }
-
-                     if (batch.length < PAGE_SIZE) {
-                         hasMore = false;
-                     } else {
-                         offset += PAGE_SIZE;
-                     }
                  } catch (err) {
-                     // Fallback: if offset not supported, try single fetch (may be capped at 50)
-                     console.warn(`[MENU] Pagination offset not supported, using single fetch: ${err.message}`);
-                     try {
-                         const fallbackBatch = await base44.asServiceRole.entities.MenuItem.filter(
-                             { restaurant_id: orderData.restaurant_id }
-                         );
-                         if (Array.isArray(fallbackBatch)) {
-                             for (const item of fallbackBatch) {
-                                 if (item && item.id) itemMap.set(item.id, item);
-                             }
-                         }
-                     } catch (fallbackErr) {
-                         console.error(`[MENU] Fallback fetch failed: ${fallbackErr.message}`);
-                     }
-                     hasMore = false;
+                     const msg = `MenuItem fetch failed at skip=${skip}: ${err.message}`;
+                     console.error(`[MENU] ${msg}`);
+                     await compensate(base44, stripe, paymentIntentId, 'menu_validation', msg);
+                     return new Response(JSON.stringify({ error: 'Menu validation failed. Please refresh and try again.', success: false }), { status: 500 });
                  }
+
+                 if (!Array.isArray(batch) || batch.length === 0) { hasMore = false; break; }
+
+                 for (const item of batch) {
+                     if (item && item.id && uniqueIds.includes(item.id)) itemMap.set(item.id, item);
+                 }
+
+                 if (itemMap.size === uniqueIds.length) { hasMore = false; break; }
+                 if (batch.length < PAGE_SIZE) { hasMore = false; break; }
+                 skip += PAGE_SIZE;
              }
 
-             console.log(`[MENU] Fetched ${itemMap.size} items for restaurant=${orderData.restaurant_id}`);
+             // Verify all items were found — fail hard if any missing
+             const missing = uniqueIds.filter(id => !itemMap.has(id));
+             if (missing.length > 0) {
+                 const msg = `Cart items not found in menu: [${missing.join(', ')}]`;
+                 console.error(`[MENU] ${msg}`);
+                 await compensate(base44, stripe, paymentIntentId, 'menu_validation', msg);
+                 return new Response(JSON.stringify({ error: 'Some items are no longer available. Please refresh and try again.', success: false }), { status: 400 });
+             }
+
+             console.log(`[MENU] Validated all ${itemMap.size} cart items`);
              return itemMap;
          })();
+
+         // If menuItemsMap is a Response (error path), return it immediately
+         if (menuItemsMap instanceof Response) return menuItemsMap;
         for (const cartItem of orderData.items) {
             // Skip deal items — they use synthetic IDs like 'deal_xyz' and are not in MenuItem table
             const isDealItem = String(cartItem.menu_item_id || '').startsWith('deal_');
@@ -670,7 +677,46 @@ Deno.serve(async (req) => {
         // Server subtotal: use server-corrected prices for regular items, stored price for deal items
         // Deal items (deal_*) use their stored price since they're not in MenuItem table
         const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
-        const deliveryFee = orderData.delivery_fee || 0;
+
+        // ── SERVER-SIDE DELIVERY FEE VERIFICATION ──────────────────────────────
+        // SECURITY: Never trust the client-supplied delivery fee.
+        // Re-derive it from zone data or restaurant settings.
+        let deliveryFee = 0;
+        if (orderData.order_type === 'collection') {
+            deliveryFee = 0; // Collection is always free
+        } else if (orderData.order_type === 'delivery') {
+            // Check delivery zones to get authoritative fee
+            const activeZones = await base44.asServiceRole.entities.DeliveryZone.filter({
+                restaurant_id: orderData.restaurant_id,
+                is_active: true
+            });
+
+            if (activeZones && activeZones.length > 0 && orderData.delivery_coordinates?.lat) {
+                // Re-run zone check server-side
+                const { lat, lng } = orderData.delivery_coordinates;
+                const pointInPolygon = (point, polygon) => {
+                    const [px, py] = point;
+                    let inside = false;
+                    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                        const [xi, yi] = polygon[i];
+                        const [xj, yj] = polygon[j];
+                        const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+                        if (intersect) inside = !inside;
+                    }
+                    return inside;
+                };
+                for (const zone of activeZones) {
+                    if (zone.coordinates?.length >= 3 && pointInPolygon([lng, lat], zone.coordinates.map(c => [c.lng, c.lat]))) {
+                        deliveryFee = zone.delivery_fee ?? 0;
+                        break;
+                    }
+                }
+            } else if (!activeZones || activeZones.length === 0) {
+                // No zones configured — use restaurant standard fee
+                deliveryFee = restaurant.delivery_fee ?? 0;
+            }
+            // else: zones exist but no match → already caught by zone check above (order would have been rejected)
+        }
 
         // ── Coupon Stacking ───────────────────────────────────────────────────
         const normalizedGuestEmail = _normalizeEmail(orderData.guest_email);
@@ -845,8 +891,8 @@ Deno.serve(async (req) => {
 
         const serverTotal = Math.max(0, serverSubtotal + deliveryFee - verifiedDiscount);
 
-        // Use 1p (£0.01) tolerance — consistent with the Stripe amount verification above
-        if (Math.abs(serverTotal - orderData.total) > 0.01) {
+        // Use 2p (£0.02) tolerance — covers floating-point rounding in tiered/promotion/fee stacking
+        if (Math.abs(serverTotal - orderData.total) > 0.02) {
             const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total}`;
             console.error(`[SECURITY] ${mismatchMsg}`);
             await base44.asServiceRole.entities.FailureLog.create({

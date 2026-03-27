@@ -128,7 +128,8 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
         } else if (coupon.discount_type === 'fixed') {
             discount = coupon.discount_value || 0;
         } else if (coupon.discount_type === 'free_delivery') {
-            discount = coupon.free_delivery_amount || coupon.discount_value || 0;
+            // Free delivery: server will apply the actual fee. Show 0 here — UI message explains it.
+            discount = 0;
         } else if (coupon.discount_type === 'free_item') {
             discount = coupon.discount_value || 0;
         } else {
@@ -143,7 +144,12 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             return updated;
         });
         setCode('');
-        toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
+        const successMsg = coupon.discount_type === 'free_delivery'
+            ? 'Coupon applied! Free delivery on this order 🚚'
+            : coupon.discount_type === 'free_item'
+            ? `Coupon applied! ${coupon.free_item_name || 'Free item'} added 🎁`
+            : `Coupon applied! You saved £${discount.toFixed(2)} 🎉`;
+        toast.success(successMsg);
     };
 
     const calculateBogoDiscount = (promotion, cartItems) => {

@@ -4,17 +4,19 @@ import { base44 } from '@/api/base44Client';
  * Check if a point is inside a polygon using ray-casting algorithm
  */
 function isPointInPolygon(point, polygon) {
-    const { lat, lng } = point;
+    // Standard ray-casting: treat lng as x-axis, lat as y-axis (matches backend logic)
+    const px = point.lng;
+    const py = point.lat;
     let inside = false;
 
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i].lat;
-        const yi = polygon[i].lng;
-        const xj = polygon[j].lat;
-        const yj = polygon[j].lng;
+        const xi = polygon[i].lng;
+        const yi = polygon[i].lat;
+        const xj = polygon[j].lng;
+        const yj = polygon[j].lat;
 
-        const intersect = ((yi > lng) !== (yj > lng)) &&
-            (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+        const intersect = ((yi > py) !== (yj > py)) &&
+            (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
 
         if (intersect) inside = !inside;
     }

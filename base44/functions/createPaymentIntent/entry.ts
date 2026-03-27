@@ -102,23 +102,10 @@ Deno.serve(async (req) => {
 
         console.log(`[PAYMENT] PaymentIntent created: ${paymentIntent.id} amount=${amountInPence}p metadata enriched`);
 
-        // Create PaymentTransaction record for tracking
-        try {
-            await base44.asServiceRole.entities.PaymentTransaction.create({
-                payment_intent_id: paymentIntent.id,
-                idempotency_key,
-                restaurant_id,
-                amount,
-                currency,
-                user_email: user?.email || null,
-                guest_email: guest_email || null,
-                guest_phone: phone || null,
-                status: 'authorized'
-            });
-        } catch (ptError) {
-            console.warn('[PAYMENT] Failed to create PaymentTransaction record:', ptError.message);
-            // Non-fatal: webhook will still work even if PT record isn't created
-        }
+        // NOTE: PaymentTransaction is created in verifyAndCreateOrder AFTER Stripe confirms payment.
+        // Creating it here (before confirmation) caused duplicate PT records and broke dedup checks.
+        // The intent metadata is sufficient for webhook recovery without an early PT record.
+        console.log(`[PAYMENT] PI created: ${paymentIntent.id} — PT record deferred to verifyAndCreateOrder`);
 
         return Response.json({
             clientSecret: paymentIntent.client_secret,

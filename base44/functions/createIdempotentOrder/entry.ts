@@ -81,59 +81,45 @@ Deno.serve(async (req) => {
          // Skip deal items (synthetic IDs like 'deal_xyz') — they have no MenuItem record
          const regularItems = items.filter(item => !String(item.menu_item_id || '').startsWith('deal_'));
 
-         // ── PAGINATION-AWARE FETCH ──────────────────────────────────────────────
-         // Handles restaurants with >50 menu items by using pagination
+         // ── SAFE MENU ITEM FETCH (SDK skip/limit pagination, no fallback) ──────
+         // Uses official skip parameter (4th arg). No unsafe fallback.
+         const regularItemIds = [...new Set(regularItems.map(i => i.menu_item_id).filter(Boolean))];
          const menuMap = await (async () => {
              const itemMap = new Map();
-             if (regularItems.length === 0) return itemMap; // No items to validate
+             if (regularItemIds.length === 0) return itemMap;
 
              const PAGE_SIZE = 50;
-             let offset = 0;
+             let skip = 0;
              let hasMore = true;
 
-             while (hasMore) {
+             while (hasMore && itemMap.size < regularItemIds.length) {
+                 let batch;
                  try {
-                     const batch = await base44.asServiceRole.entities.MenuItem.filter(
+                     batch = await base44.asServiceRole.entities.MenuItem.filter(
                          { restaurant_id },
                          null,
                          PAGE_SIZE,
-                         offset
+                         skip
                      );
-
-                     if (!Array.isArray(batch) || batch.length === 0) {
-                         hasMore = false;
-                         break;
-                     }
-
-                     for (const item of batch) {
-                         if (item && item.id) itemMap.set(item.id, item);
-                     }
-
-                     if (batch.length < PAGE_SIZE) {
-                         hasMore = false;
-                     } else {
-                         offset += PAGE_SIZE;
-                     }
                  } catch (err) {
-                     // Fallback to single fetch
-                     console.warn(`[MENU] Pagination failed: ${err.message}, using fallback`);
-                     try {
-                         const fallback = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id });
-                         if (Array.isArray(fallback)) {
-                             for (const item of fallback) {
-                                 if (item && item.id) itemMap.set(item.id, item);
-                             }
-                         }
-                     } catch (e) {
-                         console.error(`[MENU] Fallback failed: ${e.message}`);
-                     }
-                     hasMore = false;
+                     console.error(`[WEBHOOK] MenuItem fetch failed at skip=${skip}: ${err.message}`);
+                     return Response.json({ error: 'Menu validation failed', success: false, recoverable: false }, { status: 500 });
                  }
+
+                 if (!Array.isArray(batch) || batch.length === 0) { hasMore = false; break; }
+                 for (const item of batch) {
+                     if (item && item.id && regularItemIds.includes(item.id)) itemMap.set(item.id, item);
+                 }
+                 if (itemMap.size === regularItemIds.length) { hasMore = false; break; }
+                 if (batch.length < PAGE_SIZE) { hasMore = false; break; }
+                 skip += PAGE_SIZE;
              }
 
-             console.log(`[MENU] Fetched ${itemMap.size} items for webhook recovery`);
+             console.log(`[WEBHOOK] Validated ${itemMap.size} cart items`);
              return itemMap;
          })();
+
+         if (menuMap instanceof Response) return menuMap;
         
         for (const item of regularItems) {
             if (!menuMap.has(item.menu_item_id)) {

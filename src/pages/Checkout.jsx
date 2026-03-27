@@ -579,7 +579,8 @@ export default function Checkout() {
 
         initPayment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [paymentMethod, total, zoneCheckComplete, cart]); // Re-init on method/total/zone/cart changes — CRITICAL: cart added to reset PI on cart edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [paymentMethod, total, zoneCheckComplete]); // cart changes → total changes → PI resets via total dep
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
