@@ -481,8 +481,10 @@ export default function Checkout() {
     useEffect(() => {
         const initPayment = async () => {
             if (paymentMethod !== 'card') {
+                // Reset Stripe state when switching away from card
                 setClientSecret('');
                 setShowStripeForm(false);
+                paymentInitInFlightRef.current = false;
                 return;
             }
 
@@ -576,7 +578,8 @@ export default function Checkout() {
         };
 
         initPayment();
-    }, [paymentMethod, clientSecret, total]); // Only re-init when method/total changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [paymentMethod, clientSecret, total, zoneCheckComplete]); // Re-init on method/total/zone changes
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -1135,6 +1138,8 @@ export default function Checkout() {
             // If order creation throws unexpectedly, ensure UI is not stuck
             console.error('[Checkout] Unexpected error after payment success:', err.message);
             toast.error('Order creation failed after payment. Please contact support with reference: ' + paymentIntentId);
+            setPaymentCompleted(false);
+            expressConfirmFiredRef.current = false;
             setIsSubmitting(false);
         }
     };
@@ -1685,10 +1690,11 @@ export default function Checkout() {
                                         onMethodChange={(method) => {
                                             setPaymentMethod(method);
                                             // Reset payment state when switching methods
-                                            // Keep stripeLoadedPromise intact — no need to re-initialize Stripe
                                             setClientSecret('');
                                             setShowStripeForm(false);
                                             setPaymentCompleted(false);
+                                            expressConfirmFiredRef.current = false;
+                                            paymentInitInFlightRef.current = false;
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                                     />

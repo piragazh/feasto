@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ExpressCheckoutElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Card } from "@/components/ui/card";
 import { Loader2, Smartphone } from 'lucide-react';

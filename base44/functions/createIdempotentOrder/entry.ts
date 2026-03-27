@@ -78,12 +78,16 @@ Deno.serve(async (req) => {
         }
         
         // Validate items against menu (prevent fraud)
-        const menuItems = await base44.asServiceRole.entities.MenuItem.filter({
-            restaurant_id
-        });
+        // Skip deal items (synthetic IDs like 'deal_xyz') — they have no MenuItem record
+        const regularItems = items.filter(item => !String(item.menu_item_id || '').startsWith('deal_'));
+        let menuItems = [];
+        if (regularItems.length > 0) {
+            menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id });
+            if (!Array.isArray(menuItems)) menuItems = [];
+        }
         const menuMap = new Map(menuItems.map(m => [m.id, m]));
         
-        for (const item of items) {
+        for (const item of regularItems) {
             if (!menuMap.has(item.menu_item_id)) {
                 console.error(`[IDEMPOTENT_ORDER] Menu item ${item.menu_item_id} not found`);
                 return Response.json({

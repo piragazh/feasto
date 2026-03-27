@@ -557,10 +557,35 @@ Deno.serve(async (req) => {
             await compensate(base44, stripe, paymentIntentId, 'cart_validation', 'Empty cart');
             return new Response(JSON.stringify({ error: 'Order contains no items', success: false }), { status: 400 });
         }
+        // Fetch all menu items for this restaurant
+        // Use both filter and direct ID lookup as fallback for reliability
         let menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: orderData.restaurant_id });
         if (!Array.isArray(menuItems)) menuItems = [];
+        
+        // If filter returned nothing, try individual item lookups by ID (fallback)
+        if (menuItems.length === 0 && orderData.items.length > 0) {
+            const uniqueIds = [...new Set(orderData.items
+                .filter(i => !String(i.menu_item_id || '').startsWith('deal_'))
+                .map(i => i.menu_item_id)
+                .filter(Boolean))];
+            
+            const individualFetches = await Promise.all(
+                uniqueIds.map(id => 
+                    base44.asServiceRole.entities.MenuItem.filter({ id })
+                        .then(res => Array.isArray(res) ? res[0] : null)
+                        .catch(() => null)
+                )
+            );
+            menuItems = individualFetches.filter(Boolean);
+        }
+        
+        console.log(`[MENU] Fetched ${menuItems.length} items`);
         const menuItemsMap = new Map(menuItems.map(item => [item.id, item]));
         for (const cartItem of orderData.items) {
+            // Skip deal items — they use synthetic IDs like 'deal_xyz' and are not in MenuItem table
+            const isDealItem = String(cartItem.menu_item_id || '').startsWith('deal_');
+            if (isDealItem) continue;
+
             if (!menuItemsMap.has(cartItem.menu_item_id)) {
                 await base44.asServiceRole.entities.FailureLog.create({
                     failure_type: 'cart_validation',
@@ -610,6 +635,8 @@ Deno.serve(async (req) => {
             }
         }
 
+        // Server subtotal: use server-corrected prices for regular items, stored price for deal items
+        // Deal items (deal_*) use their stored price since they're not in MenuItem table
         const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
         const deliveryFee = orderData.delivery_fee || 0;
 

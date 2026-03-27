@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -96,12 +96,19 @@ export default function Restaurant() {
                 localStorage.setItem('cart', JSON.stringify(cart));
                 if (restaurantId) {
                     localStorage.setItem('cartRestaurantId', restaurantId);
+                    localStorage.setItem('cartRestaurantName', restaurant?.name || '');
                 }
+            } else {
+                // Cart is empty — clean up storage
+                localStorage.removeItem('cart');
+                localStorage.removeItem('cartRestaurantId');
+                localStorage.removeItem('cartRestaurantName');
+                localStorage.removeItem('appliedPromotions');
             }
         } catch (error) {
             toast.error('Unable to save cart. Storage may be full.');
         }
-    }, [cart, restaurantId]);
+    }, [cart, restaurantId, restaurant?.name]);
 
     const handleKeepOldCart = () => {
         setShowCartConflictDialog(false);
