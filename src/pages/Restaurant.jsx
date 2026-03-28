@@ -36,26 +36,15 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
     );
     
-    // Poll sessionStorage for custom domain ID set by Layout in the same tab
+    // Get restaurant ID from prop, sessionStorage, or URL param
     useEffect(() => {
-        let found = false;
-        const paramId = urlParams.get('id');
-        const interval = setInterval(() => {
-            if (found) return; // Stop polling once found
+        if (isMountedRef.current) {
+            const paramId = urlParams.get('id');
             const customId = sessionStorage.getItem('customDomainRestaurantId');
             if (customId || paramId) {
                 setRestaurantId(customId || paramId);
-                found = true;
             }
-        }, 100);
-
-        // Stop polling after 5 seconds
-        const timeout = setTimeout(() => clearInterval(interval), 5000);
-
-        return () => {
-            clearInterval(interval);
-            clearTimeout(timeout);
-        };
+        }
     }, []);
     
     const [cart, setCart] = useState([]);
@@ -76,9 +65,18 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const [previousCartData, setPreviousCartData] = useState(null);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
     const [showOutsideHoursConfirmation, setShowOutsideHoursConfirmation] = useState(false);
+    const isMountedRef = React.useRef(true);
+
+    // Cleanup mounted ref on unmount
+    React.useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
+        if (!isMountedRef.current) return;
         try {
             const savedCart = localStorage.getItem('cart');
             const savedRestaurantId = localStorage.getItem('cartRestaurantId');
@@ -105,12 +103,13 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
             localStorage.removeItem('appliedPromotions');
-            toast.error('Cart data corrupted. Starting fresh.');
+            if (isMountedRef.current) toast.error('Cart data corrupted. Starting fresh.');
         }
     }, [restaurantId]);
 
     // Save cart to localStorage with error handling
     useEffect(() => {
+        if (!isMountedRef.current) return;
         try {
             if (cart.length > 0) {
                 localStorage.setItem('cart', JSON.stringify(cart));
@@ -125,7 +124,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 localStorage.removeItem('appliedPromotions');
             }
         } catch (error) {
-            toast.error('Unable to save cart. Storage may be full.');
+            if (isMountedRef.current) toast.error('Unable to save cart. Storage may be full.');
         }
     }, [cart, restaurantId]);
 
