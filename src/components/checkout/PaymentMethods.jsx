@@ -31,7 +31,7 @@ export default function PaymentMethods({ selectedMethod, onMethodChange, accepts
                             </Label>
                         </div>
 
-                        {/* Cash on Delivery */}
+                        {/* Cash payment */}
                         {acceptsCash && (
                             <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                                 <RadioGroupItem value="cash" id="cash" />
@@ -40,8 +40,8 @@ export default function PaymentMethods({ selectedMethod, onMethodChange, accepts
                                         <DollarSign className="h-5 w-5 text-green-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium">Cash on Delivery</p>
-                                        <p className="text-sm text-gray-500">Pay when you receive your order</p>
+                                        <p className="font-medium">Cash Payment</p>
+                                        <p className="text-sm text-gray-500">Pay when you {selectedMethod === 'cash' ? 'collect or receive' : 'get your order'}</p>
                                     </div>
                                 </Label>
                             </div>
