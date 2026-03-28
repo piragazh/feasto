@@ -42,8 +42,18 @@ export const getApiBaseUrl = () => {
     return apiBase;
   }
 
-  // Fallback: assume frontend and API are on same origin (local dev, non-custom-domain)
-  console.warn('[API-Origin] No explicit API base configured, using current origin:', window.location.origin);
+  // Auto-detect custom domains: if hostname is not base44.app, route to platform API
+  const hostname = window.location.hostname;
+  const isCustomDomain = !hostname.includes('base44.app') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
+  if (isCustomDomain) {
+    // For custom domains, API lives on platform backend, not the custom domain
+    const apiBase = 'https://preview-sandbox--base44-api.base44.app';
+    console.log('[API-Origin] Detected custom domain, routing to platform API:', apiBase);
+    return apiBase;
+  }
+
+  // Fallback: assume frontend and API are on same origin (local dev, platform domain)
+  console.log('[API-Origin] Using current origin for API:', window.location.origin);
   return window.location.origin;
 };
 
