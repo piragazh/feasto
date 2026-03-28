@@ -13,38 +13,37 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   useEffect(() => {
-    checkAppState();
+    initializeApp();
   }, []);
 
-  const checkAppState = async () => {
+  const initializeApp = async () => {
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
 
-      // Use the SDK's built-in auth check — the SDK correctly routes API calls
-      // through Base44 infrastructure regardless of whether we're on a custom domain.
-      // Do NOT use manual fetch() with window.location.origin — it will fail on custom domains.
+      // Initialize public settings (empty for now - SDK handles routing)
       setAppPublicSettings({});
       setIsLoadingPublicSettings(false);
 
+      // Check authentication if token present
       if (appParams.token) {
-        await checkUserAuth();
+        await loadUserAuth();
       } else {
         setIsLoadingAuth(false);
         setIsAuthenticated(false);
       }
-    } catch (error) {
-      console.error('Unexpected error during app state check:', error);
+    } catch (err) {
+      console.error('[AuthProvider] Init failed:', err);
       setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
+        type: 'initialization_error',
+        message: err.message || 'Failed to initialize app'
       });
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
   };
 
-  const checkUserAuth = async () => {
+  const loadUserAuth = async () => {
     try {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
@@ -52,40 +51,36 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
     } catch (error) {
-      console.error('User auth check failed:', error);
+      console.warn('[AuthProvider] User auth check failed (public app allowed):', error?.message);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
-      // Don't set auth error for public apps - allow unauthenticated access
     }
   };
 
-  const logout = (shouldRedirect = true) => {
+  const logout = (redirectTo = window.location.pathname) => {
     setUser(null);
     setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      base44.auth.logout(window.location.pathname);
-    } else {
-      base44.auth.logout();
-    }
+    base44.auth.logout(redirectTo);
   };
 
-  const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.pathname);
+  const loginRedirect = (nextPath = window.location.pathname) => {
+    base44.auth.redirectToLogin(nextPath);
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      logout,
-      navigateToLogin,
-      checkAppState
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isLoadingAuth,
+        isLoadingPublicSettings,
+        authError,
+        appPublicSettings,
+        logout,
+        loginRedirect,
+        initializeApp
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
