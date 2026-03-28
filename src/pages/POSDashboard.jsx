@@ -76,7 +76,7 @@ export default function POSDashboard() {
 
             let restaurantId = null;
             const urlParams = new URLSearchParams(window.location.search);
-            const urlRestaurantId = urlParams.get('restaurantId');
+            const urlRestaurantId = urlParams.get('restaurant_id') || urlParams.get('restaurantId');
             const urlPosNum = parseInt(urlParams.get('posNum')) || null;
 
             if (userData.role === 'admin') {

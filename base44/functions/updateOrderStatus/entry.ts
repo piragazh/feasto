@@ -14,9 +14,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 const VALID_STATUS_TRANSITIONS = {
   'pending': ['confirmed', 'cancelled'],
   'confirmed': ['preparing', 'cancelled'],
-  'preparing': ['out_for_delivery', 'ready_for_collection', 'cancelled'],
+  'preparing': ['out_for_delivery', 'ready_for_collection', 'delivered', 'collected', 'cancelled'],
   'out_for_delivery': ['delivered', 'cancelled'],
-  'ready_for_collection': ['collected', 'cancelled'],
+  'ready_for_collection': ['collected', 'delivered', 'cancelled'],
   'delivered': ['refund_requested'],
   'collected': ['refund_requested'],
   'cancelled': [],
