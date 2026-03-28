@@ -51,11 +51,18 @@ const DomainChecker = ({ children }) => {
 
   React.useEffect(() => {
     const checkDomain = async () => {
+      const timeout = setTimeout(() => {
+        if (isMountedRef.current) {
+          console.log('[DomainChecker] Timeout after 5s, proceeding...');
+          setDomainCheckDone(true);
+        }
+      }, 5000);
       try {
         const hostname = window.location.hostname;
         const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
         if (isPlatform) {
           console.log('[DomainChecker] Platform domain detected:', hostname);
+          clearTimeout(timeout);
           if (isMountedRef.current) setDomainCheckDone(true);
           return;
         }
@@ -65,6 +72,7 @@ const DomainChecker = ({ children }) => {
         const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
         if (cached && cachedFor === hostname) {
           console.log('[DomainChecker] Using cached restaurant ID:', cached);
+          clearTimeout(timeout);
           if (isMountedRef.current) {
             setCustomDomainRestaurantId(cached);
             setDomainCheckDone(true);
@@ -77,6 +85,7 @@ const DomainChecker = ({ children }) => {
           console.log('[DomainChecker] Querying for restaurant with custom_domain:', hostname);
           const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
           const found = restaurants?.[0];
+          clearTimeout(timeout);
           if (!isMountedRef.current) return;
           
           if (found) {
@@ -88,11 +97,13 @@ const DomainChecker = ({ children }) => {
             console.log('[DomainChecker] No verified restaurant found for custom domain');
           }
         } catch (e) {
+          clearTimeout(timeout);
           if (!isMountedRef.current) return;
           console.error('[DomainChecker] Error querying restaurant:', e?.message || e);
           setDomainCheckError(e?.message || 'Failed to check custom domain');
         }
       } catch (e) {
+        clearTimeout(timeout);
         if (!isMountedRef.current) return;
         console.error('[DomainChecker] Unexpected error:', e?.message || e);
         setDomainCheckError(e?.message || 'Unexpected error');
