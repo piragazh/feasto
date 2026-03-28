@@ -299,7 +299,10 @@ export default function Layout({ children, currentPageName }) {
     };
 
     const checkCustomDomain = async () => {
-        if (customDomainChecked) return;
+        if (customDomainChecked) {
+            setIsCheckingDomain(false);
+            return;
+        }
 
         try {
             const currentDomain = window.location.hostname;
