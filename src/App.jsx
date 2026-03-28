@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import React, { Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -180,17 +180,15 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
     <NavigationStackProvider>
       <StackNavigationAnimator>
         <Routes>
-          <Route path="/" element={
-            customDomainRestaurantId ? (
-              <LayoutWrapper currentPageName="Restaurant">
-                <Restaurant restaurantId={customDomainRestaurantId} />
-              </LayoutWrapper>
-            ) : (
-              <LayoutWrapper currentPageName={mainPageKey}>
-                <MainPage />
-              </LayoutWrapper>
-            )
-          } />
+           <Route path="/" element={
+             customDomainRestaurantId ? (
+               <LayoutWrapper currentPageName="Restaurant">
+                 <Restaurant restaurantId={customDomainRestaurantId} />
+               </LayoutWrapper>
+             ) : (
+               <Navigate to="/Home" replace />
+             )
+           } />
           {Object.entries(Pages).map(([path, Page]) => (
             <Route
               key={path}
