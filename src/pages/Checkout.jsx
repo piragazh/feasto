@@ -1013,12 +1013,11 @@ export default function Checkout() {
                     }).catch(e => console.error('Customer SMS failed:', e))
             );
 
-            // Notify restaurant
+            // Notify restaurant — always route through notifyRestaurantNewOrder which handles
+            // WhatsApp vs SMS channel selection internally to prevent double-sending.
             backgroundTasks.push(
-                (restaurant?.order_alert_channel === 'whatsapp' && restaurant?.whatsapp_alerts_enabled
-                    ? base44.functions.invoke('sendWhatsAppOrder', { order_id: newOrder.id })
-                    : base44.functions.invoke('notifyRestaurantNewOrder', { orderId: newOrder.id, restaurantId, restaurantName })
-                ).catch(() => {})
+                base44.functions.invoke('notifyRestaurantNewOrder', { orderId: newOrder.id, restaurantId, restaurantName })
+                    .catch(() => {})
             );
 
             // Wait for all background tasks to complete before redirecting
