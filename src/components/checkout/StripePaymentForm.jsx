@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 import ExpressCheckout from './ExpressCheckout';
 import { checkoutTrace } from '@/lib/checkoutTrace';
+import { useExpressCheckoutFlag } from '@/hooks/useExpressCheckoutFlag';
 
 export default function StripePaymentForm({ onSuccess, amount, clientSecret, expressConfirmFiredRef }) {
     const stripe = useStripe();
@@ -13,9 +14,10 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const [errorMessage, setErrorMessage] = useState('');
     // Local ref for manual card submit dedup
     const submitFiredRef = useRef(false);
+    const expressCheckoutEnabled = useExpressCheckoutFlag();
 
     useEffect(() => {
-        checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret });
+        checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret, expressCheckoutEnabled });
     }, []);
 
     const handleSubmit = async (e) => {
@@ -128,7 +130,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
 
     return (
         <div className="space-y-4">
-            {amount && clientSecret && (
+            {expressCheckoutEnabled && amount && clientSecret && (
                 <ExpressCheckout
                     amount={amount}
                     clientSecret={clientSecret}
