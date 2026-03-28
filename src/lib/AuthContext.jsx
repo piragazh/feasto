@@ -80,12 +80,7 @@ export const AuthProvider = ({ children }) => {
         
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
+          if (reason === 'user_not_registered') {
             setAuthError({
               type: 'user_not_registered',
               message: 'User not registered for this app'
