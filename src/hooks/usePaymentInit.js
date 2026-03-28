@@ -97,10 +97,13 @@ export function usePaymentInit({
             }
 
             // If total changed since PI was created, reset so we get a fresh one
+            // NOTE: must call resetPaymentState() and then return — React state update is async,
+            // so `clientSecret` won't be '' yet in this same tick. The next effect run (triggered
+            // by the state change) will see clientSecret='' and proceed to re-init.
             if (clientSecret && piTotalRef.current !== null && Math.abs(piTotalRef.current - total) > 0.01) {
                 console.log('[usePaymentInit] Total changed from', piTotalRef.current, 'to', total, '— resetting PI');
                 resetPaymentState();
-                // Fall through to re-init
+                return; // let state settle; next effect run will re-init
             }
 
             // Already have a valid PI for this total

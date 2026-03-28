@@ -34,8 +34,8 @@ async function attemptRefund(paymentIntentId, attempt = 1) {
         
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
-            reason: 'order_creation_failed',
-            metadata: { recovery_attempt: attempt }
+            reason: 'fraudulent',
+            metadata: { recovery_attempt: String(attempt), failure_reason: 'order_creation_failed' }
         });
         
         console.log(`[REFUND] ✅ Refund successful: ${refund.id} status=${refund.status}`);
@@ -44,15 +44,24 @@ async function attemptRefund(paymentIntentId, attempt = 1) {
     } catch (error) {
         console.error(`[REFUND] Attempt ${attempt} failed:`, error.message);
         
-        if (attempt < MAX_RETRIES) {
+        // Don't retry permanent Stripe errors — no such PI, already refunded, etc.
+        const isPermanent = error?.code === 'resource_missing' || 
+            error?.code === 'charge_already_refunded' ||
+            error?.message?.includes('No such payment_intent') ||
+            error?.message?.includes('already been refunded');
+        
+        if (!isPermanent && attempt < MAX_RETRIES) {
             const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1); // exponential
             console.log(`[REFUND] Retrying in ${backoffMs}ms...`);
-            
             await new Promise(resolve => setTimeout(resolve, backoffMs));
             return attemptRefund(paymentIntentId, attempt + 1);
         } else {
-            console.error(`[REFUND] Max retries exhausted for intent=${paymentIntentId}`);
-            return { success: false, error: error.message, attempt };
+            if (isPermanent) {
+                console.error(`[REFUND] Permanent error for intent=${paymentIntentId} — not retrying:`, error.message);
+            } else {
+                console.error(`[REFUND] Max retries exhausted for intent=${paymentIntentId}`);
+            }
+            return { success: false, error: error.message, attempt, permanent: isPermanent };
         }
     }
 }

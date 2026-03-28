@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
         } catch (ptCreateErr) {
             console.error(`${LOG} [trace=${traceId}] CRITICAL: PT.create failed:`, ptCreateErr.message);
             await writeFailureLog(base44, {
-                failure_type: 'payment_transaction_create', severity: 'critical',
+                failure_type: 'stripe_api_error', severity: 'critical',
                 restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel,
                 error_message: `PaymentTransaction.create failed: ${ptCreateErr.message}`,
                 context: { trace_id: traceId, http_status: 500, alert_triggered: true }
@@ -767,9 +767,7 @@ Deno.serve(async (req) => {
     // sets verifiedDiscount; coupon path does NOT include promotion discounts).
     // We only re-check the coupon discount server-side; promotion discounts are
     // validated separately by validateAndApplyPromotion when applied.
-    const clientPromotionDiscount = (orderData.discount || 0) - verifiedDiscount > 0
-        ? (orderData.discount || 0) - verifiedDiscount
-        : 0;
+    const clientPromotionDiscount = Math.max(0, (orderData.discount || 0) - verifiedDiscount);
     const smallOrderSurcharge = typeof orderData.small_order_surcharge === 'number' ? orderData.small_order_surcharge : 0;
     const serverTotal = Math.max(0, serverSubtotal + deliveryFee + smallOrderSurcharge - verifiedDiscount - clientPromotionDiscount);
     if (Math.abs(serverTotal - orderData.total) > 0.02) {

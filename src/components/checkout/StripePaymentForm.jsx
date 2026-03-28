@@ -103,6 +103,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 checkoutTrace.log('confirm_payment_succeeded', { piId: result.paymentIntent.id });
                 console.log('✅ Payment succeeded:', result.paymentIntent.id);
                 setErrorMessage('');
+                // Do NOT reset submitFiredRef — keeps guard active to prevent double-calls
                 onSuccess(result.paymentIntent.id);
                 return true;
             }
