@@ -249,7 +249,6 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <NavigationTracker />
           <DomainChecker>
             {({ customDomainRestaurantId }) => (
               <AuthenticatedApp customDomainRestaurantId={customDomainRestaurantId} />
