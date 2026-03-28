@@ -90,6 +90,9 @@ export default function Checkout() {
     // Atomic guard: prevents Express Checkout onConfirm from firing twice
     const expressConfirmFiredRef = useRef(false);
     
+    // Atomic guard: single source of truth for payment success handling (supersedes paymentCompleted state)
+    const paymentSuccessHandledRef = useRef(false);
+    
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
         guest_name: '', // Name (for guest checkout)
@@ -512,8 +515,9 @@ export default function Checkout() {
         smallOrderSurcharge,
         // Callback: when fingerprint changes and key rotates, reset all payment guards
         onPaymentSessionKeyRotated: () => {
-            console.log('[Checkout] payment_session_key_rotated — resetting paymentCompleted + expressConfirmFired');
+            console.log('[Checkout] payment_session_key_rotated — resetting all payment guards');
             setPaymentCompleted(false);
+            paymentSuccessHandledRef.current = false;
             expressConfirmFiredRef.current = false;
         },
     });
@@ -1083,13 +1087,15 @@ export default function Checkout() {
             return;
         }
 
-        // Prevent duplicate order creation (double-click / multiple callbacks)
-        if (paymentCompleted) {
-            console.warn('[Checkout] handleStripeSuccess called again — already processed:', paymentIntentId);
+        // ── ATOMIC GUARD: Prevent duplicate order creation via ref (synchronous check) ────
+        if (paymentSuccessHandledRef.current) {
+            console.warn('[Checkout] payment_success_guard_blocked piId=' + paymentIntentId);
+            checkoutTrace.log('payment_success_guard_blocked', { piId: paymentIntentId });
             return;
         }
+        paymentSuccessHandledRef.current = true;
         
-        checkoutTrace.log('on_success_fired', { piId: paymentIntentId });
+        checkoutTrace.log('payment_success_processing_started', { piId: paymentIntentId });
         console.log('[Checkout] ✅ Payment intent confirmed:', paymentIntentId);
 
         // ── DURABILITY WRITE: persist before any order creation attempt ────────
@@ -1127,7 +1133,7 @@ export default function Checkout() {
             },
         });
 
-        // Mark payment as completed BEFORE creating order to block duplicates
+        // Mark payment as completed for UI only (not for concurrency guard)
         setPaymentCompleted(true);
         toast.success('Payment authorised! Creating your order...');
         
@@ -1139,8 +1145,11 @@ export default function Checkout() {
             await createOrder(paymentIntentId);
         } catch (err) {
             // If order creation throws unexpectedly, ensure UI is not stuck
+            // Reset guards only on retry-safe failures
             console.error('[Checkout] Unexpected error after payment success:', err.message);
+            checkoutTrace.log('payment_success_processing_reset', { piId: paymentIntentId, reason: 'order_creation_exception' });
             toast.error('Order creation failed after payment. Please contact support with reference: ' + paymentIntentId);
+            paymentSuccessHandledRef.current = false;
             setPaymentCompleted(false);
             expressConfirmFiredRef.current = false;
             setIsSubmitting(false);
@@ -1718,6 +1727,7 @@ export default function Checkout() {
                                             setPaymentMethod(method);
                                             setTraceError(null);
                                             setPaymentCompleted(false);
+                                            paymentSuccessHandledRef.current = false;
                                             expressConfirmFiredRef.current = false;
                                             resetPaymentState();
                                         }}
