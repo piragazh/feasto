@@ -128,9 +128,9 @@ export default function Home() {
             return 0;
         }), [restaurants, searchQuery, selectedCuisine, sortBy, userLocation]);
 
-    // If on custom domain, render Restaurant page directly (SEO-friendly)
+    // If on custom domain, render Restaurant page directly with ID (SEO-friendly)
     if (customDomainRestaurantId) {
-        return <Restaurant />;
+        return <Restaurant restaurantId={customDomainRestaurantId} />;
     }
 
     return (

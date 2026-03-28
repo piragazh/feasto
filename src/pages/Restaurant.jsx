@@ -28,12 +28,12 @@ const RestaurantProfileSection = lazy(() => import('@/components/restaurant/Rest
 const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
 
-export default function Restaurant() {
+export default function Restaurant({ restaurantId: propRestaurantId }) {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
-    // Watch sessionStorage for custom domain ID (reactive)
+    // Accept restaurantId from props (from Home page) or fall back to sessionStorage/URL
     const [restaurantId, setRestaurantId] = useState(() => 
-        sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
+        propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
     );
     
     // Poll sessionStorage for custom domain ID set by Layout in the same tab
