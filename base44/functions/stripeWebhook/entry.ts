@@ -9,6 +9,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import Stripe from 'npm:stripe';
 
+// ── Stripe environment validation (inline) ────────────────────────────────
+function getStripeMode(key = '') {
+    if (key.startsWith('sk_live_') || key.startsWith('pk_live_')) return 'live';
+    if (key.startsWith('sk_test_') || key.startsWith('pk_test_')) return 'test';
+    return 'unknown';
+}
+function validateStripeWebhookEnv() {
+    const sk = Deno.env.get('STRIPE_SECRET_KEY') || '';
+    const pk = Deno.env.get('STRIPE_PUBLIC_KEY') || Deno.env.get('VITE_STRIPE_PUBLIC_KEY') || '';
+    const wh = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
+    const skMode = getStripeMode(sk);
+    const pkMode = pk ? getStripeMode(pk) : skMode;
+    console.log(`[STRIPE_ENV] stripeWebhook | secret=${skMode} | publishable=${pk ? pkMode : 'not_checked'} | webhook_secret=${wh ? 'present' : 'MISSING'}`);
+    if (!sk) throw new Error('[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY is not set');
+    if (skMode === 'unknown') throw new Error(`[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY has unrecognised format (prefix: ${sk.slice(0, 8)}...)`);
+    if (pk && skMode !== pkMode) throw new Error(`[STRIPE_ENV] FATAL: KEY MODE MISMATCH — secret=${skMode} but publishable=${pkMode}. Mixed live/test keys rejected.`);
+    if (!wh) throw new Error('[STRIPE_ENV] FATAL: STRIPE_WEBHOOK_SECRET is not set — signature verification impossible');
+    return skMode;
+}
+
+const _stripeWebhookMode = validateStripeWebhookEnv();
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
@@ -108,11 +129,19 @@ async function triggerCompensation(base44, piId, reason, failureCode, metadata) 
                 ? 'payment_succeeded_order_failed_refund_issued'
                 : 'payment_succeeded_order_failed_refund_failed',
             severity: incidentSeverity,
+            failure_code: failureCode,
+            compensation_status: refundResult?.success ? 'refund_issued' : 'manual_review_required',
             payment_intent_id: piId,
+            refund_id: refundResult?.refund_id || null,
+            customer_email: metadata?.user_email && metadata.user_email !== 'guest' ? metadata.user_email : (metadata?.guest_email || null),
+            restaurant_id: metadata?.restaurant_id || null,
             error_message: `[${failureCode}] ${reason}`,
-            context: incidentDetails
+            context: incidentDetails,
+            logged_at: now,
+            alert_triggered: true,
+            alert_condition: 'payment_success_order_failed'
         });
-        console.log(`[WEBHOOK] Incident logged: ${incidentDetails.failure_type} severity=${incidentSeverity}`);
+        console.log(`[WEBHOOK] Incident logged: severity=${incidentSeverity} failure_code=${failureCode} compensation=${refundResult?.success ? 'refund_issued' : 'manual_review_required'}`);
     } catch (e) {
         console.error(`[WEBHOOK] CRITICAL: Could not log incident for intent=${piId}:`, e.message);
     }

@@ -8,6 +8,25 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import Stripe from 'npm:stripe';
 
+// ── Stripe environment validation (inline — no local imports allowed) ──────
+function getStripeMode(key = '') {
+    if (key.startsWith('sk_live_') || key.startsWith('pk_live_')) return 'live';
+    if (key.startsWith('sk_test_') || key.startsWith('pk_test_')) return 'test';
+    return 'unknown';
+}
+function validateStripeKeys() {
+    const sk = Deno.env.get('STRIPE_SECRET_KEY') || '';
+    const pk = Deno.env.get('STRIPE_PUBLIC_KEY') || Deno.env.get('VITE_STRIPE_PUBLIC_KEY') || '';
+    const skMode = getStripeMode(sk);
+    const pkMode = pk ? getStripeMode(pk) : skMode; // if pk not set, skip mismatch check
+    console.log(`[STRIPE_ENV] createPaymentIntent | secret=${skMode} | publishable=${pk ? pkMode : 'not_checked'}`);
+    if (!sk) throw new Error('[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY is not set');
+    if (skMode === 'unknown') throw new Error(`[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY has unrecognised format (prefix: ${sk.slice(0, 8)}...)`);
+    if (pk && skMode !== pkMode) throw new Error(`[STRIPE_ENV] FATAL: KEY MODE MISMATCH — secret=${skMode} but publishable=${pkMode}. Mixed live/test keys rejected.`);
+    return skMode;
+}
+
+const _stripeMode = validateStripeKeys();
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
 Deno.serve(async (req) => {

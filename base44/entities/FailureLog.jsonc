@@ -21,7 +21,12 @@
         "total_mismatch",
         "order_create",
         "refund_initiate",
-        "stripe_api_error"
+        "stripe_api_error",
+        "payment_succeeded_order_failed_refund_issued",
+        "payment_succeeded_order_failed_refund_failed",
+        "webhook_order_creation_failed",
+        "refund_failed_requires_manual_review",
+        "payment_failed_via_webhook"
       ],
       "description": "Category of failure for grouping and alerting"
     },
@@ -35,13 +40,37 @@
       "default": "warning",
       "description": "info=expected rejection, warning=unexpected error, critical=payment taken but order failed"
     },
+    "failure_code": {
+      "type": "string",
+      "description": "Machine-readable failure code for support filtering (e.g. ITEM_NOT_FOUND, RESTAURANT_CLOSED, BELOW_MINIMUM)"
+    },
+    "compensation_status": {
+      "type": "string",
+      "enum": [
+        "not_applicable",
+        "refund_issued",
+        "refund_failed",
+        "manual_review_required",
+        "pending"
+      ],
+      "default": "not_applicable",
+      "description": "Status of the compensation/refund action taken after this failure"
+    },
     "restaurant_id": {
       "type": "string",
-      "description": "Affected restaurant"
+      "description": "Affected restaurant (queryable)"
     },
     "payment_intent_id": {
       "type": "string",
-      "description": "Stripe PI if payment-related"
+      "description": "Stripe PaymentIntent ID \u2014 queryable for support lookup by PI"
+    },
+    "refund_id": {
+      "type": "string",
+      "description": "Stripe Refund ID if a refund was issued \u2014 queryable for reconciliation"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Unified customer email (authenticated user or guest) \u2014 queryable for support lookup"
     },
     "order_id": {
       "type": "string",
@@ -49,7 +78,7 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Authenticated user or 'guest'"
+      "description": "Authenticated user email or 'guest'"
     },
     "guest_email": {
       "type": "string",
@@ -65,7 +94,7 @@
     },
     "error_details": {
       "type": "object",
-      "description": "Raw error object or additional context (e.g. {field: 'coupon_code', value: 'INVALID'})"
+      "description": "Raw error object or additional context"
     },
     "context": {
       "type": "object",

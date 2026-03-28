@@ -8,6 +8,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import Stripe from 'npm:stripe';
 
+// ── Stripe environment validation (inline) ────────────────────────────────
+function getStripeMode(key = '') {
+    if (key.startsWith('sk_live_') || key.startsWith('pk_live_')) return 'live';
+    if (key.startsWith('sk_test_') || key.startsWith('pk_test_')) return 'test';
+    return 'unknown';
+}
+function validateStripeKeys() {
+    const sk = Deno.env.get('STRIPE_SECRET_KEY') || '';
+    const skMode = getStripeMode(sk);
+    console.log(`[STRIPE_ENV] refundWithRetry | secret=${skMode}`);
+    if (!sk) throw new Error('[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY is not set');
+    if (skMode === 'unknown') throw new Error(`[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY has unrecognised format (prefix: ${sk.slice(0, 8)}...)`);
+    return skMode;
+}
+
+const _stripeMode = validateStripeKeys();
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000; // 1 second
@@ -92,13 +108,22 @@ Deno.serve(async (req) => {
                 }).catch(e => console.warn('[REFUND] Failed to update PT:', e.message));
             }
             
-            // Create critical alert
+            // Create critical alert with typed fields for support visibility
+            const pts2 = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId }).catch(() => []);
+            const pt2 = pts2?.[0];
             await base44.asServiceRole.entities.FailureLog.create({
-                failure_type: 'refund_failed_requires_manual_review',
+                failure_type: 'refund_initiate',
                 severity: 'critical',
+                failure_code: 'REFUND_MAX_RETRIES_EXHAUSTED',
+                compensation_status: 'manual_review_required',
                 payment_intent_id: paymentIntentId,
+                customer_email: pt2?.user_email || pt2?.guest_email || null,
+                restaurant_id: pt2?.restaurant_id || null,
                 error_message: `Refund failed after ${MAX_RETRIES} attempts: ${refundResult.error}`,
-                context: { reason, last_attempt: refundResult.attempt }
+                context: { reason, last_attempt: refundResult.attempt },
+                logged_at: new Date().toISOString(),
+                alert_triggered: true,
+                alert_condition: 'payment_success_order_failed'
             }).catch(e => console.warn('[LOG] Failed to record critical alert:', e.message));
             
             return Response.json({
