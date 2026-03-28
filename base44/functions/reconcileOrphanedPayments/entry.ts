@@ -42,10 +42,15 @@ Deno.serve(async (req) => {
         const results = { processed: 0, refunded: 0, refund_failed: 0, escalated: 0, skipped: 0 };
 
         // ── 1. Find authorized records older than cutoff (order never created) ──
-        const orphanedAuthorized = await base44.asServiceRole.entities.PaymentTransaction.filter({
-            status: 'authorized',
-            authorized_at: { $lt: cutoff }
-        });
+        // NOTE: PaymentTransaction has no 'authorized_at' field.
+        // Fetch all 'authorized' records and filter by created_date in-process.
+        // The SDK does not support $lt on built-in date fields — must filter client-side.
+        const allAuthorized = await base44.asServiceRole.entities.PaymentTransaction.filter({
+            status: 'authorized'
+        }, '-created_date', 100);
+        const orphanedAuthorized = (allAuthorized || []).filter(pt =>
+            new Date(pt.created_date) < new Date(cutoff)
+        );
 
         const batch = (orphanedAuthorized || []).slice(0, MAX_BATCH);
         console.log(`[RECONCILE] Found ${orphanedAuthorized?.length || 0} authorized orphans. Processing ${batch.length}.`);
