@@ -67,6 +67,7 @@ class LayoutErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null };
   }
   static getDerivedStateFromError(error) {
+    console.error('[LayoutErrorBoundary] Caught error:', error?.message, error?.stack);
     return { hasError: true, error };
   }
   componentDidCatch(error, errorInfo) {
@@ -75,10 +76,11 @@ class LayoutErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="fixed inset-0 flex items-center justify-center bg-red-50 p-4">
-          <div className="text-center">
-            <div className="text-red-600 font-bold mb-2">⚠️ Layout Error</div>
+        <div className="fixed inset-0 flex items-center justify-center bg-red-50 p-4 z-[9999]">
+          <div className="text-center max-w-md">
+            <div className="text-red-600 font-bold mb-2 text-lg">⚠️ Layout Error</div>
             <p className="text-sm text-gray-600 mb-4">{this.state.error?.message || 'An error occurred'}</p>
+            <p className="text-xs text-gray-500 mb-4 font-mono bg-gray-100 p-2 rounded overflow-auto max-h-32">{this.state.error?.stack}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
