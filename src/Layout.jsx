@@ -324,9 +324,9 @@ export default function Layout({ children, currentPageName }) {
     };
 
     const updateCartCount = () => {
-        const cart = localStorage.getItem('cart');
-        if (cart) {
-            try {
+        try {
+            const cart = localStorage.getItem('cart');
+            if (cart) {
                 const items = JSON.parse(cart);
                 if (Array.isArray(items)) {
                     const count = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -336,14 +336,14 @@ export default function Layout({ children, currentPageName }) {
                     localStorage.removeItem('cart');
                     setCartCount(0);
                 }
-            } catch (e) {
-                console.error('[Layout] Corrupted cart data, clearing:', e?.message);
-                localStorage.removeItem('cart');
-                localStorage.removeItem('cartRestaurantId');
-                localStorage.removeItem('cartRestaurantName');
+            } else {
                 setCartCount(0);
             }
-        } else {
+        } catch (e) {
+            console.error('[Layout] Corrupted cart data, clearing:', e?.message);
+            localStorage.removeItem('cart');
+            localStorage.removeItem('cartRestaurantId');
+            localStorage.removeItem('cartRestaurantName');
             setCartCount(0);
         }
     };
