@@ -9,6 +9,7 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import Stripe from 'npm:stripe';
 
 const LARGE_REFUND_THRESHOLD = 30; // £ — flag in audit as high severity
 
@@ -100,6 +101,73 @@ Deno.serve(async (req) => {
         }
 
         const approvedAmount = Math.min(requestedAmount, order.total);
+
+        // ── Stripe refund (card orders only) ──────────────────────────────────────
+        let stripeRefundId = null;
+        if (order.payment_method === 'card' && order.payment_intent_id) {
+            const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
+            try {
+                const refund = await stripe.refunds.create({
+                    payment_intent: order.payment_intent_id,
+                    amount: Math.round(approvedAmount * 100), // pence
+                    reason: 'requested_by_customer',
+                    metadata: {
+                        order_id,
+                        approved_by: user.email,
+                        refund_type: order.refund_request_type || 'full',
+                    },
+                });
+                stripeRefundId = refund.id;
+                console.log(`[REFUND] Stripe refund issued: ${stripeRefundId} amount=£${approvedAmount.toFixed(2)} order=${order_id}`);
+            } catch (stripeErr) {
+                if (stripeErr.code === 'charge_already_refunded') {
+                    // Idempotent: already refunded (e.g. via webhook or previous call) — safe to continue
+                    console.warn(`[REFUND] charge_already_refunded for order ${order_id} — treating as success`);
+                } else {
+                    console.error(`[REFUND] Stripe refund FAILED for order ${order_id}:`, stripeErr.message);
+                    try {
+                        await base44.asServiceRole.entities.FailureLog.create({
+                            failure_type: 'refund_initiate',
+                            severity: 'critical',
+                            payment_intent_id: order.payment_intent_id,
+                            order_id,
+                            restaurant_id: order.restaurant_id,
+                            user_email: user.email,
+                            error_message: `approveRefund Stripe call failed: ${stripeErr.message}`,
+                            context: { approved_amount: approvedAmount, actor: user.email },
+                            logged_at: new Date().toISOString(),
+                            alert_triggered: true,
+                            alert_condition: 'critical_payment_issue',
+                        });
+                    } catch (_) {}
+                    return Response.json({
+                        error: `Refund failed: ${stripeErr.message}. The refund has not been issued. Please retry or process manually via the Stripe dashboard.`,
+                        stripe_error: stripeErr.code,
+                    }, { status: 502 });
+                }
+            }
+
+            // Update PaymentTransaction record (non-fatal if missing)
+            try {
+                const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({
+                    payment_intent_id: order.payment_intent_id,
+                });
+                if (pts?.[0]?.id) {
+                    await base44.asServiceRole.entities.PaymentTransaction.update(pts[0].id, {
+                        status: 'refunded',
+                        refund_id: stripeRefundId,
+                        refund_amount: approvedAmount,
+                        refund_attempted_at: new Date().toISOString(),
+                        refund_confirmed_at: new Date().toISOString(),
+                    });
+                }
+            } catch (ptErr) {
+                console.warn('[REFUND] PT update failed (non-fatal, refund already issued):', ptErr.message);
+            }
+        } else if (order.payment_method === 'card' && !order.payment_intent_id) {
+            console.warn(`[REFUND] Card order ${order_id} has no payment_intent_id — skipping Stripe refund. Manual action required.`);
+        }
+        // Cash/non-card orders: no Stripe refund needed, proceed to Order update
 
         // ── Apply approval ────────────────────────────────────────────────────────
         await base44.asServiceRole.entities.Order.update(order_id, {
