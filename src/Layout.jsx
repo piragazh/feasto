@@ -628,7 +628,7 @@ export default function Layout({ children, currentPageName }) {
                                             </DropdownMenuItem>
                                             ) : (
                                             <DropdownMenuItem 
-                                                onClick={() => base44.auth.redirectToLogin()}
+                                                onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
                                                 className="cursor-pointer"
                                             >
                                                 <LogOut className="h-4 w-4 mr-2" />

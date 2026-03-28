@@ -1266,7 +1266,7 @@ export default function Checkout() {
                                                     <p className="text-sm text-orange-800 mb-2">This email is already registered!</p>
                                                     <Button
                                                         type="button"
-                                                        onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                                                        onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
                                                         size="sm"
                                                         className="bg-orange-500 hover:bg-orange-600 text-white h-9"
                                                     >
