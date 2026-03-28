@@ -28,7 +28,8 @@
         window.dispatchEvent(new Event('pwaInstallPromptReady'));
       });
       
-      console.log('[index.html] Page loaded, main.jsx should execute next');
+      // Platform domain is auto-managed by Base44 SDK infrastructure.
+       // No manual injection needed - the SDK routes correctly on custom domains.
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

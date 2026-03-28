@@ -4,12 +4,14 @@ import App from '@/App.jsx'
 import '@/index.css'
 import { registerServiceWorker, cleanupLegacyServiceWorkers } from '@/lib/pwa-lifecycle'
 
+// 1. One-time cleanup of any legacy SWs registered under wrong paths.
+//    Runs once per session (guarded by sessionStorage) — not on every load.
 cleanupLegacyServiceWorkers();
+
+// 2. Register our own service worker with a safe lifecycle.
+//    No-ops gracefully if SW is unsupported.
 registerServiceWorker();
 
-const root = document.getElementById('root');
-if (!root) {
-  document.body.innerHTML = '<div style="color:red;padding:20px">ERROR: #root element missing from index.html</div>';
-} else {
-  ReactDOM.createRoot(root).render(React.createElement(App));
-}
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <App />
+)

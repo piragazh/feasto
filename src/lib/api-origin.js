@@ -22,7 +22,8 @@
  */
 export const getApiBaseUrl = () => {
   if (typeof window === 'undefined') {
-    return 'https://api.base44.app';
+    // SSR fallback
+    return process.env.VITE_PUBLIC_API_BASE_URL || 'https://api.base44.app';
   }
 
   // Check for explicit API base URL (can be set via env var or injected at runtime)

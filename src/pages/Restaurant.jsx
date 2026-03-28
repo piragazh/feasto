@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -16,17 +16,17 @@ import CartDrawer from '@/components/cart/CartDrawer';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
-// Static imports for restaurant components
-import ImageGallery from '@/components/restaurant/ImageGallery';
-import OpeningHours from '@/components/restaurant/OpeningHours';
-import SpecialOffers from '@/components/restaurant/SpecialOffers';
-import PopularItems from '@/components/restaurant/PopularItems';
-import ReviewsSection from '@/components/restaurant/ReviewsSection';
-import ActivePromotionsBanner from '@/components/restaurant/ActivePromotionsBanner';
-import InfoSection from '@/components/restaurant/InfoSection';
-import RestaurantProfileSection from '@/components/restaurant/RestaurantProfileSection';
-import MealDealsSection from '@/components/restaurant/MealDealsSection';
-import CategoryDealCustomizationModal from '@/components/restaurant/CategoryDealCustomizationModal';
+// Lazy load heavy components
+const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
+const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
+const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
+const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
+const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
+const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
+const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
+const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
+const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
+const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
 
 export default function Restaurant({ restaurantId: propRestaurantId }) {
     const navigate = useNavigate();
@@ -36,15 +36,26 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
     );
     
-    // Get restaurant ID from prop, sessionStorage, or URL param
+    // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
-        if (isMountedRef.current) {
-            const paramId = urlParams.get('id');
+        let found = false;
+        const paramId = urlParams.get('id');
+        const interval = setInterval(() => {
+            if (found) return; // Stop polling once found
             const customId = sessionStorage.getItem('customDomainRestaurantId');
             if (customId || paramId) {
                 setRestaurantId(customId || paramId);
+                found = true;
             }
-        }
+        }, 100);
+
+        // Stop polling after 5 seconds
+        const timeout = setTimeout(() => clearInterval(interval), 5000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timeout);
+        };
     }, []);
     
     const [cart, setCart] = useState([]);
@@ -65,18 +76,9 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const [previousCartData, setPreviousCartData] = useState(null);
     const [appliedPromotions, setAppliedPromotions] = useState([]);
     const [showOutsideHoursConfirmation, setShowOutsideHoursConfirmation] = useState(false);
-    const isMountedRef = React.useRef(true);
-
-    // Cleanup mounted ref on unmount
-    React.useEffect(() => {
-        return () => {
-            isMountedRef.current = false;
-        };
-    }, []);
 
     // Load cart from localStorage with error handling
     useEffect(() => {
-        if (!isMountedRef.current) return;
         try {
             const savedCart = localStorage.getItem('cart');
             const savedRestaurantId = localStorage.getItem('cartRestaurantId');
@@ -103,13 +105,12 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
             localStorage.removeItem('appliedPromotions');
-            if (isMountedRef.current) toast.error('Cart data corrupted. Starting fresh.');
+            toast.error('Cart data corrupted. Starting fresh.');
         }
     }, [restaurantId]);
 
     // Save cart to localStorage with error handling
     useEffect(() => {
-        if (!isMountedRef.current) return;
         try {
             if (cart.length > 0) {
                 localStorage.setItem('cart', JSON.stringify(cart));
@@ -124,7 +125,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 localStorage.removeItem('appliedPromotions');
             }
         } catch (error) {
-            if (isMountedRef.current) toast.error('Unable to save cart. Storage may be full.');
+            toast.error('Unable to save cart. Storage may be full.');
         }
     }, [cart, restaurantId]);
 
@@ -1100,31 +1101,33 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
             {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
-                {/* Image Gallery */}
-                {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
+                    {/* Image Gallery */}
+                    {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                        <div className="mb-8">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
+                            <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                        </div>
+                    )}
+
+                    {/* Special Offers */}
+                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                        <div className="mb-8">
+                            <SpecialOffers offers={restaurant.special_offers} />
+                        </div>
+                    )}
+
+                    {/* Info Section */}
+                    <InfoSection infoSection={restaurant.info_section} />
+
+                    {/* Active Promotions */}
+                    <ActivePromotionsBanner restaurantId={restaurantId} />
+
+                    {/* Opening Hours */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
-                        <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                        <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
                     </div>
-                )}
-
-                {/* Special Offers */}
-                {restaurant.special_offers && restaurant.special_offers.length > 0 && (
-                    <div className="mb-8">
-                        <SpecialOffers offers={restaurant.special_offers} />
-                    </div>
-                )}
-
-                {/* Info Section */}
-                <InfoSection infoSection={restaurant.info_section} />
-
-                {/* Active Promotions */}
-                <ActivePromotionsBanner restaurantId={restaurantId} />
-
-                {/* Opening Hours */}
-                <div className="mb-8">
-                    <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
-                </div>
+                </Suspense>
 
                 {/* Popular Items */}
                 <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
@@ -1307,15 +1310,17 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     />
                 </Suspense>
 
-                {/* Profile Section (About Us, Story, Awards, Social) */}
-                <div className="mt-12">
-                    <RestaurantProfileSection restaurant={restaurant} />
-                </div>
+                <Suspense fallback={<Skeleton className="h-60 w-full mt-12" />}>
+                    {/* Profile Section (About Us, Story, Awards, Social) */}
+                    <div className="mt-12">
+                        <RestaurantProfileSection restaurant={restaurant} />
+                    </div>
 
-                {/* Reviews Section */}
-                <div className="mt-12">
-                    <ReviewsSection restaurantId={restaurantId} />
-                </div>
+                    {/* Reviews Section */}
+                    <div className="mt-12">
+                        <ReviewsSection restaurantId={restaurantId} />
+                    </div>
+                </Suspense>
                 </div>
 
             {/* Floating Cart Button */}

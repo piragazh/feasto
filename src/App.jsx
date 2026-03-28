@@ -1,10 +1,13 @@
-import React, { Suspense } from 'react';
+import { Toaster } from 'sonner';
 import { QueryClientProvider } from '@tanstack/react-query';
+// NOTE: Toaster import removed — it is rendered by Layout.jsx to avoid duplicate toasts.
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound.jsx';
+import React, { Suspense } from 'react';
+// NOTE: Toaster is rendered inside Layout.jsx for every page. Do NOT add another Toaster here.
+import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
@@ -16,6 +19,7 @@ import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
 
+// Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
   <div className="fixed inset-0 flex items-center justify-center bg-background">
     <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -31,69 +35,53 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const DomainChecker = ({ children }) => {
-  const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(() => {
-    return sessionStorage.getItem('customDomainRestaurantId') || null;
-  });
+  const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
   const [domainCheckDone, setDomainCheckDone] = React.useState(false);
   const [domainCheckError, setDomainCheckError] = React.useState(null);
-  const isMountedRef = React.useRef(true);
-
-  React.useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   React.useEffect(() => {
     const checkDomain = async () => {
-      const timeout = setTimeout(() => {
-        if (isMountedRef.current) {
-          setDomainCheckDone(true);
-        }
-      }, 5000);
       try {
         const hostname = window.location.hostname;
         const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
         if (isPlatform) {
-          clearTimeout(timeout);
-          if (isMountedRef.current) setDomainCheckDone(true);
+          console.log('[DomainChecker] Platform domain detected:', hostname);
+          setDomainCheckDone(true);
           return;
         }
+        console.log('[DomainChecker] Custom domain detected:', hostname);
         
         const cached = sessionStorage.getItem('customDomainRestaurantId');
         const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
         if (cached && cachedFor === hostname) {
-          clearTimeout(timeout);
-          if (isMountedRef.current) {
-            setCustomDomainRestaurantId(cached);
-            setDomainCheckDone(true);
-          }
+          console.log('[DomainChecker] Using cached restaurant ID:', cached);
+          setCustomDomainRestaurantId(cached);
+          setDomainCheckDone(true);
           return;
         }
         
         try {
           const { base44 } = await import('@/api/base44Client');
+          console.log('[DomainChecker] Querying for restaurant with custom_domain:', hostname);
           const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
           const found = restaurants?.[0];
-          clearTimeout(timeout);
-          if (!isMountedRef.current) return;
-          
           if (found) {
+            console.log('[DomainChecker] Found restaurant:', found.id, found.name);
             sessionStorage.setItem('customDomainRestaurantId', found.id);
             sessionStorage.setItem('customDomainCheckedFor', hostname);
             setCustomDomainRestaurantId(found.id);
+          } else {
+            console.log('[DomainChecker] No verified restaurant found for custom domain');
           }
         } catch (e) {
-          clearTimeout(timeout);
-          if (!isMountedRef.current) return;
+          console.error('[DomainChecker] Error querying restaurant:', e?.message || e);
           setDomainCheckError(e?.message || 'Failed to check custom domain');
         }
       } catch (e) {
-        clearTimeout(timeout);
-        if (!isMountedRef.current) return;
+        console.error('[DomainChecker] Unexpected error:', e?.message || e);
         setDomainCheckError(e?.message || 'Unexpected error');
       } finally {
-        if (isMountedRef.current) setDomainCheckDone(true);
+        setDomainCheckDone(true);
       }
     };
     checkDomain();
@@ -130,6 +118,7 @@ const DomainChecker = ({ children }) => {
 const AuthenticatedApp = ({ customDomainRestaurantId }) => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
+  // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -138,10 +127,13 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
     );
   }
 
+  // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else {
+      // Step 4: Show visible fatal error UI with technical details for admins/devs
+      const isDev = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
       return (
         <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
           <div className="max-w-lg w-full bg-white rounded-lg shadow-lg p-8 border-l-4 border-red-600">
@@ -151,7 +143,33 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load App</h2>
               <p className="text-red-700 font-medium mb-4 text-sm">{authError.message || 'An error occurred during app initialization'}</p>
-              <button onClick={() => window.location.reload()} className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">Retry</button>
+              
+              {isDev && (
+                <div className="text-left bg-gray-900 text-gray-100 rounded p-4 mb-4 font-mono text-xs overflow-auto max-h-40 border border-gray-700">
+                  <div className="font-semibold mb-2 text-gray-400">Debug Info:</div>
+                  <div>Frontend: {window.location.hostname}</div>
+                  <div>AppId: {import.meta.env.VITE_BASE44_APP_ID || 'unknown'}</div>
+                  <div>Error Type: {authError.type}</div>
+                  {authError.data?.status && <div>Status: {authError.data.status}</div>}
+                  <div className="mt-2 text-yellow-400">Check browser console for full logs</div>
+                </div>
+              )}
+              
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors mb-2"
+              >
+                Retry
+              </button>
+              
+              {isDev && (
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors text-sm"
+                >
+                  Go Home
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -159,6 +177,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
     }
   }
 
+  // Render the main app with lazy loading and stack-based navigation
   return (
     <NavigationStackProvider>
       <StackNavigationAnimator>
@@ -221,6 +240,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
   );
 };
 
+
 function App() {
   return (
     <AuthProvider>
@@ -233,6 +253,7 @@ function App() {
             )}
           </DomainChecker>
         </Router>
+        {/* Toaster is rendered by Layout.jsx — removed duplicate from here */}
       </QueryClientProvider>
     </AuthProvider>
   )
