@@ -224,7 +224,10 @@ Deno.serve(async (req) => {
             );
         } catch (stripeError) {
             // ── Idempotency key conflict (same key, different amount) ──────────
-            if (stripeError?.code === 'idempotency_key_in_use' || stripeError?.statusCode === 400) {
+            // BUG FIX: Only classify as idempotency conflict for the SPECIFIC error code.
+            // Previously `statusCode === 400` was too broad and misclassified all Stripe
+            // validation errors (bad currency, invalid params, etc.) as idempotency conflicts.
+            if (stripeError?.code === 'idempotency_key_in_use') {
                 console.error(
                     `${LOG_PREFIX} [STRIPE_IDEMPOTENCY_CONFLICT] request_id=${requestId}` +
                     ` key=${idempotencyKeyStr} amount=${amountInPence}p error=${stripeError.message}`

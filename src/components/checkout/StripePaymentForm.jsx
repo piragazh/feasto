@@ -53,6 +53,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 console.log('🔴 Submit error:', submitError);
                 setErrorMessage(submitError.message || 'Please complete all payment fields correctly');
                 setIsProcessing(false);
+                submitFiredRef.current = false; // BUG FIX: unlock so user can retry after form error
                 return false;
             }
             
@@ -113,12 +114,14 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 console.log('🔴 Unexpected payment status:', result.paymentIntent.status);
                 setErrorMessage(`Payment ${result.paymentIntent.status}. Please try again.`);
                 setIsProcessing(false);
+                submitFiredRef.current = false; // BUG FIX: unlock so user can retry
                 return false;
             }
             
             console.log('🔴 No payment intent returned');
             setErrorMessage('Payment processing failed. Please try again.');
             setIsProcessing(false);
+            submitFiredRef.current = false; // BUG FIX: unlock so user can retry
             return false;
         } catch (err) {
             console.log('🔴 Exception:', err);

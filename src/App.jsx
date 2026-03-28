@@ -1,10 +1,12 @@
 import { Toaster } from 'sonner';
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query';
+// NOTE: Toaster import removed — it is rendered by Layout.jsx to avoid duplicate toasts.
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import React, { Suspense } from 'react';
+// NOTE: Toaster is rendered inside Layout.jsx for every page. Do NOT add another Toaster here.
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -251,7 +253,7 @@ function App() {
             )}
           </DomainChecker>
         </Router>
-        <Toaster />
+        {/* Toaster is rendered by Layout.jsx — removed duplicate from here */}
       </QueryClientProvider>
     </AuthProvider>
   )

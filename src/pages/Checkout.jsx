@@ -1726,6 +1726,7 @@ export default function Checkout() {
                                     <CardContent>
                                         {stripeLoadedPromise && clientSecret ? (
                                             <Elements 
+                                               key={clientSecret}
                                                stripe={stripeLoadedPromise} 
                                                options={{ 
                                                    clientSecret,

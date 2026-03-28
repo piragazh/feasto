@@ -124,6 +124,8 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                                 // FAILURE: Unexpected status
                                 const status = paymentIntent?.status || 'unknown';
                                 console.error('[ExpressCheckout] Payment not succeeded. Status:', status);
+                                // BUG FIX: reset guard so user can retry
+                                if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
                                 if (onError && typeof onError === 'function') {
                                     onError(`Payment ${status}. Please try again.`);
                                 }
