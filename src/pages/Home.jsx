@@ -22,7 +22,11 @@ export default function Home() {
     const [selectedCuisine, setSelectedCuisine] = useState('');
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
+    
+    // Check sessionStorage immediately for custom domain (before first render)
+    const customDomainRestaurantId = React.useMemo(() => {
+        return sessionStorage.getItem('customDomainRestaurantId');
+    }, []);
 
     // Fetch restaurants with optimized caching
     const { data: restaurants = [], isLoading, refetch } = useQuery({
@@ -34,16 +38,6 @@ export default function Home() {
 
     useEffect(() => {
         getUserLocation();
-        // Check if custom domain restaurant (synchronously before render)
-        const customDomainId = sessionStorage.getItem('customDomainRestaurantId');
-        if (customDomainId) {
-            setCustomDomainRestaurantId(customDomainId);
-        }
-    }, []);
-
-    // Check sessionStorage immediately on mount (before first render)
-    const initialCustomDomainId = React.useMemo(() => {
-        return sessionStorage.getItem('customDomainRestaurantId');
     }, []);
 
     const getUserLocation = () => {
@@ -116,7 +110,7 @@ export default function Home() {
         }), [restaurants, searchQuery, selectedCuisine, sortBy, userLocation]);
 
     // If on custom domain, render Restaurant page directly (SEO-friendly)
-    if (customDomainRestaurantId || initialCustomDomainId) {
+    if (customDomainRestaurantId) {
         return <Restaurant />;
     }
 
