@@ -46,8 +46,16 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me().catch(() => null);
-    
+
+    // Safely get user without triggering 401 errors for guests
+    let user = null;
+    try {
+        const isAuthenticated = await base44.auth.isAuthenticated();
+        if (isAuthenticated) {
+            user = await base44.auth.me();
+        }
+    } catch (_) { /* guest checkout — continue without user */ }
+
     let payload;
     try {
         payload = await req.json();
