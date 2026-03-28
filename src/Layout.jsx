@@ -21,6 +21,7 @@ import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 import { Toaster } from 'sonner';
 import { addSkipLink } from '@/lib/a11y-utils';
 import { initializeLiveRegions } from '@/lib/aria-utils.jsx';
+import { getApiUrl } from '@/lib/api-origin';
 
 // Google Tag Manager initialization
 const initializeGTM = () => {
@@ -67,8 +68,17 @@ export default function Layout({ children, currentPageName }) {
     const [cartCount, setCartCount] = useState(0);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
     
-    // Get custom domain from sessionStorage set by DomainChecker in App.jsx
-    const customDomainRestaurantId = sessionStorage.getItem('customDomainRestaurantId');
+    // Read customDomainRestaurantId from sessionStorage in state (not top-level render)
+    // to avoid synchronous render-time reads that can cause React update conflicts (#426)
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(() =>
+        sessionStorage.getItem('customDomainRestaurantId') || null
+    );
+
+    // Re-sync from sessionStorage when location changes (DomainChecker may have updated it)
+    useEffect(() => {
+        const id = sessionStorage.getItem('customDomainRestaurantId');
+        if (id !== customDomainRestaurantId) setCustomDomainRestaurantId(id || null);
+    }, [location.pathname]);
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
@@ -103,19 +113,21 @@ export default function Layout({ children, currentPageName }) {
         }
         
         // For restaurant dashboard / POS, use restaurant-specific dashboard manifest
+        // IMPORTANT: Use getApiUrl() to ensure the request hits the backend function,
+        // not the SPA frontend rewrite which returns HTML instead of JSON.
         if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard' || currentPageName === 'TabletDashboard') {
             const urlParams = new URLSearchParams(window.location.search);
             const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
             const posMode = currentPageName === 'POSDashboard' ? 'pos' : currentPageName === 'TabletDashboard' ? 'tablet' : 'dashboard';
             if (dashboardRestaurantId) {
-                manifestLink.href = `/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`;
+                manifestLink.href = getApiUrl(`/getManifest?restaurant_id=${dashboardRestaurantId}&mode=${posMode}`);
             } else {
-                manifestLink.href = `/getManifest?mode=${posMode}`;
+                manifestLink.href = getApiUrl(`/getManifest?mode=${posMode}`);
             }
         } else if (customDomainRestaurantId) {
-            manifestLink.href = `/getManifest?restaurant_id=${customDomainRestaurantId}`;
+            manifestLink.href = getApiUrl(`/getManifest?restaurant_id=${customDomainRestaurantId}`);
         } else {
-            manifestLink.href = `/getManifest`;
+            manifestLink.href = getApiUrl('/getManifest');
         }
 
         // Add theme-color meta tag

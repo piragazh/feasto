@@ -1,9 +1,11 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const url = new URLSearchParams(req.url.split('?')[1]);
+        // Use URL constructor for safe parsing (req.url is a full URL in Deno)
+        const reqUrl = new URL(req.url);
+        const url = reqUrl.searchParams;
         const restaurantId = url.get('restaurant_id');
 
         const mode = url.get('mode'); // 'dashboard' for restaurant dashboard PWA
