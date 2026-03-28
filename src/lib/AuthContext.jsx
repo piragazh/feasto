@@ -85,12 +85,10 @@ export const AuthProvider = ({ children }) => {
               type: 'user_not_registered',
               message: 'User not registered for this app'
             });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
           }
+          // For other 403s (auth_required, etc.), proceed as public app - don't block
+          setIsLoadingPublicSettings(false);
+          setIsLoadingAuth(false);
         } else {
           setAuthError({
             type: 'unknown',
