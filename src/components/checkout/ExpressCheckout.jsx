@@ -138,7 +138,9 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             switch (paymentIntent.status) {
                                 case 'succeeded':
                                     console.log('✅ [ExpressCheckout] Payment SUCCEEDED:', paymentIntent.id);
-                                    confirmInFlightRef.current = false;
+                                    // CRITICAL FIX: DO NOT reset confirmInFlightRef yet
+                                    // Keep guard active through onSuccess callback to prevent duplicate calls on network interrupt
+                                    // confirmInFlightRef will be reset when Checkout.jsx transitions to order complete screen
                                     if (onSuccess && typeof onSuccess === 'function') {
                                         onSuccess(String(paymentIntent.id));
                                     }

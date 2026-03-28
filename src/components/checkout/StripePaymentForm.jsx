@@ -40,6 +40,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
         if (!stripe || !elements) {
             console.log('🔴 Stripe not ready');
             setErrorMessage('Payment system not ready. Please wait a moment.');
+            setIsProcessing(false);
             submitFiredRef.current = false;
             return false;
         }

@@ -190,6 +190,12 @@ export function usePaymentInit({
         // eslint-disable-next-line react-hooks/exhaustive-deps
         JSON.stringify((cart || []).map(i => `${i.menu_item_id || i.id}:${i.quantity}:${i.price}`).sort()),
     ]);
+    
+    // CRITICAL: Always reset payment state when paymentMethod changes to ensure
+    // stale clientSecret is never reused for a different method
+    useEffect(() => {
+        resetPaymentState();
+    }, [paymentMethod, resetPaymentState]);
 
     // ── Effect 1: Invalidation — runs whenever fingerprint changes ─────────────
     // When the fingerprint changes, the current clientSecret is no longer valid.
