@@ -51,6 +51,28 @@ const AuthenticatedApp = () => {
       // Redirect to login automatically
       navigateToLogin();
       return null;
+    } else {
+      // Show visible error for other failures (not blank page)
+      return (
+        <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load App</h2>
+              <p className="text-gray-600 mb-1">{authError.message || 'An error occurred while initializing the app'}</p>
+              <p className="text-xs text-gray-500 mb-4">Error type: {authError.type}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
   }
 
