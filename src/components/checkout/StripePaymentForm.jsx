@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from 'lucide-react';
 import ExpressCheckout from './ExpressCheckout';
+import { checkoutTrace } from '@/lib/checkoutTrace';
 
 export default function StripePaymentForm({ onSuccess, amount, clientSecret, expressConfirmFiredRef }) {
     const stripe = useStripe();
@@ -12,6 +13,10 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const [errorMessage, setErrorMessage] = useState('');
     // Local ref for manual card submit dedup
     const submitFiredRef = useRef(false);
+
+    useEffect(() => {
+        checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret });
+    }, []);
 
     const handleSubmit = async (e) => {
         if (e) {
@@ -26,6 +31,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
         }
         submitFiredRef.current = true;
 
+        checkoutTrace.log('confirm_payment_started', { hasStripe: !!stripe, hasElements: !!elements });
         console.log('🔵 Payment form submitted');
         setErrorMessage('');
 
@@ -92,16 +98,15 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             }
             
             if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+                checkoutTrace.log('confirm_payment_succeeded', { piId: result.paymentIntent.id });
                 console.log('✅ Payment succeeded:', result.paymentIntent.id);
                 setErrorMessage('');
-                // NOTE: Do NOT call setIsProcessing(false) here — 
-                // the button stays in "processing" state until order is created
-                // to prevent double-submission. Parent (handleStripeSuccess) controls the flow.
                 onSuccess(result.paymentIntent.id);
                 return true;
             }
             
             if (result.paymentIntent) {
+                checkoutTrace.error('confirm_payment_unexpected_status', { status: result.paymentIntent.status, piId: result.paymentIntent.id });
                 console.log('🔴 Unexpected payment status:', result.paymentIntent.status);
                 setErrorMessage(`Payment ${result.paymentIntent.status}. Please try again.`);
                 setIsProcessing(false);

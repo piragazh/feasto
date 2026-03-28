@@ -34,6 +34,7 @@ import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { useSEO } from '@/lib/useSEO';
+import { checkoutTrace } from '@/lib/checkoutTrace';
 
 // ─────────────────────────────────────────────────────────────────────
 // STRIPE INITIALIZATION — Atomic singleton guard (useRef in component)
@@ -128,6 +129,13 @@ export default function Checkout() {
     const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null); // The promise to pass to <Elements>
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Static: set once at mount
+    const [checkoutTraceId] = useState(() => {
+        const id = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        checkoutTrace.reset(id);
+        console.log(`[CHECKOUT_TRACE] trace=${id} step=checkout_mounted`);
+        return id;
+    });
+    const [traceError, setTraceError] = useState(null); // Dev-facing error detail
     // Atomic guard: prevents concurrent payment initialization calls creating conflicting state
     const paymentInitInFlightRef = useRef(false);
     // Atomic guard: prevents Express Checkout onConfirm from firing twice
@@ -509,32 +517,42 @@ export default function Checkout() {
             if (paymentInitInFlightRef.current) return;
 
             // COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
-            if (isGuest && (!formData.guest_name || !formData.guest_email)) return;
-            if (!formData.phone) return;
-            
-            if (orderType === 'delivery') {
-                if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') return;
-                if (!isExistingAddress && (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '')) return;
-                if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) return;
-                if (!zoneCheckComplete) return;
-                if (deliveryZoneInfo && deliveryZoneInfo.available === false) return;
+            if (isGuest && (!formData.guest_name || !formData.guest_email)) {
+                checkoutTrace.log('stripe_init_blocked', { reason: 'missing_guest_details' });
+                return;
+            }
+            if (!formData.phone) {
+                checkoutTrace.log('stripe_init_blocked', { reason: 'missing_phone' });
+                return;
             }
             
-            if (isScheduled && !scheduledFor) return;
-            if (!cart || cart.length === 0 || total <= 0 || isNaN(total)) return;
+            if (orderType === 'delivery') {
+                if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_address' }); return; }
+                if (!isExistingAddress && (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '')) { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_door_number' }); return; }
+                if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_coordinates' }); return; }
+                if (!zoneCheckComplete) { checkoutTrace.log('stripe_init_blocked', { reason: 'zone_check_pending' }); return; }
+                if (deliveryZoneInfo && deliveryZoneInfo.available === false) { checkoutTrace.log('stripe_init_blocked', { reason: 'zone_unavailable' }); return; }
+            }
+            
+            if (isScheduled && !scheduledFor) { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_schedule_time' }); return; }
+            if (!cart || cart.length === 0 || total <= 0 || isNaN(total)) { checkoutTrace.log('stripe_init_blocked', { reason: 'invalid_cart_or_total', total, cartLen: cart?.length }); return; }
 
             // Set both state AND ref atomically
             paymentInitInFlightRef.current = true;
             setInitializingPayment(true);
+            setTraceError(null);
 
             try {
+                checkoutTrace.log('stripe_init_started', { total, orderType, isGuest });
                 console.log('[PaymentInit] Initializing Stripe and creating payment intent...');
                 
                 const stripeObj = await initializeStripe();
                 if (!stripeObj) {
+                    checkoutTrace.error('stripe_init_failed', { reason: 'stripe_object_null' });
                     toast.error('Payment system unavailable. Please refresh and try again.');
                     return;
                 }
+                checkoutTrace.log('stripe_init_succeeded');
                 
                 if (!stripeLoadedPromise) {
                     setStripeLoadedPromise(Promise.resolve(stripeObj));
@@ -548,6 +566,7 @@ export default function Checkout() {
                         : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
                     : (restaurant?.address || 'Collection');
 
+                checkoutTrace.log('create_payment_intent_started', { total, idempotencyKey });
                 console.log('[PaymentInit] Creating payment intent for amount:', total);
                 const response = await base44.functions.invoke('createPaymentIntent', {
                     amount: total,
@@ -571,18 +590,24 @@ export default function Checkout() {
                 });
 
                 if (response?.data?.clientSecret) {
+                    checkoutTrace.log('create_payment_intent_succeeded', { piId: response.data.paymentIntentId });
+                    checkoutTrace.log('client_secret_set');
                     console.log('[PaymentInit] ✅ Got clientSecret, showing Stripe form');
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
                     piTotalRef.current = total; // Record the total this PI was created for
                 } else {
                     const errorMsg = response?.data?.error || 'Failed to initialize payment. Please try again.';
+                    checkoutTrace.error('create_payment_intent_failed', { error: errorMsg });
+                    setTraceError(`PI_INIT_FAILED: ${errorMsg}`);
                     console.error('[PaymentInit] ❌ No clientSecret:', errorMsg);
                     toast.error(errorMsg);
                     setClientSecret('');
                     setShowStripeForm(false);
                 }
             } catch (error) {
+                checkoutTrace.error('create_payment_intent_exception', { error: error.message });
+                setTraceError(`PI_EXCEPTION: ${error.message}`);
                 console.error('[PaymentInit] Exception:', error.message);
                 toast.error('Failed to initialize payment. Please refresh and try again.');
                 setClientSecret('');
@@ -857,6 +882,7 @@ export default function Checkout() {
             return;
         }
         
+        checkoutTrace.log('create_order_started', { method: paymentMethod, hasPi: !!paymentIntentId });
         console.log('[Checkout] Creating order with payment method:', paymentMethod, 'and payment intent ID:', paymentIntentId || 'none');
         setIsSubmitting(true);
 
@@ -980,6 +1006,7 @@ export default function Checkout() {
 
             // CRITICAL SECURITY: Use backend verification function instead of direct create
               // This ensures payment is verified and restaurant is open
+              checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType });
               console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId);
               const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
                   orderData,
@@ -989,9 +1016,10 @@ export default function Checkout() {
 
             if (!verificationResponse?.data?.success) {
                 const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
-                console.error('[Checkout] Order creation failed:', errorMsg, 'Refunded:', verificationResponse?.data?.refunded);
-                // Check if refund was issued (payment was taken but order failed)
                 const refunded = verificationResponse?.data?.refunded === true;
+                checkoutTrace.error('verify_and_create_order_failed', { error: errorMsg, refunded, duplicate: verificationResponse?.data?.duplicate });
+                setTraceError(`ORDER_FAILED: ${errorMsg}`);
+                console.error('[Checkout] Order creation failed:', errorMsg, 'Refunded:', refunded);
                 if (refunded) {
                     toast.error(errorMsg + ' — Your payment has been automatically refunded.');
                 } else {
@@ -1001,6 +1029,7 @@ export default function Checkout() {
                 return;
             }
 
+            checkoutTrace.log('verify_and_create_order_succeeded', { orderId: verificationResponse?.data?.order_id, duplicate: verificationResponse?.data?.duplicate });
             console.log('[Checkout] ✅ Order created successfully:', verificationResponse?.data?.order_id);
             
             if (!verificationResponse?.data?.order_id) {
@@ -1136,6 +1165,7 @@ export default function Checkout() {
             return;
         }
         
+        checkoutTrace.log('on_success_fired', { piId: paymentIntentId });
         console.log('[Checkout] ✅ Payment intent confirmed:', paymentIntentId);
         
         // Mark payment as completed BEFORE creating order to block duplicates
@@ -1690,7 +1720,9 @@ export default function Checkout() {
                                     <PaymentMethods
                                         selectedMethod={paymentMethod}
                                         onMethodChange={(method) => {
+                                            checkoutTrace.log('payment_method_selected', { method, prev: paymentMethod });
                                             setPaymentMethod(method);
+                                            setTraceError(null);
                                             // CRITICAL: Reset ALL payment state AND refs when switching methods
                                             setClientSecret('');
                                             setShowStripeForm(false);
