@@ -87,8 +87,6 @@ export const AuthProvider = ({ children }) => {
             });
           }
           // For other 403s (auth_required, etc.), proceed as public app - don't block
-          setIsLoadingPublicSettings(false);
-          setIsLoadingAuth(false);
         } else {
           setAuthError({
             type: 'unknown',
