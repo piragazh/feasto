@@ -117,7 +117,7 @@ const DomainChecker = ({ children }) => {
 };
 
 const AuthenticatedApp = ({ customDomainRestaurantId }) => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
