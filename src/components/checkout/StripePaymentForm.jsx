@@ -69,7 +69,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 clientSecret,
                 redirect: 'if_required',
                 confirmParams: {
-                    return_url: window.location.href
+                    return_url: `${window.location.protocol}//${window.location.host}/checkout`
                 }
             });
 

@@ -29,9 +29,16 @@
       });
       
       // Step 2: Platform domain injection point for custom-domain apps
-      // On custom domains, this allows /api calls to route to the platform domain
-      // In production, this is auto-injected by the deployment. Leave unset to allow auto-detection.
-      // window.__BASE44_PLATFORM_DOMAIN = 'api-production-domain.base44.app';
+       // On custom domains, this allows /api calls to route to the platform domain
+       // In production, this is auto-injected by the deployment.
+       // For custom domains: detects via hostname and infers platform API domain
+       (function() {
+         const hostname = window.location.hostname;
+         // If running on custom domain (not *.base44.app), set platform domain for API routing
+         if (hostname && !hostname.includes('base44.app') && hostname !== 'localhost') {
+           window.__BASE44_PLATFORM_DOMAIN = 'api.base44.app';
+         }
+       })();
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
