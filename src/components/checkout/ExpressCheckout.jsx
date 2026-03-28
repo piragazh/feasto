@@ -23,6 +23,9 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
     const [loadError, setLoadError] = useState(null);
     const loadingTimeoutRef = useRef(null);
     const confirmInFlightRef = useRef(false);
+    // ISSUE #1 FIX: Capture clientSecret at mount time — since we remount on key={clientSecret},
+    // this ref holds the exact secret this instance was mounted with
+    const mountedClientSecretRef = useRef(clientSecret);
 
     const handleChange = (e) => {
         if (e.error) {
@@ -91,13 +94,17 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         }
 
                         try {
+                            // ISSUE #1 FIX: Capture clientSecret at confirm-start
+                            // If the Elements instance re-mounted (key rotation), this ref matches
+                            // the correct secret; any stale closure would be caught below
+                            const secretAtConfirmStart = mountedClientSecretRef.current;
+
                             // ── EXPLICIT CONFIRMATION: Use stripe.confirmPayment() ───
-                            // This is the production-safe flow for Express Checkout + Elements
                             console.log('[ExpressCheckout] Confirming payment intent via stripe.confirmPayment()');
                             
                             const confirmResult = await stripe.confirmPayment({
                                 elements,
-                                clientSecret,
+                                clientSecret: secretAtConfirmStart,
                                 redirect: 'if_required',
                                 confirmParams: {
                                     return_url: window.location.href,
@@ -138,9 +145,18 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             switch (paymentIntent.status) {
                                 case 'succeeded':
                                     console.log('✅ [ExpressCheckout] Payment SUCCEEDED:', paymentIntent.id);
-                                    // CRITICAL FIX: DO NOT reset confirmInFlightRef yet
-                                    // Keep guard active through onSuccess callback to prevent duplicate calls on network interrupt
-                                    // confirmInFlightRef will be reset when Checkout.jsx transitions to order complete screen
+                                    // ISSUE #1 & #8 FIX: Validate amount matches before proceeding
+                                    if (amount && paymentIntent.amount !== Math.round(amount * 100)) {
+                                        console.error('[ExpressCheckout] CRITICAL: Amount mismatch!', {
+                                            expected: Math.round(amount * 100),
+                                            actual: paymentIntent.amount
+                                        });
+                                        confirmInFlightRef.current = false;
+                                        if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
+                                        if (onError) onError('Payment amount changed. Please refresh and try again.');
+                                        setIsProcessing(false);
+                                        break;
+                                    }
                                     if (onSuccess && typeof onSuccess === 'function') {
                                         onSuccess(String(paymentIntent.id));
                                     }

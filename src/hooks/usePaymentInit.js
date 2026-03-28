@@ -22,9 +22,16 @@ import { checkoutTrace } from '@/lib/checkoutTrace';
 import { getPaymentErrorMessage } from '@/lib/paymentErrorMessages';
 
 // ── Module-level Stripe singleton ─────────────────────────────────────────────
-let _stripeInitState = { instance: null, promise: null, initialized: false };
+let _stripeInitState = { instance: null, promise: null, initialized: false, lastKey: null };
 
 async function initializeStripe() {
+    const currentKey = Deno.env?.get?.('VITE_STRIPE_PUBLIC_KEY');
+    // ISSUE #2 FIX: Invalidate cache if key changed
+    if (_stripeInitState.lastKey !== currentKey && currentKey) {
+        console.log('[usePaymentInit] Stripe key changed — invalidating cache');
+        _stripeInitState = { instance: null, promise: null, initialized: false, lastKey: currentKey };
+    }
+    
     if (_stripeInitState.initialized && _stripeInitState.instance) return _stripeInitState.instance;
     if (_stripeInitState.promise) return _stripeInitState.promise;
 
@@ -32,6 +39,7 @@ async function initializeStripe() {
         try {
             const response = await base44.functions.invoke('getStripePublicKey');
             if (response?.data?.publicKey) {
+                _stripeInitState.lastKey = response.data.publicKey;
                 const instance = await loadStripe(response.data.publicKey);
                 _stripeInitState.instance = instance;
                 _stripeInitState.initialized = true;
@@ -130,6 +138,8 @@ export function usePaymentInit({
     const activeSecretFingerprintRef = useRef(null);
     // Internal rotating session key — one key per unique fingerprint
     const sessionKeyRef = useRef(generateSessionKey());
+    // ISSUE #10 FIX: Idempotency key synced with session key on rotation
+    const idempotencyKeyRef = useRef(sessionKeyRef.current);
     // Atomic guard — prevents concurrent PI creation calls
     const paymentInitInFlightRef = useRef(false);
 
@@ -143,7 +153,11 @@ export function usePaymentInit({
     }, []);
 
     // Expose the current session key so Checkout can pass it to verifyAndCreateOrder / pendingPayment
-    const getSessionKey = useCallback(() => sessionKeyRef.current, []);
+    const getSessionKey = useCallback(() => {
+        // ISSUE #10 FIX: Always sync idempotency key with session key
+        idempotencyKeyRef.current = sessionKeyRef.current;
+        return sessionKeyRef.current;
+    }, []);
 
     // ── Build the normalized fingerprint from all payment-shaping inputs ───────
     const currentFingerprint = useMemo(() => {
@@ -208,6 +222,7 @@ export function usePaymentInit({
             const oldKey = sessionKeyRef.current;
             const newKey = generateSessionKey();
             sessionKeyRef.current = newKey;
+            idempotencyKeyRef.current = newKey; // ISSUE #10 FIX: Sync idempotency key
 
             console.log('[usePaymentInit] fingerprint_changed — invalidating clientSecret');
             console.log('[usePaymentInit] old fingerprint:', activeSecretFingerprintRef.current);
@@ -285,6 +300,8 @@ export function usePaymentInit({
         if (paymentInitInFlightRef.current) return;
 
         const activeSessionKey = sessionKeyRef.current;
+        // ISSUE #3 FIX: Track when PI was created to warn if expired
+        const piCreatedAt = Date.now();
 
         const runInit = async () => {
             paymentInitInFlightRef.current = true;
@@ -304,9 +321,13 @@ export function usePaymentInit({
                     setStripeLoadedPromise(Promise.resolve(stripeObj));
                 }
 
-                // Guard: session key may have rotated (fingerprint changed) while awaiting Stripe load
+                // ISSUE #1 FIX: Guard against stale session key and clientSecret
                 if (sessionKeyRef.current !== activeSessionKey) {
                     console.warn('[usePaymentInit] Session key rotated during Stripe load — aborting stale init');
+                    checkoutTrace.log('stripe_init_aborted_session_rotated', { 
+                        expectedKey: activeSessionKey, 
+                        currentKey: sessionKeyRef.current 
+                    });
                     return;
                 }
 
@@ -346,9 +367,13 @@ export function usePaymentInit({
 
                 const response = await base44.functions.invoke('createPaymentIntent', payload);
 
-                // Guard: discard if fingerprint changed while in-flight
+                // ISSUE #1 FIX: Discard if fingerprint changed while in-flight
                 if (sessionKeyRef.current !== activeSessionKey) {
                     console.warn('[usePaymentInit] Session key rotated during PI creation — discarding stale response');
+                    checkoutTrace.log('stripe_init_response_discarded_stale_session', { 
+                        expectedKey: activeSessionKey, 
+                        currentKey: sessionKeyRef.current 
+                    });
                     return;
                 }
 

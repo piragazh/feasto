@@ -373,6 +373,23 @@ Deno.serve(async (req) => {
 
         console.error(`${LOG} [trace=${traceId}] [COMPENSATE] stage=${stage} code=${errorCode} reason="${errorMessage}"`);
 
+        // ISSUE #6 FIX: Read PT status BEFORE refund to prevent double-compensation race
+        // If PT is already refunded/needs_review (another concurrent request compensated), skip
+        try {
+            const existingPts = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId });
+            const existingPt = existingPts?.[0];
+            if (existingPt?.status === 'refunded') {
+                console.log(`${LOG} [trace=${traceId}] [COMPENSATE] PT already refunded — skipping double refund`);
+                return { refunded: true };
+            }
+            if (existingPt?.status === 'needs_review') {
+                console.log(`${LOG} [trace=${traceId}] [COMPENSATE] PT already needs_review — skipping duplicate compensation`);
+                return { refunded: false };
+            }
+        } catch (ptReadErr) {
+            console.warn(`${LOG} [trace=${traceId}] [COMPENSATE] PT pre-read failed (proceeding):`, ptReadErr.message);
+        }
+
         await writeFailureLog(base44, {
             failure_type: stage === 'order_persistence' ? 'order_create' : 'refund_initiate',
             severity: 'critical',
@@ -923,19 +940,25 @@ Deno.serve(async (req) => {
     console.log(`${LOG} [trace=${traceId}] order created id=${newOrder.id} num=${newOrder.order_number}`);
 
     // ── STAGE: Payment ledger update ───────────────────────────────────────────
+    // ISSUE #6 FIX: Read-then-conditional-update to avoid double compensation race
     console.log(`${LOG} [trace=${traceId}] stage=payment_ledger_update`);
     if (paymentIntentId) {
         try {
             const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId });
-            const ptId = pts?.[0]?.id;
-            if (ptId) {
-                await base44.asServiceRole.entities.PaymentTransaction.update(ptId, {
-                    status: 'order_created',
-                    order_id: newOrder.id,
-                    order_number: newOrder.order_number || null,
-                    order_created_at: new Date().toISOString(),
-                });
-                console.log(`${LOG} [trace=${traceId}] PT updated to order_created ptId=${ptId}`);
+            const pt = pts?.[0];
+            if (pt?.id) {
+                // Only update if not already in a terminal state (guard against race)
+                if (pt.status === 'authorized') {
+                    await base44.asServiceRole.entities.PaymentTransaction.update(pt.id, {
+                        status: 'order_created',
+                        order_id: newOrder.id,
+                        order_number: newOrder.order_number || null,
+                        order_created_at: new Date().toISOString(),
+                    });
+                    console.log(`${LOG} [trace=${traceId}] PT updated to order_created ptId=${pt.id}`);
+                } else {
+                    console.warn(`${LOG} [trace=${traceId}] PT already in status=${pt.status} — skipping ledger update to prevent race`);
+                }
             } else {
                 console.warn(`${LOG} [trace=${traceId}] PT not found for intent=${paymentIntentId} — order created but PT unlinked`);
             }
@@ -957,31 +980,44 @@ Deno.serve(async (req) => {
     // Ideally the backend would support atomic increment, but for now we do our best
     console.log(`${LOG} [trace=${traceId}] stage=post_create_hooks coupons=${verifiedCouponIds.length}`);
     if (verifiedCouponIds.length > 0) {
-        const incrementResults = await Promise.allSettled(verifiedCouponIds.map(async (couponId) => {
+        // ISSUE #5 FIX: Serialize coupon increments (not parallel) to minimize window for read-write race
+        // Two concurrent requests reading count=5 and both writing 6 would leave it at 6 instead of 7
+        const incrementResults = [];
+        for (const couponId of verifiedCouponIds) {
             try {
                 const fresh = await base44.asServiceRole.entities.Coupon.filter({ id: couponId });
                 const freshCount = fresh?.[0]?.usage_count || 0;
                 const newCount = freshCount + 1;
                 await base44.asServiceRole.entities.Coupon.update(couponId, { usage_count: newCount });
-                console.log(`${LOG} [trace=${traceId}] coupon usage_count incremented id=${couponId} from ${freshCount} to ${newCount}`);
-                return { success: true, couponId, newCount };
+                // Read-back to detect concurrent race
+                const readBack = await base44.asServiceRole.entities.Coupon.filter({ id: couponId });
+                const actualCount = readBack?.[0]?.usage_count || 0;
+                if (actualCount !== newCount) {
+                    console.warn(`${LOG} [trace=${traceId}] coupon RACE DETECTED id=${couponId} expected=${newCount} got=${actualCount}`);
+                    await writeFailureLog(base44, {
+                        failure_type: 'coupon_usage_count_update', severity: 'warning',
+                        restaurant_id: orderData.restaurant_id, user_email: userLabel,
+                        error_message: `Coupon usage_count race: expected=${newCount} actual=${actualCount}`,
+                        context: { trace_id: traceId, coupon_id: couponId, order_id: newOrder.id }
+                    });
+                } else {
+                    console.log(`${LOG} [trace=${traceId}] coupon usage_count incremented id=${couponId} ${freshCount} → ${newCount} ✓`);
+                }
+                incrementResults.push({ status: 'fulfilled', value: { success: true, couponId, newCount } });
             } catch (e) {
                 console.warn(`${LOG} [trace=${traceId}] coupon usage_count increment failed id=${couponId}:`, e.message);
-                // Log to FailureLog for monitoring race conditions
                 await writeFailureLog(base44, {
-                    failure_type: 'coupon_usage_count_update',
-                    severity: 'warning',
-                    restaurant_id: orderData.restaurant_id,
-                    user_email: userLabel,
-                    error_message: `Coupon usage_count increment failed (race condition possible): ${e.message}`,
-                    context: { trace_id: traceId, coupon_id: couponId, order_id: newOrder.id, http_status: 500 }
+                    failure_type: 'coupon_usage_count_update', severity: 'warning',
+                    restaurant_id: orderData.restaurant_id, user_email: userLabel,
+                    error_message: `Coupon usage_count increment failed: ${e.message}`,
+                    context: { trace_id: traceId, coupon_id: couponId, order_id: newOrder.id }
                 });
-                return { success: false, couponId, error: e.message };
+                incrementResults.push({ status: 'fulfilled', value: { success: false, couponId, error: e.message } });
             }
-        }));
+        }
+        const _unusedPromiseAll = incrementResults; // keep same shape as before
         
-        // Log results
-        const failed = incrementResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value?.success));
+        const failed = incrementResults.filter(r => !r.value?.success);
         if (failed.length > 0) {
             console.warn(`${LOG} [trace=${traceId}] ${failed.length} coupon usage_count increments failed (non-fatal, order created)`);
         }

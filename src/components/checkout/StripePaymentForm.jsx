@@ -15,10 +15,15 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     // Local ref for manual card submit dedup
     const submitFiredRef = useRef(false);
     const expressCheckoutEnabled = useExpressCheckoutFlag();
-
-    useEffect(() => {
+    // ISSUE #3 FIX: Track PI creation time to warn if expired (>10 min)
+    const [piCreatedAtMs] = useState(() => {
         checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret, expressCheckoutEnabled });
-    }, []);
+        return Date.now();
+    });
+    
+    // ISSUE #3: Warn if PI older than 10 minutes
+    const piAgeMs = Date.now() - piCreatedAtMs;
+    const piExpired = piAgeMs > 600_000; // 10 minutes
 
     const handleSubmit = async (e) => {
         if (e) {
@@ -76,6 +81,23 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             });
 
             console.log('🔵 Payment result:', result);
+            
+            // ISSUE #8 FIX: Validate amount matches to catch stale secrets
+            if (result.paymentIntent && result.paymentIntent.amount !== Math.round(amount * 100)) {
+                console.error('[StripePaymentForm] CRITICAL: Amount mismatch after confirm!', {
+                    expected: Math.round(amount * 100),
+                    actual: result.paymentIntent.amount
+                });
+                checkoutTrace.error('confirm_payment_amount_mismatch', { 
+                    expectedAmount: Math.round(amount * 100),
+                    actualAmount: result.paymentIntent.amount,
+                    piId: result.paymentIntent?.id
+                });
+                setErrorMessage('Payment amount mismatch. Please refresh and try again.');
+                setIsProcessing(false);
+                submitFiredRef.current = false;
+                return false;
+            }
 
             if (result.error) {
                 console.log('🔴 Payment error:', result.error);
@@ -135,8 +157,16 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
 
     return (
         <div className="space-y-4">
+            {piExpired && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-sm text-yellow-800 font-medium">
+                        Payment session may have expired (created {Math.round(piAgeMs / 60_000)} minutes ago). Please refresh if you encounter issues.
+                    </p>
+                </div>
+            )}
             {expressCheckoutEnabled && amount && clientSecret && (
                 <ExpressCheckout
+                    key={clientSecret}
                     amount={amount}
                     clientSecret={clientSecret}
                     expressConfirmFiredRef={expressConfirmFiredRef}
