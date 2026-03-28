@@ -47,10 +47,6 @@ const AuthenticatedApp = () => {
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
     } else {
       // Step 4: Show visible fatal error UI with technical details for admins/devs
       const isDev = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
