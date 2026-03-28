@@ -36,17 +36,28 @@ export default function Restaurant() {
         sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
     );
     
-    // Listen for custom domain ID changes
+    // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
-        const handleStorageChange = () => {
+        const paramId = urlParams.get('id');
+        // If we already have an ID (from URL param or sessionStorage), no need to poll
+        if (restaurantId) return;
+
+        const interval = setInterval(() => {
             const customId = sessionStorage.getItem('customDomainRestaurantId');
-            const paramId = urlParams.get('id');
-            setRestaurantId(customId || paramId);
+            if (customId) {
+                setRestaurantId(customId || paramId);
+                clearInterval(interval);
+            }
+        }, 100);
+
+        // Stop polling after 5 seconds
+        const timeout = setTimeout(() => clearInterval(interval), 5000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timeout);
         };
-        
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
+    }, [restaurantId]);
     
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
@@ -884,6 +895,15 @@ export default function Restaurant() {
                         <Button>Go Back Home</Button>
                     </Link>
                 </div>
+            </div>
+        );
+    }
+
+    // Still waiting for custom domain ID to be set by Layout
+    if (!restaurantId) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }

@@ -26,20 +26,27 @@ export default function Home() {
         sessionStorage.getItem('customDomainRestaurantId')
     );
 
-    // Listen for custom domain ID from Layout (reactive)
+    // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
-        const checkCustomDomain = () => {
+        // If already set, no need to poll
+        if (customDomainRestaurantId) return;
+
+        const interval = setInterval(() => {
             const id = sessionStorage.getItem('customDomainRestaurantId');
-            setCustomDomainRestaurantId(id);
+            if (id) {
+                setCustomDomainRestaurantId(id);
+                clearInterval(interval);
+            }
+        }, 100);
+
+        // Stop polling after 5 seconds (non-custom domain)
+        const timeout = setTimeout(() => clearInterval(interval), 5000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timeout);
         };
-        
-        // Check immediately
-        checkCustomDomain();
-        
-        // Listen for storage changes
-        window.addEventListener('storage', checkCustomDomain);
-        return () => window.removeEventListener('storage', checkCustomDomain);
-    }, []);
+    }, [customDomainRestaurantId]);
 
     // Fetch restaurants with optimized caching
     const { data: restaurants = [], isLoading, refetch } = useQuery({
