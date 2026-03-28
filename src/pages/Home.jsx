@@ -22,29 +22,41 @@ export default function Home() {
     const [selectedCuisine, setSelectedCuisine] = useState('');
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(() => 
-        sessionStorage.getItem('customDomainRestaurantId')
-    );
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
+    const [domainCheckDone, setDomainCheckDone] = useState(false);
 
-    // Poll sessionStorage for custom domain ID set by Layout in the same tab
+    // Directly check the current domain for a matching restaurant (no sessionStorage dependency)
     useEffect(() => {
-        let found = false;
-        const interval = setInterval(() => {
-            if (found) return; // Stop polling once found
-            const id = sessionStorage.getItem('customDomainRestaurantId');
-            if (id) {
-                setCustomDomainRestaurantId(id);
-                found = true;
+        const checkDomain = async () => {
+            const hostname = window.location.hostname;
+            // Skip for platform/dev domains
+            const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
+            if (isPlatform) {
+                setDomainCheckDone(true);
+                return;
             }
-        }, 100);
-
-        // Stop polling after 5 seconds (non-custom domain)
-        const timeout = setTimeout(() => clearInterval(interval), 5000);
-
-        return () => {
-            clearInterval(interval);
-            clearTimeout(timeout);
+            // Check sessionStorage cache first
+            const cached = sessionStorage.getItem('customDomainRestaurantId');
+            const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
+            if (cached && cachedFor === hostname) {
+                setCustomDomainRestaurantId(cached);
+                setDomainCheckDone(true);
+                return;
+            }
+            try {
+                const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+                const found = restaurants?.[0];
+                if (found) {
+                    sessionStorage.setItem('customDomainRestaurantId', found.id);
+                    sessionStorage.setItem('customDomainCheckedFor', hostname);
+                    setCustomDomainRestaurantId(found.id);
+                }
+            } catch (e) {
+                // ignore
+            }
+            setDomainCheckDone(true);
         };
+        checkDomain();
     }, []);
 
     // Fetch restaurants with optimized caching
@@ -127,6 +139,16 @@ export default function Home() {
             if (sortBy === 'distance' && a.distance && b.distance) return a.distance - b.distance;
             return 0;
         }), [restaurants, searchQuery, selectedCuisine, sortBy, userLocation]);
+
+    // Wait for domain check on custom domains before rendering anything
+    const isPlatform = window.location.hostname === 'localhost' || window.location.hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) || window.location.hostname.includes('127.0.0.1');
+    if (!isPlatform && !domainCheckDone) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     // If on custom domain, render Restaurant page directly with ID (SEO-friendly)
     if (customDomainRestaurantId) {
