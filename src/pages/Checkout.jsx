@@ -1014,6 +1014,13 @@ export default function Checkout() {
                         if (Object.keys(updates).length > 0) return base44.auth.updateMe(updates);
                     }).catch(e => console.error('Failed to save user data:', e))
                 );
+
+                if (!isGuest && !savePhone && formData.phone && user?.phone !== formData.phone) {
+                    backgroundTasks.push(
+                        Promise.resolve().then(() => base44.auth.updateMe({ phone: null }))
+                            .catch(e => console.error('Failed to clear unsaved phone:', e))
+                    );
+                }
             }
 
             // Update group order
@@ -1027,16 +1034,7 @@ export default function Checkout() {
             // NOTE: Coupon usage_count is now incremented server-side in verifyAndCreateOrder.
             // No client-side coupon update needed here.
 
-            // Increment promotion usage (parallel per promo)
-            appliedPromotions.filter(p => !p.is_automatic).forEach(promo => {
-                backgroundTasks.push(
-                    base44.entities.Promotion.update(promo.id, {
-                        usage_count: (promo.usage_count || 0) + 1,
-                        total_revenue_generated: (promo.total_revenue_generated || 0) + total,
-                        total_discount_given: (promo.total_discount_given || 0) + promo.discount
-                    }).catch(e => console.error('Failed to update promotion usage:', e))
-                );
-            });
+            // Promotion usage is validated server-side during order creation.
 
             // Send customer confirmation via WhatsApp or SMS (whichever is enabled, WhatsApp takes priority)
             backgroundTasks.push(
@@ -1160,6 +1158,7 @@ export default function Checkout() {
                 scheduled_for: isScheduled ? scheduledFor : null,
                 guest_name: formData.guest_name,
                 guest_email: formData.guest_email,
+                promotion_codes: appliedPromotions.length > 0 ? appliedPromotions.map(p => p.promotion_code || p.name) : [],
                 order_source: 'online',
             },
         });
