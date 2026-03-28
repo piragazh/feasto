@@ -31,12 +31,8 @@ const CategoryDealCustomizationModal = lazy(() => import('@/components/restauran
 export default function Restaurant() {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
-    let restaurantId = urlParams.get('id');
-    
-    // Check for custom domain restaurant ID from sessionStorage
-    if (!restaurantId) {
-        restaurantId = sessionStorage.getItem('customDomainRestaurantId');
-    }
+    // Check sessionStorage FIRST for custom domain, fall back to query param
+    const restaurantId = sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id');
     
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
