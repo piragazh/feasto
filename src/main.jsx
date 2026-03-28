@@ -7,6 +7,9 @@ import { registerServiceWorker, cleanupLegacyServiceWorkers } from '@/lib/pwa-li
 cleanupLegacyServiceWorkers();
 registerServiceWorker();
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <App />
-)
+const root = document.getElementById('root');
+if (!root) {
+  document.body.innerHTML = '<div style="color:red;padding:20px">ERROR: #root element missing from index.html</div>';
+} else {
+  ReactDOM.createRoot(root).render(React.createElement(App));
+}
