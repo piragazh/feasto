@@ -39,6 +39,64 @@ import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, La
 import { createPageUrl } from '@/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+function SidebarContent({ menuGroups, activeTab, setActiveTab, setMobileSheetOpen, sidebarOpen, isMobile, user }) {
+    return (
+        <div className="flex flex-col h-full">
+            <div className="sticky top-0 bg-slate-950 p-5 border-b border-slate-700 flex items-center justify-between">
+                <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
+                    <div className="w-11 h-11 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <Shield className="h-6 w-6 text-white" />
+                    </div>
+                    {(sidebarOpen || isMobile) && <span className="font-bold text-lg text-white truncate">Admin Hub</span>}
+                </div>
+            </div>
+            <nav className="p-5 space-y-7 flex-1 overflow-y-auto">
+                {menuGroups.map((group) => (
+                    <div key={group.title}>
+                        {(sidebarOpen || isMobile) && (
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">
+                                {group.title}
+                            </p>
+                        )}
+                        <div className="space-y-1.5">
+                            {group.items.map((item) => {
+                                const IconComponent = item.icon;
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setActiveTab(item.id);
+                                            setMobileSheetOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-200 ${
+                                            isActive
+                                                ? 'bg-orange-500 text-white shadow-lg scale-105'
+                                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                                        } ${!sidebarOpen && !isMobile && 'justify-center'}`}
+                                        title={!sidebarOpen && !isMobile ? item.label : ''}
+                                    >
+                                        <IconComponent className="h-5 w-5 flex-shrink-0" />
+                                        {(sidebarOpen || isMobile) && <span className="text-sm font-semibold truncate">{item.label}</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </nav>
+            {(sidebarOpen || isMobile) && (
+                <div className="p-5 border-t border-slate-700 bg-slate-950">
+                    <div className="text-xs text-slate-400 space-y-1">
+                        <p className="truncate font-semibold text-slate-200">{user?.full_name}</p>
+                        <p className="truncate text-slate-500 text-xs">{user?.email}</p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function SuperAdmin() {
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -137,73 +195,11 @@ export default function SuperAdmin() {
         return null;
     }
 
-    // Render sidebar content as reusable component
-    const SidebarContent = () => (
-        <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="sticky top-0 bg-slate-950 p-5 border-b border-slate-700 flex items-center justify-between">
-                <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
-                    <div className="w-11 h-11 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <Shield className="h-6 w-6 text-white" />
-                    </div>
-                    {(sidebarOpen || isMobile) && <span className="font-bold text-lg text-white truncate">Admin Hub</span>}
-                </div>
-            </div>
-
-            {/* Menu Groups */}
-            <nav className="p-5 space-y-7 flex-1 overflow-y-auto">
-                {menuGroups.map((group) => (
-                    <div key={group.title}>
-                        {(sidebarOpen || isMobile) && (
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">
-                                {group.title}
-                            </p>
-                        )}
-                        <div className="space-y-1.5">
-                            {group.items.map((item) => {
-                                const IconComponent = item.icon;
-                                const isActive = activeTab === item.id;
-                                return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            setActiveTab(item.id);
-                                            setMobileSheetOpen(false);
-                                        }}
-                                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-200 ${
-                                            isActive
-                                                ? 'bg-orange-500 text-white shadow-lg scale-105'
-                                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-                                        } ${!sidebarOpen && !isMobile && 'justify-center'}`}
-                                        title={!sidebarOpen && !isMobile ? item.label : ''}
-                                    >
-                                        <IconComponent className="h-5 w-5 flex-shrink-0" />
-                                        {(sidebarOpen || isMobile) && <span className="text-sm font-semibold truncate">{item.label}</span>}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </nav>
-
-            {/* User Info */}
-            {(sidebarOpen || isMobile) && (
-                <div className="p-5 border-t border-slate-700 bg-slate-950">
-                    <div className="text-xs text-slate-400 space-y-1">
-                        <p className="truncate font-semibold text-slate-200">{user?.full_name}</p>
-                        <p className="truncate text-slate-500 text-xs">{user?.email}</p>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-
     return (
         <div className="min-h-screen bg-gray-50 flex">
             {/* Desktop Sidebar */}
             <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 fixed h-screen shadow-xl z-40 flex-col border-r border-slate-800`}>
-                <SidebarContent />
+                <SidebarContent menuGroups={menuGroups} activeTab={activeTab} setActiveTab={setActiveTab} setMobileSheetOpen={setMobileSheetOpen} sidebarOpen={sidebarOpen} isMobile={isMobile} user={user} />
             </div>
 
             {/* Mobile Sheet Sidebar */}
@@ -216,7 +212,7 @@ export default function SuperAdmin() {
                     </div>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-64 bg-slate-900 text-white p-0 border-0">
-                    <SidebarContent />
+                    <SidebarContent menuGroups={menuGroups} activeTab={activeTab} setActiveTab={setActiveTab} setMobileSheetOpen={setMobileSheetOpen} sidebarOpen={sidebarOpen} isMobile={isMobile} user={user} />
                 </SheetContent>
             </Sheet>
 
