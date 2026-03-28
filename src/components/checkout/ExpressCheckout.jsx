@@ -20,15 +20,18 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadError, setLoadError] = useState(null);
+    const loadingTimeoutRef = useRef(null);
 
     const handleChange = (e) => {
         if (e.error) {
             console.warn('[ExpressCheckout] Wallet error:', e.error);
             setLoadError(e.error.message);
+            if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+            setIsProcessing(false);
+            if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
             if (onError && typeof onError === 'function') {
                 onError(String(e.error.message || 'Wallet payment failed'));
             }
-            setIsProcessing(false);
         } else {
             setLoadError(null);
         }
@@ -139,6 +142,17 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                     onLoadingChange={(isLoading) => {
                         console.log('[ExpressCheckout] Loading state:', isLoading);
                         setIsProcessing(isLoading);
+                        
+                        // Safety timeout: if loading doesn't complete within 30s, reset spinner
+                        if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+                        if (isLoading) {
+                            loadingTimeoutRef.current = setTimeout(() => {
+                                console.warn('[ExpressCheckout] Wallet payment timeout after 30s, resetting spinner');
+                                setIsProcessing(false);
+                                if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
+                                if (onError) onError('Payment timeout. Please try again.');
+                            }, 30000);
+                        }
                     }}
                     options={{
                         buttonAppearance: {
