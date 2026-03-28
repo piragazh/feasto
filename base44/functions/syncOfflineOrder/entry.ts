@@ -63,7 +63,12 @@ Deno.serve(async (req) => {
         }
 
         // Verify restaurant exists
-        const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: offlineOrderData.restaurant_id });
+        let restaurants;
+        try {
+            restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: offlineOrderData.restaurant_id });
+        } catch (_) {
+            restaurants = [];
+        }
         if (!restaurants || restaurants.length === 0) {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
