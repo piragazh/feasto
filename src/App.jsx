@@ -24,9 +24,9 @@ const RouteLoadingFallback = () => (
   </div>
 );
 
-const { Pages, Layout, mainPage } = pagesConfig;
+const { Pages = {}, Layout, mainPage } = pagesConfig || {};
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const MainPage = mainPageKey && Pages[mainPageKey] ? Pages[mainPageKey] : () => (<div className="flex items-center justify-center min-h-screen text-red-600">Page not found</div>);
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -35,41 +35,77 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const DomainChecker = ({ children }) => {
   const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
   const [domainCheckDone, setDomainCheckDone] = React.useState(false);
+  const [domainCheckError, setDomainCheckError] = React.useState(null);
 
   React.useEffect(() => {
     const checkDomain = async () => {
-      const hostname = window.location.hostname;
-      const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
-      if (isPlatform) {
-        setDomainCheckDone(true);
-        return;
-      }
-      const cached = sessionStorage.getItem('customDomainRestaurantId');
-      const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
-      if (cached && cachedFor === hostname) {
-        setCustomDomainRestaurantId(cached);
-        setDomainCheckDone(true);
-        return;
-      }
       try {
-        const { base44 } = await import('@/api/base44Client');
-        const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
-        const found = restaurants?.[0];
-        if (found) {
-          sessionStorage.setItem('customDomainRestaurantId', found.id);
-          sessionStorage.setItem('customDomainCheckedFor', hostname);
-          setCustomDomainRestaurantId(found.id);
+        const hostname = window.location.hostname;
+        const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
+        if (isPlatform) {
+          console.log('[DomainChecker] Platform domain detected:', hostname);
+          setDomainCheckDone(true);
+          return;
         }
-      } catch (e) {}
-      setDomainCheckDone(true);
+        console.log('[DomainChecker] Custom domain detected:', hostname);
+        
+        const cached = sessionStorage.getItem('customDomainRestaurantId');
+        const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
+        if (cached && cachedFor === hostname) {
+          console.log('[DomainChecker] Using cached restaurant ID:', cached);
+          setCustomDomainRestaurantId(cached);
+          setDomainCheckDone(true);
+          return;
+        }
+        
+        try {
+          const { base44 } = await import('@/api/base44Client');
+          console.log('[DomainChecker] Querying for restaurant with custom_domain:', hostname);
+          const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+          const found = restaurants?.[0];
+          if (found) {
+            console.log('[DomainChecker] Found restaurant:', found.id, found.name);
+            sessionStorage.setItem('customDomainRestaurantId', found.id);
+            sessionStorage.setItem('customDomainCheckedFor', hostname);
+            setCustomDomainRestaurantId(found.id);
+          } else {
+            console.log('[DomainChecker] No verified restaurant found for custom domain');
+          }
+        } catch (e) {
+          console.error('[DomainChecker] Error querying restaurant:', e?.message || e);
+          setDomainCheckError(e?.message || 'Failed to check custom domain');
+        }
+      } catch (e) {
+        console.error('[DomainChecker] Unexpected error:', e?.message || e);
+        setDomainCheckError(e?.message || 'Unexpected error');
+      } finally {
+        setDomainCheckDone(true);
+      }
     };
     checkDomain();
   }, []);
 
   if (!domainCheckDone) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (domainCheckError) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-4">
+        <div className="max-w-md text-center">
+          <div className="text-red-600 font-bold mb-2">⚠️ Domain Check Error</div>
+          <p className="text-sm text-gray-600 mb-4">{domainCheckError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

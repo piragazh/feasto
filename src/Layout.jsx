@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
@@ -60,6 +60,38 @@ const initializeGTM = () => {
     };
     document.head.insertBefore(script, document.head.firstChild);
 };
+
+class LayoutErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[Layout] Error boundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 flex items-center justify-center bg-red-50 p-4">
+          <div className="text-center">
+            <div className="text-red-600 font-bold mb-2">⚠️ Layout Error</div>
+            <p className="text-sm text-gray-600 mb-4">{this.state.error?.message || 'An error occurred'}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function Layout({ children, currentPageName }) {
     const location = useLocation();
@@ -294,9 +326,23 @@ export default function Layout({ children, currentPageName }) {
     const updateCartCount = () => {
         const cart = localStorage.getItem('cart');
         if (cart) {
-            const items = JSON.parse(cart);
-            const count = items.reduce((sum, item) => sum + item.quantity, 0);
-            setCartCount(count);
+            try {
+                const items = JSON.parse(cart);
+                if (Array.isArray(items)) {
+                    const count = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+                    setCartCount(count);
+                } else {
+                    console.warn('[Layout] Cart is not an array, clearing');
+                    localStorage.removeItem('cart');
+                    setCartCount(0);
+                }
+            } catch (e) {
+                console.error('[Layout] Corrupted cart data, clearing:', e?.message);
+                localStorage.removeItem('cart');
+                localStorage.removeItem('cartRestaurantId');
+                localStorage.removeItem('cartRestaurantName');
+                setCartCount(0);
+            }
         } else {
             setCartCount(0);
         }
@@ -362,6 +408,7 @@ export default function Layout({ children, currentPageName }) {
 
 
     return (
+        <LayoutErrorBoundary>
         <DarkModeProvider>
         <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
             {/* Google Tag Manager Noscript */}
@@ -713,5 +760,6 @@ export default function Layout({ children, currentPageName }) {
                 )}
             </div>
             </DarkModeProvider>
+            </LayoutErrorBoundary>
             );
             }
