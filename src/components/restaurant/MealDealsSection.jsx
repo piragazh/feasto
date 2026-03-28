@@ -1,4 +1,5 @@
 import React from 'react';
+import React from 'react';
 import MealDealCard from './MealDealCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
