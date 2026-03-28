@@ -30,7 +30,8 @@
       
       // Step 2: Platform domain injection point for custom-domain apps
       // On custom domains, this allows /api calls to route to the platform domain
-      window.__BASE44_PLATFORM_DOMAIN = 'preview-sandbox--694f32ea1bcdfa212c621404.base44.app';
+      // In production, this is auto-injected by the deployment. Leave unset to allow auto-detection.
+      // window.__BASE44_PLATFORM_DOMAIN = 'api-production-domain.base44.app';
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
