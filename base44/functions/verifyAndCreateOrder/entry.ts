@@ -507,16 +507,9 @@ Deno.serve(async (req) => {
         }
     }
 
-    // ── STAGE: Minimum order ───────────────────────────────────────────────────
-    if (orderData.order_type === 'delivery') {
-        const clientSubtotal = (orderData.items || []).reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-        if ((restaurant.minimum_order || 0) > 0 && clientSubtotal < restaurant.minimum_order) {
-            const msg = `Below minimum: subtotal=£${clientSubtotal.toFixed(2)} minimum=£${restaurant.minimum_order.toFixed(2)}`;
-            await writeFailureLog(base44, { failure_type: 'minimum_order', severity: 'info', restaurant_id: orderData.restaurant_id, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
-            const c = await compensate('delivery_validation', 'BELOW_MINIMUM_ORDER', msg);
-            return Response.json({ error: `Minimum order is £${restaurant.minimum_order.toFixed(2)}`, success: false, code: 'BELOW_MINIMUM_ORDER', stage: 'delivery_validation', ...c }, { status: 400 });
-        }
-    }
+    // ── STAGE: Minimum order (pre-check using client prices — authoritative re-check done after price correction) ──
+    // This is an early rejection for obviously-below-minimum carts. The authoritative check
+    // runs again below after server-side price correction using serverSubtotal.
 
     // ── STAGE: Item / modifier validation ─────────────────────────────────────
     console.log(`${LOG} [trace=${traceId}] stage=item_validation`);
@@ -613,6 +606,14 @@ Deno.serve(async (req) => {
 
     // Server subtotal from corrected prices
     const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+
+    // ── STAGE: Minimum order (authoritative — uses server-corrected prices) ────
+    if (orderData.order_type === 'delivery' && (restaurant.minimum_order || 0) > 0 && serverSubtotal < restaurant.minimum_order) {
+        const msg = `Below minimum: subtotal=£${serverSubtotal.toFixed(2)} minimum=£${restaurant.minimum_order.toFixed(2)}`;
+        await writeFailureLog(base44, { failure_type: 'minimum_order', severity: 'info', restaurant_id: orderData.restaurant_id, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
+        const c = await compensate('delivery_validation', 'BELOW_MINIMUM_ORDER', msg);
+        return Response.json({ error: `Minimum order is £${restaurant.minimum_order.toFixed(2)}`, success: false, code: 'BELOW_MINIMUM_ORDER', stage: 'delivery_validation', ...c }, { status: 400 });
+    }
 
     // ── Server delivery fee re-derivation ──────────────────────────────────────
     let deliveryFee = 0;
