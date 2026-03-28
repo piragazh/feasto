@@ -191,7 +191,7 @@ async function handlePaymentIntentSucceeded(base44, paymentIntent) {
             payment_intent_id: piId
         });
         if (existingOrders && existingOrders.length > 0) {
-            console.log(`[WEBHOOK] Order already exists for intent=${piId} order_id=${existingOrders[0].id}`);
+            console.log(`[WEBHOOK] Order already exists for intent=${piId} order_id=${existingOrders[0].id} created_at=${existingOrders[0].created_date} — skipping duplicate`);
             return { success: true, status: 'already_reconciled', order_id: existingOrders[0].id };
         }
     } catch (e) {
@@ -312,6 +312,13 @@ Deno.serve(async (req) => {
         
         // CRITICAL: Verify Stripe webhook signature
         const body = await req.text();
+
+        // Reject empty bodies immediately — prevents attacker triggering signature check with no payload
+        if (!body || body.length === 0) {
+            console.error('[WEBHOOK] Empty webhook body rejected');
+            return new Response(JSON.stringify({ error: 'Invalid webhook' }), { status: 400 });
+        }
+
         const signature = req.headers.get('stripe-signature');
         
         if (!WEBHOOK_SECRET || !signature) {

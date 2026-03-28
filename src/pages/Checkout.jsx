@@ -37,6 +37,7 @@ import { useSEO } from '@/lib/useSEO';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { usePaymentInit } from '@/hooks/usePaymentInit';
 import { pendingPayment } from '@/lib/pendingPayment';
+import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 
 // Main Checkout Component
 export default function Checkout() {
@@ -291,6 +292,13 @@ export default function Checkout() {
         const pending = pendingPayment.read();
         if (!pending) return;
 
+        // Skip if already terminal (max attempts exhausted, refunded, etc.)
+        if (!pendingPayment.isReplayable()) {
+            console.log('[Checkout] Pending payment not replayable — clearing');
+            pendingPayment.clear();
+            return;
+        }
+
         console.log('[Checkout] Detected pending payment pi=', pending.paymentIntentId, 'savedAt=', pending.savedAt);
         checkoutTrace.log('recovery_detected', { piId: pending.paymentIntentId, savedAt: pending.savedAt });
 
@@ -305,28 +313,25 @@ export default function Checkout() {
             console.log('[Checkout] Recovery result:', result?.status, result?.order_id);
             checkoutTrace.log('recovery_result', { status: result?.status, orderId: result?.order_id });
 
-            if (result?.status === 'order_found' || result?.status === 'order_created') {
-                pendingPayment.clear();
+            const { orderPlaced: didRecover, recoveryError: errMsg } = handleRecoveryResult(result);
+            if (didRecover) {
                 setOrderPlaced(true);
                 toast.success('Your previous order has been confirmed!');
                 setTimeout(() => navigate(createPageUrl('Orders')), 2000);
-            } else if (result?.status === 'already_refunded') {
-                pendingPayment.clear();
-                setRecoveryError('Your previous payment was refunded. Please place a new order.');
-            } else if (result?.status === 'needs_review') {
-                pendingPayment.clear();
-                setRecoveryError('There was an issue with your previous payment. Our team has been notified. Please contact support.');
-            } else if (result?.status === 'payment_not_succeeded') {
-                // PI not charged — safe to clear and let user retry
-                pendingPayment.clear();
-            } else {
-                // Recovery failed — keep pending record, show error but don't block checkout
-                setRecoveryError(result?.error || 'We could not confirm your previous order. Please check your orders page or contact support.');
+            } else if (errMsg) {
+                setRecoveryError(errMsg);
             }
         }).catch(err => {
             console.error('[Checkout] Recovery request failed:', err.message);
             checkoutTrace.error('recovery_request_failed', { error: err.message });
-            setRecoveryError('Could not verify your previous payment. Please check your orders or contact support.');
+            // Non-terminal network error — count attempt, cap retries
+            const canRetry = pendingPayment.recordAttempt();
+            if (!canRetry) {
+                pendingPayment.setTerminalStatus('terminal_manual_review');
+                setRecoveryError('We could not verify your previous payment after multiple attempts. Please check your orders page or contact support.');
+            } else {
+                setRecoveryError('Could not verify your previous payment. Please check your orders or contact support.');
+            }
         }).finally(() => {
             setIsRecovering(false);
         });

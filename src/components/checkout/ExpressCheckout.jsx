@@ -201,7 +201,9 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             loadingTimeoutRef.current = setTimeout(() => {
                                 console.warn('[ExpressCheckout] Wallet payment timeout after 30s, resetting spinner');
                                 setIsProcessing(false);
-                                confirmInFlightRef.current = false;
+                                // CRITICAL FIX: Do NOT reset confirmInFlightRef here — if a confirmation is
+                                // genuinely in-flight, resetting it would allow a second concurrent attempt.
+                                // Only reset expressConfirmFiredRef to allow a fresh user-initiated retry.
                                 if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
                                 if (onError) onError('Payment timeout. Please try again.');
                             }, 30000);

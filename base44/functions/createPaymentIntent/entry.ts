@@ -76,7 +76,18 @@ function serializeItemsMeta(items) {
         quantity: i.quantity || i.qty
     }));
     const json = JSON.stringify(slim);
-    return json.length > METADATA_VALUE_MAX ? json.slice(0, METADATA_VALUE_MAX) + '…' : json;
+    if (json.length <= METADATA_VALUE_MAX) return json;
+
+    // CRITICAL: Truncated JSON is unparseable — log a warning so ops can detect this.
+    // Webhook recovery depends on parsing this field; a broken payload means manual recovery.
+    // Truncate at item boundary rather than mid-character to maximize parseability.
+    const truncated = json.slice(0, METADATA_VALUE_MAX - 3) + '...'; // never ends with valid JSON bracket
+    console.error(
+        `${LOG_PREFIX} [METADATA_TRUNCATION_WARNING] items_json too large (${json.length} chars > ${METADATA_VALUE_MAX} limit). ` +
+        `Truncated to ${truncated.length} chars. Webhook recovery for this PI may fail if order creation is interrupted. ` +
+        `items_count=${items.length}`
+    );
+    return truncated;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
