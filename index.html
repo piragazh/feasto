@@ -27,6 +27,14 @@
         window.__pwaInstallPrompt = e;
         window.dispatchEvent(new Event('pwaInstallPromptReady'));
       });
+      
+      // Step 2: Platform domain injection point for custom-domain apps
+      // On custom domains, this allows /api calls to route to the platform domain
+      // Injected by deployment config, e.g.: window.__BASE44_PLATFORM_DOMAIN = 'preview-sandbox--xxx.base44.app'
+      // If not set, app will attempt same-origin for local dev
+      if (!window.__BASE44_PLATFORM_DOMAIN) {
+        console.log('[Boot] No platform domain injected, will use current origin for API calls');
+      }
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

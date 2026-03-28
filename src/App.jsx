@@ -52,23 +52,44 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     } else {
-      // Show visible error for other failures (not blank page)
+      // Step 4: Show visible fatal error UI with technical details for admins/devs
+      const isDev = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
       return (
         <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="max-w-lg w-full bg-white rounded-lg shadow-lg p-8 border-l-4 border-red-600">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">⚠️</span>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load App</h2>
-              <p className="text-gray-600 mb-1">{authError.message || 'An error occurred while initializing the app'}</p>
-              <p className="text-xs text-gray-500 mb-4">Error type: {authError.type}</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load App</h2>
+              <p className="text-red-700 font-medium mb-4 text-sm">{authError.message || 'An error occurred during app initialization'}</p>
+              
+              {isDev && (
+                <div className="text-left bg-gray-900 text-gray-100 rounded p-4 mb-4 font-mono text-xs overflow-auto max-h-40 border border-gray-700">
+                  <div className="font-semibold mb-2 text-gray-400">Debug Info:</div>
+                  <div>Frontend: {window.location.hostname}</div>
+                  <div>AppId: {import.meta.env.VITE_BASE44_APP_ID || 'unknown'}</div>
+                  <div>Error Type: {authError.type}</div>
+                  {authError.data?.status && <div>Status: {authError.data.status}</div>}
+                  <div className="mt-2 text-yellow-400">Check browser console for full logs</div>
+                </div>
+              )}
+              
               <button
                 onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors mb-2"
               >
                 Retry
               </button>
+              
+              {isDev && (
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors text-sm"
+                >
+                  Go Home
+                </button>
+              )}
             </div>
           </div>
         </div>

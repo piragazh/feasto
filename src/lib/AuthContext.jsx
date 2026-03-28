@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
+import { getApiUrl, logApiOriginDebug } from '@/lib/api-origin';
 
 const AuthContext = createContext();
 
@@ -29,14 +30,13 @@ export const AuthProvider = ({ children }) => {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       try {
-        // Fix custom domain issue: use current origin for API requests (not absolute path)
-        const apiBaseUrl = typeof window !== 'undefined' 
-          ? window.location.origin 
-          : 'https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app';
+        // Step 3: Use dedicated API origin config (not window.location.origin)
+        const apiUrl = getApiUrl(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`);
         
-        console.log('[AuthContext] App state check:', { domain: window.location.hostname, apiBaseUrl, appId: appParams.appId });
+        logApiOriginDebug();
+        console.log('[AuthContext] App state check:', { appId: appParams.appId, apiUrl });
         
-        const res = await fetch(`${apiBaseUrl}/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { 
+        const res = await fetch(apiUrl, { 
           headers,
           signal: controller.signal 
         });
@@ -47,7 +47,8 @@ export const AuthProvider = ({ children }) => {
           const err = new Error(data?.message || `Failed to load app (${res.status})`);
           err.status = res.status;
           err.data = data;
-          console.error('[AuthContext] App settings fetch failed:', { status: res.status, message: err.message, domain: window.location.hostname });
+          logApiOriginDebug();
+          console.error('[AuthContext] App settings fetch failed:', { status: res.status, message: err.message, appId: appParams.appId });
           throw err;
         }
         const publicSettings = await res.json();
