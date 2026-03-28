@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: msg, success: false, code: 'EMPTY_CART', stage: 'item_validation', ...c }, { status: 400 });
     }
 
-    // Fetch menu items for all non-deal items — paginated, all errors explicit
+    // Fetch menu items by ID directly — avoids pagination gaps on large menus
     const cartItemIds = orderData.items
         .filter(i => !String(i.menu_item_id || '').startsWith('deal_'))
         .map(i => i.menu_item_id)
@@ -524,37 +524,36 @@ Deno.serve(async (req) => {
     const menuItemsMap = new Map();
     if (cartItemIds.length > 0) {
         const uniqueIds = [...new Set(cartItemIds)];
-        const PAGE_SIZE = 50;
-        let skip = 0;
-        let hasMore = true;
-        console.log(`${LOG} [trace=${traceId}] fetching ${uniqueIds.length} unique menu items`);
+        console.log(`${LOG} [trace=${traceId}] fetching ${uniqueIds.length} unique menu items by ID`);
 
-        while (hasMore && menuItemsMap.size < uniqueIds.length) {
-            let batch;
+        // Fetch each item by ID directly — no pagination issues
+        await Promise.all(uniqueIds.map(async (itemId) => {
             try {
-                batch = await base44.asServiceRole.entities.MenuItem.filter(
-                    { restaurant_id: orderData.restaurant_id }, null, PAGE_SIZE, skip
-                );
+                const results = await base44.asServiceRole.entities.MenuItem.filter({ id: itemId });
+                if (results?.[0]) menuItemsMap.set(itemId, results[0]);
             } catch (fetchErr) {
-                const msg = `MenuItem.filter failed at skip=${skip}: ${fetchErr.message}`;
-                console.error(`${LOG} [trace=${traceId}] ${msg}`);
-                await writeFailureLog(base44, { failure_type: 'cart_validation', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 500 } });
-                const c = await compensate('item_validation', 'MENU_FETCH_FAILED', msg);
-                return Response.json({ error: 'Menu validation failed. Please refresh and try again.', success: false, code: 'MENU_FETCH_FAILED', stage: 'item_validation', ...c }, { status: 500 });
+                console.warn(`${LOG} [trace=${traceId}] MenuItem fetch failed for id=${itemId}:`, fetchErr.message);
             }
+        }));
 
-            if (!Array.isArray(batch) || batch.length === 0) { hasMore = false; break; }
-            for (const item of batch) {
-                if (item?.id && uniqueIds.includes(item.id)) menuItemsMap.set(item.id, item);
+        // Validate found items belong to this restaurant
+        const missing = [];
+        for (const id of uniqueIds) {
+            const item = menuItemsMap.get(id);
+            if (!item) {
+                missing.push(id);
+            } else if (item.restaurant_id && item.restaurant_id !== orderData.restaurant_id) {
+                // Item belongs to a different restaurant — cross-restaurant cart tampering
+                const msg = `Cart item ${id} belongs to restaurant ${item.restaurant_id}, not ${orderData.restaurant_id}`;
+                console.error(`${LOG} [trace=${traceId}] [SECURITY] ${msg}`);
+                await writeFailureLog(base44, { failure_type: 'cart_validation', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
+                const c = await compensate('item_validation', 'ITEM_WRONG_RESTAURANT', msg);
+                return Response.json({ error: 'Cart contains items from a different restaurant. Please refresh and try again.', success: false, code: 'ITEM_WRONG_RESTAURANT', stage: 'item_validation', ...c }, { status: 400 });
             }
-            if (menuItemsMap.size >= uniqueIds.length) break;
-            if (batch.length < PAGE_SIZE) { hasMore = false; break; }
-            skip += PAGE_SIZE;
         }
 
-        const missing = uniqueIds.filter(id => !menuItemsMap.has(id));
         if (missing.length > 0) {
-            const msg = `Cart items not in menu: [${missing.join(', ')}]`;
+            const msg = `Cart items not found in DB: [${missing.join(', ')}]`;
             console.error(`${LOG} [trace=${traceId}] ${msg}`);
             await writeFailureLog(base44, { failure_type: 'cart_validation', severity: 'info', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, missing_ids: missing, http_status: 400 } });
             const c = await compensate('item_validation', 'ITEM_NOT_FOUND', msg);

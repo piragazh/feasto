@@ -797,6 +797,26 @@ export default function Checkout() {
                 return;
             }
 
+            // Validate cart items still exist in the DB (catch stale/deleted items before charging)
+            const nonDealItems = validatedItems.filter(i => !String(i.menu_item_id || '').startsWith('deal_'));
+            if (nonDealItems.length > 0) {
+                try {
+                    const itemChecks = await Promise.all(
+                        nonDealItems.map(i => base44.entities.MenuItem.filter({ id: i.menu_item_id }))
+                    );
+                    const staleItems = nonDealItems.filter((item, idx) => !itemChecks[idx]?.length || itemChecks[idx][0]?.is_available === false);
+                    if (staleItems.length > 0) {
+                        const names = staleItems.map(i => i.name).join(', ');
+                        toast.error(`Some items are no longer available: ${names}. Please remove them from your cart and try again.`);
+                        setIsSubmitting(false);
+                        return;
+                    }
+                } catch (e) {
+                    // Non-fatal — let backend validate
+                    console.warn('[Checkout] Pre-flight item check failed (non-fatal):', e.message);
+                }
+            }
+
             // Validate restaurant
             if (!restaurantId || !restaurantName) {
                 toast.error('Restaurant information missing');
@@ -903,11 +923,16 @@ export default function Checkout() {
             if (!verificationResponse?.data?.success) {
                 const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
                 const refunded = verificationResponse?.data?.refunded === true;
+                const code = verificationResponse?.data?.code || '';
                 checkoutTrace.error('verify_and_create_order_failed', { error: errorMsg, refunded, duplicate: verificationResponse?.data?.duplicate });
                 setTraceError(`ORDER_FAILED: ${errorMsg}`);
                 console.error('[Checkout] Order creation failed:', errorMsg, 'Refunded:', refunded);
                 if (refunded) {
-                    toast.error(errorMsg + ' — Your payment has been automatically refunded.');
+                    if (code === 'ITEM_NOT_FOUND' || code === 'ITEM_UNAVAILABLE') {
+                        toast.error('One or more items in your cart are no longer available. Your payment has been fully refunded. Please refresh and reorder.', { duration: 8000 });
+                    } else {
+                        toast.error(errorMsg + ' — Your payment has been automatically refunded.', { duration: 8000 });
+                    }
                 } else {
                     toast.error(errorMsg);
                 }
