@@ -23,35 +23,86 @@ import { addSkipLink } from '@/lib/a11y-utils';
 import { initializeLiveRegions } from '@/lib/aria-utils.jsx';
 import { getApiUrl } from '@/lib/api-origin';
 
+const warnStorageIssue = (type, key, error) => {
+    if (import.meta.env.DEV) {
+        console.warn(`[Layout] ${type} failed for key "${key}"`, error);
+    }
+};
+
+const safeGetSessionItem = (key) => {
+    if (typeof window === 'undefined') return null;
+    try {
+        return window.sessionStorage.getItem(key);
+    } catch (error) {
+        warnStorageIssue('sessionStorage get', key, error);
+        return null;
+    }
+};
+
+const safeSetSessionItem = (key, value) => {
+    if (typeof window === 'undefined') return null;
+    try {
+        window.sessionStorage.setItem(key, value);
+        return value;
+    } catch (error) {
+        warnStorageIssue('sessionStorage set', key, error);
+        return null;
+    }
+};
+
+const safeRemoveSessionItem = (key) => {
+    if (typeof window === 'undefined') return null;
+    try {
+        window.sessionStorage.removeItem(key);
+        return null;
+    } catch (error) {
+        warnStorageIssue('sessionStorage remove', key, error);
+        return null;
+    }
+};
+
+const safeGetLocalItem = (key) => {
+    if (typeof window === 'undefined') return null;
+    try {
+        return window.localStorage.getItem(key);
+    } catch (error) {
+        warnStorageIssue('localStorage get', key, error);
+        return null;
+    }
+};
+
 // Google Tag Manager initialization
 const initializeGTM = () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
     const gtmId = import.meta.env.VITE_GTM_ID || 'GTM-PJ3JPPSN';
-    
-    // Store for later use
+    const scriptSrc = `https://www.googletagmanager.com/gtag/js?id=${gtmId}`;
+
     window.__gtmId = gtmId;
-    
-    // Initialize dataLayer
     window.dataLayer = window.dataLayer || [];
-    
-    // Define gtag function PK
-    window.gtag = function() { 
-        window.dataLayer.push(arguments); 
-    };
-    
-    // Set defaults
-    window.gtag('js', new Date());
-    
-    // Configure GTM with privacy settings
-    window.gtag('config', gtmId, { 
-        'anonymize_ip': true,
-        'allow_google_signals': false,
-        'send_page_view': true
-    });
-    
-    // Load GTM script
+
+    if (!window.gtag) {
+        window.gtag = function() {
+            window.dataLayer.push(arguments);
+        };
+    }
+
+    if (!window.__gtmInitialized) {
+        window.gtag('js', new Date());
+        window.gtag('config', gtmId, {
+            'anonymize_ip': true,
+            'allow_google_signals': false,
+            'send_page_view': true
+        });
+        window.__gtmInitialized = true;
+    }
+
+    const existingScript = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (existingScript) return;
+
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${gtmId}`;
+    script.src = scriptSrc;
     script.onload = () => {
         if (import.meta.env.DEV) console.log('GTM script loaded successfully');
     };
@@ -101,18 +152,14 @@ export default function Layout({ children, currentPageName }) {
     const [cartCount, setCartCount] = useState(0);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
     
-    // Read customDomainRestaurantId from sessionStorage in state (not top-level render)
-    // to avoid synchronous render-time reads that can cause React update conflicts (#426)
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(() =>
-        sessionStorage.getItem('customDomainRestaurantId') || null
-    );
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
     // Re-sync from sessionStorage when location changes (DomainChecker may have updated it)
     // CRITICAL FIX #426: Wrap state update in startTransition to prevent synchronous
     // suspension during input handling. Navigation is synchronous input, but the
     // state update and subsequent query should be marked as non-urgent transitions.
     useEffect(() => {
-        const id = sessionStorage.getItem('customDomainRestaurantId');
+        const id = safeGetSessionItem('customDomainRestaurantId');
         if (id !== customDomainRestaurantId) {
             startTransition(() => {
                 setCustomDomainRestaurantId(id || null);
@@ -155,6 +202,8 @@ export default function Layout({ children, currentPageName }) {
         // For restaurant dashboard / POS, use restaurant-specific dashboard manifest
         // IMPORTANT: Use getApiUrl() to ensure the request hits the backend function,
         // not the SPA frontend rewrite which returns HTML instead of JSON.
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
         if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard' || currentPageName === 'TabletDashboard') {
             const urlParams = new URLSearchParams(window.location.search);
             const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
@@ -279,6 +328,8 @@ export default function Layout({ children, currentPageName }) {
     }, [location, customDomainRestaurant]);
 
     useEffect(() => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
         initializeGTM();
         addSkipLink();
         initializeLiveRegions();
@@ -293,6 +344,8 @@ export default function Layout({ children, currentPageName }) {
 
     // Track page views with GTM
     useEffect(() => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
         if (window.__gtmId && window.__gtmId !== 'undefined' && window.gtag && window.dataLayer) {
             // Use setTimeout to ensure GTM is ready
             setTimeout(() => {
@@ -315,15 +368,17 @@ export default function Layout({ children, currentPageName }) {
         setIsRestaurantManager(managers && managers.length > 0);
 
         // Handle staff post-login redirect
-        const staffRole = sessionStorage.getItem('staff_post_login_role');
-        const staffEmail = sessionStorage.getItem('staff_post_login_email');
+        const staffRole = safeGetSessionItem('staff_post_login_role');
+        const staffEmail = safeGetSessionItem('staff_post_login_email');
         if (staffRole && staffEmail && userData.email?.toLowerCase() === staffEmail?.toLowerCase()) {
-            sessionStorage.removeItem('staff_post_login_role');
-            sessionStorage.removeItem('staff_post_login_email');
-            if (staffRole === 'cashier') {
-                window.location.href = createPageUrl('POSDashboard');
-            } else {
-                window.location.href = createPageUrl('RestaurantDashboard');
+            safeRemoveSessionItem('staff_post_login_role');
+            safeRemoveSessionItem('staff_post_login_email');
+            if (typeof window !== 'undefined') {
+                if (staffRole === 'cashier') {
+                    window.location.href = createPageUrl('POSDashboard');
+                } else {
+                    window.location.href = createPageUrl('RestaurantDashboard');
+                }
             }
         }
     } catch (e) {
@@ -333,7 +388,7 @@ export default function Layout({ children, currentPageName }) {
 
     const updateCartCount = () => {
         try {
-            const cart = localStorage.getItem('cart');
+            const cart = safeGetLocalItem('cart');
             if (cart) {
                 const items = JSON.parse(cart);
                 if (Array.isArray(items)) {
@@ -341,7 +396,6 @@ export default function Layout({ children, currentPageName }) {
                     setCartCount(count);
                 } else {
                     console.warn('[Layout] Cart is not an array, clearing');
-                    localStorage.removeItem('cart');
                     setCartCount(0);
                 }
             } else {
@@ -349,9 +403,6 @@ export default function Layout({ children, currentPageName }) {
             }
         } catch (e) {
             console.error('[Layout] Corrupted cart data, clearing:', e?.message);
-            localStorage.removeItem('cart');
-            localStorage.removeItem('cartRestaurantId');
-            localStorage.removeItem('cartRestaurantName');
             setCartCount(0);
         }
     };
@@ -382,26 +433,30 @@ export default function Layout({ children, currentPageName }) {
         // If already on this tab's page, go to its root
         if (currentPageName === targetPage) {
             navigate(targetUrl, { replace: true });
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         } else {
             // Save current location for the outgoing tab
             const currentTabKey = `tab_location_${currentPageName}`;
-            sessionStorage.setItem(currentTabKey, JSON.stringify({
+            safeSetSessionItem(currentTabKey, JSON.stringify({
                 pathname: location.pathname,
                 search: location.search,
-                scrollY: window.scrollY
+                scrollY: typeof window !== 'undefined' ? window.scrollY : 0
             }));
             
             // Check if incoming tab has saved location
             const incomingTabKey = `tab_location_${targetPage}`;
-            const savedLocation = sessionStorage.getItem(incomingTabKey);
+            const savedLocation = safeGetSessionItem(incomingTabKey);
             
             if (savedLocation) {
                 try {
                     const { pathname, search, scrollY } = JSON.parse(savedLocation);
                     navigate(pathname + search);
                     // Restore scroll after navigation
-                    setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 0);
+                    if (typeof window !== 'undefined') {
+                        setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 0);
+                    }
                 } catch (e) {
                     // If parsing fails, just navigate normally
                     navigate(targetUrl);
@@ -415,15 +470,17 @@ export default function Layout({ children, currentPageName }) {
 
 
 
+    const gtmId = typeof window !== 'undefined' ? window.__gtmId : null;
+
     return (
         <LayoutErrorBoundary>
         <DarkModeProvider>
         <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
             {/* Google Tag Manager Noscript */}
-            {window.__gtmId && window.__gtmId !== 'undefined' && (
+            {gtmId && gtmId !== 'undefined' && (
                 <noscript 
                     dangerouslySetInnerHTML={{
-                        __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${window.__gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
+                        __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
                     }}
                 />
             )}
