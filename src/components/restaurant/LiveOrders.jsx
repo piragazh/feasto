@@ -355,7 +355,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
             const message = statusMessages[status] || `Order ${orderLabel} status updated.`;
             
-            // Send via WhatsApp if enabled
+            // WhatsApp takes priority — send only one channel to avoid duplicates
             if (shouldSendWhatsApp) {
                 await base44.functions.invoke('sendWhatsAppCustomer', {
                     to: order.phone,
@@ -364,10 +364,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                     restaurantId,
                     restaurantName: order.restaurant_name || undefined,
                 });
-            }
-
-            // Send via SMS if enabled
-            if (shouldSendSms) {
+            } else if (shouldSendSms) {
                 await base44.functions.invoke('sendSMS', {
                     to: order.phone,
                     message,

@@ -997,11 +997,12 @@ export default function Checkout() {
                 );
             });
 
-            // Send customer SMS
+            // Send customer confirmation via WhatsApp or SMS (whichever is enabled, WhatsApp takes priority)
             backgroundTasks.push(
-                base44.functions.invoke('shouldSendOrderStatusSms', { restaurantId, status: 'confirmed' })
-                    .then(smsCheckResult => {
-                        if (!smsCheckResult?.data?.shouldSend) return;
+                base44.functions.invoke('shouldSendOrderStatusNotification', { restaurantId, status: 'confirmed' })
+                    .then(checkResult => {
+                        const { shouldSendSms, shouldSendWhatsApp } = checkResult?.data || {};
+                        if (!shouldSendSms && !shouldSendWhatsApp) return;
                         const orderLabel = orderType === 'collection' && newOrder.order_number
                             ? newOrder.order_number : `#${newOrder.id.slice(-6)}`;
                         const itemsList = cart.slice(0, 3).map(item => `${item.quantity}x ${item.name}`).join('\n');
@@ -1009,8 +1010,13 @@ export default function Checkout() {
                         const customerMessage = orderType === 'collection'
                             ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min`
                             : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}`;
-                        return base44.functions.invoke('sendSMS', { to: formData.phone, message: customerMessage, orderId: newOrder.id });
-                    }).catch(e => console.error('Customer SMS failed:', e))
+                        // WhatsApp takes priority to avoid duplicates
+                        if (shouldSendWhatsApp) {
+                            return base44.functions.invoke('sendWhatsAppCustomer', { to: formData.phone, message: customerMessage, orderId: newOrder.id, restaurantId, restaurantName });
+                        } else {
+                            return base44.functions.invoke('sendSMS', { to: formData.phone, message: customerMessage, orderId: newOrder.id, restaurantId, restaurantName });
+                        }
+                    }).catch(e => console.error('Customer notification failed:', e))
             );
 
             // Notify restaurant — always route through notifyRestaurantNewOrder which handles

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     try {
@@ -84,11 +84,16 @@ Deno.serve(async (req) => {
             });
         }
 
-        const alertPhone = restaurant.alert_phone;
-        
-        // Validate phone number format
-        if (!alertPhone.match(/^(\+44|0)[0-9\s]{9,}$/)) {
-            console.error(`Invalid phone format for restaurant: ${restaurantId}`);
+        // Normalize restaurant alert phone to E.164
+        let alertPhone = restaurant.alert_phone.replace(/[\s\-\(\)]/g, '');
+        if (alertPhone.startsWith('00')) alertPhone = '+' + alertPhone.slice(2);
+        else if (alertPhone.startsWith('0')) alertPhone = '+44' + alertPhone.slice(1);
+        else if (alertPhone.startsWith('44') && !alertPhone.startsWith('+')) alertPhone = '+' + alertPhone;
+        else if (alertPhone.startsWith('7')) alertPhone = '+44' + alertPhone;
+        else if (!alertPhone.startsWith('+')) alertPhone = '+44' + alertPhone;
+
+        if (!alertPhone.match(/^\+44\d{10}$/)) {
+            console.error(`Invalid phone format for restaurant: ${restaurantId}, phone: ${alertPhone}`);
             return Response.json({ 
                 success: false,
                 message: 'Invalid phone number format'
