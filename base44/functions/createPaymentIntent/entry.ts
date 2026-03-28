@@ -99,11 +99,9 @@ Deno.serve(async (req) => {
 
         // ── Auth (guests allowed) ─────────────────────────────────────────────
         let user = null;
-        let isGuest = false;
-        try {
+        const isGuest = !(await base44.auth.isAuthenticated());
+        if (!isGuest) {
             user = await base44.auth.me();
-        } catch (_) {
-            isGuest = true;
         }
 
         // ── Parse body ────────────────────────────────────────────────────────

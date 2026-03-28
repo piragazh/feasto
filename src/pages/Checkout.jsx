@@ -111,9 +111,6 @@ export default function Checkout() {
     
     // User Authentication Status
     const [isGuest, setIsGuest] = useState(false); // Is user checking out as guest?
-    const [emailChecked, setEmailChecked] = useState(false);
-    const [emailExists, setEmailExists] = useState(false);
-    const [checkingEmail, setCheckingEmail] = useState(false);
     const [savePhone, setSavePhone] = useState(true);
     const [saveAddress, setSaveAddress] = useState(true);
     const [addressLabel, setAddressLabel] = useState('Home');
@@ -403,27 +400,6 @@ export default function Checkout() {
         }
     };
 
-    const checkEmailExists = async (email) => {
-        if (!email || !email.includes('@')) return;
-        
-        setCheckingEmail(true);
-        try {
-            const users = await base44.entities.User.filter({ email: email.toLowerCase() });
-            setEmailExists(users && users.length > 0);
-            setEmailChecked(true);
-        } catch (error) {
-            setEmailExists(false);
-            setEmailChecked(false);
-        } finally {
-            setCheckingEmail(false);
-        }
-    };
-
-    const handleEmailBlur = () => {
-        if (formData.guest_email && !emailChecked) {
-            checkEmailExists(formData.guest_email);
-        }
-    };
 
     // Fetch restaurant details from database
     const loadRestaurantName = async (id) => {
@@ -1008,15 +984,15 @@ export default function Checkout() {
             const backgroundTasks = [];
 
             // Save user phone/address
-            if (!isGuest) {
+            if (!isGuest && user) {
                 backgroundTasks.push(
-                    base44.auth.me().then(userData => {
+                    Promise.resolve().then(() => {
                         const updates = {};
-                        if (savePhone && formData.phone && formData.phone !== userData.phone) {
+                        if (savePhone && formData.phone && formData.phone !== user.phone) {
                             updates.phone = formData.phone;
                         }
                         if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
-                            const currentAddresses = userData.saved_addresses || [];
+                            const currentAddresses = user.saved_addresses || [];
                             const addressExists = currentAddresses.some(addr =>
                                 addr.address === formData.delivery_address && addr.door_number === formData.door_number
                             );
@@ -1029,7 +1005,7 @@ export default function Checkout() {
                                     instructions: formData.notes || '',
                                     is_default: setAsDefault
                                 };
-                                let updatedAddresses = setAsDefault
+                                const updatedAddresses = setAsDefault
                                     ? currentAddresses.map(addr => ({ ...addr, is_default: false }))
                                     : currentAddresses;
                                 updates.saved_addresses = [...updatedAddresses, newAddress];
@@ -1346,31 +1322,10 @@ export default function Checkout() {
                                                 type="email"
                                                 placeholder="john@example.com"
                                                 value={formData.guest_email}
-                                                onChange={(e) => {
-                                                    setFormData({ ...formData, guest_email: e.target.value });
-                                                    setEmailChecked(false);
-                                                    setEmailExists(false);
-                                                }}
-                                                onBlur={handleEmailBlur}
+                                                onChange={(e) => setFormData({ ...formData, guest_email: e.target.value })}
                                                 className="h-12"
                                                 required
                                             />
-                                            {checkingEmail && (
-                                                <p className="text-xs text-gray-500 mt-1">Checking...</p>
-                                            )}
-                                            {emailChecked && emailExists && (
-                                                <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                                                    <p className="text-sm text-orange-800 mb-2">This email is already registered!</p>
-                                                    <Button
-                                                        type="button"
-                                                        onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
-                                                        size="sm"
-                                                        className="bg-orange-500 hover:bg-orange-600 text-white h-9"
-                                                    >
-                                                        Sign in to continue
-                                                    </Button>
-                                                </div>
-                                            )}
                                         </div>
                                         <div>
                                             <Label htmlFor="guest_name">Full Name *</Label>
