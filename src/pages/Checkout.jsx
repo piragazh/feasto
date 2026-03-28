@@ -399,7 +399,8 @@ export default function Checkout() {
                 }
             }
         } catch (e) {
-            setIsGuest(true); // On error, assume guest
+            setIsGuest(true);
+            setShowManualAddressEntry(true); // Guests always enter address manually
         }
     };
 
@@ -408,10 +409,13 @@ export default function Checkout() {
         
         setCheckingEmail(true);
         try {
-            const users = await base44.entities.User.filter({ email: email.toLowerCase() });
-            setEmailExists(users && users.length > 0);
+            // Use backend function to safely check email existence without requiring auth
+            const response = await base44.functions.invoke('checkGuestEmail', { email: email.toLowerCase() });
+            const exists = response?.data?.exists === true;
+            setEmailExists(exists);
             setEmailChecked(true);
         } catch (error) {
+            // Non-fatal: if check fails, don't block the guest
             setEmailExists(false);
             setEmailChecked(false);
         } finally {
@@ -778,19 +782,24 @@ export default function Checkout() {
 
         console.log('All validations passed, proceeding...');
 
-        // FIX #19: Re-check email if >5s old or not yet checked, to prevent stale email check race
+        // Re-check email if >5s old or not yet checked, to prevent stale email check race
         if (isGuest && formData.guest_email) {
             const EMAIL_CHECK_MAX_AGE_MS = 5000;
             const isStale = !emailCheckedAt || (Date.now() - emailCheckedAt) > EMAIL_CHECK_MAX_AGE_MS;
             if (isStale) {
-                setCheckingEmail(true);
-                const users = await base44.entities.User.filter({ email: formData.guest_email.toLowerCase() });
-                setCheckingEmail(false);
-                if (users?.length > 0) {
-                    toast.error('This email is already registered. Please sign in to continue.');
-                    return;
+                try {
+                    setCheckingEmail(true);
+                    const response = await base44.functions.invoke('checkGuestEmail', { email: formData.guest_email.toLowerCase() });
+                    setCheckingEmail(false);
+                    if (response?.data?.exists === true) {
+                        toast.error('This email is already registered. Please sign in to continue.');
+                        return;
+                    }
+                    setEmailCheckedAt(Date.now());
+                } catch (e) {
+                    setCheckingEmail(false);
+                    // Non-fatal: don't block order if check fails
                 }
-                setEmailCheckedAt(Date.now());
             } else if (emailExists) {
                 toast.error('This email is already registered. Please sign in to continue.');
                 return;
