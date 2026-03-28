@@ -9,6 +9,7 @@
 // - Delivery zone checking
 
 import React, { useState, useEffect, useRef } from 'react';
+// Note: loadStripe and Stripe singleton are now in hooks/usePaymentInit.js
 import { base44 } from '@/api/base44Client'; // SDK to interact with backend
 import { useNavigate, Link } from 'react-router-dom'; // Navigation tools
 import { createPageUrl } from '@/utils'; // Helper to create page URLs
@@ -30,62 +31,11 @@ import LocationPicker from '@/components/location/LocationPicker'; // Address au
 import SavedAddressesSection from '@/components/checkout/SavedAddressesSection'; // Saved addresses for logged-in users
 import { motion } from 'framer-motion'; // Animations
 import { toast } from 'sonner'; // Toast notifications
-import { loadStripe } from '@stripe/stripe-js'; // Stripe payment integration
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { useSEO } from '@/lib/useSEO';
 import { checkoutTrace } from '@/lib/checkoutTrace';
-
-// ─────────────────────────────────────────────────────────────────────
-// STRIPE INITIALIZATION — Atomic singleton guard (useRef in component)
-// Module-level cache: survives re-renders, prevents concurrent init
-// ─────────────────────────────────────────────────────────────────────
-let _stripeInitState = {
-    instance: null,      // Resolved Stripe object
-    promise: null,       // In-flight initialization promise
-    initialized: false   // Atomic flag
-};
-
-const initializeStripe = async () => {
-    // Return cached instance immediately (no async required)
-    if (_stripeInitState.initialized && _stripeInitState.instance) {
-        return _stripeInitState.instance;
-    }
-    // Dedupe concurrent calls — return the same promise
-    if (_stripeInitState.promise) {
-        return _stripeInitState.promise;
-    }
-    
-    _stripeInitState.promise = (async () => {
-        try {
-            console.log('[Stripe] Fetching public key...');
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await base44.functions.invoke('getStripePublicKey');
-            clearTimeout(timeoutId);
-            
-            if (response?.data?.publicKey) {
-                console.log('✅ Stripe public key loaded');
-                const instance = await loadStripe(response.data.publicKey);
-                _stripeInitState.instance = instance;
-                _stripeInitState.initialized = true;
-                return instance;
-            } else {
-                console.error('❌ No public key in response');
-                _stripeInitState.promise = null; // Allow retry
-                return null;
-            }
-        } catch (error) {
-            console.error('❌ Failed to load Stripe key:', error.message);
-            _stripeInitState.promise = null; // Allow retry on next call
-            return null;
-        }
-    })();
-    
-    return _stripeInitState.promise;
-};
+import { usePaymentInit } from '@/hooks/usePaymentInit';
 
 // Main Checkout Component
 export default function Checkout() {
@@ -119,14 +69,9 @@ export default function Checkout() {
     const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null); // Delivery availability and fees
     const [zoneCheckComplete, setZoneCheckComplete] = useState(false); // Has zone check finished?
     
-    // Payment Processing (Stripe)
-    const [clientSecret, setClientSecret] = useState(''); // Stripe payment intent secret
-    const [showStripeForm, setShowStripeForm] = useState(false); // Show Stripe card form?
+    // Payment Processing
     const [paymentMethod, setPaymentMethod] = useState(''); // Selected payment method (no default)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
-    const [initializingPayment, setInitializingPayment] = useState(false);
-    const [stripeReady, setStripeReady] = useState(false); // Tracks whether Stripe object is loaded
-    const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null); // The promise to pass to <Elements>
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
     const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Static: set once at mount
     const [checkoutTraceId] = useState(() => {
@@ -136,8 +81,6 @@ export default function Checkout() {
         return id;
     });
     const [traceError, setTraceError] = useState(null); // Dev-facing error detail
-    // Atomic guard: prevents concurrent payment initialization calls creating conflicting state
-    const paymentInitInFlightRef = useRef(false);
     // Atomic guard: prevents Express Checkout onConfirm from firing twice
     const expressConfirmFiredRef = useRef(false);
     
@@ -485,145 +428,33 @@ export default function Checkout() {
     // Final total = subtotal + delivery + surcharge - discount (floor at 0)
     const total = Math.max(0, subtotal + deliveryFee + smallOrderSurcharge - discount);
 
-    // Track what total the current PaymentIntent was created for
-    const piTotalRef = useRef(null);
-
-    // Initialize payment intent when card payment is selected and form is valid
-    useEffect(() => {
-        const initPayment = async () => {
-            if (paymentMethod !== 'card') {
-                // Reset Stripe state when switching away from card
-                setClientSecret('');
-                setShowStripeForm(false);
-                paymentInitInFlightRef.current = false;
-                piTotalRef.current = null;
-                return;
-            }
-
-            // If we have a clientSecret but the total changed, clear it so we get a fresh PI
-            if (clientSecret && piTotalRef.current !== null && Math.abs(piTotalRef.current - total) > 0.01) {
-                console.log('[PaymentInit] Total changed from', piTotalRef.current, 'to', total, '— resetting PI');
-                setClientSecret('');
-                setShowStripeForm(false);
-                paymentInitInFlightRef.current = false;
-                piTotalRef.current = null;
-                // Allow fall-through to re-init
-            }
-
-            // Don't re-init if we already have a valid clientSecret for the current total
-            if (clientSecret) return;
-
-            // ATOMIC GUARD: prevent concurrent init calls
-            if (paymentInitInFlightRef.current) return;
-
-            // COMPREHENSIVE VALIDATION - Block payment until ALL checks pass
-            if (isGuest && (!formData.guest_name || !formData.guest_email)) {
-                checkoutTrace.log('stripe_init_blocked', { reason: 'missing_guest_details' });
-                return;
-            }
-            if (!formData.phone) {
-                checkoutTrace.log('stripe_init_blocked', { reason: 'missing_phone' });
-                return;
-            }
-            
-            if (orderType === 'delivery') {
-                if (!formData.delivery_address || typeof formData.delivery_address !== 'string' || formData.delivery_address.trim() === '') { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_address' }); return; }
-                if (!isExistingAddress && (!formData.door_number || typeof formData.door_number !== 'string' || formData.door_number.trim() === '')) { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_door_number' }); return; }
-                if (!deliveryCoordinates || !deliveryCoordinates.lat || !deliveryCoordinates.lng) { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_coordinates' }); return; }
-                if (!zoneCheckComplete) { checkoutTrace.log('stripe_init_blocked', { reason: 'zone_check_pending' }); return; }
-                if (deliveryZoneInfo && deliveryZoneInfo.available === false) { checkoutTrace.log('stripe_init_blocked', { reason: 'zone_unavailable' }); return; }
-            }
-            
-            if (isScheduled && !scheduledFor) { checkoutTrace.log('stripe_init_blocked', { reason: 'missing_schedule_time' }); return; }
-            if (!cart || cart.length === 0 || total <= 0 || isNaN(total)) { checkoutTrace.log('stripe_init_blocked', { reason: 'invalid_cart_or_total', total, cartLen: cart?.length }); return; }
-
-            // Set both state AND ref atomically
-            paymentInitInFlightRef.current = true;
-            setInitializingPayment(true);
-            setTraceError(null);
-
-            try {
-                checkoutTrace.log('stripe_init_started', { total, orderType, isGuest });
-                console.log('[PaymentInit] Initializing Stripe and creating payment intent...');
-                
-                const stripeObj = await initializeStripe();
-                if (!stripeObj) {
-                    checkoutTrace.error('stripe_init_failed', { reason: 'stripe_object_null' });
-                    toast.error('Payment system unavailable. Please refresh and try again.');
-                    return;
-                }
-                checkoutTrace.log('stripe_init_succeeded');
-                
-                if (!stripeLoadedPromise) {
-                    setStripeLoadedPromise(Promise.resolve(stripeObj));
-                    setStripeReady(true);
-                }
-
-                // Build full address for metadata
-                const fullAddress = orderType === 'delivery'
-                    ? (isExistingAddress
-                        ? formData.delivery_address
-                        : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
-                    : (restaurant?.address || 'Collection');
-
-                checkoutTrace.log('create_payment_intent_started', { total, idempotencyKey });
-                console.log('[PaymentInit] Creating payment intent for amount:', total);
-                const response = await base44.functions.invoke('createPaymentIntent', {
-                    amount: total,
-                    currency: 'gbp',
-                    idempotency_key: idempotencyKey,
-                    // CRITICAL: Pass full order metadata for webhook recovery
-                    restaurant_id: restaurantId,
-                    items: cart,
-                    subtotal,
-                    delivery_fee: deliveryFee,
-                    discount,
-                    order_type: orderType,
-                    delivery_address: fullAddress,
-                    delivery_coordinates: deliveryCoordinates,
-                    phone: formData.phone,
-                    guest_name: formData.guest_name,
-                    guest_email: formData.guest_email,
-                    notes: formData.notes,
-                    is_scheduled: isScheduled,
-                    scheduled_for: scheduledFor || null
-                });
-
-                if (response?.data?.clientSecret) {
-                    checkoutTrace.log('create_payment_intent_succeeded', { piId: response.data.paymentIntentId });
-                    checkoutTrace.log('client_secret_set');
-                    console.log('[PaymentInit] ✅ Got clientSecret, showing Stripe form');
-                    setClientSecret(response.data.clientSecret);
-                    setShowStripeForm(true);
-                    piTotalRef.current = total; // Record the total this PI was created for
-                } else {
-                    const errorMsg = response?.data?.error || 'Failed to initialize payment. Please try again.';
-                    checkoutTrace.error('create_payment_intent_failed', { error: errorMsg });
-                    setTraceError(`PI_INIT_FAILED: ${errorMsg}`);
-                    console.error('[PaymentInit] ❌ No clientSecret:', errorMsg);
-                    toast.error(errorMsg);
-                    setClientSecret('');
-                    setShowStripeForm(false);
-                }
-            } catch (error) {
-                checkoutTrace.error('create_payment_intent_exception', { error: error.message });
-                setTraceError(`PI_EXCEPTION: ${error.message}`);
-                console.error('[PaymentInit] Exception:', error.message);
-                toast.error('Failed to initialize payment. Please refresh and try again.');
-                setClientSecret('');
-                setShowStripeForm(false);
-            } finally {
-                paymentInitInFlightRef.current = false;
-                setInitializingPayment(false);
-            }
-        };
-
-        initPayment();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [paymentMethod, total, zoneCheckComplete]);
-    // IMPORTANT: 'total' dep is intentional — if total changes (coupon/address), we must re-init PI.
-    // The `if (clientSecret) return` guard at the top of initPayment prevents re-init if PI already exists.
-    // To force a fresh PI on total change: payment method switch clears clientSecret first.
+    // ── Payment intent initialization (extracted to hook) ─────────────────────
+    const {
+        clientSecret,
+        showStripeForm,
+        initializingPayment,
+        stripeLoadedPromise,
+        resetPaymentState,
+    } = usePaymentInit({
+        paymentMethod,
+        total,
+        cart,
+        restaurantId,
+        restaurant,
+        orderType,
+        formData,
+        isGuest,
+        isExistingAddress,
+        deliveryCoordinates,
+        deliveryZoneInfo,
+        zoneCheckComplete,
+        isScheduled,
+        scheduledFor,
+        subtotal,
+        deliveryFee,
+        discount,
+        idempotencyKey,
+    });
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -1723,13 +1554,9 @@ export default function Checkout() {
                                             checkoutTrace.log('payment_method_selected', { method, prev: paymentMethod });
                                             setPaymentMethod(method);
                                             setTraceError(null);
-                                            // CRITICAL: Reset ALL payment state AND refs when switching methods
-                                            setClientSecret('');
-                                            setShowStripeForm(false);
                                             setPaymentCompleted(false);
                                             expressConfirmFiredRef.current = false;
-                                            paymentInitInFlightRef.current = false;
-                                            setInitializingPayment(false); // Unlock UI
+                                            resetPaymentState();
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
                                     />
