@@ -36,7 +36,8 @@ async function attemptRefund(stripe, paymentIntentId, reason) {
     try {
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
-            reason: 'fraudulent',
+            // CRITICAL FIX: Do NOT set reason for internal failures — omit it entirely
+            // 'fraudulent' is only for actual fraud, not operational failures
             metadata: { failure_reason: String(reason).slice(0, 500) }
         });
         console.log(`${LOG} [REFUND] issued refund=${refund.id} intent=${paymentIntentId} status=${refund.status}`);
@@ -346,7 +347,18 @@ Deno.serve(async (req) => {
                 context: { trace_id: traceId, http_status: 500, alert_triggered: true }
             });
             // Refund immediately — no PT means we can't track this charge
-            await attemptRefund(stripe, paymentIntentId, `PT create failed: ${ptCreateErr.message}`);
+            // CRITICAL FIX: Capture actual refund result, don't assume success
+            const refundResult = await attemptRefund(stripe, paymentIntentId, `PT create failed: ${ptCreateErr.message}`);
+            if (!refundResult.success) {
+                console.error(`${LOG} [trace=${traceId}] CRITICAL: Refund also failed for PT creation failure. Manual review required.`);
+                await writeFailureLog(base44, {
+                    failure_type: 'refund_failed_requires_manual_review', severity: 'critical',
+                    restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel,
+                    error_message: `PT.create failed AND refund failed: ${refundResult.error}`,
+                    context: { trace_id: traceId, http_status: 500, alert_triggered: true }
+                });
+                return Response.json({ error: 'Payment processing error. We could not automatically refund your card. Our team has been notified. Please contact support immediately.', success: false, code: 'PT_CREATE_AND_REFUND_FAILED', stage: 'payment_transaction_create', refunded: false }, { status: 500 });
+            }
             return Response.json({ error: 'Payment processing error. Your card has been refunded. Please contact support.', success: false, code: 'PT_CREATE_FAILED', stage: 'payment_transaction_create', refunded: true }, { status: 500 });
         }
     }
@@ -481,6 +493,14 @@ Deno.serve(async (req) => {
     if (orderData.order_type === 'delivery' && orderData.delivery_coordinates) {
         try {
             const { lat, lng } = orderData.delivery_coordinates;
+            // CRITICAL FIX: Strict validation for delivery coordinates
+            if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                const msg = `Invalid delivery coordinates: lat=${lat} lng=${lng}`;
+                console.error(`${LOG} [trace=${traceId}] ${msg}`);
+                await writeFailureLog(base44, { failure_type: 'delivery_zone', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
+                const c = await compensate('delivery_validation', 'INVALID_COORDINATES', msg);
+                return Response.json({ error: 'Invalid delivery address coordinates', success: false, code: 'INVALID_COORDINATES', stage: 'delivery_validation', ...c }, { status: 400 });
+            }
             const zones = await base44.asServiceRole.entities.DeliveryZone.filter({ restaurant_id: orderData.restaurant_id, is_active: true });
             let zoneFound = false;
             if (zones?.length > 0) {
@@ -564,8 +584,31 @@ Deno.serve(async (req) => {
     }
 
     // Per-item checks: availability, channel, price correction
+    // NOTE: Modifiers/customizations are NOT fully validated server-side yet
+    // cartItem.customizations = { customization_id: value, ... }
+    // Server currently uses menuItem.price only (ignores modifier upcharges)
+    // TODO: Implement modifier price lookup and validation for full backend-authoritative pricing
     for (const cartItem of orderData.items) {
-        if (String(cartItem.menu_item_id || '').startsWith('deal_')) continue; // deal items skip DB check
+        if (String(cartItem.menu_item_id || '').startsWith('deal_')) {
+            // CRITICAL FIX: Deal items should also validate structure and price
+            // Current code: deal items skip all DB validation
+            // TODO: Implement MealDeal lookup and price validation for deal items
+            // For now: log a warning that deals are not fully validated
+            if (String(cartItem.menu_item_id || '').startsWith('deal_')) {
+                console.warn(`${LOG} [trace=${traceId}] Deal item not fully validated server-side: ${cartItem.menu_item_id} (TODO: implement MealDeal validation)`);
+            }
+            continue;
+        }
+
+        // CRITICAL FIX: Strict input validation for quantity and price
+        const quantity = cartItem.quantity;
+        if (!Number.isInteger(quantity) || quantity < 1 || !isFinite(quantity)) {
+            const msg = `Invalid quantity for item ${cartItem.menu_item_id}: ${quantity}`;
+            console.error(`${LOG} [trace=${traceId}] ${msg}`);
+            await writeFailureLog(base44, { failure_type: 'cart_validation', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
+            const c = await compensate('item_validation', 'INVALID_QUANTITY', msg);
+            return Response.json({ error: msg, success: false, code: 'INVALID_QUANTITY', stage: 'item_validation', ...c }, { status: 400 });
+        }
 
         const menuItem = menuItemsMap.get(cartItem.menu_item_id);
         if (!menuItem) {
@@ -767,9 +810,56 @@ Deno.serve(async (req) => {
     // sets verifiedDiscount; coupon path does NOT include promotion discounts).
     // We only re-check the coupon discount server-side; promotion discounts are
     // validated separately by validateAndApplyPromotion when applied.
-    const clientPromotionDiscount = Math.max(0, (orderData.discount || 0) - verifiedDiscount);
-    const smallOrderSurcharge = typeof orderData.small_order_surcharge === 'number' ? orderData.small_order_surcharge : 0;
+    
+    // CRITICAL FIX: Strict validation for numeric fields
+    const clientDiscount = orderData.discount || 0;
+    if (!isFinite(clientDiscount) || clientDiscount < 0) {
+        const msg = `Invalid client discount: ${clientDiscount}`;
+        console.error(`${LOG} [trace=${traceId}] ${msg}`);
+        const c = await compensate('total_integrity', 'INVALID_DISCOUNT', msg);
+        return Response.json({ error: 'Invalid discount value', success: false, code: 'INVALID_DISCOUNT', stage: 'total_integrity', ...c }, { status: 400 });
+    }
+    
+    const clientPromotionDiscount = Math.max(0, clientDiscount - verifiedDiscount);
+    let smallOrderSurcharge = typeof orderData.small_order_surcharge === 'number' ? orderData.small_order_surcharge : 0;
+    if (!isFinite(smallOrderSurcharge) || smallOrderSurcharge < 0) {
+        const msg = `Invalid small order surcharge: ${smallOrderSurcharge}`;
+        console.error(`${LOG} [trace=${traceId}] ${msg}`);
+        const c = await compensate('total_integrity', 'INVALID_SURCHARGE', msg);
+        return Response.json({ error: 'Invalid surcharge value', success: false, code: 'INVALID_SURCHARGE', stage: 'total_integrity', ...c }, { status: 400 });
+    }
+    
+    // Validate serverSubtotal and deliveryFee are finite
+    if (!isFinite(serverSubtotal) || serverSubtotal < 0) {
+        const msg = `Invalid server subtotal: ${serverSubtotal}`;
+        console.error(`${LOG} [trace=${traceId}] [CRITICAL] ${msg}`);
+        const c = await compensate('total_integrity', 'INVALID_SUBTOTAL', msg);
+        return Response.json({ error: 'Order calculation error', success: false, code: 'INVALID_SUBTOTAL', stage: 'total_integrity', ...c }, { status: 500 });
+    }
+    if (!isFinite(deliveryFee) || deliveryFee < 0) {
+        const msg = `Invalid delivery fee: ${deliveryFee}`;
+        console.error(`${LOG} [trace=${traceId}] [CRITICAL] ${msg}`);
+        const c = await compensate('total_integrity', 'INVALID_FEE', msg);
+        return Response.json({ error: 'Order calculation error', success: false, code: 'INVALID_FEE', stage: 'total_integrity', ...c }, { status: 500 });
+    }
+    
     const serverTotal = Math.max(0, serverSubtotal + deliveryFee + smallOrderSurcharge - verifiedDiscount - clientPromotionDiscount);
+    
+    // Final total validation
+    if (!isFinite(serverTotal) || serverTotal < 0) {
+        const msg = `Invalid calculated server total: ${serverTotal}`;
+        console.error(`${LOG} [trace=${traceId}] [CRITICAL] ${msg}`);
+        const c = await compensate('total_integrity', 'INVALID_TOTAL_CALCULATED', msg);
+        return Response.json({ error: 'Order calculation error', success: false, code: 'INVALID_TOTAL_CALCULATED', stage: 'total_integrity', ...c }, { status: 500 });
+    }
+    
+    // CRITICAL FIX: Validate orderData.total is a sane number
+    if (!isFinite(orderData.total) || orderData.total < 0) {
+        const msg = `Client provided invalid total: ${orderData.total}`;
+        console.error(`${LOG} [trace=${traceId}] ${msg}`);
+        const c = await compensate('total_integrity', 'INVALID_CLIENT_TOTAL', msg);
+        return Response.json({ error: 'Invalid order total', success: false, code: 'INVALID_CLIENT_TOTAL', stage: 'total_integrity', ...c }, { status: 400 });
+    }
     if (Math.abs(serverTotal - orderData.total) > 0.02) {
         const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total} (subtotal=${serverSubtotal.toFixed(2)} fee=${deliveryFee.toFixed(2)} surcharge=${smallOrderSurcharge.toFixed(2)} verifiedDiscount=${verifiedDiscount.toFixed(2)} clientPromotionDiscount=${clientPromotionDiscount.toFixed(2)})`;
         console.error(`${LOG} [trace=${traceId}] [SECURITY] ${mismatchMsg}`);
@@ -862,17 +952,39 @@ Deno.serve(async (req) => {
     }
 
     // ── STAGE: Post-create hooks (coupon usage_count) ──────────────────────────
+    // CRITICAL FIX: Safer usage_count increment under concurrency
+    // Note: Current implementation is read-then-write which can race
+    // Ideally the backend would support atomic increment, but for now we do our best
     console.log(`${LOG} [trace=${traceId}] stage=post_create_hooks coupons=${verifiedCouponIds.length}`);
     if (verifiedCouponIds.length > 0) {
-        await Promise.all(verifiedCouponIds.map(async (couponId) => {
+        const incrementResults = await Promise.allSettled(verifiedCouponIds.map(async (couponId) => {
             try {
                 const fresh = await base44.asServiceRole.entities.Coupon.filter({ id: couponId });
                 const freshCount = fresh?.[0]?.usage_count || 0;
-                await base44.asServiceRole.entities.Coupon.update(couponId, { usage_count: freshCount + 1 });
+                const newCount = freshCount + 1;
+                await base44.asServiceRole.entities.Coupon.update(couponId, { usage_count: newCount });
+                console.log(`${LOG} [trace=${traceId}] coupon usage_count incremented id=${couponId} from ${freshCount} to ${newCount}`);
+                return { success: true, couponId, newCount };
             } catch (e) {
                 console.warn(`${LOG} [trace=${traceId}] coupon usage_count increment failed id=${couponId}:`, e.message);
+                // Log to FailureLog for monitoring race conditions
+                await writeFailureLog(base44, {
+                    failure_type: 'coupon_usage_count_update',
+                    severity: 'warning',
+                    restaurant_id: orderData.restaurant_id,
+                    user_email: userLabel,
+                    error_message: `Coupon usage_count increment failed (race condition possible): ${e.message}`,
+                    context: { trace_id: traceId, coupon_id: couponId, order_id: newOrder.id, http_status: 500 }
+                });
+                return { success: false, couponId, error: e.message };
             }
         }));
+        
+        // Log results
+        const failed = incrementResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value?.success));
+        if (failed.length > 0) {
+            console.warn(`${LOG} [trace=${traceId}] ${failed.length} coupon usage_count increments failed (non-fatal, order created)`);
+        }
     }
 
     // ── SUCCESS ────────────────────────────────────────────────────────────────
