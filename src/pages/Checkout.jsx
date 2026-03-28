@@ -95,6 +95,9 @@ export default function Checkout() {
     // Atomic guard: single source of truth for payment success handling (supersedes paymentCompleted state)
     const paymentSuccessHandledRef = useRef(false);
     
+    // FIX #1: Top-level cross-path guard — prevents Express + card paths both firing handleStripeSuccess
+    const anyPaymentPathInFlightRef = useRef(false);
+    
     // Form Data - Customer Information
     const [formData, setFormData] = useState({
         guest_name: '', // Name (for guest checkout)
@@ -544,6 +547,7 @@ export default function Checkout() {
             setPaymentCompleted(false);
             paymentSuccessHandledRef.current = false;
             expressConfirmFiredRef.current = false;
+            anyPaymentPathInFlightRef.current = false;
         },
     });
 
@@ -1116,6 +1120,13 @@ export default function Checkout() {
     }, [isSubmitting]);
 
     const handleStripeSuccess = async (paymentIntentId) => {
+        // FIX #1: Cross-path guard — blocks if Express Checkout or any other path already in-flight
+        if (anyPaymentPathInFlightRef.current) {
+            console.warn('[Checkout] Another payment path already in-flight — ignoring duplicate success');
+            return;
+        }
+        anyPaymentPathInFlightRef.current = true;
+
         // ISSUE #4 FIX: Lock form immediately to block all back-button / double-submit races
         setIsSubmitting(true);
 
@@ -1125,6 +1136,7 @@ export default function Checkout() {
             toast.error('Invalid payment confirmation. Please try again.');
             setIsSubmitting(false);
             setPaymentCompleted(false);
+            anyPaymentPathInFlightRef.current = false;
             return;
         }
 
@@ -1133,6 +1145,7 @@ export default function Checkout() {
             console.warn('[Checkout] payment_success_guard_blocked piId=' + paymentIntentId);
             checkoutTrace.log('payment_success_guard_blocked', { piId: paymentIntentId });
             setIsSubmitting(false);
+            anyPaymentPathInFlightRef.current = false;
             return;
         }
         paymentSuccessHandledRef.current = true;
@@ -1194,6 +1207,7 @@ export default function Checkout() {
             paymentSuccessHandledRef.current = false;
             setPaymentCompleted(false);
             expressConfirmFiredRef.current = false;
+            anyPaymentPathInFlightRef.current = false;
             setIsSubmitting(false);
         }
     };
@@ -1803,6 +1817,8 @@ export default function Checkout() {
                                                     clientSecret={clientSecret}
                                                     onSuccess={handleStripeSuccess}
                                                     expressConfirmFiredRef={expressConfirmFiredRef}
+                                                    sessionKeyAtFormRender={getSessionKey()}
+                                                    getSessionKey={getSessionKey}
                                                 />
                                             </Elements>
                                         ) : (

@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
         console.log(`[IDEMPOTENT_ORDER] Creating order from ${sourceType} for intent=${paymentIntentId}`);
         
         // ─────────────────────────────────────────────────────────────────────
-        // CRITICAL: Check if order already exists (dedup check 1)
+        // CRITICAL: Check if order already exists (dedup check 1 — by PI ID)
         // ─────────────────────────────────────────────────────────────────────
         const existingByPI = await base44.asServiceRole.entities.Order.filter({
             payment_intent_id: paymentIntentId
@@ -32,6 +32,26 @@ Deno.serve(async (req) => {
                 order_id: existingByPI[0].id,
                 status: 'already_exists'
             }, { status: 200 });
+        }
+
+        // FIX #8: Also dedup by idempotency_key from metadata (prevents race with recoverPayment)
+        const metaIdempotencyKey = paymentIntentMetadata?.idempotency_key;
+        if (metaIdempotencyKey && typeof metaIdempotencyKey === 'string') {
+            try {
+                const existingByKey = await base44.asServiceRole.entities.Order.filter({
+                    idempotency_key: metaIdempotencyKey
+                });
+                if (existingByKey?.length > 0) {
+                    console.log(`[IDEMPOTENT_ORDER] Order already exists by idempotency_key=${metaIdempotencyKey} id=${existingByKey[0].id}`);
+                    return Response.json({
+                        success: true,
+                        order_id: existingByKey[0].id,
+                        status: 'already_exists'
+                    }, { status: 200 });
+                }
+            } catch (keyDedupErr) {
+                console.warn(`[IDEMPOTENT_ORDER] idempotency_key dedup check failed (non-fatal):`, keyDedupErr.message);
+            }
         }
         
         // ─────────────────────────────────────────────────────────────────────

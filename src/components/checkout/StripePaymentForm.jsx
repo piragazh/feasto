@@ -6,7 +6,7 @@ import ExpressCheckout from './ExpressCheckout';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { useExpressCheckoutFlag } from '@/hooks/useExpressCheckoutFlag';
 
-export default function StripePaymentForm({ onSuccess, amount, clientSecret, expressConfirmFiredRef }) {
+export default function StripePaymentForm({ onSuccess, amount, clientSecret, expressConfirmFiredRef, sessionKeyAtFormRender, getSessionKey }) {
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -14,6 +14,8 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const [errorMessage, setErrorMessage] = useState('');
     // Local ref for manual card submit dedup
     const submitFiredRef = useRef(false);
+    // FIX #6: Capture the clientSecret at render time (component is re-keyed on rotation)
+    const clientSecretAtMountRef = useRef(clientSecret);
     const expressCheckoutEnabled = useExpressCheckoutFlag();
     // ISSUE #3 FIX: Track PI creation time to warn if expired (>10 min)
     const [piCreatedAtMs] = useState(() => {
@@ -50,6 +52,18 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             return false;
         }
 
+        // FIX #6: Reject if session key has rotated since this form was rendered
+        if (getSessionKey && sessionKeyAtFormRender) {
+            const currentKey = getSessionKey();
+            if (currentKey !== sessionKeyAtFormRender) {
+                console.warn('[StripePaymentForm] Session key rotated since render — rejecting stale confirmation');
+                setErrorMessage('Your payment session changed. Please wait a moment and try again.');
+                setIsProcessing(false);
+                submitFiredRef.current = false;
+                return false;
+            }
+        }
+
         setIsProcessing(true);
 
         try {
@@ -71,9 +85,11 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             }
 
             console.log('🔵 Confirming payment with clientSecret:', clientSecret?.slice(0, 20) + '...');
+            // FIX #6: Use the clientSecret captured at mount time (not the closure value which may be stale)
+            const secretToUse = clientSecretAtMountRef.current || clientSecret;
             const result = await stripe.confirmPayment({
                 elements,
-                clientSecret,
+                clientSecret: secretToUse,
                 redirect: 'if_required',
                 confirmParams: {
                     return_url: `${window.location.protocol}//${window.location.host}/checkout`

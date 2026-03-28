@@ -182,6 +182,21 @@ Deno.serve(async (req) => {
 
     console.log(`${LOG} [trace=${traceId}] orderData validated, replaying order creation for succeeded PI`);
 
+    // FIX #2: Write a recovery-in-flight lock so webhook handler yields to us
+    let recoveryLockId = null;
+    try {
+        const lockRecord = await base44.asServiceRole.entities.WebhookEventLog.create({
+            stripe_event_id: `recovery_lock_${paymentIntentId}`,
+            event_type: 'payment_intent.succeeded',
+            status: 'in_progress',
+            details: { source: 'frontend_recovery', trace_id: traceId },
+            processed_at: new Date().toISOString(),
+        });
+        recoveryLockId = lockRecord?.id;
+    } catch (lockErr) {
+        console.warn(`${LOG} [trace=${traceId}] recovery lock write failed (non-fatal):`, lockErr.message);
+    }
+
     // Replay via verifyAndCreateOrder — idempotency_key ensures no duplicate
     try {
         const replayResponse = await base44.asServiceRole.functions.invoke('verifyAndCreateOrder', {
@@ -193,6 +208,19 @@ Deno.serve(async (req) => {
         const result = replayResponse?.data;
         if (result?.success || result?.duplicate) {
             console.log(`${LOG} [trace=${traceId}] ✅ Recovery order created/found id=${result.order_id}`);
+
+            // FIX #7: Mark recovery lock as processed so webhook handler doesn't re-process
+            if (recoveryLockId) {
+                try {
+                    await base44.asServiceRole.entities.WebhookEventLog.update(recoveryLockId, {
+                        status: 'processed',
+                        details: { source: 'frontend_recovery', order_id: result.order_id, trace_id: traceId }
+                    });
+                } catch (lockUpdateErr) {
+                    console.warn(`${LOG} [trace=${traceId}] recovery lock update failed (non-fatal):`, lockUpdateErr.message);
+                }
+            }
+
             return Response.json({
                 status: result.duplicate ? 'order_found' : 'order_created',
                 recovery_status: 'terminal_success',

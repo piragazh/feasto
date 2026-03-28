@@ -35,16 +35,54 @@ const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
 // ─────────────────────────────────────────────────────────────────────
 // EVENT DEDUPLICATION — Stripe retries webhook deliveries
+// FIX #4: Atomic lock-and-check via a single create attempt.
+// If two concurrent instances both try to create the same stripe_event_id,
+// the second write will fail (or return duplicate), preventing double processing.
 // ─────────────────────────────────────────────────────────────────────
-async function hasEventBeenProcessed(base44, stripeEventId) {
+async function acquireEventLock(base44, stripeEventId, eventType) {
+    // First check if already fully processed
     try {
-        const processed = await base44.asServiceRole.entities.WebhookEventLog.filter({
-            stripe_event_id: stripeEventId,
-            status: 'processed'
+        const existing = await base44.asServiceRole.entities.WebhookEventLog.filter({
+            stripe_event_id: stripeEventId
         });
-        return processed && processed.length > 0;
-    } catch {
-        return false;
+        if (existing?.length > 0) {
+            const status = existing[0].status;
+            console.log(`[WEBHOOK] Event ${stripeEventId} already in log with status=${status}`);
+            return { alreadyProcessed: true };
+        }
+    } catch (e) {
+        console.warn(`[WEBHOOK] Dedup check failed (proceeding):`, e.message);
+    }
+
+    // Attempt to write a processing lock — if another instance beats us, the second
+    // write will create a duplicate (no unique constraint), so we also recheck after write
+    try {
+        await base44.asServiceRole.entities.WebhookEventLog.create({
+            stripe_event_id: stripeEventId,
+            event_type: eventType,
+            status: 'processing',
+            processed_at: new Date().toISOString(),
+            details: { locked_at: Date.now() }
+        });
+        // Small delay then re-check for race (two concurrent creates at exact same time)
+        await new Promise(r => setTimeout(r, 100));
+        const recheckLocks = await base44.asServiceRole.entities.WebhookEventLog.filter({
+            stripe_event_id: stripeEventId,
+            status: 'processing'
+        });
+        if (recheckLocks?.length > 1) {
+            // Another instance also got a lock — the one with the lower id yields
+            const sortedIds = recheckLocks.map(r => r.id).sort();
+            const ourCreate = recheckLocks[recheckLocks.length - 1]; // last created
+            if (sortedIds[0] !== ourCreate?.id) {
+                console.log(`[WEBHOOK] Lost lock race for ${stripeEventId} — yielding to first instance`);
+                return { alreadyProcessed: true };
+            }
+        }
+        return { alreadyProcessed: false };
+    } catch (lockErr) {
+        console.warn(`[WEBHOOK] Lock write failed (non-fatal):`, lockErr.message);
+        return { alreadyProcessed: false };
     }
 }
 
@@ -166,6 +204,20 @@ async function triggerCompensation(base44, piId, reason, failureCode, metadata) 
         } catch (e) {
             console.warn(`[WEBHOOK] Could not set manual_review status for intent=${piId}:`, e.message);
         }
+        // FIX #10: Emit a structured terminal log for every refund failure
+        console.error(JSON.stringify({
+            level: 'CRITICAL',
+            event: 'webhook_refund_failure_terminal',
+            payment_intent_id: piId,
+            failure_code: failureCode,
+            failure_reason: reason,
+            refund_error: refundResult?.error,
+            restaurant_id: metadata?.restaurant_id || null,
+            customer_email: metadata?.user_email || metadata?.guest_email || null,
+            amount: metadata?.total || null,
+            timestamp: new Date().toISOString(),
+            alert: 'MANUAL_REFUND_REQUIRED'
+        }));
     }
 
     return {
@@ -198,6 +250,27 @@ async function handlePaymentIntentSucceeded(base44, paymentIntent) {
         console.error(`[WEBHOOK] Failed to check existing order for intent=${piId}:`, e.message);
         // Recoverable DB error — return non-200 so Stripe retries
         return { success: false, error: 'Failed to check for existing order', recoverable: true };
+    }
+
+    // FIX #2: Check if frontend recovery is already in-flight for this PI
+    // Give it priority to avoid both webhook + recovery racing to createIdempotentOrder
+    try {
+        const recoveryLock = await base44.asServiceRole.entities.WebhookEventLog.filter({
+            stripe_event_id: `recovery_lock_${piId}`,
+            status: 'in_progress'
+        });
+        if (recoveryLock?.length > 0) {
+            console.log(`[WEBHOOK] Frontend recovery in-flight for ${piId} — deferring to it`);
+            await new Promise(r => setTimeout(r, 3000));
+            // After waiting, re-check if order was created by recovery
+            const createdByRecovery = await base44.asServiceRole.entities.Order.filter({ payment_intent_id: piId });
+            if (createdByRecovery?.length > 0) {
+                console.log(`[WEBHOOK] Recovery succeeded for ${piId} — webhook yielding`);
+                return { success: true, status: 'recovered_by_frontend', order_id: createdByRecovery[0].id };
+            }
+        }
+    } catch (lockCheckErr) {
+        console.warn(`[WEBHOOK] Recovery lock check failed (non-fatal):`, lockCheckErr.message);
     }
     
     // Order does not exist — attempt to create it from webhook payload
@@ -339,10 +412,11 @@ Deno.serve(async (req) => {
         
         console.log(`[WEBHOOK] Received event: type=${eventType} id=${eventId}`);
         
-        // CRITICAL: Dedup check — prevent duplicate processing
-        const alreadyProcessed = await hasEventBeenProcessed(base44, eventId);
+        // FIX #4: Atomic lock-and-check (replaces simple hasEventBeenProcessed)
+        const { alreadyProcessed } = await acquireEventLock(base44, eventId, eventType);
         if (alreadyProcessed) {
-            console.log(`[WEBHOOK] Event ${eventId} already processed, skipping`);
+            console.log(`[WEBHOOK] Event ${eventId} already processed or lock lost, skipping`);
+            await logWebhookEvent(base44, eventId, eventType, 'duplicate_ignored', { reason: 'dedup' });
             return new Response(JSON.stringify({ success: true, status: 'duplicate_ignored' }), { status: 200 });
         }
         

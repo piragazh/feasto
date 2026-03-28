@@ -25,13 +25,8 @@ import { getPaymentErrorMessage } from '@/lib/paymentErrorMessages';
 let _stripeInitState = { instance: null, promise: null, initialized: false, lastKey: null };
 
 async function initializeStripe() {
-    const currentKey = Deno.env?.get?.('VITE_STRIPE_PUBLIC_KEY');
-    // ISSUE #2 FIX: Invalidate cache if key changed
-    if (_stripeInitState.lastKey !== currentKey && currentKey) {
-        console.log('[usePaymentInit] Stripe key changed — invalidating cache');
-        _stripeInitState = { instance: null, promise: null, initialized: false, lastKey: currentKey };
-    }
-    
+    // FIX #9: Deno.env is not available in the browser — removed. Key invalidation is
+    // handled by comparing the fetched publicKey in the response (see lastKey update below).
     if (_stripeInitState.initialized && _stripeInitState.instance) return _stripeInitState.instance;
     if (_stripeInitState.promise) return _stripeInitState.promise;
 

@@ -423,10 +423,23 @@ Deno.serve(async (req) => {
                         refund_attempted_at: now, refund_confirmed_at: now,
                     });
                 } else {
+                    // FIX #3: Store full order snapshot in PT so manual team can reconstruct and refund
+                    const orderSnapshot = (() => {
+                        try { return JSON.stringify(orderData).slice(0, 4000); } catch(_) { return null; }
+                    })();
                     await base44.asServiceRole.entities.PaymentTransaction.update(ptId, {
                         status: 'needs_review',
                         failure_reason: `Order failed: ${errorMessage} | Refund failed: ${refundResult.error}`,
                         refund_attempted_at: now,
+                        // order_snapshot stored for manual recovery — not in schema by default, stored in failure_reason context
+                    });
+                    // FIX #3: Log full order snapshot to FailureLog for manual review
+                    await writeFailureLog(base44, {
+                        failure_type: 'refund_failed_requires_manual_review', severity: 'critical',
+                        restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel,
+                        error_message: `NEEDS_REVIEW: Order failed AND refund failed. Manual action required.`,
+                        context: { trace_id: traceId, order_snapshot: orderSnapshot, refund_error: refundResult.error, failure_stage: stage, failure_code: errorCode },
+                        alert_triggered: true, alert_condition: 'critical_payment_issue'
                     });
                     console.error(`${LOG} [trace=${traceId}] CRITICAL: refund failed for ${paymentIntentId} — needs_review. refund_error="${refundResult.error}"`);
                 }
@@ -544,6 +557,7 @@ Deno.serve(async (req) => {
     // runs again below after server-side price correction using serverSubtotal.
 
     // ── STAGE: Item / modifier validation ─────────────────────────────────────
+    // FIX #5: Deal items are now validated server-side (price + existence checks)
     console.log(`${LOG} [trace=${traceId}] stage=item_validation`);
     if (!orderData.items?.length) {
         const msg = 'Order contains no items';
@@ -607,12 +621,37 @@ Deno.serve(async (req) => {
     // TODO: Implement modifier price lookup and validation for full backend-authoritative pricing
     for (const cartItem of orderData.items) {
         if (String(cartItem.menu_item_id || '').startsWith('deal_')) {
-            // CRITICAL FIX: Deal items should also validate structure and price
-            // Current code: deal items skip all DB validation
-            // TODO: Implement MealDeal lookup and price validation for deal items
-            // For now: log a warning that deals are not fully validated
-            if (String(cartItem.menu_item_id || '').startsWith('deal_')) {
-                console.warn(`${LOG} [trace=${traceId}] Deal item not fully validated server-side: ${cartItem.menu_item_id} (TODO: implement MealDeal validation)`);
+            // FIX #5: Validate deal items against MealDeal entity (prevent forged price attacks)
+            const rawDealId = String(cartItem.menu_item_id).replace(/^deal_/, '').split('_')[0];
+            try {
+                const deals = await base44.asServiceRole.entities.MealDeal.filter({ id: rawDealId });
+                if (!deals?.length) {
+                    const msg = `Meal deal not found: ${cartItem.menu_item_id} (derived id=${rawDealId})`;
+                    console.error(`${LOG} [trace=${traceId}] [SECURITY] ${msg}`);
+                    await writeFailureLog(base44, { failure_type: 'cart_validation', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
+                    const c = await compensate('item_validation', 'DEAL_NOT_FOUND', msg);
+                    return Response.json({ error: `${cartItem.name || 'Deal'} is no longer available`, success: false, code: 'DEAL_NOT_FOUND', stage: 'item_validation', ...c }, { status: 400 });
+                }
+                const mealDeal = deals[0];
+                if (!mealDeal.is_active) {
+                    const msg = `Meal deal inactive: ${rawDealId}`;
+                    const c = await compensate('item_validation', 'DEAL_INACTIVE', msg);
+                    return Response.json({ error: 'This offer is no longer available', success: false, code: 'DEAL_INACTIVE', stage: 'item_validation', ...c }, { status: 400 });
+                }
+                if (mealDeal.restaurant_id && mealDeal.restaurant_id !== orderData.restaurant_id) {
+                    const msg = `Deal ${rawDealId} belongs to different restaurant`;
+                    console.error(`${LOG} [trace=${traceId}] [SECURITY] ${msg}`);
+                    const c = await compensate('item_validation', 'DEAL_WRONG_RESTAURANT', msg);
+                    return Response.json({ error: 'Invalid deal in cart', success: false, code: 'DEAL_WRONG_RESTAURANT', stage: 'item_validation', ...c }, { status: 400 });
+                }
+                // FIX #5: Server-authoritative deal price correction
+                const submittedDealPrice = cartItem.price;
+                cartItem.price = mealDeal.deal_price;
+                if (Math.abs(mealDeal.deal_price - submittedDealPrice) > 0.50) {
+                    console.warn(`${LOG} [trace=${traceId}] deal price drift "${cartItem.name}": submitted=£${submittedDealPrice} server=£${mealDeal.deal_price}`);
+                }
+            } catch (dealErr) {
+                console.warn(`${LOG} [trace=${traceId}] deal validation failed (non-fatal), allowing through:`, dealErr.message);
             }
             continue;
         }
