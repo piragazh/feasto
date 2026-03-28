@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
 
 export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClose }) {
     if (!quickAddItems || quickAddItems.length === 0) return null;
@@ -32,16 +31,6 @@ export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClos
                             <Button
                                 onClick={() => {
                                     onAddToCart(item);
-                                    toast.success(`✨ ${item.name} added!`, {
-                                        duration: 2000,
-                                        style: {
-                                            background: '#f97316',
-                                            color: '#fff',
-                                            fontWeight: '600',
-                                            padding: '12px',
-                                            borderRadius: '8px'
-                                        }
-                                    });
                                 }}
                                 variant="outline"
                                 className="w-full h-auto flex flex-col items-start gap-0.5 p-1.5 sm:p-2 bg-white hover:bg-orange-50 border-orange-200 group text-left overflow-hidden"
