@@ -138,9 +138,22 @@ Deno.serve(async (req) => {
             }, { status: 200 });
         }
 
-        // ── Global usage_limit ────────────────────────────────────────────────
-        if (coupon.usage_limit && (coupon.usage_count || 0) >= coupon.usage_limit) {
-            return Response.json({ valid: false, error: 'This coupon has reached its usage limit' }, { status: 200 });
+        // ── Global usage_limit — FIX #14: Re-fetch fresh count to avoid POS terminal race ──
+        // Two simultaneous POS terminals could both read usage_count=9 and both pass limit=10.
+        // Re-fetching here narrows the window, though true atomicity requires a DB transaction.
+        if (coupon.usage_limit) {
+            try {
+                const freshCoupon = await base44.asServiceRole.entities.Coupon.filter({ id: coupon.id });
+                const freshCount = freshCoupon?.[0]?.usage_count || 0;
+                if (freshCount >= coupon.usage_limit) {
+                    return Response.json({ valid: false, error: 'This coupon has reached its usage limit' }, { status: 200 });
+                }
+            } catch (_) {
+                // Fallback to snapshot count if re-fetch fails
+                if ((coupon.usage_count || 0) >= coupon.usage_limit) {
+                    return Response.json({ valid: false, error: 'This coupon has reached its usage limit' }, { status: 200 });
+                }
+            }
         }
 
         // ── Per-customer limit (when identity available) ───────────────────────
