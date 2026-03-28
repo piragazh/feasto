@@ -38,15 +38,11 @@ export default function Restaurant() {
     
     // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
-        const paramId = urlParams.get('id');
-        // If we already have an ID (from URL param or sessionStorage), no need to poll
-        if (restaurantId) return;
-
         const interval = setInterval(() => {
             const customId = sessionStorage.getItem('customDomainRestaurantId');
-            if (customId) {
+            const paramId = urlParams.get('id');
+            if ((customId || paramId) && !restaurantId) {
                 setRestaurantId(customId || paramId);
-                clearInterval(interval);
             }
         }, 100);
 
@@ -57,7 +53,7 @@ export default function Restaurant() {
             clearInterval(interval);
             clearTimeout(timeout);
         };
-    }, [restaurantId]);
+    }, []);
     
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);

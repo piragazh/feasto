@@ -28,14 +28,10 @@ export default function Home() {
 
     // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
-        // If already set, no need to poll
-        if (customDomainRestaurantId) return;
-
         const interval = setInterval(() => {
             const id = sessionStorage.getItem('customDomainRestaurantId');
-            if (id) {
+            if (id && !customDomainRestaurantId) {
                 setCustomDomainRestaurantId(id);
-                clearInterval(interval);
             }
         }, 100);
 
@@ -46,7 +42,7 @@ export default function Home() {
             clearInterval(interval);
             clearTimeout(timeout);
         };
-    }, [customDomainRestaurantId]);
+    }, []);
 
     // Fetch restaurants with optimized caching
     const { data: restaurants = [], isLoading, refetch } = useQuery({
