@@ -116,7 +116,14 @@ async function triggerCompensation(base44, piId, reason, failureCode, metadata) 
         restaurant_id: metadata?.restaurant_id || null,
         customer_email: metadata?.user_email || metadata?.guest_email || null,
         cart_summary: metadata?.items_json ? (() => {
-            try { return JSON.parse(metadata.items_json).map(i => `${i.quantity}x ${i.name}`).join(', '); }
+            try {
+                const parsed = JSON.parse(metadata.items_json);
+                return parsed.map(i => {
+                    // Backward-compatible: handle both qty (old) and quantity (new)
+                    const qty = i.quantity || i.qty || 1;
+                    return `${qty}x ${i.name}`;
+                }).join(', ');
+            }
             catch { return metadata.items_json; }
         })() : null,
         amount: metadata?.total || null,

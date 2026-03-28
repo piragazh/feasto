@@ -64,15 +64,16 @@ function truncateMeta(value, maxLen = METADATA_VALUE_MAX) {
     return str.length > maxLen ? str.slice(0, maxLen) + '…' : str;
 }
 
-/** Serialize items array for metadata, truncating if needed */
+/** Serialize items array for metadata — standardized schema for webhook recovery */
 function serializeItemsMeta(items) {
     if (!Array.isArray(items)) return '';
-    // Only store essential fields for webhook recovery
+    // Standardized schema: { menu_item_id, name, price, quantity }
+    // This is the single source of truth for webhook recovery
     const slim = items.map(i => ({
-        id: i.id || i.menu_item_id,
+        menu_item_id: i.menu_item_id || i.id,
         name: i.name,
         price: i.price,
-        qty: i.quantity
+        quantity: i.quantity || i.qty
     }));
     const json = JSON.stringify(slim);
     return json.length > METADATA_VALUE_MAX ? json.slice(0, METADATA_VALUE_MAX) + '…' : json;

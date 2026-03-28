@@ -76,6 +76,52 @@ Deno.serve(async (req) => {
             console.error('[IDEMPOTENT_ORDER] Failed to parse items:', e.message);
             return Response.json({ error: 'Invalid items data', success: false }, { status: 400 });
         }
+
+        // ── NORMALIZE: Backward-compatible schema migration ──────────────
+        // Accept both old (id, qty) and new (menu_item_id, quantity) formats
+        const normalizedItems = items.map(i => ({
+            menu_item_id: i.menu_item_id || i.id,
+            name: i.name || '',
+            price: i.price,
+            quantity: i.quantity || i.qty
+        }));
+
+        // ── VALIDATE: Every item has required fields ───────────────────
+        for (const item of normalizedItems) {
+            if (!item.menu_item_id || typeof item.menu_item_id !== 'string') {
+                console.error('[IDEMPOTENT_ORDER] Item missing menu_item_id:', item);
+                return Response.json({
+                    error: 'Invalid items data',
+                    success: false,
+                    code: 'INVALID_ITEM_SCHEMA',
+                    recoverable: false,
+                    reason: 'Item missing menu_item_id after normalization'
+                }, { status: 400 });
+            }
+            if (typeof item.price !== 'number' || isNaN(item.price) || item.price < 0) {
+                console.error('[IDEMPOTENT_ORDER] Item invalid price:', item);
+                return Response.json({
+                    error: 'Invalid items data',
+                    success: false,
+                    code: 'INVALID_ITEM_PRICE',
+                    recoverable: false,
+                    reason: `Item ${item.name || item.menu_item_id} has invalid price: ${item.price}`
+                }, { status: 400 });
+            }
+            if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity < 1) {
+                console.error('[IDEMPOTENT_ORDER] Item invalid quantity:', item);
+                return Response.json({
+                    error: 'Invalid items data',
+                    success: false,
+                    code: 'INVALID_ITEM_QUANTITY',
+                    recoverable: false,
+                    reason: `Item ${item.name || item.menu_item_id} has invalid quantity: ${item.quantity}`
+                }, { status: 400 });
+            }
+        }
+
+        // Use normalized items from here on
+        items = normalizedItems;
         
         // Validate items against menu (prevent fraud)
          // Skip deal items (synthetic IDs like 'deal_xyz') — they have no MenuItem record
