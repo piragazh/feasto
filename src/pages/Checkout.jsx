@@ -78,7 +78,8 @@ export default function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState(''); // Selected payment method (no default)
     const [paymentCompleted, setPaymentCompleted] = useState(false); // Track if card payment is completed
     const [showCashConfirmation, setShowCashConfirmation] = useState(false); // Cash payment confirmation
-    const [idempotencyKey] = useState(() => `order_${Date.now()}_${Math.random().toString(36).slice(2)}`); // Static: set once at mount
+    // NOTE: idempotencyKey is now managed inside usePaymentInit as a rotating session key.
+    // Use getSessionKey() from the hook instead of a static mount-time value.
     const [checkoutTraceId] = useState(() => {
         const id = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         checkoutTrace.reset(id);
@@ -489,6 +490,7 @@ export default function Checkout() {
         initializingPayment,
         stripeLoadedPromise,
         resetPaymentState,
+        getSessionKey,
     } = usePaymentInit({
         paymentMethod,
         total,
@@ -508,7 +510,12 @@ export default function Checkout() {
         deliveryFee,
         discount,
         smallOrderSurcharge,
-        idempotencyKey,
+        // Callback: when fingerprint changes and key rotates, reset all payment guards
+        onPaymentSessionKeyRotated: () => {
+            console.log('[Checkout] payment_session_key_rotated — resetting paymentCompleted + expressConfirmFired');
+            setPaymentCompleted(false);
+            expressConfirmFiredRef.current = false;
+        },
     });
 
     // ============================================
@@ -911,12 +918,13 @@ export default function Checkout() {
 
             // CRITICAL SECURITY: Use backend verification function instead of direct create
               // This ensures payment is verified and restaurant is open
-              checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType });
-              console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId);
+              const currentSessionKey = getSessionKey();
+              checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType, sessionKey: currentSessionKey });
+              console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId, 'session_key:', currentSessionKey);
               const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
                   orderData,
                   paymentIntentId: paymentIntentId || null,
-                  idempotency_key: idempotencyKey
+                  idempotency_key: currentSessionKey
               });
 
             if (!verificationResponse?.data?.success) {
@@ -1089,7 +1097,7 @@ export default function Checkout() {
         // next mount will detect this record and replay order creation safely.
         pendingPayment.save({
             paymentIntentId,
-            idempotencyKey,
+            idempotencyKey: getSessionKey(),
             total,
             restaurantId,
             restaurantName,

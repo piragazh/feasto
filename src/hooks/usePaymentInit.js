@@ -4,7 +4,10 @@
  * Responsibilities:
  *   - Guards: validates all required fields before attempting PI creation
  *   - Atomic in-flight ref prevents concurrent calls
- *   - Detects total-change (coupon/address) and resets stale PI
+ *   - Computes a deterministic fingerprint of all payment-shaping inputs
+ *   - Rotates the payment-session idempotency key whenever the fingerprint changes
+ *   - Resets all payment state (clientSecret, expressConfirmFired, paymentCompleted)
+ *     when the fingerprint changes so a fresh PI is always created with a fresh key
  *   - Consumes structured error codes from createPaymentIntent backend
  *   - Returns stable state for Checkout to render loading/form/error UI
  *
@@ -13,7 +16,7 @@
  *   STRIPE_API_ERROR, INVALID_AMOUNT, INVALID_ITEMS, INVALID_RESTAURANT, etc.
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { loadStripe } from '@stripe/stripe-js';
 import { base44 } from '@/api/base44Client';
@@ -49,6 +52,43 @@ async function initializeStripe() {
     return _stripeInitState.promise;
 }
 
+// ── Deterministic payment fingerprint ─────────────────────────────────────────
+// Encodes every input that shapes the PaymentIntent payload.
+// If ANY of these change, the fingerprint changes → key rotates → fresh PI.
+function buildPaymentFingerprint({
+    total,
+    cart,
+    orderType,
+    deliveryCoordinates,
+    deliveryFee,
+    discount,
+    smallOrderSurcharge,
+    scheduledFor,
+}) {
+    const cartKey = (cart || [])
+        .map(i => `${i.menu_item_id || i.id}:${i.quantity}:${i.price}`)
+        .sort()
+        .join('|');
+    const coordKey = deliveryCoordinates
+        ? `${Number(deliveryCoordinates.lat).toFixed(5)},${Number(deliveryCoordinates.lng).toFixed(5)}`
+        : 'none';
+    return [
+        `t:${Number(total).toFixed(2)}`,
+        `c:${cartKey}`,
+        `ot:${orderType}`,
+        `xy:${coordKey}`,
+        `df:${Number(deliveryFee).toFixed(2)}`,
+        `d:${Number(discount).toFixed(2)}`,
+        `s:${Number(smallOrderSurcharge || 0).toFixed(2)}`,
+        `sf:${scheduledFor || 'none'}`,
+    ].join('__');
+}
+
+// ── Generate a fresh payment-session idempotency key ──────────────────────────
+function generateSessionKey() {
+    return `ps_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function usePaymentInit({
     paymentMethod,
@@ -69,25 +109,31 @@ export function usePaymentInit({
     deliveryFee,
     discount,
     smallOrderSurcharge,
-    idempotencyKey,
+    // idempotencyKey is NO LONGER accepted from Checkout — managed internally
+    onPaymentSessionKeyRotated, // optional callback so Checkout can sync its idempotencyKey state
 }) {
     const [clientSecret, setClientSecret] = useState('');
     const [showStripeForm, setShowStripeForm] = useState(false);
     const [initializingPayment, setInitializingPayment] = useState(false);
     const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null);
 
+    // Internal rotating session key — one key per unique fingerprint
+    const sessionKeyRef = useRef(generateSessionKey());
+    const lastFingerprintRef = useRef(null);
+
     // Atomic guards
     const paymentInitInFlightRef = useRef(false);
-    const piTotalRef = useRef(null);
 
-    // Reset all payment state (called externally when switching methods or resetting)
-    const resetPaymentState = () => {
+    // Reset all payment state (called on fingerprint change or method switch)
+    const resetPaymentState = useCallback(() => {
         setClientSecret('');
         setShowStripeForm(false);
         setInitializingPayment(false);
         paymentInitInFlightRef.current = false;
-        piTotalRef.current = null;
-    };
+    }, []);
+
+    // Expose the current session key so Checkout can pass it to verifyAndCreateOrder / pendingPayment
+    const getSessionKey = useCallback(() => sessionKeyRef.current, []);
 
     useEffect(() => {
         const initPayment = async () => {
@@ -95,22 +141,6 @@ export function usePaymentInit({
                 resetPaymentState();
                 return;
             }
-
-            // If total changed since PI was created, reset so we get a fresh one
-            // NOTE: must call resetPaymentState() and then return — React state update is async,
-            // so `clientSecret` won't be '' yet in this same tick. The next effect run (triggered
-            // by the state change) will see clientSecret='' and proceed to re-init.
-            if (clientSecret && piTotalRef.current !== null && Math.abs(piTotalRef.current - total) > 0.01) {
-                console.log('[usePaymentInit] Total changed from', piTotalRef.current, 'to', total, '— resetting PI');
-                resetPaymentState();
-                return; // let state settle; next effect run will re-init
-            }
-
-            // Already have a valid PI for this total
-            if (clientSecret) return;
-
-            // Atomic guard
-            if (paymentInitInFlightRef.current) return;
 
             // ── Pre-flight validation — must all pass before hitting backend ──
             if (isGuest && (!formData.guest_name || !formData.guest_email)) {
@@ -134,9 +164,42 @@ export function usePaymentInit({
                 return;
             }
 
+            // ── Fingerprint check: rotate key if any payment-shaping input changed ──
+            const currentFingerprint = buildPaymentFingerprint({
+                total, cart, orderType, deliveryCoordinates,
+                deliveryFee, discount, smallOrderSurcharge, scheduledFor,
+            });
+
+            if (lastFingerprintRef.current !== null && lastFingerprintRef.current !== currentFingerprint) {
+                const oldKey = sessionKeyRef.current;
+                const newKey = generateSessionKey();
+                sessionKeyRef.current = newKey;
+                console.log('[usePaymentInit] payment_fingerprint_changed — old:', lastFingerprintRef.current);
+                console.log('[usePaymentInit] payment_fingerprint_changed — new:', currentFingerprint);
+                console.log('[usePaymentInit] payment_session_key_rotated:', oldKey, '→', newKey);
+                checkoutTrace.log('payment_fingerprint_changed', { old: lastFingerprintRef.current, current: currentFingerprint });
+                checkoutTrace.log('payment_session_key_rotated', { oldKey, newKey });
+                onPaymentSessionKeyRotated?.(newKey);
+                // Reset payment state — clientSecret is for the old fingerprint, must not reuse
+                resetPaymentState();
+                lastFingerprintRef.current = currentFingerprint;
+                return; // let state settle; next effect run will re-init with new key
+            }
+
+            // Already have a valid PI for this exact fingerprint
+            if (clientSecret) return;
+
+            // Atomic guard
+            if (paymentInitInFlightRef.current) return;
+
+            // Record fingerprint before starting
+            lastFingerprintRef.current = currentFingerprint;
+
             // ── Start init ─────────────────────────────────────────────────────
             paymentInitInFlightRef.current = true;
             setInitializingPayment(true);
+
+            const activeSessionKey = sessionKeyRef.current;
 
             try {
                 checkoutTrace.log('stripe_init_started', { total, orderType, isGuest });
@@ -159,13 +222,10 @@ export function usePaymentInit({
                         : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
                     : (restaurant?.address || 'Collection');
 
-                checkoutTrace.log('create_payment_intent_started', { total, idempotencyKey });
-                console.log('[usePaymentInit] Creating PaymentIntent for amount:', total);
-
-                const response = await base44.functions.invoke('createPaymentIntent', {
+                const payload = {
                     amount: total,
                     currency: 'gbp',
-                    idempotency_key: idempotencyKey,
+                    idempotency_key: activeSessionKey,
                     restaurant_id: restaurantId,
                     items: cart,
                     subtotal,
@@ -181,14 +241,24 @@ export function usePaymentInit({
                     notes: formData.notes,
                     is_scheduled: isScheduled,
                     scheduled_for: scheduledFor || null,
-                });
+                };
+
+                checkoutTrace.log('create_payment_intent_payload', { total, sessionKey: activeSessionKey, fingerprint: currentFingerprint });
+                console.log('[usePaymentInit] create_payment_intent_payload amount:', total, 'session_key:', activeSessionKey);
+
+                const response = await base44.functions.invoke('createPaymentIntent', payload);
+
+                // Guard: if key was rotated while in-flight, discard stale result
+                if (sessionKeyRef.current !== activeSessionKey) {
+                    console.warn('[usePaymentInit] Session key rotated during PI creation — discarding stale response');
+                    return;
+                }
 
                 if (response?.data?.clientSecret) {
                     checkoutTrace.log('create_payment_intent_succeeded', { piId: response.data.paymentIntentId });
-                    console.log('[usePaymentInit] ✅ Got clientSecret');
+                    console.log('[usePaymentInit] ✅ Got clientSecret for session_key:', activeSessionKey);
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
-                    piTotalRef.current = total;
                 } else {
                     // ── Structured error from hardened backend ─────────────────
                     const errorCode = response?.data?.code || 'UNKNOWN';
@@ -215,9 +285,9 @@ export function usePaymentInit({
 
         initPayment();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [paymentMethod, total, zoneCheckComplete]);
-    // NOTE: 'total' dep is intentional — coupon/address changes must trigger a fresh PI.
-    // The `if (clientSecret) return` guard prevents unnecessary re-init.
+    }, [paymentMethod, total, deliveryFee, discount, smallOrderSurcharge, scheduledFor, orderType, zoneCheckComplete,
+        JSON.stringify(deliveryCoordinates), JSON.stringify((cart || []).map(i => `${i.menu_item_id||i.id}:${i.quantity}:${i.price}`).sort())
+    ]);
 
     return {
         clientSecret,
@@ -225,5 +295,6 @@ export function usePaymentInit({
         initializingPayment,
         stripeLoadedPromise,
         resetPaymentState,
+        getSessionKey,
     };
 }

@@ -145,6 +145,7 @@ Deno.serve(async (req) => {
         if (!idempotencyKeyStr || idempotencyKeyStr.length < 8) {
             return errorResponse('INVALID_IDEMPOTENCY_KEY', 'idempotency_key must be at least 8 characters');
         }
+        console.log(`${LOG_PREFIX} [IDEMPOTENCY_KEY] request_id=${requestId} key=${idempotencyKeyStr} amount=£${amount}`);
 
         // ── 4. Validate required order fields ─────────────────────────────────
         if (!restaurant_id || typeof restaurant_id !== 'string' || !restaurant_id.trim()) {
