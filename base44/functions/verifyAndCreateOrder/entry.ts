@@ -47,11 +47,6 @@ async function attemptRefund(stripe, paymentIntentId, reason) {
     }
 }
 
-// ── Structured error response builder ────────────────────────────────────────
-function stageError(code, stage, message, httpStatus = 400, extra = {}) {
-    return { ok: false, httpStatus, body: { success: false, error: message, code, stage, ...extra } };
-}
-
 // ── FailureLog writer (never throws) ─────────────────────────────────────────
 async function writeFailureLog(base44, fields) {
     try {
@@ -779,7 +774,7 @@ Deno.serve(async (req) => {
     const smallOrderSurcharge = typeof orderData.small_order_surcharge === 'number' ? orderData.small_order_surcharge : 0;
     const serverTotal = Math.max(0, serverSubtotal + deliveryFee + smallOrderSurcharge - verifiedDiscount - clientPromotionDiscount);
     if (Math.abs(serverTotal - orderData.total) > 0.02) {
-        const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total} (subtotal=${serverSubtotal.toFixed(2)} fee=${deliveryFee.toFixed(2)} discount=${verifiedDiscount.toFixed(2)})`;
+        const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total} (subtotal=${serverSubtotal.toFixed(2)} fee=${deliveryFee.toFixed(2)} surcharge=${smallOrderSurcharge.toFixed(2)} verifiedDiscount=${verifiedDiscount.toFixed(2)} clientPromotionDiscount=${clientPromotionDiscount.toFixed(2)})`;
         console.error(`${LOG} [trace=${traceId}] [SECURITY] ${mismatchMsg}`);
         await writeFailureLog(base44, {
             failure_type: 'total_mismatch', severity: 'critical',

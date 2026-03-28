@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        let user = null;
+        try { user = await base44.auth.me(); } catch (_) { /* guest — proceed without user */ }
 
         const { orderData } = await req.json();
 
@@ -63,10 +64,11 @@ Deno.serve(async (req) => {
 
         // ── 1. Per-user burst limit ──────────────────────────────────────────────
         if (actorId) {
-            const recentByUser = await base44.asServiceRole.entities.Order.filter({
-                created_by: actorId,
-                created_date: { $gt: windowStart60s }
-            });
+            // For authenticated users query created_by; for guests query guest_email
+            const userFilter = user?.email
+                ? { created_by: user.email, created_date: { $gt: windowStart60s } }
+                : { guest_email: actorId, created_date: { $gt: windowStart60s } };
+            const recentByUser = await base44.asServiceRole.entities.Order.filter(userFilter);
 
             const userCount = Array.isArray(recentByUser) ? recentByUser.length : 0;
 
