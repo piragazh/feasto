@@ -47,15 +47,6 @@ Deno.serve(async (req) => {
 
     const base44 = createClientFromRequest(req);
 
-    // Safely get user without triggering 401 errors for guests
-    let user = null;
-    try {
-        const isAuthenticated = await base44.auth.isAuthenticated();
-        if (isAuthenticated) {
-            user = await base44.auth.me();
-        }
-    } catch (_) { /* guest checkout — continue without user */ }
-
     let payload;
     try {
         payload = await req.json();
@@ -108,7 +99,7 @@ Deno.serve(async (req) => {
             total_pence: Math.round(amount * 100),
             is_scheduled: is_scheduled ? 'true' : 'false',
             scheduled_for: is_scheduled ? scheduled_for : null,
-            created_by: user?.email || 'guest',
+            created_by: 'guest', // No auth lookup needed
         },
     };
 

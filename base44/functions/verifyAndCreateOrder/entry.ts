@@ -164,14 +164,8 @@ Deno.serve(async (req) => {
     // ── SDK client — initialized once, available to all stages ────────────────
     const base44 = createClientFromRequest(req);
 
-    // ── Auth (guests allowed) ──────────────────────────────────────────────────
-    let user = null;
-    try {
-        const isAuthenticated = await base44.auth.isAuthenticated();
-        if (isAuthenticated) user = await base44.auth.me();
-    } catch (_) { /* guest */ }
-
-    const userLabel = user?.email || orderData?.guest_email || 'guest';
+    // ── For logging/metadata only — use guest_email if provided ───────────────
+    const userLabel = orderData?.guest_email || 'guest';
     console.log(`${LOG} [trace=${traceId}] user=${userLabel} pi=${paymentIntentId || 'cash'} key=${idempotency_key || 'none'}`);
 
     // ── Input guard ────────────────────────────────────────────────────────────
