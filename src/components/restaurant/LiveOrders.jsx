@@ -388,13 +388,26 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         printOrderDetails(orderId);
     };
 
-    const handleReject = (orderId, reason) => {
-        updateOrderMutation.mutate({ 
-            orderId, 
-            status: 'cancelled',
-            rejection_reason: reason
-        });
-        toast.success('Order rejected and customer notified');
+    const handleReject = async (orderId, reason) => {
+        try {
+            const response = await base44.functions.invoke('rejectOrderWithRefund', {
+                order_id: orderId,
+                rejection_reason: reason,
+            });
+            const result = response?.data;
+            queryClient.invalidateQueries(['live-orders']);
+            await sendCustomerNotification(orderId, 'cancelled', reason);
+            if (onOrderUpdate) onOrderUpdate();
+            if (result?.refunded) {
+                toast.success('Order rejected and refund issued automatically');
+            } else {
+                toast.success('Order rejected and customer notified');
+            }
+        } catch (error) {
+            const message = error?.response?.data?.error || error?.message || 'Failed to reject order';
+            toast.error(message);
+            console.error('[handleReject] Error:', message);
+        }
     };
 
     const assignDriverMutation = useMutation({
