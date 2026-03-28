@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
             subtotal,
             delivery_fee,
             discount,
+            small_order_surcharge,
             order_type,
             delivery_address,
             delivery_coordinates,
@@ -160,17 +161,18 @@ Deno.serve(async (req) => {
             typeof delivery_fee === 'number' &&
             typeof discount === 'number'
         ) {
-            const expectedTotal = subtotal + delivery_fee - discount;
+            const surcharge = typeof small_order_surcharge === 'number' ? small_order_surcharge : 0;
+            const expectedTotal = subtotal + delivery_fee + surcharge - discount;
             const delta = Math.abs(expectedTotal - amount);
             if (delta > MATH_TOLERANCE_GBP) {
                 console.error(
                     `${LOG_PREFIX} [MATH_INTEGRITY_FAIL] request_id=${requestId}` +
-                    ` subtotal=${subtotal} delivery_fee=${delivery_fee} discount=${discount}` +
+                    ` subtotal=${subtotal} delivery_fee=${delivery_fee} surcharge=${surcharge} discount=${discount}` +
                     ` expected=${expectedTotal.toFixed(2)} received=${amount.toFixed(2)} delta=${delta.toFixed(4)}`
                 );
                 return errorResponse(
                     'MATH_INTEGRITY_FAIL',
-                    `Total mismatch: subtotal(${subtotal}) + delivery_fee(${delivery_fee}) - discount(${discount}) = ${expectedTotal.toFixed(2)}, but amount sent was ${amount.toFixed(2)}`
+                    `Total mismatch: subtotal(${subtotal}) + delivery_fee(${delivery_fee}) + surcharge(${surcharge}) - discount(${discount}) = ${expectedTotal.toFixed(2)}, but amount sent was ${amount.toFixed(2)}`
                 );
             }
         } else {

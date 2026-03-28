@@ -507,6 +507,7 @@ export default function Checkout() {
         subtotal,
         deliveryFee,
         discount,
+        smallOrderSurcharge,
         idempotencyKey,
     });
 
@@ -1069,7 +1070,9 @@ export default function Checkout() {
                 items: cart,
                 subtotal,
                 delivery_fee: deliveryFee,
+                small_order_surcharge: smallOrderSurcharge,
                 discount,
+                coupon_codes: appliedCoupons.length > 0 ? appliedCoupons.map(c => c.code) : [],
                 total,
                 payment_method: 'card',
                 order_type: orderType,

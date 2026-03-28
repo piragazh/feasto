@@ -68,6 +68,7 @@ export function usePaymentInit({
     subtotal,
     deliveryFee,
     discount,
+    smallOrderSurcharge,
     idempotencyKey,
 }) {
     const [clientSecret, setClientSecret] = useState('');
@@ -167,6 +168,7 @@ export function usePaymentInit({
                     subtotal,
                     delivery_fee: deliveryFee,
                     discount,
+                    small_order_surcharge: smallOrderSurcharge || 0,
                     order_type: orderType,
                     delivery_address: fullAddress,
                     delivery_coordinates: deliveryCoordinates,
