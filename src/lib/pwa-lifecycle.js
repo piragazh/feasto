@@ -88,6 +88,16 @@ export function registerServiceWorker() {
   // Register
   window.addEventListener('load', async () => {
     try {
+      const swCheck = await fetch('/sw.js', { cache: 'no-store' });
+      const contentType = swCheck.headers.get('content-type') || '';
+
+      if (!swCheck.ok || !contentType.toLowerCase().includes('javascript')) {
+        log('Invalid /sw.js response detected, unregistering existing service workers.');
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+        return;
+      }
+
       const registration = await navigator.serviceWorker.register('/sw.js', {
         // updateViaCache: 'none' — browser always fetches sw.js from network
         // so stale SW file is never served from HTTP cache

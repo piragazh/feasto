@@ -18,6 +18,7 @@ import AdminRestaurants from './pages/AdminRestaurants';
 import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
+import Home from './pages/Home';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -188,7 +189,9 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
                  <Restaurant restaurantId={customDomainRestaurantId} />
                </LayoutWrapper>
              ) : (
-               <Navigate to="/Home" replace />
+               <LayoutWrapper currentPageName="Home">
+                 <Home />
+               </LayoutWrapper>
              )
            } />
           {Object.entries(Pages).map(([path, Page]) => (
