@@ -32,12 +32,10 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+const DomainChecker = ({ children }) => {
   const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
   const [domainCheckDone, setDomainCheckDone] = React.useState(false);
 
-  // Check for custom domain on mount
   React.useEffect(() => {
     const checkDomain = async () => {
       const hostname = window.location.hostname;
@@ -68,8 +66,22 @@ const AuthenticatedApp = () => {
     checkDomain();
   }, []);
 
+  if (!domainCheckDone) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return children({ customDomainRestaurantId });
+};
+
+const AuthenticatedApp = ({ customDomainRestaurantId }) => {
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+
   // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth || !domainCheckDone) {
+  if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -199,7 +211,11 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <NavigationTracker />
-          <AuthenticatedApp />
+          <DomainChecker>
+            {({ customDomainRestaurantId }) => (
+              <AuthenticatedApp customDomainRestaurantId={customDomainRestaurantId} />
+            )}
+          </DomainChecker>
         </Router>
         <Toaster />
       </QueryClientProvider>
