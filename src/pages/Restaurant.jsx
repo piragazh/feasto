@@ -31,8 +31,22 @@ const CategoryDealCustomizationModal = lazy(() => import('@/components/restauran
 export default function Restaurant() {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
-    // Check sessionStorage FIRST for custom domain, fall back to query param
-    const restaurantId = sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id');
+    // Watch sessionStorage for custom domain ID (reactive)
+    const [restaurantId, setRestaurantId] = useState(() => 
+        sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
+    );
+    
+    // Listen for custom domain ID changes
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const customId = sessionStorage.getItem('customDomainRestaurantId');
+            const paramId = urlParams.get('id');
+            setRestaurantId(customId || paramId);
+        };
+        
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
     
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
