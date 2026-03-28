@@ -70,7 +70,7 @@ import MediaLibrary from './pages/MediaLibrary';
 import MediaScreen from './pages/MediaScreen';
 import MediaScreenManagement from './pages/MediaScreenManagement';
 import Messages from './pages/Messages';
-import NotFound from './pages/NotFound';
+
 import OrderHistory from './pages/OrderHistory';
 import Orders from './pages/Orders';
 import POSDashboard from './pages/POSDashboard';
@@ -110,7 +110,6 @@ export const PAGES = {
     "MediaScreen": MediaScreen,
     "MediaScreenManagement": MediaScreenManagement,
     "Messages": Messages,
-    "NotFound": NotFound,
     "OrderHistory": OrderHistory,
     "Orders": Orders,
     "POSDashboard": POSDashboard,
