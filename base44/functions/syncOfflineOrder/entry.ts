@@ -45,22 +45,20 @@ Deno.serve(async (req) => {
             }
         }
 
-        // ✨ NEW: Idempotency check — prevent duplicate sync of same offline order
+        // Idempotency check — prevent duplicate sync on retry using the stable offline_id UUID
         const offlineId = offlineOrderData.offline_id;
         if (offlineId) {
-            const existingOrders = await base44.asServiceRole.entities.Order.filter({ offline_created: true });
-            // Check if an order with this offline_id was already synced (by matching offline_id pattern + exact timestamps)
-            const isDuplicate = existingOrders?.some(o => 
-                o.offline_created_at === offlineOrderData.created_at && 
-                o.restaurant_id === offlineOrderData.restaurant_id &&
-                Math.abs(new Date(o.offline_synced_at).getTime() - new Date().getTime()) < 5000 // within 5 sec
-            );
-            if (isDuplicate) {
-                console.warn(`[OFFLINE-SYNC] Duplicate detected for offline_id=${offlineId}. Rejecting.`);
-                return Response.json({ 
-                    error: 'Order already synced (duplicate offline_id)',
-                    isDuplicate: true
-                }, { status: 409 });
+            const existingWithOfflineId = await base44.asServiceRole.entities.Order.filter({
+                offline_id: offlineId,
+            });
+            if (existingWithOfflineId?.length > 0) {
+                const existing = existingWithOfflineId[0];
+                console.log(`[OFFLINE-SYNC] Duplicate suppressed — offline_id=${offlineId} already synced as order=${existing.id}`);
+                return Response.json({
+                    order: existing,
+                    isDuplicate: true,
+                    needs_review: existing.needs_review || false,
+                }, { status: 200 });
             }
         }
 
@@ -250,7 +248,6 @@ Deno.serve(async (req) => {
             platform_commission_amount: _pc,
             restaurant_earnings: _re,
             coupon_code: _cc,
-            offline_id: _oid,
             synced: _synced,
             created_at: offlineCreatedAt,
             ...safeOrderData
