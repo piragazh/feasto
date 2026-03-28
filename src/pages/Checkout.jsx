@@ -36,6 +36,7 @@ import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { useSEO } from '@/lib/useSEO';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { usePaymentInit } from '@/hooks/usePaymentInit';
+import { pendingPayment } from '@/lib/pendingPayment';
 
 // Main Checkout Component
 export default function Checkout() {
@@ -56,6 +57,10 @@ export default function Checkout() {
     // Order Status
     const [isSubmitting, setIsSubmitting] = useState(false); // True when submitting order
     const [orderPlaced, setOrderPlaced] = useState(false); // True when order successfully placed
+
+    // Recovery state — detects interrupted payments on page reload
+    const [isRecovering, setIsRecovering] = useState(false);
+    const [recoveryError, setRecoveryError] = useState(null);
     
     // Discounts and Special Orders
     const [appliedCoupons, setAppliedCoupons] = useState([]); // Applied coupons array
@@ -274,6 +279,55 @@ export default function Checkout() {
             })
             .catch(() => {});
     }, []);
+
+    // ── Recovery: detect interrupted payments on page reload ──────────────────
+    // If a pending payment was persisted (PI succeeded but browser closed before
+    // order creation confirmed), attempt to recover it automatically.
+    useEffect(() => {
+        const pending = pendingPayment.read();
+        if (!pending) return;
+
+        console.log('[Checkout] Detected pending payment pi=', pending.paymentIntentId, 'savedAt=', pending.savedAt);
+        checkoutTrace.log('recovery_detected', { piId: pending.paymentIntentId, savedAt: pending.savedAt });
+
+        setIsRecovering(true);
+
+        base44.functions.invoke('recoverPayment', {
+            paymentIntentId: pending.paymentIntentId,
+            idempotencyKey: pending.idempotencyKey,
+            orderData: pending.orderData,
+        }).then(response => {
+            const result = response?.data;
+            console.log('[Checkout] Recovery result:', result?.status, result?.order_id);
+            checkoutTrace.log('recovery_result', { status: result?.status, orderId: result?.order_id });
+
+            if (result?.status === 'order_found' || result?.status === 'order_created') {
+                pendingPayment.clear();
+                setOrderPlaced(true);
+                toast.success('Your previous order has been confirmed!');
+                setTimeout(() => navigate(createPageUrl('Orders')), 2000);
+            } else if (result?.status === 'already_refunded') {
+                pendingPayment.clear();
+                setRecoveryError('Your previous payment was refunded. Please place a new order.');
+            } else if (result?.status === 'needs_review') {
+                pendingPayment.clear();
+                setRecoveryError('There was an issue with your previous payment. Our team has been notified. Please contact support.');
+            } else if (result?.status === 'payment_not_succeeded') {
+                // PI not charged — safe to clear and let user retry
+                pendingPayment.clear();
+            } else {
+                // Recovery failed — keep pending record, show error but don't block checkout
+                setRecoveryError(result?.error || 'We could not confirm your previous order. Please check your orders page or contact support.');
+            }
+        }).catch(err => {
+            console.error('[Checkout] Recovery request failed:', err.message);
+            checkoutTrace.error('recovery_request_failed', { error: err.message });
+            setRecoveryError('Could not verify your previous payment. Please check your orders or contact support.');
+        }).finally(() => {
+            setIsRecovering(false);
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount only
 
     // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
@@ -872,7 +926,7 @@ export default function Checkout() {
                 order_number: verificationResponse.data.order_number 
             };
 
-            // Clear cart & show success immediately — all post-order tasks run in parallel in background
+            // Clear cart & pending payment record — order is confirmed
             localStorage.removeItem('cart');
             localStorage.removeItem('cartRestaurantId');
             localStorage.removeItem('cartRestaurantName');
@@ -881,6 +935,7 @@ export default function Checkout() {
             localStorage.removeItem('appliedPromotions');
             localStorage.removeItem('userAddress');
             localStorage.removeItem('userCoordinates');
+            pendingPayment.clear(); // Safe: idempotent if already cleared by recovery
             setOrderPlaced(true);
 
             // Fire all post-order background tasks in parallel — none block the user
@@ -998,7 +1053,40 @@ export default function Checkout() {
         
         checkoutTrace.log('on_success_fired', { piId: paymentIntentId });
         console.log('[Checkout] ✅ Payment intent confirmed:', paymentIntentId);
-        
+
+        // ── DURABILITY WRITE: persist before any order creation attempt ────────
+        // If the browser closes/refreshes after this line, the recovery flow on
+        // next mount will detect this record and replay order creation safely.
+        pendingPayment.save({
+            paymentIntentId,
+            idempotencyKey,
+            total,
+            restaurantId,
+            restaurantName,
+            orderData: {
+                restaurant_id: restaurantId,
+                restaurant_name: restaurantName,
+                items: cart,
+                subtotal,
+                delivery_fee: deliveryFee,
+                discount,
+                total,
+                payment_method: 'card',
+                order_type: orderType,
+                delivery_address: orderType === 'delivery'
+                    ? (isExistingAddress ? formData.delivery_address : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
+                    : (restaurant?.address || 'Collection'),
+                delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
+                phone: formData.phone,
+                notes: formData.notes,
+                is_scheduled: isScheduled,
+                scheduled_for: isScheduled ? scheduledFor : null,
+                guest_name: formData.guest_name,
+                guest_email: formData.guest_email,
+                order_source: 'online',
+            },
+        });
+
         // Mark payment as completed BEFORE creating order to block duplicates
         setPaymentCompleted(true);
         toast.success('Payment authorised! Creating your order...');
@@ -1040,7 +1128,20 @@ export default function Checkout() {
         );
     }
 
-    if (cart.length === 0) {
+    // Recovery: show full-screen spinner while checking pending payment
+    if (isRecovering) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <Loader2 className="h-10 w-10 animate-spin text-orange-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Checking your previous payment…</h2>
+                    <p className="text-gray-500 text-sm">Please wait, this takes just a moment.</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (cart.length === 0 && !recoveryError) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
@@ -1086,6 +1187,28 @@ export default function Checkout() {
                     </div>
                 </div>
                 </div>
+
+            {recoveryError && (
+                <div className="max-w-4xl mx-auto px-4 pt-4">
+                    <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+                        <span className="text-2xl mt-0.5">⚠️</span>
+                        <div>
+                            <p className="font-semibold text-amber-900 mb-1">Previous payment notice</p>
+                            <p className="text-sm text-amber-800">{recoveryError}</p>
+                            <div className="flex gap-3 mt-3">
+                                <Link to={createPageUrl('Orders')}>
+                                    <Button size="sm" variant="outline" className="h-9 border-amber-400 text-amber-800 hover:bg-amber-100">
+                                        Check My Orders
+                                    </Button>
+                                </Link>
+                                <Button size="sm" variant="ghost" className="h-9 text-amber-700" onClick={() => setRecoveryError(null)}>
+                                    Dismiss
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="max-w-4xl mx-auto px-4 py-8">
                 <div className="grid md:grid-cols-5 gap-8">
