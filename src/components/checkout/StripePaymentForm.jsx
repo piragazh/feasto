@@ -16,14 +16,6 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const submitFiredRef = useRef(false);
     // FIX #6: Capture the clientSecret at render time (component is re-keyed on rotation)
     const clientSecretAtMountRef = useRef(clientSecret);
-    // FIX #12: Track if component is still mounted to prevent setState on unmounted component
-    const isMountedRef = useRef(true);
-
-    useEffect(() => {
-        return () => {
-            isMountedRef.current = false;
-        };
-    }, []);
     const expressCheckoutEnabled = useExpressCheckoutFlag();
     // ISSUE #3 FIX: Track PI creation time to warn if expired (>10 min)
     const [piCreatedAtMs] = useState(() => {
@@ -41,12 +33,6 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             e.stopPropagation();
         }
 
-        // FIX #12: Guard against back-button unmounting component mid-flight
-        if (!isMountedRef.current) {
-            console.warn('[StripePaymentForm] Component unmounted — ignoring submit');
-            return false;
-        }
-
         // ATOMIC GUARD: prevent double-click / double-submit
         if (submitFiredRef.current) {
             console.warn('🟡 Submit already in progress — ignoring duplicate');
@@ -56,7 +42,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
 
         checkoutTrace.log('confirm_payment_started', { hasStripe: !!stripe, hasElements: !!elements });
         console.log('🔵 Payment form submitted');
-        if (isMountedRef.current) setErrorMessage('');
+        setErrorMessage('');
 
         if (!stripe || !elements) {
             console.log('🔴 Stripe not ready');
@@ -85,24 +71,16 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             const { error: submitError } = await elements.submit();
             if (submitError) {
                 console.log('🔴 Submit error:', submitError);
-                if (isMountedRef.current) {
-                    setErrorMessage(submitError.message || 'Please complete all payment fields correctly');
-                    setIsProcessing(false);
-                }
+                setErrorMessage(submitError.message || 'Please complete all payment fields correctly');
+                setIsProcessing(false);
                 submitFiredRef.current = false; // BUG FIX: unlock so user can retry after form error
                 return false;
             }
             
             if (!clientSecret) {
                 console.log('🔴 No clientSecret available');
-                if (isMountedRef.current) setErrorMessage('Payment session expired. Please refresh and try again.');
+                setErrorMessage('Payment session expired. Please refresh and try again.');
                 setIsProcessing(false);
-                return false;
-            }
-
-            // FIX #12: Guard against back-button before confirmPayment
-            if (!isMountedRef.current) {
-                console.warn('[StripePaymentForm] Component unmounted before confirmPayment');
                 return false;
             }
 
@@ -118,12 +96,6 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 }
             });
 
-            // FIX #12: Guard after async operation completes
-            if (!isMountedRef.current) {
-                console.warn('[StripePaymentForm] Component unmounted after confirmPayment');
-                return false;
-            }
-
             console.log('🔵 Payment result:', result);
             
             // ISSUE #8 FIX: Validate amount matches to catch stale secrets
@@ -137,7 +109,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                     actualAmount: result.paymentIntent.amount,
                     piId: result.paymentIntent?.id
                 });
-                if (isMountedRef.current) setErrorMessage('Payment amount mismatch. Please refresh and try again.');
+                setErrorMessage('Payment amount mismatch. Please refresh and try again.');
                 setIsProcessing(false);
                 submitFiredRef.current = false;
                 return false;
@@ -161,7 +133,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                     }
                 }
                 
-                if (isMountedRef.current) setErrorMessage(msg);
+                setErrorMessage(msg);
                 setIsProcessing(false);
                 submitFiredRef.current = false; // Unlock on failure
                 return false;
@@ -170,29 +142,29 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
                 checkoutTrace.log('confirm_payment_succeeded', { piId: result.paymentIntent.id });
                 console.log('✅ Payment succeeded:', result.paymentIntent.id);
-                if (isMountedRef.current) setErrorMessage('');
+                setErrorMessage('');
                 // Do NOT reset submitFiredRef — keeps guard active to prevent double-calls
-                if (isMountedRef.current && onSuccess) onSuccess(result.paymentIntent.id);
+                onSuccess(result.paymentIntent.id);
                 return true;
             }
             
             if (result.paymentIntent) {
                 checkoutTrace.error('confirm_payment_unexpected_status', { status: result.paymentIntent.status, piId: result.paymentIntent.id });
                 console.log('🔴 Unexpected payment status:', result.paymentIntent.status);
-                if (isMountedRef.current) setErrorMessage(`Payment ${result.paymentIntent.status}. Please try again.`);
+                setErrorMessage(`Payment ${result.paymentIntent.status}. Please try again.`);
                 setIsProcessing(false);
                 submitFiredRef.current = false; // BUG FIX: unlock so user can retry
                 return false;
             }
             
             console.log('🔴 No payment intent returned');
-            if (isMountedRef.current) setErrorMessage('Payment processing failed. Please try again.');
+            setErrorMessage('Payment processing failed. Please try again.');
             setIsProcessing(false);
             submitFiredRef.current = false; // BUG FIX: unlock so user can retry
             return false;
         } catch (err) {
             console.log('🔴 Exception:', err);
-            if (isMountedRef.current) setErrorMessage(String(err?.message || 'An error occurred. Please try again.'));
+            setErrorMessage(String(err?.message || 'An error occurred. Please try again.'));
             setIsProcessing(false);
             submitFiredRef.current = false; // Unlock on failure
             return false;

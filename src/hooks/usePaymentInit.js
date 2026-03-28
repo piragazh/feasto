@@ -209,7 +209,6 @@ export function usePaymentInit({
     // ── Effect 1: Invalidation — runs whenever fingerprint changes ─────────────
     // When the fingerprint changes, the current clientSecret is no longer valid.
     // Rotate the session key and reset all payment state so Effect 2 can re-init.
-    // FIX #13: Multi-tab session key collision detection
     useEffect(() => {
         // Nothing to invalidate on first mount or when there's no active secret
         if (activeSecretFingerprintRef.current === null) return;
@@ -217,23 +216,8 @@ export function usePaymentInit({
         if (activeSecretFingerprintRef.current !== currentFingerprint) {
             const oldKey = sessionKeyRef.current;
             const newKey = generateSessionKey();
-
-            // FIX #13: Check if another tab has an active payment session
-            const otherTabSession = sessionStorage.getItem('app_payment_active_session');
-            if (otherTabSession && otherTabSession !== oldKey) {
-                console.warn('[usePaymentInit] [FIX #13] Another tab has active payment session:', otherTabSession, '— blocking new session rotation');
-                checkoutTrace.log('payment_session_collision_blocked', { 
-                    otherTabSession, 
-                    currentKey: oldKey, 
-                    attemptedKey: newKey 
-                });
-                // Don't rotate — let the other tab complete its payment
-                return;
-            }
-
             sessionKeyRef.current = newKey;
             idempotencyKeyRef.current = newKey; // ISSUE #10 FIX: Sync idempotency key
-            sessionStorage.setItem('app_payment_active_session', newKey); // FIX #13: Mark this tab's session
 
             console.log('[usePaymentInit] fingerprint_changed — invalidating clientSecret');
             console.log('[usePaymentInit] old fingerprint:', activeSecretFingerprintRef.current);
@@ -248,32 +232,6 @@ export function usePaymentInit({
             resetPaymentState(); // clears activeSecretFingerprintRef too
         }
     }, [currentFingerprint, onPaymentSessionKeyRotated, resetPaymentState]);
-
-    // FIX #13: Cleanup active session on unmount
-    useEffect(() => {
-        return () => {
-            sessionStorage.removeItem('app_payment_active_session');
-        };
-    }, []);
-
-    // FIX #17: Cap Stripe singleton lifetime at 5 minutes to handle key rotation
-    // without thrashing concurrent users
-    useEffect(() => {
-        const STRIPE_SINGLETON_MAX_AGE_MS = 5 * 60 * 1000;
-        const singletonAgeKey = '__stripeInitTime';
-        const lastInit = parseInt(sessionStorage.getItem(singletonAgeKey) || '0', 10);
-        const now = Date.now();
-        if (lastInit && (now - lastInit) > STRIPE_SINGLETON_MAX_AGE_MS) {
-            // Stale singleton — force re-init on next payment method selection
-            _stripeInitState.initialized = false;
-            _stripeInitState.instance = null;
-            _stripeInitState.promise = null;
-            sessionStorage.removeItem(singletonAgeKey);
-            console.log('[usePaymentInit] [FIX #17] Stripe singleton expired — will re-fetch key on next init');
-        } else if (!lastInit) {
-            sessionStorage.setItem(singletonAgeKey, String(now));
-        }
-    }, []);
 
     // ── Effect 2: Initialization — runs when conditions are met ───────────────
     // Fires whenever the fingerprint changes (after Effect 1 resets state)

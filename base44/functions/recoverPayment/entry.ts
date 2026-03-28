@@ -209,32 +209,17 @@ Deno.serve(async (req) => {
         if (result?.success || result?.duplicate) {
             console.log(`${LOG} [trace=${traceId}] ✅ Recovery order created/found id=${result.order_id}`);
 
-            // FIX #7 + #16: Mark BOTH the recovery lock AND the PI processing lock as processed
-            // so the webhook handler sees them and yields instead of creating a duplicate order.
-            const lockUpdates = [];
+            // FIX #7: Mark recovery lock as processed so webhook handler doesn't re-process
             if (recoveryLockId) {
-                lockUpdates.push(
-                    base44.asServiceRole.entities.WebhookEventLog.update(recoveryLockId, {
+                try {
+                    await base44.asServiceRole.entities.WebhookEventLog.update(recoveryLockId, {
                         status: 'processed',
                         details: { source: 'frontend_recovery', order_id: result.order_id, trace_id: traceId }
-                    }).catch(e => console.warn(`${LOG} [trace=${traceId}] recovery lock update failed:`, e.message))
-                );
+                    });
+                } catch (lockUpdateErr) {
+                    console.warn(`${LOG} [trace=${traceId}] recovery lock update failed (non-fatal):`, lockUpdateErr.message);
+                }
             }
-            // Also close the PI processing lock written by verifyAndCreateOrder (FIX #11)
-            lockUpdates.push(
-                base44.asServiceRole.entities.WebhookEventLog.filter({
-                    stripe_event_id: `vaco_lock_${paymentIntentId}`,
-                    status: 'processing'
-                }).then(locks => {
-                    if (locks?.[0]?.id) {
-                        return base44.asServiceRole.entities.WebhookEventLog.update(locks[0].id, {
-                            status: 'processed',
-                            details: { source: 'recovery_cleanup', order_id: result.order_id, trace_id: traceId }
-                        });
-                    }
-                }).catch(e => console.warn(`${LOG} [trace=${traceId}] PI lock cleanup failed (non-fatal):`, e.message))
-            );
-            await Promise.allSettled(lockUpdates);
 
             return Response.json({
                 status: result.duplicate ? 'order_found' : 'order_created',

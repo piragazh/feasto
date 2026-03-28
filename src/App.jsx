@@ -2,6 +2,7 @@ import { Toaster } from 'sonner';
 import { QueryClientProvider } from '@tanstack/react-query';
 // NOTE: Toaster import removed — it is rendered by Layout.jsx to avoid duplicate toasts.
 import { queryClientInstance } from '@/lib/query-client'
+import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import React, { Suspense } from 'react';
@@ -17,7 +18,6 @@ import AdminRestaurants from './pages/AdminRestaurants';
 import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
-import Home from './pages/Home';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -116,7 +116,7 @@ const DomainChecker = ({ children }) => {
 };
 
 const AuthenticatedApp = ({ customDomainRestaurantId }) => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -188,9 +188,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
                  <Restaurant restaurantId={customDomainRestaurantId} />
                </LayoutWrapper>
              ) : (
-               <LayoutWrapper currentPageName="Home">
-                 <Home />
-               </LayoutWrapper>
+               <Navigate to="/Home" replace />
              )
            } />
           {Object.entries(Pages).map(([path, Page]) => (
@@ -248,6 +246,7 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
+          <NavigationTracker />
           <DomainChecker>
             {({ customDomainRestaurantId }) => (
               <AuthenticatedApp customDomainRestaurantId={customDomainRestaurantId} />

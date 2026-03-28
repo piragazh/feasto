@@ -5,8 +5,6 @@
  * If refund fails after max retries, escalates to manual review.
  */
 
-// FIX #20: On Stripe API timeout, check refund status before marking needs_review
-// to prevent double-refund by manual team.
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import Stripe from 'npm:stripe';
 
@@ -30,36 +28,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000; // 1 second
 
-// FIX #20: Check Stripe for an existing refund on this PI before attempting to create one.
-// Prevents double-refund when a previous attempt timed out but the refund actually succeeded.
-async function getExistingRefund(paymentIntentId) {
-    try {
-        const pi = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ['latest_charge'] });
-        const charge = pi.latest_charge;
-        if (charge && typeof charge === 'object' && charge.refunded) {
-            // PI already fully refunded
-            const refunds = await stripe.refunds.list({ payment_intent: paymentIntentId, limit: 1 });
-            const existingRefund = refunds.data?.[0];
-            if (existingRefund) {
-                console.log(`[REFUND] [FIX #20] Found existing refund ${existingRefund.id} status=${existingRefund.status} — skipping create`);
-                return { exists: true, refund_id: existingRefund.id, status: existingRefund.status };
-            }
-        }
-    } catch (e) {
-        console.warn('[REFUND] [FIX #20] Pre-check failed (non-fatal):', e.message);
-    }
-    return { exists: false };
-}
-
 async function attemptRefund(paymentIntentId, attempt = 1) {
-    // FIX #20: On first attempt, check if a refund already exists (from a previous timed-out call)
-    if (attempt === 1) {
-        const existing = await getExistingRefund(paymentIntentId);
-        if (existing.exists) {
-            return { success: true, refund_id: existing.refund_id, attempt: 0, already_refunded: true };
-        }
-    }
-
     try {
         console.log(`[REFUND] Attempt ${attempt}/${MAX_RETRIES} for intent=${paymentIntentId}`);
         
@@ -74,17 +43,12 @@ async function attemptRefund(paymentIntentId, attempt = 1) {
         
     } catch (error) {
         console.error(`[REFUND] Attempt ${attempt} failed:`, error.message);
-
-        // FIX #20: charge_already_refunded means the refund succeeded in a prior timed-out call
-        if (error?.code === 'charge_already_refunded') {
-            console.log(`[REFUND] [FIX #20] charge_already_refunded — treating as success`);
-            const existing = await getExistingRefund(paymentIntentId);
-            return { success: true, refund_id: existing.refund_id || 're_already_refunded', attempt, already_refunded: true };
-        }
         
-        // Don't retry permanent Stripe errors — no such PI, etc.
+        // Don't retry permanent Stripe errors — no such PI, already refunded, etc.
         const isPermanent = error?.code === 'resource_missing' || 
-            error?.message?.includes('No such payment_intent');
+            error?.code === 'charge_already_refunded' ||
+            error?.message?.includes('No such payment_intent') ||
+            error?.message?.includes('already been refunded');
         
         if (!isPermanent && attempt < MAX_RETRIES) {
             const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1); // exponential

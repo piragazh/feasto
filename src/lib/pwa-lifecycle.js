@@ -85,30 +85,25 @@ export function registerServiceWorker() {
   };
   navigator.serviceWorker.addEventListener('message', onMessage);
 
-  const doRegister = async () => {
+  // Register
+  window.addEventListener('load', async () => {
     try {
-      const swCheck = await fetch('/sw.js', { cache: 'no-store' });
-      log('SW check response:', swCheck.status, swCheck.headers.get('content-type'));
-      const contentType = swCheck.headers.get('content-type') || '';
-
-      if (!swCheck.ok || !contentType.toLowerCase().includes('javascript')) {
-        log('Invalid /sw.js response detected, unregistering existing service workers.');
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((registration) => registration.unregister()));
-        return;
-      }
-
       const registration = await navigator.serviceWorker.register('/sw.js', {
+        // updateViaCache: 'none' — browser always fetches sw.js from network
+        // so stale SW file is never served from HTTP cache
         updateViaCache: 'none',
       });
 
       log('Registered:', registration.scope);
 
+      // If a new SW is already waiting (e.g. from a previous update that didn't
+      // reload), trigger a safe reload now.
       if (registration.waiting) {
         log('A waiting SW was found on registration — triggering safe reload.');
         safeReload('waiting SW on registration');
       }
 
+      // Watch for future updates
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
         if (!newWorker) return;
@@ -119,26 +114,26 @@ export function registerServiceWorker() {
           log('New SW state:', newWorker.state);
 
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // A new SW installed but the old one is still controlling the page.
+            // The new SW will self-activate via skipWaiting() and then post
+            // SW_UPDATE_AVAILABLE via clients.claim() → message. The reload
+            // will happen via the message handler above.
             log('New SW installed and waiting to activate.');
           }
         });
       });
 
+      // Periodically check for updates (every 30 minutes) so long-running
+      // POS/media screens pick up deploys without requiring a manual refresh.
       setInterval(() => {
         registration.update().catch(() => {});
       }, 30 * 60 * 1000);
+
     } catch (error) {
+      // SW registration failure is non-fatal — app works without it
       log('Registration failed:', error);
     }
-  };
-
-  if (document.readyState === 'complete') {
-    void doRegister();
-  } else {
-    window.addEventListener('load', () => {
-      void doRegister();
-    }, { once: true });
-  }
+  });
 
   return () => {
     navigator.serviceWorker.removeEventListener('message', onMessage);

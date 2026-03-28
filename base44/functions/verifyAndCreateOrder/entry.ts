@@ -243,35 +243,6 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid payment intent format', success: false, code: 'INVALID_PAYMENT_INTENT', stage: 'payment_intent_verification' }, { status: 400 });
         }
 
-        // FIX #11: Distributed lock via WebhookEventLog BEFORE PT creation — prevents
-        // concurrent requests from all passing dedup checks simultaneously and then
-        // racing to write PT + compensate (triple-refund race condition).
-        try {
-            await base44.asServiceRole.entities.WebhookEventLog.create({
-                stripe_event_id: `vaco_lock_${paymentIntentId}`,
-                event_type: 'payment_intent.succeeded',
-                status: 'processing',
-                processed_at: new Date().toISOString(),
-                details: { idempotency_key, trace_id: traceId, locked_at: Date.now() }
-            });
-            console.log(`${LOG} [trace=${traceId}] [FIX #11] PI processing lock acquired`);
-        } catch (lockErr) {
-            // Lock already exists — another concurrent verifyAndCreateOrder is processing this PI
-            console.log(`${LOG} [trace=${traceId}] [FIX #11] PI lock already held — checking existing order`);
-            // Give the other request 200ms to finish writing the order, then check PT
-            await new Promise(r => setTimeout(r, 200));
-            try {
-                const raceCheck = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId });
-                if (raceCheck?.[0]?.status === 'order_created' && raceCheck[0].order_id) {
-                    return Response.json({ success: true, order_id: raceCheck[0].order_id, order_number: raceCheck[0].order_number, duplicate: true }, { status: 200 });
-                }
-            } catch (_) {}
-            return Response.json({
-                error: 'Another payment confirmation is in progress for this transaction. Please wait and check your orders.',
-                success: false, code: 'CONCURRENT_PAYMENT_IN_PROGRESS', stage: 'payment_intent_verification'
-            }, { status: 409 });
-        }
-
         // PT dedup: already linked to order?
         try {
             const existingPT = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId });
@@ -960,49 +931,6 @@ Deno.serve(async (req) => {
 
     orderData.total = serverTotal;
     orderData.subtotal = serverSubtotal;
-
-    // FIX #18: Re-validate each coupon's is_active + discount_value immediately before PT write
-    // to catch the window where a coupon is disabled between validation and order creation.
-    if (verifiedCouponCodes.length > 0) {
-        const now18 = new Date();
-        for (const vc of validatedCoupons) {
-            try {
-                const freshCoupon = await base44.asServiceRole.entities.Coupon.filter({ id: vc.coupon.id });
-                const fc = freshCoupon?.[0];
-                if (!fc || !fc.is_active) {
-                    const msg = `Coupon "${vc.coupon.code}" was deactivated after validation`;
-                    console.warn(`${LOG} [trace=${traceId}] [FIX #18] ${msg}`);
-                    const c = await compensate('coupon_validation', 'COUPON_DEACTIVATED_RACE', msg);
-                    return Response.json({ error: 'A coupon you applied is no longer valid. Please remove it and try again.', success: false, code: 'COUPON_DEACTIVATED_RACE', stage: 'coupon_validation', ...c }, { status: 400 });
-                }
-                if (fc.valid_until && new Date(fc.valid_until) < now18) {
-                    const msg = `Coupon "${vc.coupon.code}" expired between validation and order create`;
-                    const c = await compensate('coupon_validation', 'COUPON_EXPIRED_RACE', msg);
-                    return Response.json({ error: 'A coupon you applied has expired. Please remove it and try again.', success: false, code: 'COUPON_EXPIRED_RACE', stage: 'coupon_validation', ...c }, { status: 400 });
-                }
-                if (Math.abs((fc.discount_value || 0) - (vc.coupon.discount_value || 0)) > 0.01) {
-                    console.warn(`${LOG} [trace=${traceId}] [FIX #18] Coupon discount_value changed: was=${vc.coupon.discount_value} now=${fc.discount_value}`);
-                    // Non-fatal: log the drift but proceed — total integrity check below catches the discrepancy
-                }
-            } catch (revalidateErr) {
-                console.warn(`${LOG} [trace=${traceId}] [FIX #18] Coupon re-validation failed (non-fatal):`, revalidateErr.message);
-            }
-        }
-    }
-
-    // FIX #15: Brief pause to allow any concurrent webhook-created order to propagate
-    // before the final order dedup check + create, reducing the webhook-vs-frontend race window.
-    if (paymentIntentId) {
-        await new Promise(r => setTimeout(r, 75));
-        // Final dedup check after pause — if webhook won the race, PT should now be updated
-        try {
-            const latePT = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: paymentIntentId });
-            if (latePT?.[0]?.status === 'order_created' && latePT[0].order_id) {
-                console.log(`${LOG} [trace=${traceId}] [FIX #15] Order already created by webhook — returning as duplicate`);
-                return Response.json({ success: true, order_id: latePT[0].order_id, order_number: latePT[0].order_number, duplicate: true }, { status: 200 });
-            }
-        } catch (_) {}
-    }
 
     // ── STAGE: Order persistence ───────────────────────────────────────────────
     console.log(`${LOG} [trace=${traceId}] stage=order_persistence total=£${serverTotal.toFixed(2)} coupons=[${verifiedCouponCodes.join(',')}]`);

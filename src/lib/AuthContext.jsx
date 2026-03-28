@@ -25,8 +25,13 @@ export const AuthProvider = ({ children }) => {
       setAppPublicSettings({});
       setIsLoadingPublicSettings(false);
 
-      // Always resolve auth state once on boot; public apps should not block on token presence
-      await loadUserAuth();
+      // Check authentication if token present
+      if (appParams.token) {
+        await loadUserAuth();
+      } else {
+        setIsLoadingAuth(false);
+        setIsAuthenticated(false);
+      }
     } catch (err) {
       console.error('[AuthProvider] Init failed:', err);
       setAuthError({
@@ -43,15 +48,12 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
       setUser(currentUser);
-      setIsAuthenticated(!!currentUser);
-      setAuthError(null);
+      setIsAuthenticated(true);
+      setIsLoadingAuth(false);
     } catch (error) {
       console.warn('[AuthProvider] User auth check failed (public app allowed):', error?.message);
-      setUser(null);
-      setIsAuthenticated(false);
-      setAuthError(null);
-    } finally {
       setIsLoadingAuth(false);
+      setIsAuthenticated(false);
     }
   };
 

@@ -11,7 +11,7 @@ export function DarkModeProvider({ children }) {
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        // Check system preference and localStorage
         const stored = localStorage.getItem('darkMode');
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         

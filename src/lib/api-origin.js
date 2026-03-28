@@ -42,18 +42,14 @@ export const getApiBaseUrl = () => {
     return apiBase;
   }
 
-  // Auto-detect custom domains: if hostname is not base44.app, prefer configured platform API
+  // Auto-detect custom domains: if hostname is not base44.app, route to platform API
   const hostname = window.location.hostname;
   const isCustomDomain = !hostname.includes('base44.app') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
   if (isCustomDomain) {
-    if (platformDomain) {
-      const apiBase = `https://${platformDomain}`;
-      console.log('[API-Origin] Detected custom domain, using configured platform API:', apiBase);
-      return apiBase;
-    }
-
-    console.log('[API-Origin] Detected custom domain without configured platform API, falling back to current origin:', window.location.origin);
-    return window.location.origin;
+    // For custom domains, API lives on platform backend, not the custom domain
+    const apiBase = 'https://preview-sandbox--base44-api.base44.app';
+    console.log('[API-Origin] Detected custom domain, routing to platform API:', apiBase);
+    return apiBase;
   }
 
   // Fallback: assume frontend and API are on same origin (local dev, platform domain)
