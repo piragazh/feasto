@@ -130,14 +130,13 @@ Deno.serve(async (req) => {
                 }, { status: 400 });
             }
             
-            // Verify price hasn't changed drastically (allow 5% tolerance for timing)
+            // Log price discrepancy for webhook recovery — don't reject (payment already taken).
+            // verifyAndCreateOrder already server-corrected prices at order time.
+            // The metadata prices are what was charged; we just log if menu changed.
             const menuItem = menuMap.get(item.menu_item_id);
-            if (Math.abs(menuItem.price - item.price) > menuItem.price * 0.05) {
-                console.error(`[IDEMPOTENT_ORDER] Price mismatch for item ${item.name}`);
-                return Response.json({
-                    error: 'Item prices have changed. Please review and try again.',
-                    success: false
-                }, { status: 400 });
+            if (Math.abs(menuItem.price - item.price) > 0.50) {
+                console.warn(`[IDEMPOTENT_ORDER] Price drift for item ${item.name}: charged=£${item.price} current=£${menuItem.price} (keeping charged price for recovery)`);
+                // Do NOT reject — the customer was already charged at item.price via verifyAndCreateOrder
             }
         }
         

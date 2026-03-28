@@ -477,6 +477,9 @@ export default function Checkout() {
     // Final total = subtotal + delivery + surcharge - discount (floor at 0)
     const total = Math.max(0, subtotal + deliveryFee + smallOrderSurcharge - discount);
 
+    // Track what total the current PaymentIntent was created for
+    const piTotalRef = useRef(null);
+
     // Initialize payment intent when card payment is selected and form is valid
     useEffect(() => {
         const initPayment = async () => {
@@ -485,9 +488,21 @@ export default function Checkout() {
                 setClientSecret('');
                 setShowStripeForm(false);
                 paymentInitInFlightRef.current = false;
+                piTotalRef.current = null;
                 return;
             }
 
+            // If we have a clientSecret but the total changed, clear it so we get a fresh PI
+            if (clientSecret && piTotalRef.current !== null && Math.abs(piTotalRef.current - total) > 0.01) {
+                console.log('[PaymentInit] Total changed from', piTotalRef.current, 'to', total, '— resetting PI');
+                setClientSecret('');
+                setShowStripeForm(false);
+                paymentInitInFlightRef.current = false;
+                piTotalRef.current = null;
+                // Allow fall-through to re-init
+            }
+
+            // Don't re-init if we already have a valid clientSecret for the current total
             if (clientSecret) return;
 
             // ATOMIC GUARD: prevent concurrent init calls
@@ -559,6 +574,7 @@ export default function Checkout() {
                     console.log('[PaymentInit] ✅ Got clientSecret, showing Stripe form');
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
+                    piTotalRef.current = total; // Record the total this PI was created for
                 } else {
                     const errorMsg = response?.data?.error || 'Failed to initialize payment. Please try again.';
                     console.error('[PaymentInit] ❌ No clientSecret:', errorMsg);
@@ -579,8 +595,10 @@ export default function Checkout() {
 
         initPayment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [paymentMethod, total, zoneCheckComplete]); // cart changes → total changes → PI resets via total dep
+    }, [paymentMethod, total, zoneCheckComplete]);
+    // IMPORTANT: 'total' dep is intentional — if total changes (coupon/address), we must re-init PI.
+    // The `if (clientSecret) return` guard at the top of initPayment prevents re-init if PI already exists.
+    // To force a fresh PI on total change: payment method switch clears clientSecret first.
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -693,35 +711,30 @@ export default function Checkout() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        console.log('=== CHECKOUT SUBMIT ===');
-        console.log('Payment Method:', paymentMethod);
-        console.log('Payment Completed:', paymentCompleted);
-        
         // CRITICAL: Block ALL submissions when card is selected
         if (paymentMethod === 'card') {
-            console.log('BLOCKED: Card payment selected - form submission not allowed');
             toast.error('Please complete the card payment form below');
             return;
         }
         
         // CRITICAL SECURITY: Validate payment method is actually set
         if (!paymentMethod || (typeof paymentMethod !== 'string')) {
-            console.log('BLOCKED: Invalid payment method');
             toast.error('Please select a payment method');
             return;
         }
         
-        // CRITICAL SECURITY: Check rate limiting
-        try {
-            const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {});
-            if (!rateLimitResponse?.data?.allowed) {
-                toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
-                return;
+        // CRITICAL SECURITY: Check rate limiting — guests skip (no user context yet)
+        if (!isGuest) {
+            try {
+                const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {});
+                if (!rateLimitResponse?.data?.allowed) {
+                    toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
+                    return;
+                }
+            } catch (error) {
+                // Non-fatal — log but don't block legitimate order
+                console.error('Rate limit check failed:', error);
             }
-        } catch (error) {
-            console.error('Rate limit check failed:', error);
-            toast.error('Unable to process order. Please try again.');
-            return;
         }
         
         // ---- VALIDATION: Check Required Fields ----
@@ -1626,20 +1639,8 @@ export default function Checkout() {
                                         subtotal={subtotal}
                                         cartItems={cart}
                                         onCouponApply={(coupons) => {
-                                            // CRITICAL SECURITY: Validate coupon usage limits before applying
-                                            coupons.forEach(async (coupon) => {
-                                                try {
-                                                    const validationResult = await base44.functions.invoke('validateCouponUsage', {
-                                                        couponId: coupon.id
-                                                    });
-                                                    if (!validationResult?.data?.valid) {
-                                                        toast.error(`Coupon "${coupon.code}" is no longer valid: ${validationResult?.data?.error}`);
-                                                        return;
-                                                    }
-                                                } catch (error) {
-                                                    console.error('Coupon validation failed:', error);
-                                                }
-                                            });
+                                            // Coupons are already validated by DiscountCodeInput before calling this.
+                                            // Server-side re-validation happens in verifyAndCreateOrder at order time.
                                             setAppliedCoupons(coupons);
                                         }}
                                         onPromotionApply={setAppliedPromotions}

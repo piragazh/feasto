@@ -34,11 +34,17 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        let user = null;
+        try {
+            user = await base44.auth.me();
+        } catch (_) {
+            // Guest or unauthenticated — allow through.
+            // Full guest throttling happens in orderVelocityThrottle using guest_email/phone.
+            return new Response(JSON.stringify({ allowed: true }), { status: 200 });
+        }
 
         if (!user) {
             // Guest pre-submit check: no user context available yet, allow through.
-            // Full guest throttling happens in orderVelocityThrottle using guest_email/phone.
             return new Response(JSON.stringify({ allowed: true }), { status: 200 });
         }
 
