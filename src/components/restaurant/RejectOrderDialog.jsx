@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -39,12 +39,11 @@ export default function RejectOrderDialog({ open, onClose, onReject, orderNumber
                         <AlertCircle className="h-5 w-5 text-red-500" />
                         Reject Order #{orderNumber}
                     </DialogTitle>
+                    <DialogDescription>
+                        Please select a reason for rejecting this order. The customer will be notified.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                        Please select a reason for rejecting this order. The customer will be notified.
-                    </p>
-                    
                     {isCardPayment && (
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded flex items-start gap-2">
                             <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />

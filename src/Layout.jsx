@@ -65,17 +65,10 @@ export default function Layout({ children, currentPageName }) {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
-    const [customDomainChecked, setCustomDomainChecked] = useState(false);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
-    // Only show domain-check spinner on actual custom domains, not on platform domains
-    const isPlatformDomain = typeof window !== 'undefined' && (
-        window.location.hostname === 'localhost' ||
-        window.location.hostname.includes('base44') ||
-        /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) ||
-        window.location.hostname.includes('127.0.0.1')
-    );
-    const [isCheckingDomain, setIsCheckingDomain] = useState(!isPlatformDomain);
+    
+    // Get custom domain from sessionStorage set by DomainChecker in App.jsx
+    const customDomainRestaurantId = sessionStorage.getItem('customDomainRestaurantId');
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
@@ -239,7 +232,6 @@ export default function Layout({ children, currentPageName }) {
         initializeLiveRegions();
         loadUser();
         updateCartCount();
-        checkCustomDomain();
         
         const interval = setInterval(updateCartCount, 1000);
         return () => clearInterval(interval);
@@ -298,63 +290,7 @@ export default function Layout({ children, currentPageName }) {
         }
     };
 
-    const checkCustomDomain = async () => {
-        if (customDomainChecked) {
-            setIsCheckingDomain(false);
-            return;
-        }
 
-        try {
-            const currentDomain = window.location.hostname;
-
-            // Skip for localhost, IP addresses, or main platform domains
-            if (
-                currentDomain === 'localhost' || 
-                currentDomain.includes('base44') ||
-                /^\d+\.\d+\.\d+\.\d+$/.test(currentDomain) ||
-                currentDomain.includes('127.0.0.1')
-            ) {
-                setCustomDomainChecked(true);
-                setIsCheckingDomain(false);
-                sessionStorage.removeItem('customDomainRestaurantId');
-                return;
-            }
-
-            // Check sessionStorage cache first to avoid fetching all restaurants
-            const cached = sessionStorage.getItem('customDomainRestaurantId');
-            const cachedDomain = sessionStorage.getItem('customDomainCheckedFor');
-            if (cached && cachedDomain === currentDomain) {
-                setCustomDomainRestaurantId(cached);
-                setCustomDomainChecked(true);
-                setIsCheckingDomain(false);
-                return;
-            }
-
-            // Fetch only restaurants with custom domains (filter server-side)
-            const restaurants = await base44.entities.Restaurant.filter({
-                custom_domain: currentDomain,
-                domain_verified: true
-            });
-
-            const domainRestaurant = restaurants?.[0] || null;
-
-            if (domainRestaurant) {
-                setCustomDomainRestaurantId(domainRestaurant.id);
-                sessionStorage.setItem('customDomainRestaurantId', domainRestaurant.id);
-                sessionStorage.setItem('customDomainCheckedFor', currentDomain);
-            } else {
-                sessionStorage.removeItem('customDomainRestaurantId');
-                sessionStorage.setItem('customDomainCheckedFor', currentDomain);
-            }
-
-            setCustomDomainChecked(true);
-            setIsCheckingDomain(false);
-        } catch (error) {
-            // Silently fail - don't disrupt user experience
-            setCustomDomainChecked(true);
-            setIsCheckingDomain(false);
-        }
-    };
 
     const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
     const isFullScreenPage = ['MediaScreen', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay'].includes(currentPageName);
@@ -411,17 +347,7 @@ export default function Layout({ children, currentPageName }) {
         }
     };
 
-    // Show loading while checking custom domain
-    if (isCheckingDomain) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Loading...</p>
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <DarkModeProvider>
