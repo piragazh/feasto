@@ -89,6 +89,7 @@ export function registerServiceWorker() {
   window.addEventListener('load', async () => {
     try {
       const swCheck = await fetch('/sw.js', { cache: 'no-store' });
+      log('SW check response:', swCheck.status, swCheck.headers.get('content-type'));
       const contentType = swCheck.headers.get('content-type') || '';
 
       if (!swCheck.ok || !contentType.toLowerCase().includes('javascript')) {
