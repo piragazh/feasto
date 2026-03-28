@@ -47,47 +47,43 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import { lazy } from 'react';
-
 // Critical path — loaded eagerly (visible on first paint)
 import Home from './pages/Home';
 import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
 import DriverApp from './pages/DriverApp';
 import AdminDashboard from './pages/AdminDashboard';
-
-// Everything else — lazy loaded (split into separate chunks)
-const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
-const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
-const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
-const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
-const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
-const Favorites = lazy(() => import('./pages/Favorites'));
-const GoogleMenu = lazy(() => import('./pages/GoogleMenu'));
-const GroupOrder = lazy(() => import('./pages/GroupOrder'));
-const KioskDashboard = lazy(() => import('./pages/KioskDashboard'));
-const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay'));
-const LoyaltyProgram = lazy(() => import('./pages/LoyaltyProgram'));
-const ManageCoupons = lazy(() => import('./pages/ManageCoupons'));
-const ManageRestaurantManagers = lazy(() => import('./pages/ManageRestaurantManagers'));
-const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
-const MediaScreen = lazy(() => import('./pages/MediaScreen'));
-const MediaScreenManagement = lazy(() => import('./pages/MediaScreenManagement'));
-const Messages = lazy(() => import('./pages/Messages'));
-const NotFound = lazy(() => import('./pages/NotFound'));
-const OrderHistory = lazy(() => import('./pages/OrderHistory'));
-const Orders = lazy(() => import('./pages/Orders'));
-const POSDashboard = lazy(() => import('./pages/POSDashboard'));
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-const PublicFilesManager = lazy(() => import('./pages/PublicFilesManager'));
-const RestaurantDashboard = lazy(() => import('./pages/RestaurantDashboard'));
-const Sitemap = lazy(() => import('./pages/Sitemap'));
-const StaffOnboarding = lazy(() => import('./pages/StaffOnboarding'));
-const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
-const TableOrder = lazy(() => import('./pages/TableOrder'));
-const TabletDashboard = lazy(() => import('./pages/TabletDashboard'));
-const TermsOfService = lazy(() => import('./pages/TermsOfService'));
-const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+import AdminRestaurants from './pages/AdminRestaurants';
+import CookiesPolicy from './pages/CookiesPolicy';
+import CustomerDisplay from './pages/CustomerDisplay';
+import CustomerProfile from './pages/CustomerProfile';
+import DriverDashboard from './pages/DriverDashboard';
+import Favorites from './pages/Favorites';
+import GoogleMenu from './pages/GoogleMenu';
+import GroupOrder from './pages/GroupOrder';
+import KioskDashboard from './pages/KioskDashboard';
+import KitchenDisplay from './pages/KitchenDisplay';
+import LoyaltyProgram from './pages/LoyaltyProgram';
+import ManageCoupons from './pages/ManageCoupons';
+import ManageRestaurantManagers from './pages/ManageRestaurantManagers';
+import MediaLibrary from './pages/MediaLibrary';
+import MediaScreen from './pages/MediaScreen';
+import MediaScreenManagement from './pages/MediaScreenManagement';
+import Messages from './pages/Messages';
+import NotFound from './pages/NotFound';
+import OrderHistory from './pages/OrderHistory';
+import Orders from './pages/Orders';
+import POSDashboard from './pages/POSDashboard';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import PublicFilesManager from './pages/PublicFilesManager';
+import RestaurantDashboard from './pages/RestaurantDashboard';
+import Sitemap from './pages/Sitemap';
+import StaffOnboarding from './pages/StaffOnboarding';
+import SuperAdmin from './pages/SuperAdmin';
+import TableOrder from './pages/TableOrder';
+import TabletDashboard from './pages/TabletDashboard';
+import TermsOfService from './pages/TermsOfService';
+import TrackOrder from './pages/TrackOrder';
 
 import __Layout from './Layout.jsx';
 
