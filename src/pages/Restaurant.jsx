@@ -396,20 +396,20 @@ export default function Restaurant() {
                 }
             }
 
-            setCart(prev => {
-                const existing = prev.find(i => 
-                    i.menu_item_id === item.id && 
-                    !i.customizations && 
-                    !i.itemQuantities &&
-                    !i.is_deal
-                );
-                if (existing) {
-                    return prev.map(i => 
-                        i.menu_item_id === item.id && !i.customizations && !i.itemQuantities && !i.is_deal
-                            ? { ...i, quantity: i.quantity + quantityToAdd }
-                            : i
-                    );
-                }
+            const existing = cart.find(i => 
+                i.menu_item_id === item.id && 
+                !i.customizations && 
+                !i.itemQuantities &&
+                !i.is_deal
+            );
+            
+            if (existing) {
+                setCart(prev => prev.map(i => 
+                    i.menu_item_id === item.id && !i.customizations && !i.itemQuantities && !i.is_deal
+                        ? { ...i, quantity: i.quantity + quantityToAdd }
+                        : i
+                ));
+            } else {
                 const newItem = {
                     menu_item_id: item.id,
                     name: item.name,
@@ -422,9 +422,10 @@ export default function Restaurant() {
                     newItem.promotion_type = activePromotion.promotion_type;
                     newItem.promotion_name = activePromotion.name;
                 }
-                return [...prev, newItem];
-                });
-                toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
+                setCart(prev => [...prev, newItem]);
+            }
+            
+            toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
                 duration: 3000,
                 style: {
                     background: activePromotion ? '#8b5cf6' : '#10b981',
@@ -433,7 +434,7 @@ export default function Restaurant() {
                     padding: '16px',
                     borderRadius: '12px'
                 }
-                });
+            });
         } catch (error) {
             toast.error('Failed to add item to cart');
         }
@@ -456,28 +457,26 @@ export default function Restaurant() {
                 itemQuantities: itemData.itemQuantities || {}
             });
             
-            setCart(prev => {
-                const existing = prev.find(i => 
+            const existing = cart.find(i => 
+                i.menu_item_id === itemData.id && 
+                JSON.stringify({
+                    customizations: i.customizations || {},
+                    itemQuantities: i.itemQuantities || {}
+                }) === customizationKey
+            );
+            
+            if (existing) {
+                setCart(prev => prev.map(i => 
                     i.menu_item_id === itemData.id && 
                     JSON.stringify({
                         customizations: i.customizations || {},
                         itemQuantities: i.itemQuantities || {}
                     }) === customizationKey
-                );
-                
-                if (existing) {
-                    return prev.map(i => 
-                        i.menu_item_id === itemData.id && 
-                        JSON.stringify({
-                            customizations: i.customizations || {},
-                            itemQuantities: i.itemQuantities || {}
-                        }) === customizationKey
-                            ? { ...i, quantity: i.quantity + itemData.quantity }
-                            : i
-                    );
-                }
-                
-                return [...prev, {
+                        ? { ...i, quantity: i.quantity + itemData.quantity }
+                        : i
+                ));
+            } else {
+                setCart(prev => [...prev, {
                     menu_item_id: itemData.id,
                     name: itemData.name,
                     price: itemData.final_price,
@@ -485,35 +484,10 @@ export default function Restaurant() {
                     image_url: itemData.image_url,
                     customizations: itemData.customizations,
                     itemQuantities: itemData.itemQuantities
-                }];
-                });
-                toast.success(`🛒 ${itemData.name} added to cart`, {
-                    duration: 2000,
-                    style: {
-                        background: '#10b981',
-                        color: '#fff',
-                        fontWeight: '600',
-                        padding: '16px',
-                        borderRadius: '12px'
-                    }
-                });
-        } catch (error) {
-            toast.error('Failed to add item to cart');
-        }
-    };
-
-    const addMealDealToCart = (deal) => {
-            setCart(prev => [...prev, {
-                menu_item_id: `deal_${deal.id}`,
-                name: deal.name,
-                price: deal.deal_price,
-                quantity: 1,
-                image_url: deal.image_url,
-                is_deal: true,
-                fixed_items: deal.items || [],
-                selected_items: deal.category_rules?.length === 0 ? null : {}
                 }]);
-                toast.success(`🛒 ${deal.name} added to cart`, {
+            }
+            
+            toast.success(`🛒 ${itemData.name} added to cart`, {
                 duration: 2000,
                 style: {
                     background: '#10b981',
@@ -522,8 +496,34 @@ export default function Restaurant() {
                     padding: '16px',
                     borderRadius: '12px'
                 }
-                });
-        };
+            });
+        } catch (error) {
+            toast.error('Failed to add item to cart');
+        }
+    };
+
+    const addMealDealToCart = (deal) => {
+        setCart(prev => [...prev, {
+            menu_item_id: `deal_${deal.id}`,
+            name: deal.name,
+            price: deal.deal_price,
+            quantity: 1,
+            image_url: deal.image_url,
+            is_deal: true,
+            fixed_items: deal.items || [],
+            selected_items: deal.category_rules?.length === 0 ? null : {}
+        }]);
+        toast.success(`🛒 ${deal.name} added to cart`, {
+            duration: 2000,
+            style: {
+                background: '#10b981',
+                color: '#fff',
+                fontWeight: '600',
+                padding: '16px',
+                borderRadius: '12px'
+            }
+        });
+    };
 
     const handleCustomizeDeal = (deal) => {
             setSelectedDeal(deal);
@@ -546,8 +546,8 @@ export default function Restaurant() {
             is_deal: true,
             is_category_deal: true,
             selected_items: dealData.selected_items
-            }]);
-            toast.success(`🛒 ${dealData.deal_name} added to cart`, {
+        }]);
+        toast.success(`🛒 ${dealData.deal_name} added to cart`, {
             duration: 2000,
             style: {
                 background: '#10b981',
@@ -556,7 +556,7 @@ export default function Restaurant() {
                 padding: '16px',
                 borderRadius: '12px'
             }
-            });
+        });
     };
 
     const updateQuantity = (menuItemId, newQuantity, customizationKey) => {
