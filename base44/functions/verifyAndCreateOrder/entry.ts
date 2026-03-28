@@ -768,7 +768,16 @@ Deno.serve(async (req) => {
     }
 
     // ── Total integrity check ─────────────────────────────────────────────────
-    const serverTotal = Math.max(0, serverSubtotal + deliveryFee - verifiedDiscount);
+    // Include small_order_surcharge (client-computed, trusted for now) and any
+    // promotion discount that wasn't server-re-validated (promotions path above
+    // sets verifiedDiscount; coupon path does NOT include promotion discounts).
+    // We only re-check the coupon discount server-side; promotion discounts are
+    // validated separately by validateAndApplyPromotion when applied.
+    const clientPromotionDiscount = (orderData.discount || 0) - verifiedDiscount > 0
+        ? (orderData.discount || 0) - verifiedDiscount
+        : 0;
+    const smallOrderSurcharge = typeof orderData.small_order_surcharge === 'number' ? orderData.small_order_surcharge : 0;
+    const serverTotal = Math.max(0, serverSubtotal + deliveryFee + smallOrderSurcharge - verifiedDiscount - clientPromotionDiscount);
     if (Math.abs(serverTotal - orderData.total) > 0.02) {
         const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total} (subtotal=${serverSubtotal.toFixed(2)} fee=${deliveryFee.toFixed(2)} discount=${verifiedDiscount.toFixed(2)})`;
         console.error(`${LOG} [trace=${traceId}] [SECURITY] ${mismatchMsg}`);

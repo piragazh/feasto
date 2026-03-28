@@ -11,8 +11,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
  * 5. Audit logging: all changes logged with actor identity
  */
 
-const ALLOWED_ROLES = ['admin', 'manager', 'cashier', 'waiter', 'kitchen_staff'];
-
 const VALID_STATUS_TRANSITIONS = {
   'pending': ['confirmed', 'cancelled'],
   'confirmed': ['preparing', 'cancelled'],
@@ -37,13 +35,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!ALLOWED_ROLES.includes(user.role)) {
-      return Response.json(
-        { error: `Role '${user.role}' cannot update order status` },
-        { status: 403 }
-      );
-    }
-
     const { order_id, new_status, rejection_reason } = await req.json();
 
     if (!order_id || !new_status) {
@@ -61,7 +52,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Scope check: user must belong to restaurant or be admin
+    // Scope check: admin always allowed; otherwise must be a restaurant manager for this restaurant
     if (user.role !== 'admin') {
       const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
         user_email: user.email,
