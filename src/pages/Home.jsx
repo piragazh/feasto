@@ -22,10 +22,23 @@ export default function Home() {
     const [selectedCuisine, setSelectedCuisine] = useState('');
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
-    
-    // Check sessionStorage immediately for custom domain (before first render)
-    const customDomainRestaurantId = React.useMemo(() => {
-        return sessionStorage.getItem('customDomainRestaurantId');
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(() => 
+        sessionStorage.getItem('customDomainRestaurantId')
+    );
+
+    // Listen for custom domain ID from Layout (reactive)
+    useEffect(() => {
+        const checkCustomDomain = () => {
+            const id = sessionStorage.getItem('customDomainRestaurantId');
+            setCustomDomainRestaurantId(id);
+        };
+        
+        // Check immediately
+        checkCustomDomain();
+        
+        // Listen for storage changes
+        window.addEventListener('storage', checkCustomDomain);
+        return () => window.removeEventListener('storage', checkCustomDomain);
     }, []);
 
     // Fetch restaurants with optimized caching
