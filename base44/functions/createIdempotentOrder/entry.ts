@@ -123,13 +123,19 @@ Deno.serve(async (req) => {
         
         for (const item of regularItems) {
             if (!menuMap.has(item.menu_item_id)) {
-                console.error(`[IDEMPOTENT_ORDER] Menu item ${item.menu_item_id} not found`);
+                console.error(`[IDEMPOTENT_ORDER] Menu item ${item.menu_item_id} (${item.name}) not found — deleted/disabled after payment`);
+                // NON-RECOVERABLE: item was removed from menu after payment was taken.
+                // Caller (stripeWebhook) must trigger compensation refund.
                 return Response.json({
-                    error: `Item no longer available: ${item.name}`,
-                    success: false
+                    success: false,
+                    code: 'ITEM_NOT_FOUND',
+                    recoverable: false,
+                    compensatable: true,
+                    reason: `Menu item deleted or disabled after payment: ${item.name} (id=${item.menu_item_id})`,
+                    error: `Item no longer available: ${item.name}`
                 }, { status: 400 });
             }
-            
+
             // Log price discrepancy for webhook recovery — don't reject (payment already taken).
             // verifyAndCreateOrder already server-corrected prices at order time.
             // The metadata prices are what was charged; we just log if menu changed.

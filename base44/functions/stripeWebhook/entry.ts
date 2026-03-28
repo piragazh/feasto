@@ -42,59 +42,172 @@ async function logWebhookEvent(base44, eventId, eventType, status, details) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// COMPENSATION — Refund + log incident for post-payment order failures
+// ─────────────────────────────────────────────────────────────────────
+async function triggerCompensation(base44, piId, reason, failureCode, metadata) {
+    const now = new Date().toISOString();
+    console.error(`[WEBHOOK] 🚨 Triggering compensation for intent=${piId} reason=${reason} code=${failureCode}`);
+
+    // Step 1: Mark PaymentTransaction as payment_succeeded_order_failed
+    try {
+        const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({
+            payment_intent_id: piId
+        });
+        if (pts?.[0]) {
+            await base44.asServiceRole.entities.PaymentTransaction.update(pts[0].id, {
+                status: 'needs_review',
+                failure_reason: `[${failureCode}] ${reason}`,
+                refund_attempted_at: now
+            });
+        }
+    } catch (e) {
+        console.warn(`[WEBHOOK] Could not update PT status for intent=${piId}:`, e.message);
+    }
+
+    // Step 2: Attempt automatic refund via refundWithRetry
+    let refundResult = null;
+    try {
+        const refundResponse = await base44.asServiceRole.functions.invoke('refundWithRetry', {
+            paymentIntentId: piId,
+            reason: `webhook_compensation_${failureCode}`
+        });
+        refundResult = refundResponse?.data;
+        if (refundResult?.success) {
+            console.log(`[WEBHOOK] ✅ Compensation refund succeeded for intent=${piId} refund_id=${refundResult.refund_id}`);
+        } else {
+            console.error(`[WEBHOOK] ❌ Compensation refund failed for intent=${piId}:`, refundResult?.error);
+        }
+    } catch (e) {
+        console.error(`[WEBHOOK] ❌ refundWithRetry invocation threw for intent=${piId}:`, e.message);
+        refundResult = { success: false, error: e.message };
+    }
+
+    // Step 3: Log incident in FailureLog regardless of refund outcome
+    const incidentSeverity = refundResult?.success ? 'high' : 'critical';
+    const incidentDetails = {
+        payment_intent_id: piId,
+        failure_code: failureCode,
+        failure_reason: reason,
+        refund_attempted: true,
+        refund_succeeded: refundResult?.success || false,
+        refund_id: refundResult?.refund_id || null,
+        refund_error: refundResult?.error || null,
+        restaurant_id: metadata?.restaurant_id || null,
+        customer_email: metadata?.user_email || metadata?.guest_email || null,
+        cart_summary: metadata?.items_json ? (() => {
+            try { return JSON.parse(metadata.items_json).map(i => `${i.quantity}x ${i.name}`).join(', '); }
+            catch { return metadata.items_json; }
+        })() : null,
+        amount: metadata?.total || null,
+        incident_at: now
+    };
+
+    try {
+        await base44.asServiceRole.entities.FailureLog.create({
+            failure_type: refundResult?.success
+                ? 'payment_succeeded_order_failed_refund_issued'
+                : 'payment_succeeded_order_failed_refund_failed',
+            severity: incidentSeverity,
+            payment_intent_id: piId,
+            error_message: `[${failureCode}] ${reason}`,
+            context: incidentDetails
+        });
+        console.log(`[WEBHOOK] Incident logged: ${incidentDetails.failure_type} severity=${incidentSeverity}`);
+    } catch (e) {
+        console.error(`[WEBHOOK] CRITICAL: Could not log incident for intent=${piId}:`, e.message);
+    }
+
+    // Step 4: If refund failed, flag PT for manual review
+    if (!refundResult?.success) {
+        try {
+            const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: piId });
+            if (pts?.[0]) {
+                await base44.asServiceRole.entities.PaymentTransaction.update(pts[0].id, {
+                    status: 'needs_review',
+                    failure_reason: `MANUAL ACTION REQUIRED: Refund failed after retries. [${failureCode}] ${reason}. Refund error: ${refundResult?.error}`
+                });
+            }
+        } catch (e) {
+            console.warn(`[WEBHOOK] Could not set manual_review status for intent=${piId}:`, e.message);
+        }
+    }
+
+    return {
+        success: false,
+        status: refundResult?.success ? 'compensation_refund_issued' : 'compensation_refund_failed_manual_review_required',
+        refunded: refundResult?.success || false,
+        failure_code: failureCode
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // PAYMENT INTENT SUCCEEDED — Reconcile or create order
 // ─────────────────────────────────────────────────────────────────────
 async function handlePaymentIntentSucceeded(base44, paymentIntent) {
     const piId = paymentIntent.id;
     const metadata = paymentIntent.metadata || {};
     
-    console.log(`[WEBHOOK] payment_intent.succeeded event: ${piId} metadata:`, metadata);
+    console.log(`[WEBHOOK] payment_intent.succeeded event: ${piId}`);
     
-    // CRITICAL: Check if order already exists for this payment intent
+    // Check if order already exists for this payment intent (normal path / duplicate event)
     try {
         const existingOrders = await base44.asServiceRole.entities.Order.filter({
             payment_intent_id: piId
         });
-        
         if (existingOrders && existingOrders.length > 0) {
             console.log(`[WEBHOOK] Order already exists for intent=${piId} order_id=${existingOrders[0].id}`);
             return { success: true, status: 'already_reconciled', order_id: existingOrders[0].id };
         }
     } catch (e) {
         console.error(`[WEBHOOK] Failed to check existing order for intent=${piId}:`, e.message);
+        // Recoverable DB error — return non-200 so Stripe retries
         return { success: false, error: 'Failed to check for existing order', recoverable: true };
     }
     
     // Order does not exist — attempt to create it from webhook payload
-    console.log(`[WEBHOOK] No existing order for intent=${piId}. Creating from webhook payload...`);
+    console.log(`[WEBHOOK] No existing order for intent=${piId}. Attempting webhook recovery...`);
     
+    let result;
     try {
-        const result = await base44.asServiceRole.functions.invoke('createIdempotentOrder', {
+        const response = await base44.asServiceRole.functions.invoke('createIdempotentOrder', {
             paymentIntentId: piId,
             paymentIntentMetadata: metadata,
             sourceType: 'webhook_recovery'
         });
-        
-        if (result?.data?.success) {
-            console.log(`[WEBHOOK] ✅ Order created from webhook: ${result.data.order_id}`);
-            return { success: true, status: 'created_from_webhook', order_id: result.data.order_id };
-        } else {
-            console.error(`[WEBHOOK] Failed to create order from webhook:`, result?.data?.error);
-            
-            // Attempt refund for payment that couldn't be reconciled
-            console.log(`[WEBHOOK] Attempting compensation refund for intent=${piId}...`);
-            await base44.asServiceRole.functions.invoke('refundWithRetry', {
-                paymentIntentId: piId,
-                reason: 'webhook_recovery_failed'
-            }).catch(e => console.error('[WEBHOOK] Refund invocation failed:', e.message));
-            
-            return { success: false, error: result?.data?.error || 'Order creation failed', recoverable: true };
-        }
+        result = response?.data;
     } catch (e) {
-        console.error(`[WEBHOOK] Exception during webhook reconciliation:`, e.message);
-        // Queue for manual review
+        console.error(`[WEBHOOK] createIdempotentOrder invocation threw for intent=${piId}:`, e.message);
+        // Network/infra error — recoverable, Stripe will retry
         return { success: false, error: e.message, recoverable: true };
     }
+
+    // ── TERMINAL OUTCOME A: Order created ────────────────────────────
+    if (result?.success) {
+        console.log(`[WEBHOOK] ✅ Order created from webhook recovery: ${result.order_id}`);
+        return { success: true, status: 'created_from_webhook', order_id: result.order_id };
+    }
+
+    // ── CLASSIFY THE FAILURE ─────────────────────────────────────────
+    const isRecoverable = result?.recoverable !== false; // default to recoverable if not specified
+    const isCompensatable = result?.compensatable === true; // must be explicitly set
+
+    console.error(`[WEBHOOK] Order creation failed intent=${piId} code=${result?.code} recoverable=${isRecoverable} compensatable=${isCompensatable} reason=${result?.reason || result?.error}`);
+
+    // ── TERMINAL OUTCOME B: Non-recoverable — trigger compensation ───
+    if (!isRecoverable && isCompensatable) {
+        return await triggerCompensation(
+            base44,
+            piId,
+            result?.reason || result?.error || 'Order creation failed non-recoverably',
+            result?.code || 'UNKNOWN_NON_RECOVERABLE',
+            metadata
+        );
+    }
+
+    // ── RECOVERABLE FAILURE: return failure so Stripe retries ────────
+    // (DB errors, timeouts, infra issues — Stripe will redeliver the event)
+    console.warn(`[WEBHOOK] Recoverable failure for intent=${piId} — Stripe will retry. error=${result?.error}`);
+    return { success: false, error: result?.error || 'Order creation failed', recoverable: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────
