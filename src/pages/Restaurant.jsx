@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -16,17 +16,17 @@ import CartDrawer from '@/components/cart/CartDrawer';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
-// Lazy load heavy components
-const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
-const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
-const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
-const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
-const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
-const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
-const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
-const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
-const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
-const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
+// Static imports for restaurant components
+import ImageGallery from '@/components/restaurant/ImageGallery';
+import OpeningHours from '@/components/restaurant/OpeningHours';
+import SpecialOffers from '@/components/restaurant/SpecialOffers';
+import PopularItems from '@/components/restaurant/PopularItems';
+import ReviewsSection from '@/components/restaurant/ReviewsSection';
+import ActivePromotionsBanner from '@/components/restaurant/ActivePromotionsBanner';
+import InfoSection from '@/components/restaurant/InfoSection';
+import RestaurantProfileSection from '@/components/restaurant/RestaurantProfileSection';
+import MealDealsSection from '@/components/restaurant/MealDealsSection';
+import CategoryDealCustomizationModal from '@/components/restaurant/CategoryDealCustomizationModal';
 
 export default function Restaurant({ restaurantId: propRestaurantId }) {
     const navigate = useNavigate();
@@ -1100,33 +1100,31 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
             {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
-                <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
-                    {/* Image Gallery */}
-                    {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
-                            <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
-                        </div>
-                    )}
-
-                    {/* Special Offers */}
-                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
-                        <div className="mb-8">
-                            <SpecialOffers offers={restaurant.special_offers} />
-                        </div>
-                    )}
-
-                    {/* Info Section */}
-                    <InfoSection infoSection={restaurant.info_section} />
-
-                    {/* Active Promotions */}
-                    <ActivePromotionsBanner restaurantId={restaurantId} />
-
-                    {/* Opening Hours */}
+                {/* Image Gallery */}
+                {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
                     <div className="mb-8">
-                        <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
+                        <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
                     </div>
-                </Suspense>
+                )}
+
+                {/* Special Offers */}
+                {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                    <div className="mb-8">
+                        <SpecialOffers offers={restaurant.special_offers} />
+                    </div>
+                )}
+
+                {/* Info Section */}
+                <InfoSection infoSection={restaurant.info_section} />
+
+                {/* Active Promotions */}
+                <ActivePromotionsBanner restaurantId={restaurantId} />
+
+                {/* Opening Hours */}
+                <div className="mb-8">
+                    <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
+                </div>
 
                 {/* Popular Items */}
                 <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
@@ -1309,17 +1307,15 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     />
                 </Suspense>
 
-                <Suspense fallback={<Skeleton className="h-60 w-full mt-12" />}>
-                    {/* Profile Section (About Us, Story, Awards, Social) */}
-                    <div className="mt-12">
-                        <RestaurantProfileSection restaurant={restaurant} />
-                    </div>
+                {/* Profile Section (About Us, Story, Awards, Social) */}
+                <div className="mt-12">
+                    <RestaurantProfileSection restaurant={restaurant} />
+                </div>
 
-                    {/* Reviews Section */}
-                    <div className="mt-12">
-                        <ReviewsSection restaurantId={restaurantId} />
-                    </div>
-                </Suspense>
+                {/* Reviews Section */}
+                <div className="mt-12">
+                    <ReviewsSection restaurantId={restaurantId} />
+                </div>
                 </div>
 
             {/* Floating Cart Button */}
