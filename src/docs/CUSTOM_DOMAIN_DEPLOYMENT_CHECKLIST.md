@@ -1,298 +1,219 @@
 # Custom Domain Deployment Checklist
 
-## Pre-Deployment (Code Ready ✅)
+**Domain:** `tilburychicken.co.uk`  
+**Platform Domain:** `preview-sandbox--694f32ea1bcdfa212c621404.base44.app`  
+**Date:** 2026-03-28
 
-- [x] API origin config system implemented (`lib/api-origin.js`)
-- [x] AuthContext uses dedicated API origin (boot flow fixed)
-- [x] Visible error fallback UI in place (no blank page)
-- [x] Runtime injection point added (`index.html`)
-- [x] Debug logging implemented
-- [x] Documentation complete
+---
 
-## Deployment Steps (Per Custom Domain)
+## Pre-Deployment Checklist
 
-### Step 1: Identify Platform Domain
+- [ ] **Code changes verified**
+  - `index.html` updated with `window.__BASE44_PLATFORM_DOMAIN` injection
+  - `lib/api-origin.js` implements dynamic platform domain resolution
+  - No breaking changes to existing functionality
 
-Find the Base44 platform domain where this app's backend lives:
+- [ ] **Build tested locally**
+  ```bash
+  npm run build
+  ```
+  - Verify `dist/index.html` contains the platform domain injection
+  - Verify `dist/src/main.jsx` exists and is readable
 
-```
-preview-sandbox--694f32ea1bcdfa212c621404.base44.app
-```
+- [ ] **Environment variables set**
+  - `VITE_BASE44_APP_ID` available (if needed)
+  - `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLIC_KEY` configured
+  - All other secrets in place (see existing secrets list)
 
-This is where `/api` endpoints are served.
+---
 
-### Step 2: Get Customer Domain
+## Deployment Steps
 
-The custom domain the restaurant/app is using:
-
-```
-pizzeria.com
-// or
-restaurant-name.app
-```
-
-This is where the frontend HTML will be served.
-
-### Step 3: Configure Origin Separation
-
-**Choose one approach:**
-
-#### Approach A: Build-Time Env Var (Recommended)
-
+### Step 1: Build the Application
 ```bash
-# Before building
-export VITE_PUBLIC_API_BASE_URL="https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app"
 npm run build
+```
+✅ Creates optimized build in `dist/` folder with all assets
 
-# Deploy dist/ to pizzeria.com
+### Step 2: Deploy Full `dist/` Folder
+**CRITICAL:** Upload the ENTIRE `dist/` directory to the hosting provider, not just `index.html`
+
+```
+dist/
+├── index.html          ← Must include platform domain injection
+├── src/
+│   └── main.jsx       ← React entry point
+├── assets/            ← All bundled CSS, JS, images
+└── ...                ← All other static files
 ```
 
-**Pros:**
-- No runtime script injection
-- Immutable config
-- Built into app
+**Common mistakes to avoid:**
+- ❌ Only uploading `index.html` (causes blank page — missing React bundle)
+- ❌ Not clearing CDN cache after upload
+- ❌ Uploading old build without platform domain injection
 
-**Cons:**
-- Rebuild needed for each domain
-
-#### Approach B: HTML Script Injection (Flexible)
-
-```html
-<!-- In deployment template, before app mounts -->
-<script>
-  window.__BASE44_PLATFORM_DOMAIN = 'preview-sandbox--694f32ea1bcdfa212c621404.base44.app';
-</script>
-<!-- Then include built app -->
-<div id="root"></div>
-<script type="module" src="/src/main.jsx"></script>
-```
-
-**Pros:**
-- Same build, different origins
-- Flexible per-deployment
-
-**Cons:**
-- Requires HTML template customization
-- Runtime config (less immutable)
-
-### Step 4: CORS Configuration
-
-Verify `/api` endpoint CORS headers allow requests from custom domain:
-
-```http
-Access-Control-Allow-Origin: https://pizzeria.com
-// or
-Access-Control-Allow-Origin: *
-```
-
-**Check with:**
+### Step 3: Clear CDN/Server Cache
 ```bash
-curl -H "Origin: https://pizzeria.com" \
-  https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app/api/apps/public/prod/public-settings/by-id/694f32ea1bcdfa212c621404
+# If using CDN (Cloudflare, etc.)
+# Purge cache for tilburychicken.co.uk
+
+# If using server cache
+# Clear browser cache by appending version parameter to main.jsx
 ```
 
-Should return 200, not CORS error.
-
-### Step 5: SSL/TLS Certificate
-
-Ensure custom domain has valid SSL certificate:
-
+### Step 4: Verify Deployment
+Run the verification script:
 ```bash
-# Custom domain must be HTTPS
-https://pizzeria.com ✅
-
-# HTTP will fail (mixed content)
-http://pizzeria.com ❌
+bash scripts/verify-production-deployment.sh
 ```
 
-### Step 6: DNS Configuration
-
-Ensure DNS points custom domain to deployment server:
-
-```dns
-pizzeria.com  A      192.0.2.1
-              CNAME  deployment-cdn.example.com
-```
-
-### Step 7: Deploy Frontend
-
-Deploy built frontend to custom domain:
-
+Or manually check:
 ```bash
-# If Approach A: app has config baked in
-gsutil -m cp -r dist/* gs://pizzeria.com/
+# Check HTML loads
+curl https://tilburychicken.co.uk | grep '<div id="root">'
 
-# If Approach B: inject config in your HTML template
-# Template must include window.__BASE44_PLATFORM_DOMAIN
+# Check React script present
+curl https://tilburychicken.co.uk | grep 'src="/src/main.jsx"'
+
+# Check platform domain injected
+curl https://tilburychicken.co.uk | grep "window.__BASE44_PLATFORM_DOMAIN"
 ```
 
-### Step 8: Verify Boot
+---
 
-**In browser, navigate to custom domain and check console:**
+## Post-Deployment Testing
 
-```javascript
-// Should see (within 2 seconds):
-[API-Origin-Debug] {
-  frontend: "https://pizzeria.com",
-  api: "https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app",
-  sameOrigin: false,
-  appId: "694f32ea1bcdfa212c621404"
-}
-
-[AuthContext] App state check: {
-  appId: "694f32ea1bcdfa212c621404",
-  apiUrl: "https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app/api/apps/public/prod/public-settings/by-id/694f32ea1bcdfa212c621404"
-}
+### 1. Browser Console (Critical)
+Open DevTools (F12) → Console and look for:
+```
+[API-Origin] Frontend: tilburychicken.co.uk
+[API-Origin] API Origin: preview-sandbox--694f32ea1bcdfa212c621404.base44.app
 ```
 
-**App should load without errors.**
+✅ **Expected:** Both lines present, matching the platform domain
 
-## Troubleshooting
+❌ **Problem:** Messages missing → API origin resolution failed
 
-### Blank Page on Load
+---
 
-**Check console for error:**
+### 2. Load Test
+1. Open `https://tilburychicken.co.uk`
+2. Wait for React to fully load (spinning loader should disappear)
+3. Check page displays restaurant menu or home page
+4. ✅ Page should NOT be blank
 
-```javascript
-[API-Origin-Debug] {
-  frontend: "https://pizzeria.com",
-  api: "https://pizzeria.com",  // ❌ Wrong! Should be platform domain
-  sameOrigin: true
-}
-```
+**If blank page:**
+- F12 → Console → Check for errors
+- Check Network tab → Look for failed requests
+- Verify React script loaded: `src/main.jsx` should show 200 status
 
-**Fix:**
-- Verify platform domain is injected/configured
-- Check `window.__BASE44_PLATFORM_DOMAIN` in console
-- Verify `VITE_PUBLIC_API_BASE_URL` was set at build time
-- Rebuild if using Approach A
+---
 
-### 404 on `/api/apps/public/prod/public-settings/by-id/...`
+### 3. API Requests Test
+1. Open DevTools → Network tab
+2. Click "Add to Cart" or navigate a page
+3. Filter by XHR/Fetch requests
+4. Verify requests go to: `https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app/api/...`
 
-**Likely cause:** API origin pointing to custom domain instead of platform
+❌ **Problem:** Requests going to `https://tilburychicken.co.uk/api/...` → CORS will fail
 
-**Fix:**
-1. Check API origin in console logs
-2. Verify CORS headers on platform `/api` endpoint
-3. Confirm platform domain is correct
+---
 
-**Test API directly:**
+### 4. Authentication Flow Test
+1. Log out (if logged in)
+2. Click "Sign In"
+3. Complete login flow
+4. Verify redirects back to restaurant page
+5. Confirm authenticated (see user menu)
+
+✅ **Success:** Full login → redirect → authenticated state works
+
+---
+
+### 5. Ordering Flow Test (Quick)
+1. Open `https://tilburychicken.co.uk`
+2. Add an item to cart
+3. Click "View Cart"
+4. Proceed to checkout
+5. Verify checkout page loads without CORS errors
+
+❌ **Problem:** CORS error in Console → API origin mismatch
+
+---
+
+## Server-Side CORS Configuration
+
+**CRITICAL:** The Base44 backend MUST allow requests from `tilburychicken.co.uk`
+
+Verify CORS headers on API responses:
 ```bash
-curl -H "X-App-Id: 694f32ea1bcdfa212c621404" \
-  https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app/api/apps/public/prod/public-settings/by-id/694f32ea1bcdfa212c621404
+curl -I https://preview-sandbox--694f32ea1bcdfa212c621404.base44.app/api/restaurants
 ```
 
-Should return JSON, not 404.
-
-### Mixed Content Error
-
-**Symptom:** Console shows "Mixed Content" warning
-
-**Cause:** Frontend over HTTPS calling API over HTTP (or vice versa)
-
-**Fix:**
-- Ensure both frontend and API use HTTPS
-- Check env var/injection uses `https://`
-
-```javascript
-// ✅ Good
-VITE_PUBLIC_API_BASE_URL=https://platform.base44.app
-
-// ❌ Bad
-VITE_PUBLIC_API_BASE_URL=http://platform.base44.app
+Expected response headers:
+```
+Access-Control-Allow-Origin: https://tilburychicken.co.uk
+Access-Control-Allow-Credentials: true
 ```
 
-### Redirect Loop on Login
+**If missing:** Contact Base44 DevOps to add custom domain to CORS allowlist
 
-**Symptom:** Clicking Sign In goes to login page then back to app infinitely
-
-**Cause:** Auth redirect URL misconfigured
-
-**Status:** ✅ Known, not caused by this fix. Check auth settings separately.
-
-## Post-Deployment Verification
-
-### Automated Tests
-
-Run these in browser console after deployment:
-
-```javascript
-// 1. Check origin config
-console.log('Frontend:', window.location.origin);
-console.log('API:', await import('./lib/api-origin.js').then(m => m.getApiBaseUrl()));
-
-// 2. Check app booted
-console.log('App loaded:', document.title !== 'MealDrop - Loading...');
-
-// 3. Check auth state
-fetch('/api/apps/public/prod/public-settings/by-id/694f32ea1bcdfa212c621404', {
-  headers: { 'X-App-Id': '694f32ea1bcdfa212c621404' }
-})
-.then(r => r.json())
-.then(d => console.log('API call success:', d.name))
-.catch(e => console.error('API call failed:', e.message));
-```
-
-### User Testing
-
-1. Open custom domain in browser
-2. App should load within 3 seconds
-3. No blank page
-4. No console errors
-5. Navigation works
-6. API calls succeed
-
-### Monitoring
-
-Monitor these metrics post-deploy:
-
-- **App Boot Time:** Should be <3 seconds
-- **API Error Rate:** Should be 0% for public settings fetch
-- **Console Errors:** Should be 0 (check browser console stats)
-- **Auth Success Rate:** Should be >99%
+---
 
 ## Rollback Plan
 
 If deployment fails:
 
-1. **Revert to previous deployment** (if applicable)
-2. **Check API connectivity** from custom domain
-3. **Verify platform domain** is correct and running
-4. **Check CORS headers** on `/api` endpoint
-5. **Review console logs** for error messages
-
-## Post-Deployment Documentation
-
-Update your deployment docs with:
-
-```
-Custom Domain: pizzeria.com
-Platform Domain: preview-sandbox--694f32ea1bcdfa212c621404.base44.app
-API Config Method: [Approach A / Approach B]
-Deployed By: [Your Name]
-Deployed At: [Timestamp]
-Verified At: [Timestamp]
+### Option 1: Revert to Previous Deploy
+```bash
+# Redeploy previous build (before platform domain changes)
+# All API requests will fail unless previous build had the fix
 ```
 
-## Approval Gate
+### Option 2: Deploy Test Build to Staging
+```bash
+# Deploy to subdomain: test.tilburychicken.co.uk
+# Test the full flow before production cutover
+```
 
-- [ ] Platform domain confirmed correct
-- [ ] CORS headers verified on platform API
-- [ ] SSL/TLS certificate valid for custom domain
-- [ ] DNS pointing custom domain to deployment
-- [ ] App boots without errors
-- [ ] Console logs show correct origin separation
-- [ ] API calls succeed (tested in console)
-- [ ] User can login/navigate
-- [ ] No blank page or fatal errors
-
-## Sign-Off
-
-- **Deployed By:** ___________________
-- **Date:** ___________________
-- **Verified By:** ___________________
-- **Notes:** ___________________
+### Option 3: Emergency Fix
+If blank page after deployment:
+1. Verify `index.html` in `dist/` has `window.__BASE44_PLATFORM_DOMAIN` injection
+2. Verify React script tag: `<script type="module" src="/src/main.jsx"></script>`
+3. Clear browser cache: Hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
+4. Redeploy full `dist/` folder
 
 ---
 
-**Reference:** See `docs/CUSTOM_DOMAIN_API_ORIGIN_FIX.md` for detailed configuration guide.
+## Success Criteria
+
+✅ All tests pass → Deployment successful
+
+| Test | Status | Notes |
+|------|--------|-------|
+| HTML loads | ✅ | React root div present |
+| React script loads | ✅ | No console errors |
+| Console logs API origin | ✅ | Matches platform domain |
+| API requests to correct origin | ✅ | Requests to Base44 backend |
+| Authentication flow | ✅ | Login → redirect → authenticated |
+| Ordering flow | ✅ | Add to cart → checkout works |
+| No CORS errors | ✅ | Console clean |
+
+---
+
+## Monitoring Post-Deployment
+
+- **Check browser console** for errors hourly (first 24 hours)
+- **Monitor API response times** — should be normal latency
+- **Check user reports** in admin dashboard for order issues
+- **Verify Stripe webhooks** are still firing correctly
+
+---
+
+## Support
+
+If deployment fails:
+1. Run verification script: `bash scripts/verify-production-deployment.sh`
+2. Check browser console (F12) for error messages
+3. Share console errors + Network tab screenshots
+4. Confirm Base44 CORS headers allow the custom domain
