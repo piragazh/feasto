@@ -1,5 +1,4 @@
 import React from 'react';
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import useEmblaCarousel from 'embla-carousel-react';
 import { base44 } from '@/api/base44Client';
