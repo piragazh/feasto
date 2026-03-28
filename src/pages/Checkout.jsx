@@ -797,6 +797,23 @@ export default function Checkout() {
                 return;
             }
 
+            // Validate restaurant
+            if (!restaurantId || !restaurantName) {
+                toast.error('Restaurant information missing');
+                setIsSubmitting(false);
+                return;
+            }
+
+            // CRITICAL: Ensure cart items have required fields (ID mapping from cart structure)
+            const validatedItems = cart.map(item => ({
+                menu_item_id: item.id || item.menu_item_id, // Handle both 'id' and 'menu_item_id' keys
+                name: item.name || 'Unknown item',
+                price: item.price || 0,
+                quantity: item.quantity || 1,
+                customizations: item.customizations || {},
+                itemQuantities: item.itemQuantities || {}
+            }));
+
             // Validate cart items still exist in the DB (catch stale/deleted items before charging)
             const nonDealItems = validatedItems.filter(i => !String(i.menu_item_id || '').startsWith('deal_'));
             if (nonDealItems.length > 0) {
@@ -815,13 +832,6 @@ export default function Checkout() {
                     // Non-fatal — let backend validate
                     console.warn('[Checkout] Pre-flight item check failed (non-fatal):', e.message);
                 }
-            }
-
-            // Validate restaurant
-            if (!restaurantId || !restaurantName) {
-                toast.error('Restaurant information missing');
-                setIsSubmitting(false);
-                return;
             }
 
             // Sanitize delivery address to prevent XSS
@@ -853,7 +863,6 @@ export default function Checkout() {
                 : null;
 
             // Calculate loyalty points
-            // Uses system loyalty_points_per_pound setting (fetched inline) × restaurant multiplier
             const earnLoyalty = restaurant?.loyalty_program_enabled !== false;
             const pointsMultiplier = restaurant?.loyalty_points_multiplier || 1;
             const pointsToEarn = earnLoyalty ? Math.floor(total * pointsPerPound * pointsMultiplier) : 0;
@@ -865,16 +874,6 @@ export default function Checkout() {
                     .replace(/[<>]/g, '') // Remove angle brackets
                     .slice(0, 500); // Cap length
             };
-
-            // CRITICAL: Ensure cart items have required fields (ID mapping from cart structure)
-            const validatedItems = cart.map(item => ({
-                menu_item_id: item.id || item.menu_item_id, // Handle both 'id' and 'menu_item_id' keys
-                name: item.name || 'Unknown item',
-                price: item.price || 0,
-                quantity: item.quantity || 1,
-                customizations: item.customizations || {},
-                itemQuantities: item.itemQuantities || {}
-            }));
 
             const orderData = {
                 order_number: orderNumber,
