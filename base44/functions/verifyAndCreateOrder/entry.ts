@@ -836,25 +836,51 @@ Deno.serve(async (req) => {
         }
         verifiedDiscount = accumulatedDiscount;
 
-    } else if (orderData.applied_promotion_id) {
+    } else if (Array.isArray(orderData.promotion_codes) && orderData.promotion_codes.length > 0) {
         // ── STAGE: Promotion validation ───────────────────────────────────────
         console.log(`${LOG} [trace=${traceId}] stage=promotion_validation`);
         try {
-            const promRes = await base44.functions.invoke('validateAndApplyPromotion', {
-                promotion_id: orderData.applied_promotion_id,
-                restaurant_id: orderData.restaurant_id,
-                server_subtotal: serverSubtotal,
-                delivery_fee: deliveryFee
-            });
-            if (promRes?.data?.valid && typeof promRes.data.discount === 'number') {
-                verifiedDiscount = promRes.data.discount;
-                console.log(`${LOG} [trace=${traceId}] promotion validated discount=£${verifiedDiscount.toFixed(2)}`);
-            } else {
-                const promError = promRes?.data?.error || 'Promotion validation failed';
-                await writeFailureLog(base44, { failure_type: 'promotion_validation', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: promError, context: { trace_id: traceId, promotion_id: orderData.applied_promotion_id, http_status: 400 } });
-                const c = await compensate('promotion_validation', 'PROMOTION_INVALID', promError);
-                return Response.json({ error: `Promotion: ${promError}`, success: false, code: 'PROMOTION_INVALID', stage: 'promotion_validation', ...c }, { status: 400 });
+            const promotionCode = String(orderData.promotion_codes[0] || '').trim();
+            if (!promotionCode) {
+                const c = await compensate('promotion_validation', 'PROMOTION_INVALID', 'Invalid promotion code');
+                return Response.json({ error: 'Promotion validation failed.', success: false, code: 'PROMOTION_INVALID', stage: 'promotion_validation', ...c }, { status: 400 });
             }
+
+            const promotions = await base44.asServiceRole.entities.Promotion.filter({
+                restaurant_id: orderData.restaurant_id,
+                promotion_code: promotionCode,
+                is_active: true
+            });
+
+            if (!promotions?.length) {
+                const c = await compensate('promotion_validation', 'PROMOTION_NOT_FOUND', `Promotion not found: ${promotionCode}`);
+                return Response.json({ error: 'Promotion is no longer valid.', success: false, code: 'PROMOTION_NOT_FOUND', stage: 'promotion_validation', ...c }, { status: 400 });
+            }
+
+            const promo = promotions[0];
+            const now = new Date();
+            const start = promo.start_date ? new Date(promo.start_date) : null;
+            const end = promo.end_date ? new Date(promo.end_date) : null;
+            if ((start && now < start) || (end && now > end)) {
+                const c = await compensate('promotion_validation', 'PROMOTION_EXPIRED', `Promotion inactive by date: ${promotionCode}`);
+                return Response.json({ error: 'Promotion has expired.', success: false, code: 'PROMOTION_EXPIRED', stage: 'promotion_validation', ...c }, { status: 400 });
+            }
+            if (promo.minimum_order && serverSubtotal < promo.minimum_order) {
+                const c = await compensate('promotion_validation', 'PROMOTION_MINIMUM_NOT_MET', `Promotion minimum not met: ${promotionCode}`);
+                return Response.json({ error: `Minimum order of £${promo.minimum_order.toFixed(2)} required for this promotion.`, success: false, code: 'PROMOTION_MINIMUM_NOT_MET', stage: 'promotion_validation', ...c }, { status: 400 });
+            }
+
+            if (promo.promotion_type === 'percentage_off') {
+                verifiedDiscount = (serverSubtotal * (promo.discount_value || 0)) / 100;
+            } else if (promo.promotion_type === 'fixed_amount_off') {
+                verifiedDiscount = promo.discount_value || 0;
+            } else if (promo.promotion_type === 'free_delivery') {
+                verifiedDiscount = deliveryFee;
+            } else {
+                verifiedDiscount = 0;
+            }
+            verifiedDiscount = Math.min(Math.max(0, verifiedDiscount), serverSubtotal + deliveryFee + smallOrderSurcharge);
+            console.log(`${LOG} [trace=${traceId}] promotion validated code=${promotionCode} discount=£${verifiedDiscount.toFixed(2)}`);
         } catch (promErr) {
             const msg = `Promotion validation exception: ${promErr.message}`;
             await writeFailureLog(base44, { failure_type: 'promotion_validation', severity: 'warning', restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 500 } });
