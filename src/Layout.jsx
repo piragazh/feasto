@@ -420,7 +420,7 @@ export default function Layout({ children, currentPageName }) {
         <DarkModeProvider>
         <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
             {/* Google Tag Manager Noscript */}
-            {window.__gtmId && window.__gtmId !== 'undefined' && (
+            {typeof window !== 'undefined' && window.__gtmId && window.__gtmId !== 'undefined' && (
                 <noscript 
                     dangerouslySetInnerHTML={{
                         __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${window.__gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`

@@ -21,15 +21,6 @@ export default function NotificationBell({ userEmail }) {
         enabled: !!userEmail
     });
 
-    const { data: settings } = useQuery({
-        queryKey: ['notification-sound-setting'],
-        queryFn: async () => {
-            const result = await base44.asServiceRole.entities.SystemSettings.filter({ 
-                setting_key: 'notification_sound_url' 
-            });
-            return result?.[0] || null;
-        }
-    });
 
     const markAsReadMutation = useMutation({
         mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
@@ -46,12 +37,7 @@ export default function NotificationBell({ userEmail }) {
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
-    const playNotificationSound = () => {
-        if (settings?.setting_value) {
-            const audio = new Audio(settings.setting_value);
-            audio.play().catch(err => console.log('Audio play error:', err));
-        }
-    };
+    const playNotificationSound = () => {};
 
     const handleNotificationClick = (notification) => {
         if (!notification.is_read) {
