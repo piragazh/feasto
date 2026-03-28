@@ -15,6 +15,7 @@ import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview
 import AdminRestaurants from './pages/AdminRestaurants';
 import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import Unsubscribe from './pages/Unsubscribe';
+import Restaurant from './pages/Restaurant';
 
 // Loading fallback for lazy-loaded routes
 const RouteLoadingFallback = () => (
@@ -33,9 +34,42 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
+  const [domainCheckDone, setDomainCheckDone] = React.useState(false);
+
+  // Check for custom domain on mount
+  React.useEffect(() => {
+    const checkDomain = async () => {
+      const hostname = window.location.hostname;
+      const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
+      if (isPlatform) {
+        setDomainCheckDone(true);
+        return;
+      }
+      const cached = sessionStorage.getItem('customDomainRestaurantId');
+      const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
+      if (cached && cachedFor === hostname) {
+        setCustomDomainRestaurantId(cached);
+        setDomainCheckDone(true);
+        return;
+      }
+      try {
+        const { base44 } = await import('@/api/base44Client');
+        const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+        const found = restaurants?.[0];
+        if (found) {
+          sessionStorage.setItem('customDomainRestaurantId', found.id);
+          sessionStorage.setItem('customDomainCheckedFor', hostname);
+          setCustomDomainRestaurantId(found.id);
+        }
+      } catch (e) {}
+      setDomainCheckDone(true);
+    };
+    checkDomain();
+  }, []);
 
   // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  if (isLoadingPublicSettings || isLoadingAuth || !domainCheckDone) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -99,9 +133,15 @@ const AuthenticatedApp = () => {
       <StackNavigationAnimator>
         <Routes>
           <Route path="/" element={
-            <LayoutWrapper currentPageName={mainPageKey}>
-              <MainPage />
-            </LayoutWrapper>
+            customDomainRestaurantId ? (
+              <LayoutWrapper currentPageName="Restaurant">
+                <Restaurant restaurantId={customDomainRestaurantId} />
+              </LayoutWrapper>
+            ) : (
+              <LayoutWrapper currentPageName={mainPageKey}>
+                <MainPage />
+              </LayoutWrapper>
+            )
           } />
           {Object.entries(Pages).map(([path, Page]) => (
             <Route
