@@ -18,7 +18,7 @@ export default function PlatformRefundOversight() {
     const { data: rejectedRefunds = [], isLoading } = useQuery({
         queryKey: ['rejected-refunds'],
         queryFn: async () => {
-            const orders = await base44.asServiceRole.entities.Order.list();
+            const orders = await base44.entities.Order.list();
             return orders.filter(order => order.status === 'refund_rejected_by_restaurant');
         },
         refetchInterval: 10000,

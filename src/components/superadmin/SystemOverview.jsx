@@ -34,18 +34,18 @@ export default function SystemOverview() {
     });
 
     // Calculate metrics
-    const totalRevenue = orders
-        .filter(o => o.status === 'delivered')
-        .reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalRevenue = (orders || [])
+        .filter(o => o?.status === 'delivered')
+        .reduce((sum, o) => sum + (o?.total || 0), 0);
 
-    const todayOrders = orders.filter(o => {
-        const orderDate = new Date(o.created_date);
+    const todayOrders = (orders || []).filter(o => {
+        const orderDate = new Date(o?.created_date);
         const today = new Date();
         return orderDate.toDateString() === today.toDateString();
     });
 
-    const activeOrders = orders.filter(o => 
-        ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(o.status)
+    const activeOrders = (orders || []).filter(o => 
+        ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(o?.status)
     );
 
     const activeDrivers = drivers.filter(d => d.is_available);

@@ -45,7 +45,7 @@ export default function RestaurantManagement() {
         mutationFn: ({ restaurantId, enabled }) => 
             base44.entities.Restaurant.update(restaurantId, { media_screen_enabled: enabled }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['all-restaurants']);
+            queryClient.invalidateQueries({ queryKey: ['all-restaurants'] });
             toast.success('Media screen access updated');
         },
     });
@@ -54,7 +54,7 @@ export default function RestaurantManagement() {
         mutationFn: ({ restaurantId, enabled }) => 
             base44.entities.Restaurant.update(restaurantId, { pos_enabled: enabled }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['all-restaurants']);
+            queryClient.invalidateQueries({ queryKey: ['all-restaurants'] });
             toast.success('POS access updated');
         },
     });
@@ -69,7 +69,7 @@ export default function RestaurantManagement() {
             return token;
         },
         onSuccess: (token, restaurantId) => {
-            queryClient.invalidateQueries(['all-restaurants']);
+            queryClient.invalidateQueries({ queryKey: ['all-restaurants'] });
             const restaurant = restaurants.find(r => r.id === restaurantId);
             setOnboardingDialog({ restaurant, token });
         },
