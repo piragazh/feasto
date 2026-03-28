@@ -28,10 +28,13 @@ export default function Home() {
 
     // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
+        let found = false;
         const interval = setInterval(() => {
+            if (found) return; // Stop polling once found
             const id = sessionStorage.getItem('customDomainRestaurantId');
-            if (id && !customDomainRestaurantId) {
+            if (id) {
                 setCustomDomainRestaurantId(id);
+                found = true;
             }
         }, 100);
 

@@ -38,11 +38,14 @@ export default function Restaurant() {
     
     // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
+        let found = false;
+        const paramId = urlParams.get('id');
         const interval = setInterval(() => {
+            if (found) return; // Stop polling once found
             const customId = sessionStorage.getItem('customDomainRestaurantId');
-            const paramId = urlParams.get('id');
-            if ((customId || paramId) && !restaurantId) {
+            if (customId || paramId) {
                 setRestaurantId(customId || paramId);
+                found = true;
             }
         }, 100);
 
