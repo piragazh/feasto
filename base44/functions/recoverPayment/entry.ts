@@ -131,11 +131,10 @@ Deno.serve(async (req) => {
         return Response.json({ status: 'payment_not_succeeded', pi_status: paymentIntent.status });
     }
 
-    // ── Step 5: PI succeeded but no order — replay verifyAndCreateOrder ───────
+    // ── Step 5: PI succeeded but no order — validate orderData & check recovery limits ─
     // Only possible if orderData was persisted in the pending-payment record
     if (!orderData) {
         console.error(`${LOG} [trace=${traceId}] PI succeeded but no orderData to replay — manual review needed`);
-        // Write a failure log so ops team sees this
         try {
             await base44.asServiceRole.entities.FailureLog.create({
                 failure_type: 'webhook_order_creation_failed',
@@ -150,13 +149,38 @@ Deno.serve(async (req) => {
             });
         } catch (_) {}
         return Response.json({
-            status: 'recovery_failed',
+            status: 'needs_review',
+            recovery_status: 'terminal_invalid_payload',
             error: 'Payment was successful but order data is unavailable. Our team has been notified and will process your order. Please contact support with your payment reference.',
             payment_intent_id: paymentIntentId,
         }, { status: 500 });
     }
 
-    console.log(`${LOG} [trace=${traceId}] Replaying order creation for succeeded PI`);
+    // ── Validate & normalize orderData before replay ──────────────────────────────
+    // Ensure required fields exist and have correct types
+    const validateOrderData = (data) => {
+        const errors = [];
+        if (!data || typeof data !== 'object') errors.push('orderData must be an object');
+        if (!data?.restaurant_id || typeof data.restaurant_id !== 'string') errors.push('missing/invalid restaurant_id');
+        if (!data?.items || !Array.isArray(data.items) || data.items.length === 0) errors.push('missing/invalid items array');
+        if (typeof data?.total !== 'number' || data.total <= 0) errors.push('missing/invalid total amount');
+        if (!data?.payment_method || typeof data.payment_method !== 'string') errors.push('missing/invalid payment_method');
+        if (!data?.order_type || typeof data.order_type !== 'string') errors.push('missing/invalid order_type');
+        return errors.length === 0 ? { valid: true } : { valid: false, errors };
+    };
+
+    const validation = validateOrderData(orderData);
+    if (!validation.valid) {
+        console.error(`${LOG} [trace=${traceId}] orderData validation failed:`, validation.errors.join(', '));
+        return Response.json({
+            status: 'needs_review',
+            recovery_status: 'terminal_invalid_payload',
+            error: 'Order data is malformed and cannot be recovered. Please contact support.',
+            payment_intent_id: paymentIntentId,
+        }, { status: 500 });
+    }
+
+    console.log(`${LOG} [trace=${traceId}] orderData validated, replaying order creation for succeeded PI`);
 
     // Replay via verifyAndCreateOrder — idempotency_key ensures no duplicate
     try {
@@ -171,26 +195,38 @@ Deno.serve(async (req) => {
             console.log(`${LOG} [trace=${traceId}] ✅ Recovery order created/found id=${result.order_id}`);
             return Response.json({
                 status: result.duplicate ? 'order_found' : 'order_created',
+                recovery_status: 'terminal_success',
                 order_id: result.order_id,
                 order_number: result.order_number,
             });
         }
 
         const errMsg = result?.error || 'Order creation failed during recovery';
-        console.error(`${LOG} [trace=${traceId}] Recovery replay failed: ${errMsg} code=${result?.code}`);
+        const code = result?.code || 'UNKNOWN';
+        const refunded = result?.refunded === true;
+        console.error(`${LOG} [trace=${traceId}] Recovery replay failed: ${errMsg} code=${code} refunded=${refunded}`);
 
-        // The Stripe webhook is the final safety net — log and inform user
+        // Determine recovery_status based on terminal vs replayable
+        let recoveryStatus = 'replayable';
+        const terminalCodes = ['ITEM_NOT_FOUND', 'ITEM_UNAVAILABLE', 'RESTAURANT_CLOSED', 'DELIVERY_UNAVAILABLE'];
+        if (refunded || terminalCodes.includes(code)) {
+            recoveryStatus = refunded ? 'terminal_refunded' : 'terminal_manual_review';
+        }
+
+        // Return failure with status hint for frontend
         return Response.json({
             status: 'recovery_failed',
+            recovery_status: recoveryStatus,
             error: errMsg,
-            code: result?.code,
-            refunded: result?.refunded,
+            code,
+            refunded,
         }, { status: 500 });
 
     } catch (replayErr) {
         console.error(`${LOG} [trace=${traceId}] Recovery replay threw:`, replayErr.message);
         return Response.json({
             status: 'recovery_failed',
+            recovery_status: 'replayable',
             error: 'Recovery attempt failed. The Stripe webhook will process your order automatically. Please check your orders in a few minutes.',
         }, { status: 500 });
     }
