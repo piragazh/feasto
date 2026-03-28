@@ -24,13 +24,13 @@ Deno.serve(async (req) => {
                     "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
                     "sizes": "192x192",
                     "type": "image/png",
-                    "purpose": "any maskable"
+                    "purpose": "any"
                 },
                 {
                     "src": "https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png",
                     "sizes": "512x512",
                     "type": "image/png",
-                    "purpose": "any maskable"
+                    "purpose": "any"
                 }
             ]
         };
@@ -105,13 +105,13 @@ Deno.serve(async (req) => {
                         "src": iconUrl,
                         "sizes": "192x192",
                         "type": "image/png",
-                        "purpose": "any maskable"
+                        "purpose": "any"
                     },
                     {
                         "src": iconUrl,
                         "sizes": "512x512",
                         "type": "image/png",
-                        "purpose": "any maskable"
+                        "purpose": "any"
                     }
                 ];
             }
