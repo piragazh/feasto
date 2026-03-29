@@ -40,49 +40,37 @@ const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 // the second write will fail (or return duplicate), preventing double processing.
 // ─────────────────────────────────────────────────────────────────────
 async function acquireEventLock(base44, stripeEventId, eventType) {
-    // First check if already fully processed
     try {
         const existing = await base44.asServiceRole.entities.WebhookEventLog.filter({
             stripe_event_id: stripeEventId
         });
-        if (existing?.length > 0) {
-            const status = existing[0].status;
-            console.log(`[WEBHOOK] Event ${stripeEventId} already in log with status=${status}`);
-            return { alreadyProcessed: true };
-        }
-    } catch (e) {
-        console.warn(`[WEBHOOK] Dedup check failed (proceeding):`, e.message);
-    }
 
-    // Attempt to write a processing lock — if another instance beats us, the second
-    // write will create a duplicate (no unique constraint), so we also recheck after write
-    try {
-        await base44.asServiceRole.entities.WebhookEventLog.create({
+        const terminal = (existing || []).find((entry) =>
+            ['processed', 'failed', 'duplicate_ignored'].includes(entry.status)
+        );
+        if (terminal) {
+            console.log(`[WEBHOOK] Event ${stripeEventId} already terminal with status=${terminal.status}`);
+            return { alreadyProcessed: true, lockId: terminal.id };
+        }
+
+        const activeLock = (existing || []).find((entry) => entry.status === 'processing');
+        if (activeLock) {
+            console.log(`[WEBHOOK] Event ${stripeEventId} already has active processing lock`);
+            return { alreadyProcessed: true, lockId: activeLock.id };
+        }
+
+        const created = await base44.asServiceRole.entities.WebhookEventLog.create({
             stripe_event_id: stripeEventId,
             event_type: eventType,
             status: 'processing',
             processed_at: new Date().toISOString(),
             details: { locked_at: Date.now() }
         });
-        // Small delay then re-check for race (two concurrent creates at exact same time)
-        await new Promise(r => setTimeout(r, 100));
-        const recheckLocks = await base44.asServiceRole.entities.WebhookEventLog.filter({
-            stripe_event_id: stripeEventId,
-            status: 'processing'
-        });
-        if (recheckLocks?.length > 1) {
-            // Another instance also got a lock — the one with the lower id yields
-            const sortedIds = recheckLocks.map(r => r.id).sort();
-            const ourCreate = recheckLocks[recheckLocks.length - 1]; // last created
-            if (sortedIds[0] !== ourCreate?.id) {
-                console.log(`[WEBHOOK] Lost lock race for ${stripeEventId} — yielding to first instance`);
-                return { alreadyProcessed: true };
-            }
-        }
-        return { alreadyProcessed: false };
+
+        return { alreadyProcessed: false, lockId: created?.id || null };
     } catch (lockErr) {
-        console.warn(`[WEBHOOK] Lock write failed (non-fatal):`, lockErr.message);
-        return { alreadyProcessed: false };
+        console.warn(`[WEBHOOK] Lock write failed — falling back to safe skip:`, lockErr.message);
+        return { alreadyProcessed: true, lockId: null };
     }
 }
 
@@ -424,9 +412,9 @@ Deno.serve(async (req) => {
         console.log(`[WEBHOOK] Received event: type=${eventType} id=${eventId}`);
         
         // FIX #4: Atomic lock-and-check (replaces simple hasEventBeenProcessed)
-        const { alreadyProcessed } = await acquireEventLock(base44, eventId, eventType);
+        const { alreadyProcessed, lockId } = await acquireEventLock(base44, eventId, eventType);
         if (alreadyProcessed) {
-            console.log(`[WEBHOOK] Event ${eventId} already processed or lock lost, skipping`);
+            console.log(`[WEBHOOK] Event ${eventId} already processed or locked, skipping`);
             await logWebhookEvent(base44, eventId, eventType, 'duplicate_ignored', { reason: 'dedup' });
             return new Response(JSON.stringify({ success: true, status: 'duplicate_ignored' }), { status: 200 });
         }
@@ -454,7 +442,10 @@ Deno.serve(async (req) => {
         }
         
         // Log the event processing
-        await logWebhookEvent(base44, eventId, eventType, result.success ? 'processed' : 'failed', result);
+        await logWebhookEvent(base44, eventId, eventType, result.success ? 'processed' : 'failed', {
+            ...result,
+            lock_id: lockId || null,
+        });
         
         if (!result?.success && result?.recoverable) {
             return new Response(JSON.stringify({ error: result.error || 'Recoverable webhook processing failure' }), { status: 500 });

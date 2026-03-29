@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
     // ── STAGE: Velocity throttle (non-fatal) ───────────────────────────────────
     console.log(`${LOG} [trace=${traceId}] stage=velocity_throttle`);
     try {
-        const velocityResult = await base44.functions.invoke('orderVelocityThrottle', { orderData });
+        const velocityResult = await base44.asServiceRole.functions.invoke('orderVelocityThrottle', { orderData });
         if (velocityResult?.data && !velocityResult.data.allowed) {
             await writeFailureLog(base44, {
                 failure_type: 'payment_velocity_throttle', severity: 'info',
