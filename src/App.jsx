@@ -1,4 +1,3 @@
-import { Toaster } from 'sonner';
 import { QueryClientProvider } from '@tanstack/react-query';
 // NOTE: Toaster import removed — it is rendered by Layout.jsx to avoid duplicate toasts.
 import { queryClientInstance } from '@/lib/query-client'
@@ -14,7 +13,6 @@ import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
 import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
 import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview';
-import AdminRestaurants from './pages/AdminRestaurants';
 import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
@@ -26,9 +24,7 @@ const RouteLoadingFallback = () => (
   </div>
 );
 
-const { Pages = {}, Layout, mainPage } = pagesConfig || {};
-const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey && Pages[mainPageKey] ? Pages[mainPageKey] : () => (<div className="flex items-center justify-center min-h-screen text-red-600">Page not found</div>);
+const { Pages = {}, Layout } = pagesConfig || {};
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -116,7 +112,7 @@ const DomainChecker = ({ children }) => {
 };
 
 const AuthenticatedApp = ({ customDomainRestaurantId }) => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -215,13 +211,6 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="RestaurantOfflineRiskOverview">
                 <RestaurantOfflineRiskOverview />
-              </LayoutWrapper>
-            </Suspense>
-          } />
-          <Route path="/AdminRestaurants" element={
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <LayoutWrapper currentPageName="AdminRestaurants">
-                <AdminRestaurants />
               </LayoutWrapper>
             </Suspense>
           } />
