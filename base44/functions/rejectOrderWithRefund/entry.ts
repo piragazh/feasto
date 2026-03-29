@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     try {
       const refund = await stripe.refunds.create({
         payment_intent: paymentIntentId,
-        reason: 'requested_by_merchant',
+        reason: 'requested_by_customer',
         metadata: {
           order_id,
           rejection_reason: rejection_reason.slice(0, 200),

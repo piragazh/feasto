@@ -397,6 +397,8 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             if (onOrderUpdate) onOrderUpdate();
             if (result?.refunded) {
                 toast.success('Order rejected and refund issued automatically');
+            } else if (result?.requires_manual_action) {
+                toast.error(result?.message || 'Order rejected but refund needs manual review');
             } else {
                 toast.success('Order rejected and customer notified');
             }
