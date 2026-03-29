@@ -55,7 +55,6 @@ import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
 
 // Everything else — lazy loaded (split into separate chunks)
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
@@ -93,7 +92,6 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "AdminDashboard": AdminDashboard,
     "AdminRestaurants": AdminRestaurants,
     "Checkout": Checkout,
     "CookiesPolicy": CookiesPolicy,
