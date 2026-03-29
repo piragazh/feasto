@@ -163,20 +163,16 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                                     break;
 
                                 case 'processing':
-                                    // Payment is processing, may complete shortly
-                                    console.log('[ExpressCheckout] Payment processing — checking status later');
-                                    confirmInFlightRef.current = false;
-                                    if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
-                                    if (onError) onError('Payment is processing. Please wait.');
-                                    setIsProcessing(false);
+                                    console.log('[ExpressCheckout] Payment processing — handing off to recovery path');
+                                    if (onSuccess && typeof onSuccess === 'function') {
+                                        onSuccess(String(paymentIntent.id));
+                                    }
                                     break;
 
                                 case 'requires_action':
-                                    // User needs to complete additional action (3DS, etc)
-                                    console.log('[ExpressCheckout] requires_action — user action needed');
+                                    console.log('[ExpressCheckout] requires_action — waiting for Stripe flow to complete');
                                     confirmInFlightRef.current = false;
                                     if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
-                                    if (onError) onError('Additional verification required. Please try again.');
                                     setIsProcessing(false);
                                     break;
 
@@ -217,9 +213,7 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             loadingTimeoutRef.current = setTimeout(() => {
                                 console.warn('[ExpressCheckout] Wallet payment timeout after 30s, resetting spinner');
                                 setIsProcessing(false);
-                                // CRITICAL FIX: Do NOT reset confirmInFlightRef here — if a confirmation is
-                                // genuinely in-flight, resetting it would allow a second concurrent attempt.
-                                // Only reset expressConfirmFiredRef to allow a fresh user-initiated retry.
+                                confirmInFlightRef.current = false;
                                 if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
                                 if (onError) onError('Payment timeout. Please try again.');
                             }, 30000);

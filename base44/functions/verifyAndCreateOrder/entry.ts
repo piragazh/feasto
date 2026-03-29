@@ -881,7 +881,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Invalid discount value', success: false, code: 'INVALID_DISCOUNT', stage: 'total_integrity', ...c }, { status: 400 });
     }
     
-    const clientPromotionDiscount = Math.max(0, clientDiscount - verifiedDiscount);
+    const clientPromotionDiscount = 0;
     let smallOrderSurcharge = typeof orderData.small_order_surcharge === 'number' ? orderData.small_order_surcharge : 0;
     if (!isFinite(smallOrderSurcharge) || smallOrderSurcharge < 0) {
         const msg = `Invalid small order surcharge: ${smallOrderSurcharge}`;
@@ -904,7 +904,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Order calculation error', success: false, code: 'INVALID_FEE', stage: 'total_integrity', ...c }, { status: 500 });
     }
     
-    const serverTotal = Math.max(0, serverSubtotal + deliveryFee + smallOrderSurcharge - verifiedDiscount - clientPromotionDiscount);
+    const serverTotal = Math.max(0, serverSubtotal + deliveryFee + smallOrderSurcharge - verifiedDiscount);
     
     // Final total validation
     if (!isFinite(serverTotal) || serverTotal < 0) {
