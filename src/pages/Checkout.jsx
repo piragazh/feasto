@@ -1540,9 +1540,9 @@ export default function Checkout() {
                                                             Fee: £{Number(deliveryZoneInfo.deliveryFee || 0).toFixed(2)} • 
                                                             ETA: {String(deliveryZoneInfo.estimatedTime || '30-45 min')}
                                                         </p>
-                                                        {deliveryZoneInfo.minOrderValue && (
+                                                        {deliveryZoneInfo.minimumOrder && (
                                                             <p className="text-xs text-green-700">
-                                                                Min order: £{Number(deliveryZoneInfo.minOrderValue).toFixed(2)}
+                                                                Min order: £{Number(deliveryZoneInfo.minimumOrder).toFixed(2)}
                                                             </p>
                                                         )}
                                                     </div>

@@ -706,11 +706,29 @@ Deno.serve(async (req) => {
     const serverSubtotal = orderData.items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
 
     // ── STAGE: Minimum order (authoritative — uses server-corrected prices) ────
-    if (orderData.order_type === 'delivery' && (restaurant.minimum_order || 0) > 0 && serverSubtotal < restaurant.minimum_order) {
-        const msg = `Below minimum: subtotal=£${serverSubtotal.toFixed(2)} minimum=£${restaurant.minimum_order.toFixed(2)}`;
+    let effectiveMinimumOrder = restaurant.minimum_order || 0;
+    if (orderData.order_type === 'delivery') {
+        try {
+            const activeZones = await base44.asServiceRole.entities.DeliveryZone.filter({ restaurant_id: orderData.restaurant_id, is_active: true });
+            if (activeZones?.length > 0 && orderData.delivery_coordinates?.lat) {
+                const { lat, lng } = orderData.delivery_coordinates;
+                for (const zone of activeZones) {
+                    if (zone.coordinates?.length >= 3 && pointInPolygon([lng, lat], zone.coordinates.map(c => [c.lng, c.lat]))) {
+                        effectiveMinimumOrder = zone.min_order_value ?? effectiveMinimumOrder;
+                        break;
+                    }
+                }
+            }
+        } catch (minErr) {
+            console.warn(`${LOG} [trace=${traceId}] minimum order derivation failed (using restaurant default):`, minErr.message);
+        }
+    }
+
+    if (orderData.order_type === 'delivery' && effectiveMinimumOrder > 0 && serverSubtotal < effectiveMinimumOrder) {
+        const msg = `Below minimum: subtotal=£${serverSubtotal.toFixed(2)} minimum=£${effectiveMinimumOrder.toFixed(2)}`;
         await writeFailureLog(base44, { failure_type: 'minimum_order', severity: 'info', restaurant_id: orderData.restaurant_id, user_email: userLabel, error_message: msg, context: { trace_id: traceId, http_status: 400 } });
         const c = await compensate('delivery_validation', 'BELOW_MINIMUM_ORDER', msg);
-        return Response.json({ error: `Minimum order is £${restaurant.minimum_order.toFixed(2)}`, success: false, code: 'BELOW_MINIMUM_ORDER', stage: 'delivery_validation', ...c }, { status: 400 });
+        return Response.json({ error: `Minimum order is £${effectiveMinimumOrder.toFixed(2)}`, success: false, code: 'BELOW_MINIMUM_ORDER', stage: 'delivery_validation', ...c }, { status: 400 });
     }
 
     // ── Server delivery fee re-derivation ──────────────────────────────────────
