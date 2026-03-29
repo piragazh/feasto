@@ -165,15 +165,7 @@ export async function cleanupLegacyServiceWorkers() {
 
     for (const reg of registrations) {
       const swUrl = reg.active?.scriptURL || reg.installing?.scriptURL || reg.waiting?.scriptURL || '';
-      const isOurs = swUrl.endsWith('/sw.js');
-
-      if (!isOurs) {
-        log('Removing legacy SW:', swUrl);
-        await reg.unregister();
-        continue;
-      }
-
-      log('Refreshing current SW registration:', swUrl);
+      log('Unregistering SW during debug cleanup:', swUrl);
       await reg.unregister();
     }
 
