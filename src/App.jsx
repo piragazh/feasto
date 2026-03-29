@@ -55,7 +55,7 @@ const DomainChecker = ({ children }) => {
         const cached = sessionStorage.getItem('customDomainRestaurantId');
         const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
         const urlParams = new URLSearchParams(window.location.search);
-        const forcedRestaurantId = window.location.pathname === '/' ? (urlParams.get('id') || cached) : null;
+        const forcedRestaurantId = window.location.pathname === '/' ? urlParams.get('id') : null;
         const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
 
         if (forcedRestaurantId) {
@@ -67,9 +67,6 @@ const DomainChecker = ({ children }) => {
 
         if (isPlatform) {
           console.log('[DomainChecker] Platform domain detected:', hostname);
-          if (cached && cachedFor === hostname) {
-            setCustomDomainRestaurantId(cached);
-          }
           setDomainCheckDone(true);
           return;
         }

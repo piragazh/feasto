@@ -33,18 +33,17 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     // Accept restaurantId from props (from Home page) or fall back to sessionStorage/URL
     const [restaurantId, setRestaurantId] = useState(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        return propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id');
+        return propRestaurantId || urlParams.get('id') || (window.location.pathname === '/' ? sessionStorage.getItem('customDomainRestaurantId') : null);
     });
     
     useEffect(() => {
         const syncRestaurantId = () => {
             const urlParams = new URLSearchParams(window.location.search);
             const paramId = urlParams.get('id');
-            const customId = sessionStorage.getItem('customDomainRestaurantId');
-            const nextId = propRestaurantId || customId || paramId;
+            const customId = window.location.pathname === '/' ? sessionStorage.getItem('customDomainRestaurantId') : null;
+            const nextId = propRestaurantId || paramId || customId;
 
-            const isRootPath = window.location.pathname === '/';
-            if (isRootPath && nextId) {
+            if (window.location.pathname === '/' && nextId) {
                 sessionStorage.setItem('customDomainRestaurantId', nextId);
             }
 
