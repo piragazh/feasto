@@ -30,6 +30,18 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+const CustomDomainRestaurantRoute = ({ customDomainRestaurantId }) => {
+  if (!customDomainRestaurantId) {
+    return <Navigate to="/Home" replace />;
+  }
+
+  return (
+    <LayoutWrapper currentPageName="Restaurant">
+      <Restaurant restaurantId={customDomainRestaurantId} />
+    </LayoutWrapper>
+  );
+};
+
 const DomainChecker = ({ children }) => {
   const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
   const [domainCheckDone, setDomainCheckDone] = React.useState(false);
@@ -187,28 +199,34 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
     <NavigationStackProvider>
       <StackNavigationAnimator>
         <Routes>
-           <Route path="/" element={
-             customDomainRestaurantId ? (
-               <LayoutWrapper currentPageName="Restaurant">
-                 <Restaurant restaurantId={customDomainRestaurantId} />
-               </LayoutWrapper>
-             ) : (
-               <Navigate to="/Home" replace />
-             )
-           } />
-          {Object.entries(Pages).map(([path, Page]) => (
-            <Route
-              key={path}
-              path={`/${path}`}
-              element={
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <LayoutWrapper currentPageName={path}>
-                    <Page />
-                  </LayoutWrapper>
-                </Suspense>
-              }
-            />
-          ))}
+           <Route path="/" element={<CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />} />
+          {Object.entries(Pages).map(([path, Page]) => {
+            const isCustomDomainHomeRoute = customDomainRestaurantId && path.toLowerCase() === 'home';
+
+            if (isCustomDomainHomeRoute) {
+              return (
+                <Route
+                  key={path}
+                  path={`/${path}`}
+                  element={<CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />}
+                />
+              );
+            }
+
+            return (
+              <Route
+                key={path}
+                path={`/${path}`}
+                element={
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <LayoutWrapper currentPageName={path}>
+                      <Page />
+                    </LayoutWrapper>
+                  </Suspense>
+                }
+              />
+            );
+          })}
           <Route path="/OfflineRiskControlCenter" element={
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="OfflineRiskControlCenter">
@@ -230,6 +248,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
               </LayoutWrapper>
             </Suspense>
           } />
+          <Route path="/Home" element={<CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
