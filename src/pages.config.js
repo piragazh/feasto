@@ -53,10 +53,13 @@ import { lazy } from 'react';
 import Home from './pages/Home';
 import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
+import AdminDashboardPage from './pages/AdminDashboard';
+import AdminRestaurantsPage from './pages/AdminRestaurants';
 
 // Everything else — lazy loaded (split into separate chunks)
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
+// Admin pages loaded eagerly to avoid chunk-load failures
+const AdminDashboard = AdminDashboardPage;
+const AdminRestaurants = AdminRestaurantsPage;
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
 const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
