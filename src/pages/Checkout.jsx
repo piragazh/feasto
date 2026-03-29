@@ -36,6 +36,7 @@ import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
 import { useSEO } from '@/lib/useSEO.js';
 import { checkoutTrace } from '@/lib/checkoutTrace';
+import { usePaymentInit } from '@/hooks/usePaymentInit';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 
@@ -513,22 +514,44 @@ export default function Checkout() {
     // Final total = subtotal + delivery + surcharge - discount (floor at 0)
     const total = Math.max(0, subtotal + deliveryFee + smallOrderSurcharge - discount);
 
-    const [clientSecret, setClientSecret] = useState('');
-    const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null);
-    const [initializingPayment, setInitializingPayment] = useState(false);
     const [paymentSessionKey, setPaymentSessionKey] = useState(() => `ps_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
-    const showStripeForm = paymentMethod === 'card';
+
+    const {
+        clientSecret,
+        showStripeForm,
+        initializingPayment,
+        stripeLoadedPromise,
+        resetPaymentState: resetStripePaymentState,
+        getSessionKey,
+    } = usePaymentInit({
+        paymentMethod,
+        total,
+        cart,
+        restaurantId,
+        restaurant,
+        orderType,
+        formData,
+        isGuest,
+        isExistingAddress,
+        deliveryCoordinates,
+        deliveryZoneInfo,
+        zoneCheckComplete,
+        isScheduled,
+        scheduledFor,
+        subtotal,
+        deliveryFee,
+        discount,
+        smallOrderSurcharge,
+        onPaymentSessionKeyRotated: setPaymentSessionKey,
+    });
 
     const resetPaymentState = () => {
-        setClientSecret('');
-        setInitializingPayment(false);
+        resetStripePaymentState();
         setPaymentCompleted(false);
         paymentSuccessHandledRef.current = false;
         expressConfirmFiredRef.current = false;
         anyPaymentPathInFlightRef.current = false;
     };
-
-    const getSessionKey = () => paymentSessionKey;
 
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
@@ -1826,79 +1849,10 @@ export default function Checkout() {
                                                 />
                                             </Elements>
                                         ) : (
-                                            <Button
-                                                type="button"
-                                                disabled={initializingPayment}
-                                                onClick={async () => {
-                                                    if (initializingPayment) return;
-                                                    setInitializingPayment(true);
-                                                    resetPaymentState();
-                                                    const nextKey = `ps_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-                                                    setPaymentSessionKey(nextKey);
-
-                                                    try {
-                                                        const keyRes = await base44.functions.invoke('getStripePublicKey');
-                                                        const publicKey = keyRes?.data?.publicKey;
-                                                        if (!publicKey) {
-                                                            toast.error('Payment system unavailable. Please try again.');
-                                                            return;
-                                                        }
-
-                                                        const { loadStripe } = await import('@stripe/stripe-js');
-                                                        const stripeInstance = await loadStripe(publicKey);
-                                                        setStripeLoadedPromise(Promise.resolve(stripeInstance));
-
-                                                        const fullAddress = orderType === 'delivery'
-                                                            ? (isExistingAddress
-                                                                ? formData.delivery_address
-                                                                : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
-                                                            : '';
-
-                                                        const response = await base44.functions.invoke('createPaymentIntent', {
-                                                            amount: total,
-                                                            currency: 'gbp',
-                                                            idempotency_key: nextKey,
-                                                            restaurant_id: restaurantId,
-                                                            items: cart,
-                                                            subtotal,
-                                                            delivery_fee: deliveryFee,
-                                                            discount,
-                                                            small_order_surcharge: smallOrderSurcharge || 0,
-                                                            order_type: orderType,
-                                                            delivery_address: fullAddress,
-                                                            delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
-                                                            phone: formData.phone,
-                                                            guest_name: formData.guest_name,
-                                                            guest_email: formData.guest_email,
-                                                            notes: formData.notes,
-                                                            is_scheduled: isScheduled,
-                                                            scheduled_for: scheduledFor || null,
-                                                        });
-
-                                                        if (!response?.data?.clientSecret) {
-                                                            toast.error(response?.data?.error || 'Failed to initialize payment.');
-                                                            return;
-                                                        }
-
-                                                        setClientSecret(response.data.clientSecret);
-                                                    } catch (error) {
-                                                        const message = error?.response?.data?.error || error?.message || 'Failed to initialize payment.';
-                                                        toast.error(message);
-                                                    } finally {
-                                                        setInitializingPayment(false);
-                                                    }
-                                                }}
-                                                className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
-                                            >
-                                                {initializingPayment ? (
-                                                    <>
-                                                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                                        Preparing Payment...
-                                                    </>
-                                                ) : (
-                                                    'Continue to Payment'
-                                                )}
-                                            </Button>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Preparing payment form...
+                                            </div>
                                         )}
                                     </CardContent>
                                 </Card>
