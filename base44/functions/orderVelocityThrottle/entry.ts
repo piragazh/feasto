@@ -143,13 +143,27 @@ Deno.serve(async (req) => {
             const fingerprint = basketFingerprint(orderData);
 
             if (fingerprint) {
-                const recentByUserForRestaurant = await base44.asServiceRole.entities.Order.filter({
-                    created_by: actorId,
-                    restaurant_id: orderData.restaurant_id,
-                    created_date: { $gt: windowStart90s }
-                });
+                const duplicateFilter = user?.email
+                    ? {
+                        created_by: user.email,
+                        restaurant_id: orderData.restaurant_id,
+                        created_date: { $gt: windowStart90s }
+                    }
+                    : (normalizedGuestPhone
+                        ? {
+                            phone: normalizedGuestPhone,
+                            restaurant_id: orderData.restaurant_id,
+                            created_date: { $gt: windowStart90s }
+                        }
+                        : {
+                            guest_email: actorId,
+                            restaurant_id: orderData.restaurant_id,
+                            created_date: { $gt: windowStart90s }
+                        });
 
-                const duplicate = (recentByUserForRestaurant || []).find(o => {
+                const recentByActorForRestaurant = await base44.asServiceRole.entities.Order.filter(duplicateFilter);
+
+                const duplicate = (recentByActorForRestaurant || []).find(o => {
                     return basketFingerprint(o) === fingerprint;
                 });
 

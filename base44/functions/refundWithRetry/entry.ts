@@ -34,7 +34,6 @@ async function attemptRefund(paymentIntentId, attempt = 1) {
         
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
-            reason: 'fraudulent',
             metadata: { recovery_attempt: String(attempt), failure_reason: 'order_creation_failed' }
         });
         

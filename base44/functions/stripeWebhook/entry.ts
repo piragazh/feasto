@@ -88,6 +88,17 @@ async function acquireEventLock(base44, stripeEventId, eventType) {
 
 async function logWebhookEvent(base44, eventId, eventType, status, details) {
     try {
+        const existing = await base44.asServiceRole.entities.WebhookEventLog.filter({ stripe_event_id: eventId });
+        if (existing?.[0]?.id) {
+            await base44.asServiceRole.entities.WebhookEventLog.update(existing[0].id, {
+                event_type: eventType,
+                status,
+                details,
+                processed_at: new Date().toISOString(),
+            });
+            return;
+        }
+
         await base44.asServiceRole.entities.WebhookEventLog.create({
             stripe_event_id: eventId,
             event_type: eventType,
@@ -445,7 +456,11 @@ Deno.serve(async (req) => {
         // Log the event processing
         await logWebhookEvent(base44, eventId, eventType, result.success ? 'processed' : 'failed', result);
         
-        // Return 200 to acknowledge to Stripe (even on failure, we logged it)
+        if (!result?.success && result?.recoverable) {
+            return new Response(JSON.stringify({ error: result.error || 'Recoverable webhook processing failure' }), { status: 500 });
+        }
+
+        // Return 200 to acknowledge to Stripe for terminal or successful outcomes
         return new Response(JSON.stringify({ received: true, status: result.status || 'processed' }), { status: 200 });
         
     } catch (error) {
