@@ -56,9 +56,10 @@ Deno.serve(async (req) => {
     if (user.role !== 'admin') {
       const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
         user_email: user.email,
-        restaurant_ids: { $elemMatch: { $eq: order.restaurant_id } },
+        is_active: true,
       });
-      if (managers.length === 0) {
+      const hasAccess = managers.some((manager) => manager.restaurant_ids?.includes(order.restaurant_id));
+      if (!hasAccess) {
         return Response.json(
           { error: 'Access denied: not authorized for this restaurant' },
           { status: 403 }

@@ -50,13 +50,13 @@ Deno.serve(async (req) => {
         }
 
         // CRITICAL: Check if refund already requested
-        if (order.refund_requested_date) {
+        if (order.refund_request_date || order.status === 'refund_requested' || order.status === 'refund_under_platform_review') {
             return new Response(
                 JSON.stringify({ 
                     canRefund: false,
                     error: 'A refund has already been requested for this order',
                     refundStatus: order.status,
-                    requestedDate: order.refund_requested_date
+                    requestedDate: order.refund_request_date || null
                 }),
                 { status: 400 }
             );

@@ -44,17 +44,25 @@ export default function RefundManagement({ restaurantId }) {
     });
 
     const rejectMutation = useMutation({
-        mutationFn: ({ orderId, reason }) => base44.entities.Order.update(orderId, {
-            status: 'refund_rejected_by_restaurant',
-            refund_paid_by: 'restaurant',
-            refund_rejection_reason: reason,
-            refund_rejected_date: new Date().toISOString()
-        }),
+        mutationFn: async ({ orderId, reason }) => {
+            const result = await base44.functions.invoke('updateOrderStatus', {
+                order_id: orderId,
+                new_status: 'refund_rejected_by_restaurant',
+                rejection_reason: reason,
+            });
+            if (!result?.data?.success) {
+                throw new Error(result?.data?.error || 'Refund rejection failed');
+            }
+            return result.data;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['refund-requests']);
             toast.success('Refund rejected - Escalated to platform for review');
             setViewDialog(null);
             setRejectReason('');
+        },
+        onError: (error) => {
+            toast.error(error?.message || 'Failed to reject refund request');
         },
     });
 
