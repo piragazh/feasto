@@ -58,7 +58,7 @@ export default function WeeklyOpsHealthDashboard() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await base44.functions.invoke('weeklyOpsHealth', {});
+                const response = await base44.functions.invoke('weeklyOpsHealth');
                 setData(response.data);
                 setError(null);
             } catch (err) {

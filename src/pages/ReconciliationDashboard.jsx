@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,22 +13,29 @@ import ReconciliationTrends from '@/components/reconciliation/ReconciliationTren
 
 export default function ReconciliationDashboard() {
     const queryClient = useQueryClient();
-    const [user, setUser] = useState(null);
     const [selectedIssueId, setSelectedIssueId] = useState(null);
     const [filterType, setFilterType] = useState('all');
     const [filterSeverity, setFilterSeverity] = useState('all');
     const [filterStatus, setFilterStatus] = useState('open');
 
-    // Load current user
-    React.useEffect(() => {
-        base44.auth.me().then(setUser).catch(() => {});
-    }, []);
+    const { data: user, isLoading: userLoading } = useQuery({
+        queryKey: ['reconciliation-user'],
+        queryFn: () => base44.auth.me(),
+    });
 
-    // Check if user is admin or superadmin
     const isAuthorized = user?.role === 'admin';
-    const restaurantId = user?.restaurant_id; // For restaurant managers later
 
-    if (!user) {
+    const { data: allIssues = [], isLoading: issuesLoading } = useQuery({
+        queryKey: ['reconciliation-issues'],
+        queryFn: async () => {
+            const issues = await base44.entities.ReconciliationIssue.list('-created_date', 1000);
+            return issues || [];
+        },
+        enabled: isAuthorized,
+        refetchInterval: 60000,
+    });
+
+    if (userLoading) {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
     }
 
@@ -44,16 +52,6 @@ export default function ReconciliationDashboard() {
             </div>
         );
     }
-
-    // Fetch all open/reviewed issues
-    const { data: allIssues = [], isLoading: issuesLoading } = useQuery({
-        queryKey: ['reconciliation-issues'],
-        queryFn: async () => {
-            const issues = await base44.asServiceRole.entities.ReconciliationIssue.list('-created_date', 1000);
-            return issues || [];
-        },
-        refetchInterval: 60000, // Refresh every minute
-    });
 
     // Filter issues based on UI state
     const filteredIssues = useMemo(() => {
