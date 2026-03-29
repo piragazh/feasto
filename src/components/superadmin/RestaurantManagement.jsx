@@ -19,7 +19,7 @@ import {
     ShoppingCart
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl } from '@/utils/index.ts';
 import { toast } from 'sonner';
 import {
     Dialog,

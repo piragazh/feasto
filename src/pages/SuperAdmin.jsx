@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import SystemOverview from '@/components/superadmin/SystemOverview';
 import RestaurantManagement from '@/components/superadmin/RestaurantManagement';
 import MessagingCenter from '@/components/superadmin/MessagingCenter';
@@ -35,7 +34,7 @@ import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
 import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
 import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
 import WeeklyOpsHealthDashboard from '@/components/superadmin/WeeklyOpsHealthDashboard';
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Mail, MenuIcon, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile';
 
