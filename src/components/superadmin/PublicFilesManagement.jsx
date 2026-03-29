@@ -17,7 +17,7 @@ export default function PublicFilesManagement() {
 
     const { data: settings } = useQuery({
         queryKey: ['system-settings'],
-        queryFn: () => base44.asServiceRole.entities.SystemSettings.filter({ 
+        queryFn: () => base44.entities.SystemSettings.filter({ 
             setting_key: 'notification_sound_url' 
         }),
     });

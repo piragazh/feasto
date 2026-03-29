@@ -41,7 +41,7 @@ export default function PromotionOversight() {
 
     const toggleActiveMutation = useMutation({
         mutationFn: ({ id, is_active }) => 
-            base44.asServiceRole.entities.Promotion.update(id, { is_active }),
+            base44.entities.Promotion.update(id, { is_active }),
         onSuccess: () => {
             queryClient.invalidateQueries(['all-promotions']);
             toast.success('Promotion status updated');
