@@ -54,7 +54,7 @@ import __Layout from './Layout.jsx';
 const AdminDashboard = AdminDashboardPage;
 const AdminRestaurants = AdminRestaurantsPage;
 
-export const PAGES = {
+export const Pages = {
   "AdminDashboard": AdminDashboard,
   "AdminRestaurants": AdminRestaurants,
   "Checkout": Checkout,
@@ -95,6 +95,6 @@ export const PAGES = {
 
 export const pagesConfig = {
   mainPage: "Home",
-  Pages: PAGES,
+  Pages,
   Layout: __Layout,
 };
