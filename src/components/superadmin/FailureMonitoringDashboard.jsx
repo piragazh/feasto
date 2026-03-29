@@ -42,7 +42,7 @@ function MetricCard({ title, value, icon: Icon, tone = 'text-slate-700' }) {
 }
 
 function FailureRow({ failure, restaurantMap }) {
-  const data = failure.data || {};
+  const data = failure;
   return (
     <div className="rounded-xl border p-4 bg-white space-y-3">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -58,6 +58,7 @@ function FailureRow({ failure, restaurantMap }) {
             <p>Payment Intent: {data.payment_intent_id || '—'}</p>
             <p>Order ID: {data.order_id || '—'}</p>
             <p>Customer: {data.customer_email || data.guest_email || data.user_email || '—'}</p>
+            <p>Logged: {data.logged_at ? format(new Date(data.logged_at), 'dd MMM yyyy, h:mm a') : (failure.created_date ? format(new Date(failure.created_date), 'dd MMM yyyy, h:mm a') : '—')}</p>
           </div>
         </div>
         <div className="text-sm text-slate-500 whitespace-nowrap">
@@ -69,7 +70,7 @@ function FailureRow({ failure, restaurantMap }) {
 }
 
 function IssueRow({ issue, restaurantMap }) {
-  const data = issue.data || {};
+  const data = issue;
   return (
     <div className="rounded-xl border p-4 bg-white space-y-3">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -85,6 +86,7 @@ function IssueRow({ issue, restaurantMap }) {
             <p>Payment Intent: {data.metadata?.payment_intent_id || '—'}</p>
             <p>Order ID: {data.order_id || '—'}</p>
             <p>Amount: {typeof data.amount === 'number' ? `£${data.amount.toFixed(2)}` : '—'}</p>
+            <p>Detected: {data.detected_at ? format(new Date(data.detected_at), 'dd MMM yyyy, h:mm a') : '—'}</p>
           </div>
         </div>
         <div className="text-sm text-slate-500 whitespace-nowrap">
@@ -125,7 +127,7 @@ export default function FailureMonitoringDashboard() {
   const filteredFailures = useMemo(() => {
     const q = search.trim().toLowerCase();
     return failures.filter((failure) => {
-      const data = failure.data || {};
+      const data = failure;
       const matchesSeverity = severityFilter === 'all' || data.severity === severityFilter;
       const haystack = [
         data.error_message,
@@ -144,7 +146,7 @@ export default function FailureMonitoringDashboard() {
   const filteredIssues = useMemo(() => {
     const q = search.trim().toLowerCase();
     return issues.filter((issue) => {
-      const data = issue.data || {};
+      const data = issue;
       const matchesSeverity = severityFilter === 'all' || data.severity === severityFilter;
       const matchesStatus = issueStatusFilter === 'all' || data.status === issueStatusFilter;
       const haystack = [
@@ -160,10 +162,10 @@ export default function FailureMonitoringDashboard() {
     });
   }, [issues, search, severityFilter, issueStatusFilter, restaurantMap]);
 
-  const criticalFailures = failures.filter((f) => (f.data?.severity === 'critical')).length;
-  const refundFailures = failures.filter((f) => String(f.data?.failure_type || '').includes('refund')).length;
-  const openIssues = issues.filter((i) => ['open', 'reviewed', 'escalated'].includes(i.data?.status)).length;
-  const escalatedIssues = issues.filter((i) => i.data?.status === 'escalated' || i.data?.requires_escalation).length;
+  const criticalFailures = failures.filter((f) => f.severity === 'critical').length;
+  const refundFailures = failures.filter((f) => String(f.failure_type || '').includes('refund')).length;
+  const openIssues = issues.filter((i) => ['open', 'reviewed', 'escalated'].includes(i.status)).length;
+  const escalatedIssues = issues.filter((i) => i.status === 'escalated' || i.requires_escalation).length;
 
   const refreshAll = () => {
     refetchFailures();
