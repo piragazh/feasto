@@ -2,7 +2,7 @@
 // This file is typically served from /sw.js via a static file server or special route
 // For now, this is a reference implementation
 
-const CACHE_NAME = 'tablet-dashboard-v1';
+const CACHE_NAME = 'tablet-dashboard-v2';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -14,6 +14,21 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+
+    const url = new URL(event.request.url);
+    const isAppCodeRequest =
+        url.pathname.includes('/src/') ||
+        url.pathname.includes('/node_modules/.vite/') ||
+        url.pathname.endsWith('.js') ||
+        url.pathname.endsWith('.jsx') ||
+        url.pathname.endsWith('.ts') ||
+        url.pathname.endsWith('.tsx') ||
+        url.pathname.endsWith('.mjs');
+
+    if (isAppCodeRequest) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
     
     event.respondWith(
         caches.match(event.request).then((response) => {
