@@ -1,7 +1,7 @@
 /**
  * pages.config.js - Page routing configuration
  * 
- * This file contains the app page registry.
+ * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
  * Pages are auto-registered when you create files in the ./pages/ folder.
  * 
  * THE ONLY EDITABLE VALUE: mainPage
@@ -53,12 +53,10 @@ import { lazy } from 'react';
 import Home from './pages/Home';
 import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminRestaurants from './pages/AdminRestaurants';
-import RestaurantDashboard from './pages/RestaurantDashboard';
-import SuperAdmin from './pages/SuperAdmin';
 
 // Everything else — lazy loaded (split into separate chunks)
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
 const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
@@ -82,8 +80,10 @@ const Orders = lazy(() => import('./pages/Orders'));
 const POSDashboard = lazy(() => import('./pages/POSDashboard'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const PublicFilesManager = lazy(() => import('./pages/PublicFilesManager'));
+const RestaurantDashboard = lazy(() => import('./pages/RestaurantDashboard'));
 const Sitemap = lazy(() => import('./pages/Sitemap'));
 const StaffOnboarding = lazy(() => import('./pages/StaffOnboarding'));
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
 const TableOrder = lazy(() => import('./pages/TableOrder'));
 const TabletDashboard = lazy(() => import('./pages/TabletDashboard'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
