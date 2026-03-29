@@ -1,51 +1,11 @@
 /**
  * pages.config.js - Page routing configuration
- * 
+ *
  * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
  * Pages are auto-registered when you create files in the ./pages/ folder.
- * 
+ *
  * THE ONLY EDITABLE VALUE: mainPage
  * This controls which page is the landing page (shown when users visit the app).
- * 
- * Example file structure:
- * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
- *   
- *   export const PAGES = {
- *       "HomePage": HomePage,
- *       "Dashboard": Dashboard,
- *       "Settings": Settings,
- *   }
- *   
- *   export const pagesConfig = {
- *       mainPage: "HomePage",
- *       Pages: PAGES,
- *   };
- * 
- * Example with Layout (wraps all pages):
- *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
- *   import __Layout from './Layout.jsx';
- *
- *   export const PAGES = {
- *       "Home": Home,
- *       "Settings": Settings,
- *   }
- *
- *   export const pagesConfig = {
- *       mainPage: "Home",
- *       Pages: PAGES,
- *       Layout: __Layout,
- *   };
- *
- * To change the main page from HomePage to Dashboard, use find_replace:
- *   Old: mainPage: "HomePage",
- *   New: mainPage: "Dashboard",
- *
- * The mainPage value must match a key in the PAGES object exactly.
  */
 import { lazy } from 'react';
 
@@ -57,9 +17,6 @@ import AdminDashboardPage from './pages/AdminDashboard';
 import AdminRestaurantsPage from './pages/AdminRestaurants';
 
 // Everything else — lazy loaded (split into separate chunks)
-// Admin pages loaded eagerly to avoid chunk-load failures
-const AdminDashboard = AdminDashboardPage;
-const AdminRestaurants = AdminRestaurantsPage;
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
 const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
@@ -94,48 +51,50 @@ const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 
 import __Layout from './Layout.jsx';
 
+const AdminDashboard = AdminDashboardPage;
+const AdminRestaurants = AdminRestaurantsPage;
 
 export const PAGES = {
-    "AdminDashboard": AdminDashboard,
-    "AdminRestaurants": AdminRestaurants,
-    "Checkout": Checkout,
-    "CookiesPolicy": CookiesPolicy,
-    "CustomerDisplay": CustomerDisplay,
-    "CustomerProfile": CustomerProfile,
-    "DriverApp": DriverApp,
-    "DriverDashboard": DriverDashboard,
-    "Favorites": Favorites,
-    "GoogleMenu": GoogleMenu,
-    "GroupOrder": GroupOrder,
-    "Home": Home,
-    "KioskDashboard": KioskDashboard,
-    "KitchenDisplay": KitchenDisplay,
-    "LoyaltyProgram": LoyaltyProgram,
-    "ManageCoupons": ManageCoupons,
-    "ManageRestaurantManagers": ManageRestaurantManagers,
-    "MediaLibrary": MediaLibrary,
-    "MediaScreen": MediaScreen,
-    "MediaScreenManagement": MediaScreenManagement,
-    "Messages": Messages,
-    "NotFound": NotFound,
-    "OrderHistory": OrderHistory,
-    "Orders": Orders,
-    "POSDashboard": POSDashboard,
-    "PrivacyPolicy": PrivacyPolicy,
-    "PublicFilesManager": PublicFilesManager,
-    "Restaurant": Restaurant,
-    "RestaurantDashboard": RestaurantDashboard,
-    "Sitemap": Sitemap,
-    "StaffOnboarding": StaffOnboarding,
-    "SuperAdmin": SuperAdmin,
-    "TableOrder": TableOrder,
-    "TabletDashboard": TabletDashboard,
-    "TermsOfService": TermsOfService,
-    "TrackOrder": TrackOrder,
-}
+  "AdminDashboard": AdminDashboard,
+  "AdminRestaurants": AdminRestaurants,
+  "Checkout": Checkout,
+  "CookiesPolicy": CookiesPolicy,
+  "CustomerDisplay": CustomerDisplay,
+  "CustomerProfile": CustomerProfile,
+  "DriverApp": DriverApp,
+  "DriverDashboard": DriverDashboard,
+  "Favorites": Favorites,
+  "GoogleMenu": GoogleMenu,
+  "GroupOrder": GroupOrder,
+  "Home": Home,
+  "KioskDashboard": KioskDashboard,
+  "KitchenDisplay": KitchenDisplay,
+  "LoyaltyProgram": LoyaltyProgram,
+  "ManageCoupons": ManageCoupons,
+  "ManageRestaurantManagers": ManageRestaurantManagers,
+  "MediaLibrary": MediaLibrary,
+  "MediaScreen": MediaScreen,
+  "MediaScreenManagement": MediaScreenManagement,
+  "Messages": Messages,
+  "NotFound": NotFound,
+  "OrderHistory": OrderHistory,
+  "Orders": Orders,
+  "POSDashboard": POSDashboard,
+  "PrivacyPolicy": PrivacyPolicy,
+  "PublicFilesManager": PublicFilesManager,
+  "Restaurant": Restaurant,
+  "RestaurantDashboard": RestaurantDashboard,
+  "Sitemap": Sitemap,
+  "StaffOnboarding": StaffOnboarding,
+  "SuperAdmin": SuperAdmin,
+  "TableOrder": TableOrder,
+  "TabletDashboard": TabletDashboard,
+  "TermsOfService": TermsOfService,
+  "TrackOrder": TrackOrder,
+};
 
 export const pagesConfig = {
-    mainPage: "Home",
-    Pages: PAGES,
-    Layout: __Layout,
+  mainPage: "Home",
+  Pages: PAGES,
+  Layout: __Layout,
 };
