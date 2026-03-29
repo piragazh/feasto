@@ -42,6 +42,11 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             const paramId = urlParams.get('id');
             const customId = sessionStorage.getItem('customDomainRestaurantId');
             const nextId = propRestaurantId || customId || paramId;
+
+            if ((window.location.pathname === '/' || /^\/restaurant$/i.test(window.location.pathname)) && nextId) {
+                sessionStorage.setItem('customDomainRestaurantId', nextId);
+            }
+
             setRestaurantId((prev) => (prev === nextId ? prev : nextId));
         };
 
@@ -128,7 +133,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
     const handleKeepOldCart = () => {
         setShowCartConflictDialog(false);
-        navigate(createPageUrl('Home'));
+        navigate(sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home'));
     };
 
     const handleStartNewCart = () => {
@@ -645,6 +650,12 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
     const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    useEffect(() => {
+        if (restaurantId && (window.location.pathname === '/' || /^\/restaurant$/i.test(window.location.pathname))) {
+            sessionStorage.setItem('customDomainRestaurantId', restaurantId);
+        }
+    }, [restaurantId]);
 
     // SEO Meta Tags - must be before any conditional returns
     useEffect(() => {
