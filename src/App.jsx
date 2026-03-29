@@ -213,7 +213,18 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
     <NavigationStackProvider>
       <StackNavigationAnimator>
         <Routes>
-           <Route path="/" element={<CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />} />
+           <Route
+            path="/"
+            element={customDomainRestaurantId ? (
+              <CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />
+            ) : (
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <LayoutWrapper currentPageName="Home">
+                  <Pages.Home />
+                </LayoutWrapper>
+              </Suspense>
+            )}
+          />
           {Object.entries(Pages).map(([path, Page]) => {
             if (path.toLowerCase() === 'home') {
               return null;
