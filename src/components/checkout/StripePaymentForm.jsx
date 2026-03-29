@@ -12,13 +12,11 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [formValid, setFormValid] = useState(false);
     // Local ref for manual card submit dedup
     const submitFiredRef = useRef(false);
-    // FIX #6: Capture the clientSecret at render time (component is re-keyed on rotation)
+    // Capture the clientSecret at mount time (component is re-keyed on rotation)
     const clientSecretAtMountRef = useRef(clientSecret);
     const expressCheckoutEnabled = useExpressCheckoutFlag();
-    // ISSUE #3 FIX: Track PI creation time to warn if expired (>10 min)
     const piCreatedAtMsRef = useRef(Date.now());
 
     useEffect(() => {
@@ -26,9 +24,8 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
         checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret, expressCheckoutEnabled });
     }, [clientSecret, stripe, elements, expressCheckoutEnabled]);
     
-    // ISSUE #3: Warn if PI older than 10 minutes
     const piAgeMs = Date.now() - piCreatedAtMsRef.current;
-    const piExpired = piAgeMs > 600_000; // 10 minutes
+    const piExpired = piAgeMs > 600_000;
 
     const handleSubmit = async (e) => {
         if (e) {
@@ -50,92 +47,74 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
         if (!stripe || !elements) {
             console.log('🔴 Stripe not ready');
             setErrorMessage('Payment system not ready. Please wait a moment.');
-            setIsProcessing(false);
             submitFiredRef.current = false;
             return false;
         }
 
+        if (!isFormComplete) {
+            console.log('🔴 Form incomplete');
+            setErrorMessage('Please complete all card details before paying.');
+            submitFiredRef.current = false;
+            return false;
+        }
+
+        const secretToUse = clientSecretAtMountRef.current || clientSecret;
+        if (!secretToUse) {
+            console.log('🔴 No clientSecret available');
+            setErrorMessage('Payment session expired. Please refresh and try again.');
+            submitFiredRef.current = false;
+            return false;
+        }
 
         setIsProcessing(true);
 
         try {
-            // CRITICAL: Ensure form is complete before submission
-            if (!isFormComplete) {
-                console.log('🔴 Form incomplete');
-                setErrorMessage('Please complete all card details');
-                setIsProcessing(false);
-                submitFiredRef.current = false;
-                return false;
-            }
-
-            console.log('🔵 Submitting payment elements...');
-            const { error: submitError } = await elements.submit();
-            if (submitError) {
-                console.log('🔴 Submit error:', submitError);
-                const userMsg = submitError.code === 'generic_decline' 
-                    ? 'Card validation failed. Please check your card details and try again.'
-                    : (submitError.message || 'Please complete all payment fields correctly');
-                setErrorMessage(userMsg);
-                setIsProcessing(false);
-                submitFiredRef.current = false; // BUG FIX: unlock so user can retry after form error
-                return false;
-            }
-            
-            if (!clientSecret) {
-                console.log('🔴 No clientSecret available');
-                setErrorMessage('Payment session expired. Please refresh and try again.');
-                setIsProcessing(false);
-                submitFiredRef.current = false;
-                return false;
-            }
-
-            console.log('🔵 Confirming payment with clientSecret:', clientSecret?.slice(0, 20) + '...');
-            // FIX #6: Use the clientSecret captured at mount time (not the closure value which may be stale)
-            const secretToUse = clientSecretAtMountRef.current || clientSecret;
+            // CORRECT STRIPE FLOW: For Elements initialized with clientSecret (deferred intent),
+            // call confirmPayment directly — it handles submit + confirm in one step.
+            // DO NOT call elements.submit() separately — it causes validation_error/generic_decline.
+            console.log('🔵 Confirming payment with Stripe...');
             const result = await stripe.confirmPayment({
                 elements,
                 clientSecret: secretToUse,
                 redirect: 'if_required',
                 confirmParams: {
-                    return_url: `${window.location.protocol}//${window.location.host}/checkout`
+                    return_url: `${window.location.protocol}//${window.location.host}/Checkout`
                 }
             });
 
-            console.log('🔵 Payment result:', result);
-            
-            if (result.paymentIntent && result.paymentIntent.amount !== Math.round(amount * 100)) {
-                console.warn('[StripePaymentForm] [TEMP] Amount mismatch bypassed after confirm', {
-                    expected: Math.round(amount * 100),
-                    actual: result.paymentIntent.amount
-                });
-                checkoutTrace.log('confirm_payment_amount_mismatch_bypassed', {
-                    expectedAmount: Math.round(amount * 100),
-                    actualAmount: result.paymentIntent.amount,
-                    piId: result.paymentIntent?.id
-                });
-            }
+            console.log('🔵 Payment result:', result?.paymentIntent?.status, result?.error?.code);
 
             if (result.error) {
-                console.log('🔴 Payment error:', result.error);
-                let msg = result.error.message || 'Payment failed. Please check your card details and try again.';
+                console.log('🔴 Payment error:', result.error.code, result.error.message);
+                checkoutTrace.error('confirm_payment_error', { code: result.error.code, type: result.error.type });
                 
-                if (result.error.type === 'card_error') {
-                    if (result.error.code === 'card_declined') {
+                let msg = result.error.message || 'Payment failed. Please check your card details and try again.';
+                const code = result.error.code;
+                const type = result.error.type;
+
+                if (type === 'card_error' || type === 'validation_error') {
+                    if (code === 'card_declined' || code === 'generic_decline') {
                         msg = 'Your card was declined. Please try a different card or contact your bank.';
-                    } else if (result.error.code === 'insufficient_funds') {
+                    } else if (code === 'insufficient_funds') {
                         msg = 'Insufficient funds. Please use a different payment method.';
-                    } else if (result.error.code === 'expired_card') {
+                    } else if (code === 'expired_card') {
                         msg = 'Your card has expired. Please use a different card.';
-                    } else if (result.error.code === 'incorrect_cvc') {
+                    } else if (code === 'incorrect_cvc') {
                         msg = 'Incorrect security code (CVC). Please check and try again.';
-                    } else if (result.error.code === 'incorrect_number') {
+                    } else if (code === 'incorrect_number') {
                         msg = 'Invalid card number. Please check and try again.';
+                    } else if (code === 'incomplete_number') {
+                        msg = 'Please enter your complete card number.';
+                    } else if (code === 'incomplete_expiry') {
+                        msg = 'Please enter your card expiry date.';
+                    } else if (code === 'incomplete_cvc') {
+                        msg = 'Please enter your card security code (CVC).';
                     }
                 }
                 
                 setErrorMessage(msg);
                 setIsProcessing(false);
-                submitFiredRef.current = false; // Unlock on failure
+                submitFiredRef.current = false;
                 return false;
             }
             
