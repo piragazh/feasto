@@ -11,9 +11,13 @@ export default function PersonalizedRecommendations({ restaurants }) {
     const [recommendations, setRecommendations] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
-    const { data: user } = useQuery({
+    const { data: user = null } = useQuery({
         queryKey: ['current-user'],
-        queryFn: () => base44.auth.me(),
+        queryFn: async () => {
+            const authenticated = await base44.auth.isAuthenticated();
+            if (!authenticated) return null;
+            return base44.auth.me();
+        },
     });
 
     const { data: orders = [] } = useQuery({
@@ -23,12 +27,12 @@ export default function PersonalizedRecommendations({ restaurants }) {
     });
 
     const { data: reviews = [] } = useQuery({
-        queryKey: ['user-reviews-for-ai'],
+        queryKey: ['user-reviews-for-ai', user?.email],
         queryFn: async () => {
-            const userEmail = (await base44.auth.me()).email;
-            return base44.entities.Review.filter({ created_by: userEmail });
+            if (!user?.email) return [];
+            return base44.entities.Review.filter({ created_by: user.email });
         },
-        enabled: !!user,
+        enabled: !!user?.email,
     });
 
     useEffect(() => {

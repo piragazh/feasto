@@ -517,6 +517,7 @@ export default function Checkout() {
     const [stripeLoadedPromise, setStripeLoadedPromise] = useState(null);
     const [initializingPayment, setInitializingPayment] = useState(false);
     const [paymentSessionKey, setPaymentSessionKey] = useState(() => `ps_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
+    const showStripeForm = paymentMethod === 'card';
 
     const resetPaymentState = () => {
         setClientSecret('');

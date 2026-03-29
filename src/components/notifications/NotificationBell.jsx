@@ -24,11 +24,12 @@ export default function NotificationBell({ userEmail }) {
     const { data: settings } = useQuery({
         queryKey: ['notification-sound-setting'],
         queryFn: async () => {
-            const result = await base44.asServiceRole.entities.SystemSettings.filter({ 
+            const result = await base44.entities.SystemSettings.filter({ 
                 setting_key: 'notification_sound_url' 
             });
             return result?.[0] || null;
-        }
+        },
+        enabled: !!userEmail
     });
 
     const markAsReadMutation = useMutation({
