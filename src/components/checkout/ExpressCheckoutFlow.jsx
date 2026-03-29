@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ExpressCheckoutElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Card } from "@/components/ui/card";
 import { Loader2, Smartphone } from 'lucide-react';
@@ -20,6 +20,11 @@ export default function ExpressCheckoutFlow({ amount, onSuccess, onError, client
     const loadingTimeoutRef = useRef(null);
     const confirmFiredRef = useRef(false);
     const clientSecretRef = useRef(clientSecret);
+
+    // Sync clientSecret ref on prop change (handles price/coupon updates)
+    useEffect(() => {
+        clientSecretRef.current = clientSecret;
+    }, [clientSecret]);
 
     if (!stripe || !elements || !clientSecret) {
         return null;
