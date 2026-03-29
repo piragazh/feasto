@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
@@ -96,29 +96,33 @@ class LayoutErrorBoundary extends React.Component {
 export default function Layout({ children, currentPageName }) {
     const location = useLocation();
     const navigate = useNavigate();
-    const [isPending, startTransition] = useTransition();
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
     
     // Read customDomainRestaurantId from sessionStorage in state (not top-level render)
     // to avoid synchronous render-time reads that can cause React update conflicts (#426)
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(() =>
-        sessionStorage.getItem('customDomainRestaurantId') || null
-    );
+    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
-    // Re-sync from sessionStorage when location changes (DomainChecker may have updated it)
-    // CRITICAL FIX #426: Wrap state update in startTransition to prevent synchronous
-    // suspension during input handling. Navigation is synchronous input, but the
-    // state update and subsequent query should be marked as non-urgent transitions.
     useEffect(() => {
-        const id = sessionStorage.getItem('customDomainRestaurantId');
-        if (id !== customDomainRestaurantId) {
-            startTransition(() => {
-                setCustomDomainRestaurantId(id || null);
-            });
-        }
-    }, [location.pathname, customDomainRestaurantId]);
+        setCustomDomainRestaurantId(sessionStorage.getItem('customDomainRestaurantId') || null);
+    }, []);
+
+    useEffect(() => {
+        const syncCustomDomainRestaurant = () => {
+            const id = sessionStorage.getItem('customDomainRestaurantId') || null;
+            setCustomDomainRestaurantId((prev) => (prev === id ? prev : id));
+        };
+
+        syncCustomDomainRestaurant();
+        window.addEventListener('storage', syncCustomDomainRestaurant);
+        window.addEventListener('focus', syncCustomDomainRestaurant);
+
+        return () => {
+            window.removeEventListener('storage', syncCustomDomainRestaurant);
+            window.removeEventListener('focus', syncCustomDomainRestaurant);
+        };
+    }, []);
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
