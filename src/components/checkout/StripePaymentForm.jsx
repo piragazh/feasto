@@ -18,13 +18,15 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const clientSecretAtMountRef = useRef(clientSecret);
     const expressCheckoutEnabled = useExpressCheckoutFlag();
     // ISSUE #3 FIX: Track PI creation time to warn if expired (>10 min)
-    const [piCreatedAtMs] = useState(() => {
+    const piCreatedAtMsRef = useRef(Date.now());
+
+    useEffect(() => {
+        piCreatedAtMsRef.current = Date.now();
         checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret, expressCheckoutEnabled });
-        return Date.now();
-    });
+    }, [clientSecret, stripe, elements, expressCheckoutEnabled]);
     
     // ISSUE #3: Warn if PI older than 10 minutes
-    const piAgeMs = Date.now() - piCreatedAtMs;
+    const piAgeMs = Date.now() - piCreatedAtMsRef.current;
     const piExpired = piAgeMs > 600_000; // 10 minutes
 
     const handleSubmit = async (e) => {
@@ -81,6 +83,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 console.log('🔴 No clientSecret available');
                 setErrorMessage('Payment session expired. Please refresh and try again.');
                 setIsProcessing(false);
+                submitFiredRef.current = false;
                 return false;
             }
 

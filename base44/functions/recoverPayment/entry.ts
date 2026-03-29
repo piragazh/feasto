@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
 
         // Determine recovery_status based on terminal vs replayable
         let recoveryStatus = 'replayable';
-        const terminalCodes = ['ITEM_NOT_FOUND', 'ITEM_UNAVAILABLE', 'RESTAURANT_CLOSED', 'DELIVERY_UNAVAILABLE'];
+        const terminalCodes = ['ITEM_NOT_FOUND', 'ITEM_UNAVAILABLE', 'RESTAURANT_CLOSED', 'RESTAURANT_CLOSED_TODAY', 'OUTSIDE_OPENING_HOURS', 'OUTSIDE_DELIVERY_ZONE', 'INVALID_COORDINATES', 'BELOW_MINIMUM_ORDER', 'COUPON_INVALID', 'COUPON_LIMIT_EXCEEDED', 'NON_STACKABLE_COUPONS', 'TOO_MANY_COUPONS', 'DUPLICATE_COUPON_CODES', 'ALREADY_REFUNDED', 'NEEDS_REVIEW'];
         if (refunded || terminalCodes.includes(code)) {
             recoveryStatus = refunded ? 'terminal_refunded' : 'terminal_manual_review';
         }

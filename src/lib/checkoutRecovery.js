@@ -47,6 +47,24 @@ export function handleRecoveryResult(result) {
         return { orderPlaced: false, recoveryError: null };
     }
 
+    if (result?.recovery_status === 'terminal_refunded') {
+        pendingPayment.clear();
+        return {
+            orderPlaced: false,
+            recoveryError: result?.error || 'Your payment was refunded. Please place a new order.',
+        };
+    }
+
+    if (result?.recovery_status === 'terminal_manual_review' || result?.recovery_status === 'terminal_invalid_payload') {
+        pendingPayment.setTerminalStatus('terminal_manual_review');
+        return {
+            orderPlaced: false,
+            recoveryError:
+                result?.error ||
+                'We could not complete recovery automatically. Please check your orders page or contact support.',
+        };
+    }
+
     // ── Non-terminal recovery failure — enforce retry limit ────────────────────
     // recordAttempt() increments the counter and returns true while under the limit.
     const canRetry = pendingPayment.recordAttempt();
