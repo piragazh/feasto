@@ -365,24 +365,28 @@ export function usePaymentInit({
                     const rawMsg = response?.data?.error || 'Failed to initialize payment.';
                     const userMsg = getPaymentErrorMessage(errorCode, rawMsg);
 
-                    // CRITICAL FIX: On idempotency conflict, rotate session key immediately
-                    // so next retry uses a fresh key and doesn't hit the same conflict
+                    checkoutTrace.error('create_payment_intent_failed', { code: errorCode, error: rawMsg });
+                    console.error('[usePaymentInit] ❌ PI failed:', errorCode, rawMsg);
+                    
+                    // CRITICAL FIX: On idempotency conflict, rotate key and reset fingerprint
+                    // so Effect 1 detects mismatch and triggers Effect 2 retry with fresh key
                     if (errorCode === 'STRIPE_IDEMPOTENCY_CONFLICT') {
                         const oldKey = sessionKeyRef.current;
                         const newKey = generateSessionKey();
                         sessionKeyRef.current = newKey;
                         idempotencyKeyRef.current = newKey;
-                        console.log('[usePaymentInit] Idempotency conflict — rotated key:', oldKey, '→', newKey);
+                        // CRITICAL: Reset fingerprint to trigger Effect 1, which resets state and allows Effect 2 to retry
+                        activeSecretFingerprintRef.current = null;
+                        console.log('[usePaymentInit] Idempotency conflict — rotated key and reset fingerprint:', oldKey, '→', newKey);
                         checkoutTrace.log('idempotency_conflict_key_rotated', { oldKey, newKey });
-                        onPaymentSessionKeyRotated?.(newKey);
+                    } else {
+                        // Non-idempotency errors: just reset state
+                        activeSecretFingerprintRef.current = null;
                     }
 
-                    checkoutTrace.error('create_payment_intent_failed', { code: errorCode, error: rawMsg });
-                    console.error('[usePaymentInit] ❌ PI failed:', errorCode, rawMsg);
                     toast.error(userMsg);
                     setClientSecret('');
                     setShowStripeForm(false);
-                    activeSecretFingerprintRef.current = null;
                 }
             } catch (error) {
                 checkoutTrace.error('create_payment_intent_exception', { error: error.message });
