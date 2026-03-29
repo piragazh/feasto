@@ -365,6 +365,18 @@ export function usePaymentInit({
                     const rawMsg = response?.data?.error || 'Failed to initialize payment.';
                     const userMsg = getPaymentErrorMessage(errorCode, rawMsg);
 
+                    // CRITICAL FIX: On idempotency conflict, rotate session key immediately
+                    // so next retry uses a fresh key and doesn't hit the same conflict
+                    if (errorCode === 'STRIPE_IDEMPOTENCY_CONFLICT') {
+                        const oldKey = sessionKeyRef.current;
+                        const newKey = generateSessionKey();
+                        sessionKeyRef.current = newKey;
+                        idempotencyKeyRef.current = newKey;
+                        console.log('[usePaymentInit] Idempotency conflict — rotated key:', oldKey, '→', newKey);
+                        checkoutTrace.log('idempotency_conflict_key_rotated', { oldKey, newKey });
+                        onPaymentSessionKeyRotated?.(newKey);
+                    }
+
                     checkoutTrace.error('create_payment_intent_failed', { code: errorCode, error: rawMsg });
                     console.error('[usePaymentInit] ❌ PI failed:', errorCode, rawMsg);
                     toast.error(userMsg);
