@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
             const lastmod = restaurant.updated_date || restaurant.created_date;
             
             sitemap += '  <url>\n';
-            sitemap += `    <loc>${baseUrl}/restaurant?id=${restaurant.id}</loc>\n`;
+            sitemap += `    <loc>${baseUrl}/Restaurant?id=${restaurant.id}</loc>\n`;
             if (lastmod) {
                 sitemap += `    <lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>\n`;
             }
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
             
             // Add Google Menu page for each restaurant
             sitemap += '  <url>\n';
-            sitemap += `    <loc>${baseUrl}/googlemenu?id=${restaurant.id}</loc>\n`;
+            sitemap += `    <loc>${baseUrl}/GoogleMenu?id=${restaurant.id}</loc>\n`;
             if (lastmod) {
                 sitemap += `    <lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>\n`;
             }

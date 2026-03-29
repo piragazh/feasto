@@ -11,7 +11,9 @@ import { useQuery } from '@tanstack/react-query';
 import { isWithinInterval } from 'date-fns';
 
 export default function RestaurantCard({ restaurant, distance, showFavoriteButton = true }) {
-    const restaurantUrl = `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
+    const restaurantUrl = sessionStorage.getItem('customDomainRestaurantId') === restaurant.id
+        ? '/'
+        : `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userEmail, setUserEmail] = useState(null);

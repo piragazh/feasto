@@ -1255,7 +1255,7 @@ export default function Checkout() {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
-                    <Link to={createPageUrl('Home')}>
+                    <Link to={sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home')}>
                         <Button>Browse Restaurants</Button>
                     </Link>
                 </div>
@@ -1275,9 +1275,10 @@ export default function Checkout() {
                             className="rounded-full"
                             onClick={() => {
                                 if (restaurantId) {
-                                    navigate(createPageUrl('Restaurant') + `?id=${restaurantId}`);
+                                    const isCustomDomainRestaurant = sessionStorage.getItem('customDomainRestaurantId') === restaurantId;
+                                    navigate(isCustomDomainRestaurant ? '/' : createPageUrl('Restaurant') + `?id=${restaurantId}`);
                                 } else {
-                                    navigate(createPageUrl('Home'));
+                                    navigate(sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home'));
                                 }
                             }}
                         >

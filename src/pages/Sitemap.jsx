@@ -30,7 +30,7 @@ export default function Sitemap() {
                 const lastmod = restaurant.updated_date || restaurant.created_date;
 
                 xml += '  <url>\n';
-                xml += `    <loc>${baseUrl}/restaurant?id=${restaurant.id}</loc>\n`;
+                xml += `    <loc>${baseUrl}/Restaurant?id=${restaurant.id}</loc>\n`;
                 if (lastmod) {
                     xml += `    <lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>\n`;
                 }
@@ -40,7 +40,7 @@ export default function Sitemap() {
 
                 // Google Menu
                 xml += '  <url>\n';
-                xml += `    <loc>${baseUrl}/googlemenu?id=${restaurant.id}</loc>\n`;
+                xml += `    <loc>${baseUrl}/GoogleMenu?id=${restaurant.id}</loc>\n`;
                 if (lastmod) {
                     xml += `    <lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>\n`;
                 }
@@ -51,12 +51,12 @@ export default function Sitemap() {
 
             // Static pages
             const staticPages = [
-                { path: '/orders', priority: '0.6' },
-                { path: '/favorites', priority: '0.5' },
-                { path: '/loyaltyprogram', priority: '0.6' },
-                { path: '/privacypolicy', priority: '0.3' },
-                { path: '/termsofservice', priority: '0.3' },
-                { path: '/cookiespolicy', priority: '0.3' }
+                { path: '/Orders', priority: '0.6' },
+                { path: '/Favorites', priority: '0.5' },
+                { path: '/LoyaltyProgram', priority: '0.6' },
+                { path: '/PrivacyPolicy', priority: '0.3' },
+                { path: '/TermsOfService', priority: '0.3' },
+                { path: '/CookiesPolicy', priority: '0.3' }
             ];
 
             for (const page of staticPages) {
