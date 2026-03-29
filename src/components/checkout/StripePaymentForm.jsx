@@ -12,6 +12,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const [isProcessing, setIsProcessing] = useState(false);
     const [isFormComplete, setIsFormComplete] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [formValid, setFormValid] = useState(false);
     // Local ref for manual card submit dedup
     const submitFiredRef = useRef(false);
     // FIX #6: Capture the clientSecret at render time (component is re-keyed on rotation)
@@ -58,11 +59,23 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
         setIsProcessing(true);
 
         try {
+            // CRITICAL: Ensure form is complete before submission
+            if (!isFormComplete) {
+                console.log('🔴 Form incomplete');
+                setErrorMessage('Please complete all card details');
+                setIsProcessing(false);
+                submitFiredRef.current = false;
+                return false;
+            }
+
             console.log('🔵 Submitting payment elements...');
             const { error: submitError } = await elements.submit();
             if (submitError) {
                 console.log('🔴 Submit error:', submitError);
-                setErrorMessage(submitError.message || 'Please complete all payment fields correctly');
+                const userMsg = submitError.code === 'generic_decline' 
+                    ? 'Card validation failed. Please check your card details and try again.'
+                    : (submitError.message || 'Please complete all payment fields correctly');
+                setErrorMessage(userMsg);
                 setIsProcessing(false);
                 submitFiredRef.current = false; // BUG FIX: unlock so user can retry after form error
                 return false;
@@ -222,7 +235,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!stripe || !elements || isProcessing}
+                disabled={!stripe || !elements || isProcessing || !isFormComplete}
                 className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isProcessing ? (
