@@ -158,13 +158,24 @@ export async function cleanupLegacyServiceWorkers() {
 
     for (const reg of registrations) {
       const swUrl = reg.active?.scriptURL || reg.installing?.scriptURL || reg.waiting?.scriptURL || '';
-
-      // Keep our own /sw.js registration — unregister anything else
       const isOurs = swUrl.endsWith('/sw.js');
+
       if (!isOurs) {
         log('Removing legacy SW:', swUrl);
         await reg.unregister();
+        continue;
       }
+
+      log('Refreshing current SW registration:', swUrl);
+      await reg.unregister();
+    }
+
+    if ('caches' in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => {
+        log('Deleting cache:', key);
+        return caches.delete(key);
+      }));
     }
 
     sessionStorage.setItem('sw_legacy_cleaned', '1');
