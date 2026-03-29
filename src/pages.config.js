@@ -53,9 +53,10 @@ import { lazy } from 'react';
 import Home from './pages/Home';
 import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Everything else — lazy loaded (split into separate chunks)
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+
 const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
