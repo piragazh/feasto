@@ -15,6 +15,7 @@ import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationMod
 import CartDrawer from '@/components/cart/CartDrawer';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -1114,43 +1115,49 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
             {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
-                <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
-                    {/* Image Gallery */}
-                    {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                <RestaurantSectionErrorBoundary sectionName="restaurant-top-sections">
+                    <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
+                        {/* Image Gallery */}
+                        {restaurant.gallery_images && restaurant.gallery_images.length > 0 && (
+                            <div className="mb-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
+                                <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                            </div>
+                        )}
+
+                        {/* Special Offers */}
+                        {restaurant.special_offers && restaurant.special_offers.length > 0 && (
+                            <div className="mb-8">
+                                <SpecialOffers offers={restaurant.special_offers} />
+                            </div>
+                        )}
+
+                        {/* Info Section */}
+                        <InfoSection infoSection={restaurant.info_section} />
+
+                        {/* Active Promotions */}
+                        <ActivePromotionsBanner restaurantId={restaurantId} />
+
+                        {/* Opening Hours */}
                         <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Photos</h2>
-                            <ImageGallery images={restaurant.gallery_images} restaurantName={restaurant.name} />
+                            <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
                         </div>
-                    )}
-
-                    {/* Special Offers */}
-                    {restaurant.special_offers && restaurant.special_offers.length > 0 && (
-                        <div className="mb-8">
-                            <SpecialOffers offers={restaurant.special_offers} />
-                        </div>
-                    )}
-
-                    {/* Info Section */}
-                    <InfoSection infoSection={restaurant.info_section} />
-
-                    {/* Active Promotions */}
-                    <ActivePromotionsBanner restaurantId={restaurantId} />
-
-                    {/* Opening Hours */}
-                    <div className="mb-8">
-                        <OpeningHours openingHours={restaurant.opening_hours} isOpen={restaurant.is_open} />
-                    </div>
-                </Suspense>
+                    </Suspense>
+                </RestaurantSectionErrorBoundary>
 
                 {/* Popular Items */}
-                <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+                <RestaurantSectionErrorBoundary sectionName="popular-items">
+                    <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+                </RestaurantSectionErrorBoundary>
 
                 {/* Meal Deals Section */}
-                <MealDealsSection 
-                    deals={mealDeals}
-                    onAddToCart={addMealDealToCart}
-                    onCustomize={handleCustomizeDeal}
-                />
+                <RestaurantSectionErrorBoundary sectionName="meal-deals">
+                    <MealDealsSection 
+                        deals={mealDeals}
+                        onAddToCart={addMealDealToCart}
+                        onCustomize={handleCustomizeDeal}
+                    />
+                </RestaurantSectionErrorBoundary>
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Full Menu</h2>
 
@@ -1323,17 +1330,19 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     />
                 </Suspense>
 
-                <Suspense fallback={<Skeleton className="h-60 w-full mt-12" />}>
-                    {/* Profile Section (About Us, Story, Awards, Social) */}
-                    <div className="mt-12">
-                        <RestaurantProfileSection restaurant={restaurant} />
-                    </div>
+                <RestaurantSectionErrorBoundary sectionName="restaurant-bottom-sections">
+                    <Suspense fallback={<Skeleton className="h-60 w-full mt-12" />}>
+                        {/* Profile Section (About Us, Story, Awards, Social) */}
+                        <div className="mt-12">
+                            <RestaurantProfileSection restaurant={restaurant} />
+                        </div>
 
-                    {/* Reviews Section */}
-                    <div className="mt-12">
-                        <ReviewsSection restaurantId={restaurantId} />
-                    </div>
-                </Suspense>
+                        {/* Reviews Section */}
+                        <div className="mt-12">
+                            <ReviewsSection restaurantId={restaurantId} />
+                        </div>
+                    </Suspense>
+                </RestaurantSectionErrorBoundary>
                 </div>
 
             {/* Floating Cart Button */}
@@ -1378,11 +1387,13 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 onAddItem={addToCartDirect}
                 />
 
-                <RestaurantInfoDialog
-                    open={showInfoDialog}
-                    onClose={() => setShowInfoDialog(false)}
-                    restaurant={restaurant}
-                />
+                <RestaurantSectionErrorBoundary sectionName="restaurant-info-dialog">
+                    <RestaurantInfoDialog
+                        open={showInfoDialog}
+                        onClose={() => setShowInfoDialog(false)}
+                        restaurant={restaurant}
+                    />
+                </RestaurantSectionErrorBoundary>
 
                 {/* Time Warning Dialog */}
             {showTimeWarning && (
