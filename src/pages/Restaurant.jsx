@@ -651,7 +651,9 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
         try {
             // Title
-            document.title = `${restaurant.name || 'Restaurant'} - MealDrop`;
+            document.title = sessionStorage.getItem('customDomainRestaurantId')
+                ? (restaurant.name || 'Restaurant')
+                : `${restaurant.name || 'Restaurant'} - MealDrop`;
 
             // Meta description
             let metaDescription = document.querySelector('meta[name="description"]');
@@ -886,7 +888,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 <div className="text-center max-w-md">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to load restaurant</h2>
                     <p className="text-gray-600 mb-4">{restaurantError.message || 'Please try again later'}</p>
-                    <Link to={createPageUrl('Home')}>
+                    <Link to={sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home')}>
                         <Button>Go Back Home</Button>
                     </Link>
                 </div>
@@ -908,7 +910,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Restaurant not found</h2>
-                    <Link to={createPageUrl('Home')}>
+                    <Link to={sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home')}>
                         <Button>Go Back Home</Button>
                     </Link>
                 </div>
@@ -961,7 +963,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
                 {/* Top action buttons */}
                 <div className="absolute top-4 left-4 md:left-8 flex gap-2 z-10">
-                    <Link to={createPageUrl('Home')}>
+                    <Link to={sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home')}>
                         <Button size="icon" variant="secondary" className="rounded-full bg-white/90 hover:bg-white shadow-lg h-10 w-10">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>

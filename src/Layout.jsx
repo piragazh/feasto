@@ -202,13 +202,16 @@ export default function Layout({ children, currentPageName }) {
         }
 
         // Set title and meta tags
-        if (customDomainRestaurant?.name) {
-            const titleText = customDomainRestaurant.description 
-                ? `${customDomainRestaurant.name} - ${customDomainRestaurant.description}`
-                : `${customDomainRestaurant.name} - Order Online`;
-            document.title = titleText;
-        } else {
-            document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
+        const isRestaurantPage = currentPageName === 'Restaurant';
+        if (!isRestaurantPage) {
+            if (customDomainRestaurant?.name) {
+                const titleText = customDomainRestaurant.description 
+                    ? `${customDomainRestaurant.name} - ${customDomainRestaurant.description}`
+                    : `${customDomainRestaurant.name} - Order Online`;
+                document.title = titleText;
+            } else {
+                document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
+            }
         }
 
         // Meta description

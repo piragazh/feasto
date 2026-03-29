@@ -21,6 +21,8 @@ const NEVER_CACHE_PATTERNS = [
   /^\/SuperAdmin/i,
   /^\/RestaurantDashboard/i,
   /^\/CustomerDisplay/i,
+  /^\/Restaurant$/i,
+  /^\/Restaurant\//i,
   /^\/src\//,
   /^\/node_modules\/.vite\//,
 ];
