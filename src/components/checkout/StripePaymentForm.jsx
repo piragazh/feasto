@@ -16,7 +16,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
     const submitFiredRef = useRef(false);
     // FIX #6: Capture the clientSecret at render time (component is re-keyed on rotation)
     const clientSecretAtMountRef = useRef(clientSecret);
-    const expressCheckoutEnabled = useExpressCheckoutFlag();
+    const expressCheckoutEnabled = false;
     // ISSUE #3 FIX: Track PI creation time to warn if expired (>10 min)
     const piCreatedAtMsRef = useRef(Date.now());
 
