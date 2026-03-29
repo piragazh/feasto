@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 
@@ -14,28 +14,31 @@ export function PullToRefresh({ onRefresh, children }) {
     const threshold = 60;
     const maxPull = 100;
 
-    const handleTouchStart = (e) => {
+    const handleTouchStart = useCallback((e) => {
         if (window.scrollY === 0) {
             startY.current = e.touches[0].clientY;
             isPulling.current = true;
         }
-    };
+    }, []);
 
-    const handleTouchMove = (e) => {
+    const handleTouchMove = useCallback((e) => {
         if (!isPulling.current || isRefreshing) return;
 
         const currentY = e.touches[0].clientY;
         const distance = currentY - startY.current;
 
         if (distance > 0 && window.scrollY === 0) {
-            setPullDistance(Math.min(distance, maxPull));
+            setPullDistance((prev) => {
+                const nextDistance = Math.min(distance, maxPull);
+                return prev === nextDistance ? prev : nextDistance;
+            });
             if (distance > 8) {
                 e.preventDefault();
             }
         }
-    };
+    }, [isRefreshing]);
 
-    const handleTouchEnd = async () => {
+    const handleTouchEnd = useCallback(async () => {
         if (!isPulling.current || isRefreshing) return;
         
         isPulling.current = false;
@@ -47,7 +50,7 @@ export function PullToRefresh({ onRefresh, children }) {
         
         setPullDistance(0);
         controls.start({ y: 0 });
-    };
+    }, [controls, isRefreshing, pullDistance]);
 
     const handleConfirmRefresh = async () => {
         setShowConfirm(false);
@@ -79,7 +82,7 @@ export function PullToRefresh({ onRefresh, children }) {
             container.removeEventListener('touchmove', handleTouchMove);
             container.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [pullDistance, isRefreshing]);
+    }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
     const rotation = (pullDistance / maxPull) * 360;
     const opacity = Math.min(pullDistance / threshold, 1);
