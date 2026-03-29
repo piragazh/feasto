@@ -35,6 +35,11 @@ const CustomDomainRestaurantRoute = ({ customDomainRestaurantId }) => {
     return <Navigate to="/Home" replace />;
   }
 
+  const normalizedPath = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '/';
+  if (normalizedPath === '/home') {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <LayoutWrapper currentPageName="Restaurant">
       <Restaurant restaurantId={customDomainRestaurantId} />
@@ -249,6 +254,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
             </Suspense>
           } />
           <Route path="/Home" element={<CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />} />
+          <Route path="/home" element={<CustomDomainRestaurantRoute customDomainRestaurantId={customDomainRestaurantId} />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
