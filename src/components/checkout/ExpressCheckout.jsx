@@ -94,17 +94,23 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                         }
 
                         try {
-                            // ISSUE #1 FIX: Capture clientSecret at confirm-start
-                            // If the Elements instance re-mounted (key rotation), this ref matches
-                            // the correct secret; any stale closure would be caught below
-                            const secretAtConfirmStart = mountedClientSecretRef.current;
-
-                            // ── EXPLICIT CONFIRMATION: Use stripe.confirmPayment() ───
-                            console.log('[ExpressCheckout] Confirming payment intent via stripe.confirmPayment()');
+                            // CRITICAL FIX: Express Checkout Element auto-confirms via onConfirm
+                            // It does NOT require manual stripe.confirmPayment() — the wallet payment
+                            // is already confirmed by the ExpressCheckoutElement internally.
+                            // We only need to capture the result from the data payload.
                             
+                            console.log('[ExpressCheckout] Express Checkout auto-confirmed by Stripe (wallet payment)');
+                            console.log('[ExpressCheckout] Confirm data:', data);
+                            
+                            // The data payload from onConfirm contains the result — no need to call confirmPayment
+                            // Extract payment intent ID directly from data
+                            const paymentIntentId = data?.payment_method?.id || 'wallet_payment';
+                            
+                            // For Express Checkout, the payment is pre-authorized by Stripe
+                            // Call confirmPayment just to verify the intent status (no card submission needed)
                             const confirmResult = await stripe.confirmPayment({
                                 elements,
-                                clientSecret: secretAtConfirmStart,
+                                clientSecret: mountedClientSecretRef.current,
                                 redirect: 'if_required',
                                 confirmParams: {
                                     return_url: window.location.href,

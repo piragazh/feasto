@@ -179,27 +179,34 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 </div>
             )}
             {expressCheckoutEnabled && amount && clientSecret && !isFormComplete && (
-                <ExpressCheckout
-                    key={clientSecret}
-                    amount={amount}
-                    clientSecret={clientSecret}
-                    expressConfirmFiredRef={expressConfirmFiredRef}
-                    onSuccess={(paymentIntentId) => {
-                        console.log('[StripePaymentForm] Express Checkout success, calling onSuccess()');
-                        onSuccess(paymentIntentId);
-                    }}
-                    onError={(error) => {
-                        console.log('[StripePaymentForm] Express Checkout error:', error);
-                        setErrorMessage(String(error || 'Payment failed'));
-                        setIsProcessing(false);
-                    }}
-                    disabled={isProcessing}
-                />
+                <>
+                    <ExpressCheckout
+                        key={clientSecret}
+                        amount={amount}
+                        clientSecret={clientSecret}
+                        expressConfirmFiredRef={expressConfirmFiredRef}
+                        onSuccess={(paymentIntentId) => {
+                            console.log('[StripePaymentForm] Express Checkout success, calling onSuccess()');
+                            onSuccess(paymentIntentId);
+                        }}
+                        onError={(error) => {
+                            console.log('[StripePaymentForm] Express Checkout error:', error);
+                            setErrorMessage(String(error || 'Payment failed'));
+                            setIsProcessing(false);
+                        }}
+                        disabled={isProcessing}
+                    />
+                    <div className="flex items-center gap-2 my-4">
+                        <div className="flex-1 border-t border-gray-300"></div>
+                        <span className="text-xs text-gray-500 font-medium">OR</span>
+                        <div className="flex-1 border-t border-gray-300"></div>
+                    </div>
+                </>
             )}
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
-                    🔒 Enter your card details below to complete payment
+                    🔒 {expressCheckoutEnabled && !isFormComplete ? 'OR enter' : 'Enter'} your card details to complete payment
                 </p>
             </div>
             
