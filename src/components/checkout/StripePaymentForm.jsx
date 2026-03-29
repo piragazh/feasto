@@ -69,9 +69,26 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
         setIsProcessing(true);
 
         try {
-            // CORRECT STRIPE FLOW: For Elements initialized with clientSecret (deferred intent),
-            // call confirmPayment directly — it handles submit + confirm in one step.
-            // DO NOT call elements.submit() separately — it causes validation_error/generic_decline.
+            // CORRECT STRIPE FLOW (Deferred Intent Pattern):
+            // 1. Call elements.submit() FIRST to validate card and prepare data
+            // 2. Then call stripe.confirmPayment() to confirm with prepared data
+            // This order is REQUIRED by Stripe for deferred intent pattern
+            console.log('🔵 Submitting payment elements for validation...');
+            const { error: submitError } = await elements.submit();
+            
+            if (submitError) {
+                console.log('🔴 Element validation error:', submitError);
+                checkoutTrace.error('element_submit_error', { code: submitError.code, message: submitError.message });
+                const msg = submitError.code === 'incomplete_number' ? 'Please enter your complete card number.'
+                    : submitError.code === 'incomplete_expiry' ? 'Please enter your card expiry date.'
+                    : submitError.code === 'incomplete_cvc' ? 'Please enter your card security code (CVC).'
+                    : submitError.message || 'Card validation failed. Please check and try again.';
+                setErrorMessage(msg);
+                setIsProcessing(false);
+                submitFiredRef.current = false;
+                return false;
+            }
+
             console.log('🔵 Confirming payment with Stripe...');
             const result = await stripe.confirmPayment({
                 elements,
