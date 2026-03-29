@@ -49,7 +49,7 @@ const TabletDashboard = lazy(() => import('./pages/TabletDashboard'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 
-import __Layout from './Layout.jsx';
+import __Layout from './layout.jsx';
 
 const AdminDashboard = AdminDashboardPage;
 const AdminRestaurants = AdminRestaurantsPage;
