@@ -1824,55 +1824,59 @@ export default function Checkout() {
 
                             {(paymentMethod === 'card') && showStripeForm && clientSecret ? (
                                 <div className="space-y-6">
-                                    <ExpressCheckoutFlow
-                                        amount={total}
-                                        clientSecret={clientSecret}
-                                        onSuccess={handleStripeSuccess}
-                                        onError={(error) => {
-                                            toast.error(String(error || 'Wallet payment failed'));
-                                        }}
-                                    />
+                                    {stripeLoadedPromise && clientSecret ? (
+                                        <>
+                                            {/* Express Checkout (wallets) — own Elements wrapper */}
+                                            <Elements
+                                                key={`express_${clientSecret}`}
+                                                stripe={stripeLoadedPromise}
+                                                options={{ clientSecret, appearance: { theme: 'stripe' } }}
+                                            >
+                                                <ExpressCheckoutFlow
+                                                    amount={total}
+                                                    clientSecret={clientSecret}
+                                                    onSuccess={handleStripeSuccess}
+                                                    onError={(error) => {
+                                                        toast.error(String(error || 'Wallet payment failed'));
+                                                    }}
+                                                />
+                                            </Elements>
 
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 border-t border-gray-300"></div>
-                                        <span className="text-xs text-gray-500 font-medium">OR</span>
-                                        <div className="flex-1 border-t border-gray-300"></div>
-                                    </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 border-t border-gray-300"></div>
+                                                <span className="text-xs text-gray-500 font-medium">OR PAY BY CARD</span>
+                                                <div className="flex-1 border-t border-gray-300"></div>
+                                            </div>
 
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>💳 Card Payment</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {stripeLoadedPromise && clientSecret ? (
-                                                <Elements 
-                                                   key={clientSecret}
-                                                   stripe={stripeLoadedPromise} 
-                                                   options={{ 
-                                                       clientSecret,
-                                                       appearance: {
-                                                           theme: 'stripe'
-                                                       },
-                                                       loader: 'auto'
-                                                   }}
-                                                >
-                                                    <StripePaymentForm
-                                                        amount={total}
-                                                        clientSecret={clientSecret}
-                                                        onSuccess={handleStripeSuccess}
-                                                        expressConfirmFiredRef={expressConfirmFiredRef}
-                                                        sessionKeyAtFormRender={getSessionKey()}
-                                                        getSessionKey={getSessionKey}
-                                                    />
-                                                </Elements>
-                                            ) : (
-                                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Preparing payment form...
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                            {/* Card payment — own Elements wrapper */}
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>💳 Card Payment</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <Elements
+                                                        key={`card_${clientSecret}`}
+                                                        stripe={stripeLoadedPromise}
+                                                        options={{ clientSecret, appearance: { theme: 'stripe' }, loader: 'auto' }}
+                                                    >
+                                                        <StripePaymentForm
+                                                            amount={total}
+                                                            clientSecret={clientSecret}
+                                                            onSuccess={handleStripeSuccess}
+                                                            expressConfirmFiredRef={expressConfirmFiredRef}
+                                                            sessionKeyAtFormRender={getSessionKey()}
+                                                            getSessionKey={getSessionKey}
+                                                        />
+                                                    </Elements>
+                                                </CardContent>
+                                            </Card>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Preparing payment form...
+                                        </div>
+                                    )}
                                 </div>
                             ) : paymentMethod === 'cash' ? (
                                 <Button
