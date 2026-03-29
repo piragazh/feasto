@@ -79,7 +79,6 @@ const Orders = lazy(() => import('./pages/Orders'));
 const POSDashboard = lazy(() => import('./pages/POSDashboard'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const PublicFilesManager = lazy(() => import('./pages/PublicFilesManager'));
-const RestaurantDashboard = lazy(() => import('./pages/RestaurantDashboard'));
 const Sitemap = lazy(() => import('./pages/Sitemap'));
 const StaffOnboarding = lazy(() => import('./pages/StaffOnboarding'));
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
@@ -119,7 +118,6 @@ export const PAGES = {
     "PrivacyPolicy": PrivacyPolicy,
     "PublicFilesManager": PublicFilesManager,
     "Restaurant": Restaurant,
-    "RestaurantDashboard": RestaurantDashboard,
     "Sitemap": Sitemap,
     "StaffOnboarding": StaffOnboarding,
     "SuperAdmin": SuperAdmin,
