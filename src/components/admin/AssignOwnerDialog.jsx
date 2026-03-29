@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { toast } from 'sonner';
 
-export default function AssignOwnerDialog({ open, onClose, restaurant, users }) {
+export default function AssignOwnerDialog({ open, onClose, restaurant, users = [] }) {
     const [assignmentType, setAssignmentType] = useState('existing');
     const [selectedUserId, setSelectedUserId] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
@@ -43,7 +43,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
             const managerRecords = await base44.entities.RestaurantManager.filter({ user_email: userToAssign.email });
             if (managerRecords.length > 0) {
                 const manager = managerRecords[0];
-                const updatedRestaurantIds = [...new Set([...manager.restaurant_ids, restaurantId])];
+                const updatedRestaurantIds = [...new Set([...(manager.restaurant_ids || []), restaurantId])];
                 await base44.entities.RestaurantManager.update(manager.id, {
                     restaurant_ids: updatedRestaurantIds,
                     full_name: userToAssign.full_name || userToAssign.email,
@@ -126,7 +126,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users }) 
         mutationFn: async ({ managerId, restaurantId }) => {
             const manager = await base44.entities.RestaurantManager.filter({ id: managerId });
             if (manager.length > 0) {
-                const updatedRestaurantIds = manager[0].restaurant_ids.filter(id => id !== restaurantId);
+                const updatedRestaurantIds = (manager[0].restaurant_ids || []).filter(id => id !== restaurantId);
                 if (updatedRestaurantIds.length === 0) {
                     await base44.entities.RestaurantManager.delete(managerId);
                 } else {
