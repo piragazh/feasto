@@ -12,7 +12,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // Note: loadStripe and Stripe singleton are now in hooks/usePaymentInit.js
 import { base44 } from '@/api/base44Client'; // SDK to interact with backend
 import { useNavigate, Link } from 'react-router-dom'; // Navigation tools
-import { createPageUrl } from '@/utils'; // Helper to create page URLs
+import { createPageUrl } from '@/utils/index.ts'; // Helper to create page URLs
 import { calculateDeliveryDetails } from '@/components/checkout/DeliveryZoneCalculator'; // Check delivery zones
 import { Button } from "@/components/ui/button"; // UI Components
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ import { toast } from 'sonner'; // Toast notifications
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
-import { useSEO } from '@/lib/useSEO';
+import { useSEO } from '@/lib/useSEO.js';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { usePaymentInit } from '@/hooks/usePaymentInit';
 import { pendingPayment } from '@/lib/pendingPayment';

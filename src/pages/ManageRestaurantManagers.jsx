@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, UserCheck, Building } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils/index.ts';
 
 export default function ManageRestaurantManagers() {
     const navigate = useNavigate();
@@ -122,12 +123,6 @@ export default function ManageRestaurantManagers() {
         }));
     };
 
-    const getRestaurantNames = (restaurantIds) => {
-        return restaurantIds
-            .map(id => restaurants.find(r => r.id === id)?.name)
-            .filter(Boolean)
-            .join(', ');
-    };
 
     return (
         <div className="min-h-screen bg-gray-50">
