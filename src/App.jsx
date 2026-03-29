@@ -55,10 +55,10 @@ const DomainChecker = ({ children }) => {
         const cached = sessionStorage.getItem('customDomainRestaurantId');
         const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
         const urlParams = new URLSearchParams(window.location.search);
-        const forcedRestaurantId = urlParams.get('id') || cached;
+        const forcedRestaurantId = window.location.pathname === '/' ? (urlParams.get('id') || cached) : null;
         const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
 
-        if (forcedRestaurantId && (window.location.pathname === '/' || /^\/home$/i.test(window.location.pathname))) {
+        if (forcedRestaurantId) {
           console.log('[DomainChecker] Using forced custom-domain restaurant context:', forcedRestaurantId);
           setCustomDomainRestaurantId(forcedRestaurantId);
           setDomainCheckDone(true);

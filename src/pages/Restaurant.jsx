@@ -43,7 +43,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             const customId = sessionStorage.getItem('customDomainRestaurantId');
             const nextId = propRestaurantId || customId || paramId;
 
-            if ((window.location.pathname === '/' || /^\/restaurant$/i.test(window.location.pathname)) && nextId) {
+            const isRootPath = window.location.pathname === '/';
+            if (isRootPath && nextId) {
                 sessionStorage.setItem('customDomainRestaurantId', nextId);
             }
 
@@ -652,7 +653,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
     useEffect(() => {
-        if (restaurantId && (window.location.pathname === '/' || /^\/restaurant$/i.test(window.location.pathname))) {
+        if (restaurantId && window.location.pathname === '/') {
             sessionStorage.setItem('customDomainRestaurantId', restaurantId);
         }
     }, [restaurantId]);
