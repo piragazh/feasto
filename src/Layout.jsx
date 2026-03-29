@@ -106,7 +106,8 @@ export default function Layout({ children, currentPageName }) {
 
     useEffect(() => {
         const syncCustomDomainRestaurant = () => {
-            const id = sessionStorage.getItem('customDomainRestaurantId') || null;
+            const isRootRestaurantContext = window.location.pathname === '/';
+            const id = isRootRestaurantContext ? (sessionStorage.getItem('customDomainRestaurantId') || null) : null;
             setCustomDomainRestaurantId((prev) => (prev === id ? prev : id));
         };
 
@@ -118,7 +119,7 @@ export default function Layout({ children, currentPageName }) {
             window.removeEventListener('storage', syncCustomDomainRestaurant);
             window.removeEventListener('focus', syncCustomDomainRestaurant);
         };
-    }, []);
+    }, [location.pathname]);
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
@@ -367,12 +368,11 @@ export default function Layout({ children, currentPageName }) {
     const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
     
     // Custom domain home link
-    const homeUrl = customDomainRestaurantId
-        ? '/'
-        : createPageUrl('Home');
+    const isRootRestaurantContext = location.pathname === '/' && !!customDomainRestaurantId;
+    const homeUrl = isRootRestaurantContext ? '/' : createPageUrl('Home');
 
-    // Determine if we should show back button (not on Home or custom domain restaurant page)
-    const isHomePage = currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant');
+    // Determine if we should show back button (not on Home or root custom-domain restaurant page)
+    const isHomePage = currentPageName === 'Home' || (isRootRestaurantContext && currentPageName === 'Restaurant');
     const showBackButton = !hideHeader && !isHomePage;
 
     // Bottom nav tabs for stack preservation
@@ -535,7 +535,7 @@ export default function Layout({ children, currentPageName }) {
                                        <DropdownMenuItem asChild className="md:hidden">
                                            <Link to={homeUrl} className="flex items-center gap-2">
                                                <Home className="h-4 w-4" />
-                                               {customDomainRestaurantId ? 'Home' : 'Restaurants'}
+                                               {isRootRestaurantContext ? 'Home' : 'Restaurants'}
                                            </Link>
                                        </DropdownMenuItem>
                                        <DropdownMenuItem asChild className="md:hidden">
@@ -709,9 +709,9 @@ export default function Layout({ children, currentPageName }) {
                     <div className="flex items-center justify-around h-16 px-2">
                         <a 
                             href={homeUrl}
-                            onClick={(e) => handleTabClick(e, customDomainRestaurantId ? 'Restaurant' : 'Home', homeUrl)}
+                            onClick={(e) => handleTabClick(e, isRootRestaurantContext ? 'Restaurant' : 'Home', homeUrl)}
                             className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-                                currentPageName === 'Home' || (customDomainRestaurantId && currentPageName === 'Restaurant') ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
+                                currentPageName === 'Home' || (isRootRestaurantContext && currentPageName === 'Restaurant') ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                             }`}
                         >
                             <Home className="h-6 w-6" />

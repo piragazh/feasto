@@ -653,7 +653,10 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
     useEffect(() => {
         if (restaurantId && window.location.pathname === '/') {
-            sessionStorage.setItem('customDomainRestaurantId', restaurantId);
+            const currentId = sessionStorage.getItem('customDomainRestaurantId');
+            if (currentId !== restaurantId) {
+                sessionStorage.setItem('customDomainRestaurantId', restaurantId);
+            }
         }
     }, [restaurantId]);
 
