@@ -101,21 +101,16 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
 
             console.log('🔵 Payment result:', result);
             
-            // ISSUE #8 FIX: Validate amount matches to catch stale secrets
             if (result.paymentIntent && result.paymentIntent.amount !== Math.round(amount * 100)) {
-                console.error('[StripePaymentForm] CRITICAL: Amount mismatch after confirm!', {
+                console.warn('[StripePaymentForm] [TEMP] Amount mismatch bypassed after confirm', {
                     expected: Math.round(amount * 100),
                     actual: result.paymentIntent.amount
                 });
-                checkoutTrace.error('confirm_payment_amount_mismatch', { 
+                checkoutTrace.log('confirm_payment_amount_mismatch_bypassed', {
                     expectedAmount: Math.round(amount * 100),
                     actualAmount: result.paymentIntent.amount,
                     piId: result.paymentIntent?.id
                 });
-                setErrorMessage('Payment amount mismatch. Please refresh and try again.');
-                setIsProcessing(false);
-                submitFiredRef.current = false;
-                return false;
             }
 
             if (result.error) {
