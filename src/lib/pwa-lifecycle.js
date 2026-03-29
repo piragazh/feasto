@@ -86,7 +86,7 @@ export function registerServiceWorker() {
   navigator.serviceWorker.addEventListener('message', onMessage);
 
   // Register
-  window.addEventListener('load', async () => {
+  const register = async () => {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js', {
         // updateViaCache: 'none' — browser always fetches sw.js from network
@@ -133,10 +133,17 @@ export function registerServiceWorker() {
       // SW registration failure is non-fatal — app works without it
       log('Registration failed:', error);
     }
-  });
+  };
+
+  if (document.readyState === 'complete') {
+    register();
+  } else {
+    window.addEventListener('load', register, { once: true });
+  }
 
   return () => {
     navigator.serviceWorker.removeEventListener('message', onMessage);
+    window.removeEventListener('load', register);
   };
 }
 
