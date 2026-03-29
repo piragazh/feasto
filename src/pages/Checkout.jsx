@@ -642,7 +642,11 @@ export default function Checkout() {
         
         // CRITICAL: Block ALL submissions when card is selected
         if (paymentMethod === 'card') {
-            toast.error('Please complete the card payment form below');
+            if (!clientSecret) {
+                toast.error('Please continue to payment first');
+            } else {
+                toast.error('Please complete the card payment form below');
+            }
             return;
         }
         
@@ -1422,8 +1426,13 @@ export default function Checkout() {
                                                         }
 
                                                         // Setting coordinates triggers the zone-check useEffect
-                                                        if (coords && coords.lat && coords.lng) {
+                                                        if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
                                                             setDeliveryCoordinates(coords);
+                                                            setZoneCheckComplete(false);
+                                                        } else {
+                                                            setDeliveryCoordinates(null);
+                                                            setZoneCheckComplete(false);
+                                                            toast.error('Please select a valid saved address.');
                                                         }
                                                     }}
                                                 />
@@ -1436,6 +1445,9 @@ export default function Checkout() {
                                                     onClick={() => {
                                                         setShowManualAddressEntry(true);
                                                         setIsExistingAddress(false);
+                                                        setDeliveryCoordinates(null);
+                                                        setDeliveryZoneInfo(null);
+                                                        setZoneCheckComplete(false);
                                                         setFormData(prev => ({ ...prev, delivery_address: '', door_number: '' }));
                                                     }}
                                                     className="w-full"
@@ -1462,9 +1474,14 @@ export default function Checkout() {
                                                                     delivery_address: defaultAddress.address || '',
                                                                     door_number: defaultAddress.door_number || ''
                                                                 }));
-                                                                if (defaultAddress.coordinates) {
+                                                                if (defaultAddress.coordinates && Number.isFinite(defaultAddress.coordinates.lat) && Number.isFinite(defaultAddress.coordinates.lng)) {
                                                                     setDeliveryCoordinates(defaultAddress.coordinates);
+                                                                    setZoneCheckComplete(false);
+                                                                } else {
+                                                                    setDeliveryCoordinates(null);
+                                                                    setZoneCheckComplete(false);
                                                                 }
+                                                                setDeliveryZoneInfo(null);
                                                                 setIsExistingAddress(true);
                                                             }
                                                         }}
@@ -1493,9 +1510,9 @@ export default function Checkout() {
                                                        value={formData.delivery_address}
                                                        onLocationSelect={(locationData) => {
                                                            setFormData({ ...formData, delivery_address: locationData.address });
-                                                           setDeliveryCoordinates(locationData.coordinates);
+                                                           setDeliveryCoordinates(locationData.coordinates || null);
+                                                           setDeliveryZoneInfo(null);
                                                            setIsExistingAddress(false);
-                                                           // ISSUE #9 FIX: Reset stale zone check when address explicitly changes
                                                            setZoneCheckComplete(false);
                                                        }}
                                                        className="[&>div]:h-12"
