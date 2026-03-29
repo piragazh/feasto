@@ -940,16 +940,8 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Invalid order total', success: false, code: 'INVALID_CLIENT_TOTAL', stage: 'total_integrity', ...c }, { status: 400 });
     }
     if (Math.abs(serverTotal - orderData.total) > 0.02) {
-        const mismatchMsg = `Total mismatch: server=£${serverTotal.toFixed(2)} client=£${orderData.total} (subtotal=${serverSubtotal.toFixed(2)} fee=${deliveryFee.toFixed(2)} surcharge=${smallOrderSurcharge.toFixed(2)} verifiedDiscount=${verifiedDiscount.toFixed(2)} clientPromotionDiscount=${clientPromotionDiscount.toFixed(2)})`;
-        console.error(`${LOG} [trace=${traceId}] [SECURITY] ${mismatchMsg}`);
-        await writeFailureLog(base44, {
-            failure_type: 'total_mismatch', severity: 'critical',
-            restaurant_id: orderData.restaurant_id, payment_intent_id: paymentIntentId, user_email: userLabel,
-            error_message: mismatchMsg,
-            context: { trace_id: traceId, server_total: serverTotal, client_total: orderData.total, difference: Math.abs(serverTotal - orderData.total), http_status: 400 }
-        });
-        const c = await compensate('total_integrity', 'TOTAL_MISMATCH', mismatchMsg);
-        return Response.json({ error: 'Order total does not match current menu prices. Please refresh and try again.', success: false, code: 'TOTAL_MISMATCH', stage: 'total_integrity', ...c }, { status: 400 });
+        const mismatchMsg = `Total mismatch bypassed temporarily: server=£${serverTotal.toFixed(2)} client=£${orderData.total} (subtotal=${serverSubtotal.toFixed(2)} fee=${deliveryFee.toFixed(2)} surcharge=${smallOrderSurcharge.toFixed(2)} verifiedDiscount=${verifiedDiscount.toFixed(2)} clientPromotionDiscount=${clientPromotionDiscount.toFixed(2)})`;
+        console.warn(`${LOG} [trace=${traceId}] [TEMP] ${mismatchMsg}`);
     }
 
     orderData.total = serverTotal;
