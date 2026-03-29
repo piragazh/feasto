@@ -595,7 +595,7 @@ export default function AdminDashboard() {
                                                             <span className="text-sm font-bold text-gray-900">£{(order.total || 0).toFixed(2)}</span>
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
-                                                            <Badge className={`text-xs capitalize ${statusColor} hover:${statusColor}`}>
+                                                            <Badge className={`text-xs capitalize ${statusColor}`}>
                                                                 {order.status?.replace(/_/g, ' ')}
                                                             </Badge>
                                                         </td>
