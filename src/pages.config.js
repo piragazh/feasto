@@ -13,8 +13,6 @@ import { lazy } from 'react';
 import Home from './pages/Home';
 import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
-import AdminDashboardPage from './pages/AdminDashboard';
-import AdminRestaurantsPage from './pages/AdminRestaurants';
 
 // Everything else — lazy loaded (split into separate chunks)
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
@@ -28,6 +26,8 @@ const GroupOrder = lazy(() => import('./pages/GroupOrder'));
 const KioskDashboard = lazy(() => import('./pages/KioskDashboard'));
 const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay'));
 const LoyaltyProgram = lazy(() => import('./pages/LoyaltyProgram'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
 const ManageCoupons = lazy(() => import('./pages/ManageCoupons'));
 const ManageRestaurantManagers = lazy(() => import('./pages/ManageRestaurantManagers'));
 const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
@@ -50,9 +50,6 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 
 import __Layout from './Layout.jsx';
-
-const AdminDashboard = AdminDashboardPage;
-const AdminRestaurants = AdminRestaurantsPage;
 
 export const Pages = {
   "AdminDashboard": AdminDashboard,
