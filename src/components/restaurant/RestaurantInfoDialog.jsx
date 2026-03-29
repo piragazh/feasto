@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, Truck, Store, Star, Award, Facebook, Instagram, Twitter, Globe, Trophy } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -41,6 +41,9 @@ export default function RestaurantInfoDialog({ open, onClose, restaurant }) {
                         </div>
                         <span className="text-xs text-gray-400 font-normal">ID: {restaurant.id}</span>
                     </DialogTitle>
+                    <DialogDescription>
+                        View restaurant details, opening times, location and delivery information.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
