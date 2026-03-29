@@ -137,6 +137,8 @@ export function usePaymentInit({
     const idempotencyKeyRef = useRef(sessionKeyRef.current);
     // Atomic guard — prevents concurrent PI creation calls
     const paymentInitInFlightRef = useRef(false);
+    // Force Effect 2 retry on idempotency conflicts (incremented on conflict, forces dependency change)
+    const [retryCounterRef, setRetryCounter] = useState(0);
 
     // Reset all payment state (exposed for external callers e.g. method change)
     const resetPaymentState = useCallback(() => {
@@ -368,17 +370,19 @@ export function usePaymentInit({
                     checkoutTrace.error('create_payment_intent_failed', { code: errorCode, error: rawMsg });
                     console.error('[usePaymentInit] ❌ PI failed:', errorCode, rawMsg);
                     
-                    // CRITICAL FIX: On idempotency conflict, rotate key and reset fingerprint
-                    // so Effect 1 detects mismatch and triggers Effect 2 retry with fresh key
+                    // CRITICAL FIX: On idempotency conflict, rotate key, reset fingerprint, AND increment retry counter
+                    // to force Effect 2 to re-run with fresh key
                     if (errorCode === 'STRIPE_IDEMPOTENCY_CONFLICT') {
                         const oldKey = sessionKeyRef.current;
                         const newKey = generateSessionKey();
                         sessionKeyRef.current = newKey;
                         idempotencyKeyRef.current = newKey;
-                        // CRITICAL: Reset fingerprint to trigger Effect 1, which resets state and allows Effect 2 to retry
+                        // CRITICAL: Reset fingerprint to trigger Effect 1
                         activeSecretFingerprintRef.current = null;
-                        console.log('[usePaymentInit] Idempotency conflict — rotated key and reset fingerprint:', oldKey, '→', newKey);
-                        checkoutTrace.log('idempotency_conflict_key_rotated', { oldKey, newKey });
+                        // CRITICAL: Increment counter to force Effect 2 retry (breaks dependency stale closure)
+                        setRetryCounter(prev => prev + 1);
+                        console.log('[usePaymentInit] Idempotency conflict — rotated key, reset fingerprint, increment retry:', oldKey, '→', newKey);
+                        checkoutTrace.log('idempotency_conflict_recovery', { oldKey, newKey });
                     } else {
                         // Non-idempotency errors: just reset state
                         activeSecretFingerprintRef.current = null;
@@ -403,7 +407,7 @@ export function usePaymentInit({
 
         runInit();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentFingerprint, zoneCheckComplete]);
+    }, [currentFingerprint, zoneCheckComplete, retryCounterRef]);
 
     return {
         clientSecret,
