@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import RestaurantFormDialog from '@/components/admin/RestaurantFormDialog';
 import AssignOwnerDialog from '@/components/admin/AssignOwnerDialog';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl } from '@/utils/index.ts';
 
 export default function AdminRestaurants() {
     const navigate = useNavigate();
