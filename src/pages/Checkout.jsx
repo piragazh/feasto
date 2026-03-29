@@ -373,41 +373,11 @@ export default function Checkout() {
     const checkAuthStatus = async () => {
         try {
             const authenticated = await base44.auth.isAuthenticated();
-            setIsGuest(!authenticated); // If not authenticated, they're a guest
-            
-            // Load user data if authenticated
-            if (authenticated) {
-                try {
-                    const userData = await base44.auth.me();
-                    setUser(userData);
-                    
-                    // Pre-fill phone if saved
-                    if (userData.phone) {
-                        setFormData(prev => ({ ...prev, phone: userData.phone }));
-                        setIsExistingPhone(true);
-                    }
-                    // Pre-fill default or first saved address if available
-                    if (userData.saved_addresses && userData.saved_addresses.length > 0) {
-                        const defaultAddress = userData.saved_addresses.find(addr => addr.is_default) || userData.saved_addresses[0];
-                        setFormData(prev => ({
-                            ...prev,
-                            delivery_address: defaultAddress.address || '',
-                            door_number: defaultAddress.door_number || ''
-                        }));
-                        if (defaultAddress.coordinates) {
-                            setDeliveryCoordinates(defaultAddress.coordinates);
-                        }
-                        setIsExistingAddress(true);
-                        setShowManualAddressEntry(false);
-                    } else {
-                        setShowManualAddressEntry(true);
-                    }
-                } catch (error) {
-                    console.error('Failed to load user data:', error);
-                }
-            }
+            setIsGuest(!authenticated);
+            setShowManualAddressEntry(!authenticated);
         } catch (e) {
-            setIsGuest(true); // On error, assume guest
+            setIsGuest(true);
+            setShowManualAddressEntry(true);
         }
     };
 
