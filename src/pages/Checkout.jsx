@@ -279,11 +279,21 @@ export default function Checkout() {
 
     // Load loyalty points per pound setting once on mount
     useEffect(() => {
-        base44.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' })
+        let mounted = true;
+        base44.auth.isAuthenticated()
+            .then((authenticated) => {
+                if (!authenticated) return null;
+                return base44.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' });
+            })
             .then(results => {
-                if (results?.[0]?.setting_value) setPointsPerPound(parseFloat(results[0].setting_value) || 1);
+                if (mounted && results?.[0]?.setting_value) {
+                    setPointsPerPound(parseFloat(results[0].setting_value) || 1);
+                }
             })
             .catch(() => {});
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     // ── Recovery: detect interrupted payments on page reload ──────────────────
@@ -329,7 +339,8 @@ export default function Checkout() {
             // ISSUE #7 FIX: Before marking terminal, check if order was created despite network error
             try {
                 const pending = pendingPayment.read();
-                if (pending?.idempotencyKey) {
+                const authed = await base44.auth.isAuthenticated();
+                if (authed && pending?.idempotencyKey) {
                     const maybeOrders = await base44.entities.Order.filter({ idempotency_key: pending.idempotencyKey });
                     if (maybeOrders?.length > 0) {
                         console.log('[Checkout] Order found via idempotency check despite network error — clearing pending');
