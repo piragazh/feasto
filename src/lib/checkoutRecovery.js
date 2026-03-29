@@ -6,7 +6,7 @@
  *
  * Returns: { orderPlaced: bool, recoveryError: string|null, clearPending: bool }
  */
-import { pendingPayment } from '@/lib/pendingPayment';
+import { pendingPayment } from '@/lib/pendingPayment.js';
 
 /**
  * Process the response from recoverPayment and return the UI state to apply.
