@@ -21,6 +21,8 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
 
     useEffect(() => {
         piCreatedAtMsRef.current = Date.now();
+        // CRITICAL: Update the clientSecret ref when it rotates (price change, coupon applied, etc.)
+        clientSecretAtMountRef.current = clientSecret;
         checkoutTrace.log('stripe_payment_form_mounted', { hasStripe: !!stripe, hasElements: !!elements, hasClientSecret: !!clientSecret, expressCheckoutEnabled });
     }, [clientSecret, stripe, elements, expressCheckoutEnabled]);
     
@@ -176,7 +178,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                     </p>
                 </div>
             )}
-            {expressCheckoutEnabled && amount && clientSecret && (
+            {expressCheckoutEnabled && amount && clientSecret && !isFormComplete && (
                 <ExpressCheckout
                     key={clientSecret}
                     amount={amount}
