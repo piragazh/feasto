@@ -46,9 +46,10 @@ Deno.serve(async (req) => {
     if (user.role !== 'admin') {
       const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
         user_email: user.email,
-        restaurant_ids: { $elemMatch: { $eq: order.restaurant_id } },
+        is_active: true,
       });
-      if (managers.length === 0) {
+      const hasAccess = managers.some((manager) => manager.restaurant_ids?.includes(order.restaurant_id));
+      if (!hasAccess) {
         return Response.json(
           { error: 'Access denied: not authorized for this restaurant' },
           { status: 403 }
@@ -106,8 +107,8 @@ Deno.serve(async (req) => {
           refund_id: pt.refund_id,
         });
       }
-      if (pt.status === 'manual_review') {
-        console.log(`[REJECT-IDEMPOTENT] PI ${paymentIntentId} in manual_review — blocking retry`);
+      if (pt.status === 'needs_review') {
+        console.log(`[REJECT-IDEMPOTENT] PI ${paymentIntentId} in needs_review — blocking retry`);
         return Response.json({
           success: false,
           message: 'Refund already failed and is under manual review. Contact support.',
@@ -162,9 +163,8 @@ Deno.serve(async (req) => {
       } else {
         // Refund failed
         await base44.asServiceRole.entities.PaymentTransaction.update(pt.id, {
-          status: 'manual_review',
+          status: 'needs_review',
           failure_reason: `Order rejection refund failed: ${refundError}`,
-          failure_stage: 'refund_initiate',
           refund_attempted_at: now,
         });
       }
@@ -176,14 +176,14 @@ Deno.serve(async (req) => {
           restaurant_id: order.restaurant_id,
           amount: order.total,
           currency: 'gbp',
-          status: refundId ? 'refunded' : 'manual_review',
+          order_id,
+          status: refundId ? 'refunded' : 'needs_review',
           user_email: order.created_by || null,
           guest_email: order.guest_email || null,
           guest_phone: order.phone || null,
           refund_id: refundId || null,
           refund_amount: order.total,
           failure_reason: refundId ? null : `Rejection refund failed: ${refundError}`,
-          failure_stage: refundId ? null : 'refund_initiate',
           refund_attempted_at: now,
           refund_confirmed_at: refundId ? now : null,
           stripe_verified_at: now,
