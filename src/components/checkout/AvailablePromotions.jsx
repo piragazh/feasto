@@ -76,22 +76,22 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                 }
             }
 
-            // Apply all promotions at once
-            if (toApply.length > 0) {
-                onPromotionApply(prev => {
-                    const updated = [...prev];
-                    for (const promo of toApply) {
-                        if (!updated.find(p => p.id === promo.id)) {
-                            updated.push(promo);
-                        }
-                    }
-                    return updated;
-                });
+            const keptPromotions = appliedPromotions.filter((promo) =>
+                !availablePromotions.find((available) => available.id === promo.id) || subtotal >= (promo.minimum_order || 0)
+            );
+
+            const updated = [...keptPromotions];
+            for (const promo of toApply) {
+                if (!updated.find((p) => p.id === promo.id)) {
+                    updated.push(promo);
+                }
             }
+
+            onPromotionApply(updated);
         };
 
         autoApply();
-    }, [subtotal, availablePromotions]);
+    }, [subtotal, availablePromotions, appliedPromotions, onPromotionApply]);
 
     if (loading || availablePromotions.length === 0) return null;
 

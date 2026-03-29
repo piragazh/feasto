@@ -244,14 +244,18 @@ Deno.serve(async (req) => {
             // BUG FIX: Only classify as idempotency conflict for the SPECIFIC error code.
             // Previously `statusCode === 400` was too broad and misclassified all Stripe
             // validation errors (bad currency, invalid params, etc.) as idempotency conflicts.
-            if (stripeError?.code === 'idempotency_key_in_use') {
+            if (
+                stripeError?.code === 'idempotency_key_in_use' ||
+                stripeError?.type === 'StripeIdempotencyError' ||
+                String(stripeError?.message || '').includes('Keys for idempotent requests can only be used with the same parameters')
+            ) {
                 console.error(
                     `${LOG_PREFIX} [STRIPE_IDEMPOTENCY_CONFLICT] request_id=${requestId}` +
                     ` key=${idempotencyKeyStr} amount=${amountInPence}p error=${stripeError.message}`
                 );
                 return errorResponse(
                     'STRIPE_IDEMPOTENCY_CONFLICT',
-                    'A payment with this session was already initiated with a different amount. Please refresh and try again.',
+                    'This payment session is out of date. Please try again and a fresh payment session will be created.',
                     409
                 );
             }

@@ -1731,11 +1731,17 @@ export default function Checkout() {
                                         subtotal={subtotal}
                                         cartItems={cart}
                                         onCouponApply={(coupons) => {
-                                            // Coupons are already validated by DiscountCodeInput before calling this.
-                                            // Server-side re-validation happens in verifyAndCreateOrder at order time.
                                             setAppliedCoupons(coupons);
+                                            if (paymentMethod === 'card') {
+                                                resetPaymentState();
+                                            }
                                         }}
-                                        onPromotionApply={setAppliedPromotions}
+                                        onPromotionApply={(promotions) => {
+                                            setAppliedPromotions(promotions);
+                                            if (paymentMethod === 'card') {
+                                                resetPaymentState();
+                                            }
+                                        }}
                                     />
                                 </CardContent>
                             </Card>
@@ -1784,9 +1790,6 @@ export default function Checkout() {
                                             checkoutTrace.log('payment_method_selected', { method, prev: paymentMethod });
                                             setPaymentMethod(method);
                                             setTraceError(null);
-                                            setPaymentCompleted(false);
-                                            paymentSuccessHandledRef.current = false;
-                                            expressConfirmFiredRef.current = false;
                                             resetPaymentState();
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
@@ -1877,6 +1880,9 @@ export default function Checkout() {
                                                         }
 
                                                         setClientSecret(response.data.clientSecret);
+                                                    } catch (error) {
+                                                        const message = error?.response?.data?.error || error?.message || 'Failed to initialize payment.';
+                                                        toast.error(message);
                                                     } finally {
                                                         setInitializingPayment(false);
                                                     }
