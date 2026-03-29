@@ -166,7 +166,12 @@ Deno.serve(async (req) => {
 
     // ── Auth (guests allowed) ──────────────────────────────────────────────────
     let user = null;
-    try { user = await base44.auth.me(); } catch (_) { /* guest */ }
+    const authHeader = req.headers.get('authorization');
+    try {
+        if (authHeader) {
+            user = await base44.auth.me();
+        }
+    } catch (_) { /* guest */ }
 
     const userLabel = user?.email || orderData?.guest_email || 'guest';
     console.log(`${LOG} [trace=${traceId}] user=${userLabel} pi=${paymentIntentId || 'cash'} key=${idempotency_key || 'none'}`);

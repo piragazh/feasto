@@ -1,33 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { Badge } from '@/components/ui/badge';
 import { Home, Briefcase, MapPin, Star } from 'lucide-react';
 
-export default function SavedAddressesSection({ onAddressSelect }) {
-    const [savedAddresses, setSavedAddresses] = useState([]);
+export default function SavedAddressesSection({ savedAddresses = [], onAddressSelect }) {
     const [selectedIndex, setSelectedIndex] = useState(null);
 
     useEffect(() => {
-        loadSavedAddresses();
-    }, []);
-
-    const loadSavedAddresses = async () => {
-        try {
-            const userData = await base44.auth.me();
-            if (userData.saved_addresses && userData.saved_addresses.length > 0) {
-                setSavedAddresses(userData.saved_addresses);
-                
-                // Auto-select default address if exists
-                const defaultIndex = userData.saved_addresses.findIndex(addr => addr.is_default);
-                if (defaultIndex !== -1) {
-                    setSelectedIndex(defaultIndex);
-                    onAddressSelect(userData.saved_addresses[defaultIndex]);
-                }
+        if (savedAddresses.length > 0) {
+            const defaultIndex = savedAddresses.findIndex(addr => addr.is_default);
+            if (defaultIndex !== -1) {
+                setSelectedIndex(defaultIndex);
+                onAddressSelect(savedAddresses[defaultIndex]);
             }
-        } catch (error) {
-            console.error('Failed to load saved addresses:', error);
         }
-    };
+    }, [savedAddresses, onAddressSelect]);
 
     const getAddressIcon = (label) => {
         switch (label) {

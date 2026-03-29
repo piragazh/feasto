@@ -1007,16 +1007,16 @@ export default function Checkout() {
             // Fire all post-order background tasks in parallel — none block the user
             const backgroundTasks = [];
 
-            // Save user phone/address
-            if (!isGuest) {
+            // Save user phone/address using already-loaded user state
+            if (!isGuest && user) {
                 backgroundTasks.push(
-                    base44.auth.me().then(userData => {
+                    Promise.resolve().then(() => {
                         const updates = {};
-                        if (savePhone && formData.phone && formData.phone !== userData.phone) {
+                        if (savePhone && formData.phone && formData.phone !== user.phone) {
                             updates.phone = formData.phone;
                         }
                         if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
-                            const currentAddresses = userData.saved_addresses || [];
+                            const currentAddresses = user.saved_addresses || [];
                             const addressExists = currentAddresses.some(addr =>
                                 addr.address === formData.delivery_address && addr.door_number === formData.door_number
                             );
@@ -1029,13 +1029,17 @@ export default function Checkout() {
                                     instructions: formData.notes || '',
                                     is_default: setAsDefault
                                 };
-                                let updatedAddresses = setAsDefault
+                                const updatedAddresses = setAsDefault
                                     ? currentAddresses.map(addr => ({ ...addr, is_default: false }))
                                     : currentAddresses;
                                 updates.saved_addresses = [...updatedAddresses, newAddress];
                             }
                         }
-                        if (Object.keys(updates).length > 0) return base44.auth.updateMe(updates);
+                        if (Object.keys(updates).length > 0) {
+                            return base44.auth.updateMe(updates).then(() => {
+                                setUser(prev => prev ? { ...prev, ...updates } : prev);
+                            });
+                        }
                     }).catch(e => console.error('Failed to save user data:', e))
                 );
             }
@@ -1401,6 +1405,7 @@ export default function Checkout() {
                                         {!isGuest && !showManualAddressEntry && (
                                             <>
                                                 <SavedAddressesSection 
+                                                    savedAddresses={user?.saved_addresses || []}
                                                     onAddressSelect={async (address) => {
                                                         setFormData(prev => ({
                                                             ...prev,
