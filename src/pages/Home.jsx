@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Search, MapPin, Filter, Star, Clock, DollarSign } from 'lucide-react';
 import { Input } from "@/components/ui/input";
@@ -13,52 +12,13 @@ import PersonalizedRecommendations from '@/components/home/PersonalizedRecommend
 import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
 import RestaurantCard from '@/components/home/RestaurantCard';
 import EnhancedSearchBar from '@/components/home/EnhancedSearchBar';
-import Restaurant from './Restaurant';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 export default function Home() {
-    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCuisine, setSelectedCuisine] = useState('');
     const [sortBy, setSortBy] = useState('rating');
     const [userLocation, setUserLocation] = useState(null);
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
-    const [domainCheckDone, setDomainCheckDone] = useState(false);
-    const redirectedCustomDomainRef = useRef(false);
-
-    // Directly check the current domain for a matching restaurant (no sessionStorage dependency)
-    useEffect(() => {
-        const checkDomain = async () => {
-            const hostname = window.location.hostname;
-            // Skip for platform/dev domains
-            const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
-            if (isPlatform) {
-                setDomainCheckDone(true);
-                return;
-            }
-            // Check sessionStorage cache first
-            const cached = sessionStorage.getItem('customDomainRestaurantId');
-            const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
-            if (cached && cachedFor === hostname) {
-                setCustomDomainRestaurantId(cached);
-                setDomainCheckDone(true);
-                return;
-            }
-            try {
-                const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
-                const found = restaurants?.[0];
-                if (found) {
-                    sessionStorage.setItem('customDomainRestaurantId', found.id);
-                    sessionStorage.setItem('customDomainCheckedFor', hostname);
-                    setCustomDomainRestaurantId(found.id);
-                }
-            } catch (e) {
-                // ignore
-            }
-            setDomainCheckDone(true);
-        };
-        checkDomain();
-    }, []);
 
     // Fetch restaurants with optimized caching
     const { data: restaurants = [], isLoading, refetch } = useQuery({
@@ -141,25 +101,6 @@ export default function Home() {
             return 0;
         }), [restaurants, searchQuery, selectedCuisine, sortBy, userLocation]);
 
-    // Wait for domain check on custom domains before rendering anything
-    const isPlatform = window.location.hostname === 'localhost' || window.location.hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) || window.location.hostname.includes('127.0.0.1');
-    if (!isPlatform && !domainCheckDone) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
-    }
-
-    useEffect(() => {
-        if (!customDomainRestaurantId || redirectedCustomDomainRef.current) return;
-        redirectedCustomDomainRef.current = true;
-        navigate(createPageUrl('Restaurant') + `?id=${customDomainRestaurantId}`, { replace: true });
-    }, [customDomainRestaurantId, navigate]);
-
-    if (customDomainRestaurantId) {
-        return null;
-    }
 
     return (
         <PullToRefresh onRefresh={() => refetch()}>
