@@ -148,9 +148,7 @@ export function usePaymentInit({
                     return;
                 }
 
-                if (!stripeLoadedPromise) {
-                    setStripeLoadedPromise(Promise.resolve(stripeObj));
-                }
+                setStripeLoadedPromise(Promise.resolve(stripeObj));
 
                 const fullAddress = orderType === 'delivery'
                     ? (isExistingAddress
