@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
@@ -99,27 +99,11 @@ export default function Layout({ children, currentPageName }) {
     const [user, setUser] = useState(null);
     const [cartCount, setCartCount] = useState(0);
     const [isRestaurantManager, setIsRestaurantManager] = useState(false);
-    
-    // Read customDomainRestaurantId from sessionStorage in state (not top-level render)
-    // to avoid synchronous render-time reads that can cause React update conflicts (#426)
-    const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
-    useEffect(() => {
-        const syncCustomDomainRestaurant = () => {
-            const isRootRestaurantContext = window.location.pathname === '/';
-            const id = isRootRestaurantContext ? (sessionStorage.getItem('customDomainRestaurantId') || null) : null;
-            setCustomDomainRestaurantId((prev) => (prev === id ? prev : id));
-        };
-
-        syncCustomDomainRestaurant();
-        window.addEventListener('storage', syncCustomDomainRestaurant);
-        window.addEventListener('focus', syncCustomDomainRestaurant);
-
-        return () => {
-            window.removeEventListener('storage', syncCustomDomainRestaurant);
-            window.removeEventListener('focus', syncCustomDomainRestaurant);
-        };
-    }, [location.pathname]);
+    const customDomainRestaurantId = useMemo(() => {
+        if (location.pathname !== '/') return null;
+        return sessionStorage.getItem('customDomainRestaurantId') || null;
+    }, [location.pathname, location.search]);
 
     // Fetch restaurant data if custom domain is set
     const { data: customDomainRestaurant } = useQuery({
@@ -368,7 +352,7 @@ export default function Layout({ children, currentPageName }) {
     const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
     
     // Custom domain home link
-    const isRootRestaurantContext = location.pathname === '/' && !!customDomainRestaurantId;
+    const isRootRestaurantContext = location.pathname === '/' && Boolean(customDomainRestaurantId);
     const homeUrl = isRootRestaurantContext ? '/' : createPageUrl('Home');
 
     // Determine if we should show back button (not on Home or root custom-domain restaurant page)
@@ -640,15 +624,7 @@ export default function Layout({ children, currentPageName }) {
             )}
 
             <main id="main-content" className="min-h-screen">
-                {isFullScreenPage ? (
-                    children
-                ) : (
-                    <PullToRefresh onRefresh={() => window.location.reload()}>
-                        <PageTransition>
-                            {children}
-                        </PageTransition>
-                    </PullToRefresh>
-                )}
+                {isFullScreenPage ? children : <PageTransition>{children}</PageTransition>}
             </main>
 
                 {/* AI Chatbot Widget */}
