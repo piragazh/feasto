@@ -223,7 +223,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
             )}
           />
           {Object.entries(Pages).map(([path, Page]) => {
-            if (path.toLowerCase() === 'home') {
+            if (path.toLowerCase() === 'home' || path.toLowerCase() === 'restaurant') {
               return null;
             }
 
@@ -262,6 +262,14 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
               </LayoutWrapper>
             </Suspense>
           } />
+          <Route
+            path="/Restaurant"
+            element={
+              <LayoutWrapper currentPageName="Restaurant">
+                <Restaurant />
+              </LayoutWrapper>
+            }
+          />
           <Route
             path="/Home"
             element={customDomainRestaurantId ? (
