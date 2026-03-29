@@ -1,5 +1,6 @@
+import { Toaster } from 'sonner';
 import { QueryClientProvider } from '@tanstack/react-query';
-// NOTE: Toaster is rendered by Layout.jsx to avoid duplicate toasts.
+// NOTE: Toaster import removed — it is rendered by Layout.jsx to avoid duplicate toasts.
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
@@ -187,9 +188,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
                  <Restaurant restaurantId={customDomainRestaurantId} />
                </LayoutWrapper>
              ) : (
-               <LayoutWrapper currentPageName="Home">
-                 <MainPage />
-               </LayoutWrapper>
+               <Navigate to="/Home" replace />
              )
            } />
           {Object.entries(Pages).map(([path, Page]) => (

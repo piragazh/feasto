@@ -78,13 +78,15 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
 
             // Apply all promotions at once
             if (toApply.length > 0) {
-                const updated = [...appliedPromotions];
-                for (const promo of toApply) {
-                    if (!updated.find(p => p.id === promo.id)) {
-                        updated.push(promo);
+                onPromotionApply(prev => {
+                    const updated = [...prev];
+                    for (const promo of toApply) {
+                        if (!updated.find(p => p.id === promo.id)) {
+                            updated.push(promo);
+                        }
                     }
-                }
-                onPromotionApply(updated);
+                    return updated;
+                });
             }
         };
 

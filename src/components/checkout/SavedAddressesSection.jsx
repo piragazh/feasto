@@ -13,17 +13,16 @@ export default function SavedAddressesSection({ onAddressSelect }) {
 
     const loadSavedAddresses = async () => {
         try {
-            const authed = await base44.auth.isAuthenticated();
-            if (!authed) return;
             const userData = await base44.auth.me();
             if (userData.saved_addresses && userData.saved_addresses.length > 0) {
                 setSavedAddresses(userData.saved_addresses);
                 
-                // Auto-select default address if exists, otherwise first address
+                // Auto-select default address if exists
                 const defaultIndex = userData.saved_addresses.findIndex(addr => addr.is_default);
-                const indexToUse = defaultIndex !== -1 ? defaultIndex : 0;
-                setSelectedIndex(indexToUse);
-                onAddressSelect(userData.saved_addresses[indexToUse]);
+                if (defaultIndex !== -1) {
+                    setSelectedIndex(defaultIndex);
+                    onAddressSelect(userData.saved_addresses[defaultIndex]);
+                }
             }
         } catch (error) {
             console.error('Failed to load saved addresses:', error);

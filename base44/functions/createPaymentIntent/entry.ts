@@ -99,9 +99,11 @@ Deno.serve(async (req) => {
 
         // ── Auth (guests allowed) ─────────────────────────────────────────────
         let user = null;
-        const isGuest = !(await base44.auth.isAuthenticated());
-        if (!isGuest) {
+        let isGuest = false;
+        try {
             user = await base44.auth.me();
+        } catch (_) {
+            isGuest = true;
         }
 
         // ── Parse body ────────────────────────────────────────────────────────
@@ -207,8 +209,8 @@ Deno.serve(async (req) => {
             discount: String(discount ?? ''),
             total: String(amount),
             order_type: truncateMeta(order_type || 'delivery'),
-            delivery_address: truncateMeta(order_type === 'delivery' ? (delivery_address || '') : ''),
-            delivery_coordinates: truncateMeta(order_type === 'delivery' && delivery_coordinates ? JSON.stringify(delivery_coordinates) : ''),
+            delivery_address: truncateMeta(delivery_address || ''),
+            delivery_coordinates: truncateMeta(delivery_coordinates ? JSON.stringify(delivery_coordinates) : ''),
             phone: truncateMeta(phone || ''),
             guest_name: truncateMeta(guest_name || ''),
             guest_email: truncateMeta(guest_email || ''),

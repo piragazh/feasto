@@ -13,18 +13,19 @@ import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search, Chevro
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import CartDrawer from '@/components/cart/CartDrawer';
-import PopularItems from '@/components/restaurant/PopularItems';
-import MealDealsSection from '@/components/restaurant/MealDealsSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
+// Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
 const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
 const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
+const PopularItems = lazy(() => import('@/components/restaurant/PopularItems'));
 const ReviewsSection = lazy(() => import('@/components/restaurant/ReviewsSection'));
 const ActivePromotionsBanner = lazy(() => import('@/components/restaurant/ActivePromotionsBanner'));
 const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
 const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
+const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
 
 export default function Restaurant({ restaurantId: propRestaurantId }) {

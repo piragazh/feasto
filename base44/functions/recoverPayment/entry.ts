@@ -50,10 +50,7 @@ Deno.serve(async (req) => {
 
     const base44 = createClientFromRequest(req);
     let user = null;
-    const isAuthenticated = await base44.auth.isAuthenticated();
-    if (isAuthenticated) {
-        user = await base44.auth.me();
-    }
+    try { user = await base44.auth.me(); } catch (_) { /* guest */ }
 
     console.log(`${LOG} [trace=${traceId}] pi=${paymentIntentId} key=${idempotencyKey || 'none'} user=${user?.email || 'guest'}`);
 

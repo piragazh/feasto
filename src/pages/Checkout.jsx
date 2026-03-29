@@ -111,6 +111,9 @@ export default function Checkout() {
     
     // User Authentication Status
     const [isGuest, setIsGuest] = useState(false); // Is user checking out as guest?
+    const [emailChecked, setEmailChecked] = useState(false);
+    const [emailExists, setEmailExists] = useState(false);
+    const [checkingEmail, setCheckingEmail] = useState(false);
     const [savePhone, setSavePhone] = useState(true);
     const [saveAddress, setSaveAddress] = useState(true);
     const [addressLabel, setAddressLabel] = useState('Home');
@@ -279,21 +282,11 @@ export default function Checkout() {
 
     // Load loyalty points per pound setting once on mount
     useEffect(() => {
-        let mounted = true;
-        base44.auth.isAuthenticated()
-            .then((authenticated) => {
-                if (!authenticated) return null;
-                return base44.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' });
-            })
+        base44.entities.SystemSettings.filter({ setting_key: 'loyalty_points_per_pound' })
             .then(results => {
-                if (mounted && results?.[0]?.setting_value) {
-                    setPointsPerPound(parseFloat(results[0].setting_value) || 1);
-                }
+                if (results?.[0]?.setting_value) setPointsPerPound(parseFloat(results[0].setting_value) || 1);
             })
             .catch(() => {});
-        return () => {
-            mounted = false;
-        };
     }, []);
 
     // ── Recovery: detect interrupted payments on page reload ──────────────────
@@ -339,8 +332,7 @@ export default function Checkout() {
             // ISSUE #7 FIX: Before marking terminal, check if order was created despite network error
             try {
                 const pending = pendingPayment.read();
-                const authed = await base44.auth.isAuthenticated();
-                if (authed && pending?.idempotencyKey) {
+                if (pending?.idempotencyKey) {
                     const maybeOrders = await base44.entities.Order.filter({ idempotency_key: pending.idempotencyKey });
                     if (maybeOrders?.length > 0) {
                         console.log('[Checkout] Order found via idempotency check despite network error — clearing pending');
@@ -373,14 +365,65 @@ export default function Checkout() {
     const checkAuthStatus = async () => {
         try {
             const authenticated = await base44.auth.isAuthenticated();
-            setIsGuest(!authenticated);
-            setShowManualAddressEntry(!authenticated);
+            setIsGuest(!authenticated); // If not authenticated, they're a guest
+            
+            // Load user data if authenticated
+            if (authenticated) {
+                try {
+                    const userData = await base44.auth.me();
+                    setUser(userData);
+                    
+                    // Pre-fill phone if saved
+                    if (userData.phone) {
+                        setFormData(prev => ({ ...prev, phone: userData.phone }));
+                        setIsExistingPhone(true);
+                    }
+                    // Pre-fill default or first saved address if available
+                    if (userData.saved_addresses && userData.saved_addresses.length > 0) {
+                        const defaultAddress = userData.saved_addresses.find(addr => addr.is_default) || userData.saved_addresses[0];
+                        setFormData(prev => ({
+                            ...prev,
+                            delivery_address: defaultAddress.address || '',
+                            door_number: defaultAddress.door_number || ''
+                        }));
+                        if (defaultAddress.coordinates) {
+                            setDeliveryCoordinates(defaultAddress.coordinates);
+                        }
+                        setIsExistingAddress(true);
+                        setShowManualAddressEntry(false);
+                    } else {
+                        setShowManualAddressEntry(true);
+                    }
+                } catch (error) {
+                    console.error('Failed to load user data:', error);
+                }
+            }
         } catch (e) {
-            setIsGuest(true);
-            setShowManualAddressEntry(true);
+            setIsGuest(true); // On error, assume guest
         }
     };
 
+    const checkEmailExists = async (email) => {
+        if (!email || !email.includes('@')) return;
+        
+        setCheckingEmail(true);
+        try {
+            const users = await base44.entities.User.filter({ email: email.toLowerCase() });
+            setEmailExists(users && users.length > 0);
+            setEmailChecked(true);
+        } catch (error) {
+            setEmailExists(false);
+            setEmailChecked(false);
+        } finally {
+            setCheckingEmail(false);
+        }
+    };
+
+    const handleEmailBlur = () => {
+        if (formData.guest_email && !emailChecked) {
+            checkEmailExists(formData.guest_email);
+        }
+    };
 
     // Fetch restaurant details from database
     const loadRestaurantName = async (id) => {
@@ -965,15 +1008,15 @@ export default function Checkout() {
             const backgroundTasks = [];
 
             // Save user phone/address
-            if (!isGuest && user) {
+            if (!isGuest) {
                 backgroundTasks.push(
-                    Promise.resolve().then(() => {
+                    base44.auth.me().then(userData => {
                         const updates = {};
-                        if (savePhone && formData.phone && formData.phone !== user.phone) {
+                        if (savePhone && formData.phone && formData.phone !== userData.phone) {
                             updates.phone = formData.phone;
                         }
                         if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
-                            const currentAddresses = user.saved_addresses || [];
+                            const currentAddresses = userData.saved_addresses || [];
                             const addressExists = currentAddresses.some(addr =>
                                 addr.address === formData.delivery_address && addr.door_number === formData.door_number
                             );
@@ -986,7 +1029,7 @@ export default function Checkout() {
                                     instructions: formData.notes || '',
                                     is_default: setAsDefault
                                 };
-                                const updatedAddresses = setAsDefault
+                                let updatedAddresses = setAsDefault
                                     ? currentAddresses.map(addr => ({ ...addr, is_default: false }))
                                     : currentAddresses;
                                 updates.saved_addresses = [...updatedAddresses, newAddress];
@@ -995,13 +1038,6 @@ export default function Checkout() {
                         if (Object.keys(updates).length > 0) return base44.auth.updateMe(updates);
                     }).catch(e => console.error('Failed to save user data:', e))
                 );
-
-                if (!isGuest && !savePhone && formData.phone && user?.phone !== formData.phone) {
-                    backgroundTasks.push(
-                        Promise.resolve().then(() => base44.auth.updateMe({ phone: null }))
-                            .catch(e => console.error('Failed to clear unsaved phone:', e))
-                    );
-                }
             }
 
             // Update group order
@@ -1015,7 +1051,16 @@ export default function Checkout() {
             // NOTE: Coupon usage_count is now incremented server-side in verifyAndCreateOrder.
             // No client-side coupon update needed here.
 
-            // Promotion usage is validated server-side during order creation.
+            // Increment promotion usage (parallel per promo)
+            appliedPromotions.filter(p => !p.is_automatic).forEach(promo => {
+                backgroundTasks.push(
+                    base44.entities.Promotion.update(promo.id, {
+                        usage_count: (promo.usage_count || 0) + 1,
+                        total_revenue_generated: (promo.total_revenue_generated || 0) + total,
+                        total_discount_given: (promo.total_discount_given || 0) + promo.discount
+                    }).catch(e => console.error('Failed to update promotion usage:', e))
+                );
+            });
 
             // Send customer confirmation via WhatsApp or SMS (whichever is enabled, WhatsApp takes priority)
             backgroundTasks.push(
@@ -1139,7 +1184,6 @@ export default function Checkout() {
                 scheduled_for: isScheduled ? scheduledFor : null,
                 guest_name: formData.guest_name,
                 guest_email: formData.guest_email,
-                promotion_codes: appliedPromotions.length > 0 ? appliedPromotions.map(p => p.promotion_code || p.name) : [],
                 order_source: 'online',
             },
         });
@@ -1302,10 +1346,31 @@ export default function Checkout() {
                                                 type="email"
                                                 placeholder="john@example.com"
                                                 value={formData.guest_email}
-                                                onChange={(e) => setFormData({ ...formData, guest_email: e.target.value })}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, guest_email: e.target.value });
+                                                    setEmailChecked(false);
+                                                    setEmailExists(false);
+                                                }}
+                                                onBlur={handleEmailBlur}
                                                 className="h-12"
                                                 required
                                             />
+                                            {checkingEmail && (
+                                                <p className="text-xs text-gray-500 mt-1">Checking...</p>
+                                            )}
+                                            {emailChecked && emailExists && (
+                                                <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                                    <p className="text-sm text-orange-800 mb-2">This email is already registered!</p>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
+                                                        size="sm"
+                                                        className="bg-orange-500 hover:bg-orange-600 text-white h-9"
+                                                    >
+                                                        Sign in to continue
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <Label htmlFor="guest_name">Full Name *</Label>

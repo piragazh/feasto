@@ -235,7 +235,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!stripe || !elements || isProcessing || !isFormComplete}
+                disabled={!stripe || !elements || isProcessing}
                 className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isProcessing ? (
@@ -246,7 +246,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 ) : (
                     <>
                         <CreditCard className="h-5 w-5 mr-2" />
-                        {isFormComplete ? `Pay £${amount ? amount.toFixed(2) : '0.00'}` : 'Complete payment details'}
+                        Pay £{amount ? amount.toFixed(2) : '0.00'}
                     </>
                 )}
             </Button>
