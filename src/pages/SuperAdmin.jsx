@@ -33,6 +33,7 @@ import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
 import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
 import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
 import WeeklyOpsHealthDashboard from '@/components/superadmin/WeeklyOpsHealthDashboard';
+import FailureMonitoringDashboard from '@/components/superadmin/FailureMonitoringDashboard';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
@@ -147,6 +148,7 @@ export default function SuperAdmin() {
             items: [
                 { id: 'drivers', label: 'Driver Management', icon: Truck },
                 { id: 'monitoring', label: 'Monitoring', icon: Activity },
+                { id: 'failures', label: 'Failures', icon: AlertCircle },
                 { id: 'screens', label: 'Screen Health', icon: Monitor },
                 { id: 'offline-reviews', label: 'Offline Reviews', icon: Activity },
                 { id: 'operator-analytics', label: 'Operator Analytics', icon: Users },
@@ -248,6 +250,7 @@ export default function SuperAdmin() {
                     {activeTab === 'messages' && <MessagingCenter />}
                     {activeTab === 'commission' && <CommissionManagement />}
                     {activeTab === 'monitoring' && <SystemMonitoring />}
+                    {activeTab === 'failures' && <FailureMonitoringDashboard />}
                     {activeTab === 'cuisine' && <CuisineTypeManagement />}
                     {activeTab === 'domains' && <DomainManagement />}
                     {activeTab === 'analytics' && <EnhancedAnalytics />}
