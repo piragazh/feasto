@@ -187,7 +187,9 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
                  <Restaurant restaurantId={customDomainRestaurantId} />
                </LayoutWrapper>
              ) : (
-               <Navigate to="/Home" replace />
+               <LayoutWrapper currentPageName="Home">
+                 <MainPage />
+               </LayoutWrapper>
              )
            } />
           {Object.entries(Pages).map(([path, Page]) => (
