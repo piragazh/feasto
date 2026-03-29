@@ -55,6 +55,7 @@ import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
 
 // Everything else — lazy loaded (split into separate chunks)
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminRestaurants = lazy(() => import('./pages/AdminRestaurants'));
 const CookiesPolicy = lazy(() => import('./pages/CookiesPolicy'));
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'));
@@ -79,6 +80,7 @@ const Orders = lazy(() => import('./pages/Orders'));
 const POSDashboard = lazy(() => import('./pages/POSDashboard'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const PublicFilesManager = lazy(() => import('./pages/PublicFilesManager'));
+const RestaurantDashboard = lazy(() => import('./pages/RestaurantDashboard'));
 const Sitemap = lazy(() => import('./pages/Sitemap'));
 const StaffOnboarding = lazy(() => import('./pages/StaffOnboarding'));
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
@@ -91,6 +93,7 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AdminDashboard": AdminDashboard,
     "AdminRestaurants": AdminRestaurants,
     "Checkout": Checkout,
     "CookiesPolicy": CookiesPolicy,
@@ -118,6 +121,7 @@ export const PAGES = {
     "PrivacyPolicy": PrivacyPolicy,
     "PublicFilesManager": PublicFilesManager,
     "Restaurant": Restaurant,
+    "RestaurantDashboard": RestaurantDashboard,
     "Sitemap": Sitemap,
     "StaffOnboarding": StaffOnboarding,
     "SuperAdmin": SuperAdmin,
