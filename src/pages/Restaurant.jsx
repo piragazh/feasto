@@ -13,12 +13,11 @@ import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search, Chevro
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import CartDrawer from '@/components/cart/CartDrawer';
-import { motion } from 'framer-motion';
-import { toast } from 'sonner';
 import PopularItems from '@/components/restaurant/PopularItems';
 import MealDealsSection from '@/components/restaurant/MealDealsSection';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
-// Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
 const OpeningHours = lazy(() => import('@/components/restaurant/OpeningHours'));
 const SpecialOffers = lazy(() => import('@/components/restaurant/SpecialOffers'));
