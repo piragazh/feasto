@@ -34,9 +34,6 @@ export default function PublicFilesManagement() {
 
         setUploading(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-
             const response = await base44.functions.invoke('uploadPublicFile', {
                 file: file
             });

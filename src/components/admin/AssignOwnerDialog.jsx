@@ -22,7 +22,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users = [
         const loadCurrentManager = async () => {
             if (open && restaurant) {
                 const managers = await base44.entities.RestaurantManager.filter({});
-                const manager = managers.find(m => m.restaurant_ids?.includes(restaurant.id));
+                const manager = (managers || []).find(m => (m.restaurant_ids || []).includes(restaurant.id));
                 setCurrentManager(manager);
                 setSelectedUserId('');
                 setAssignmentType('existing');
@@ -77,7 +77,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users = [
             // Revert optimistic update on error
             const loadCurrentManager = async () => {
                 const managers = await base44.entities.RestaurantManager.filter({});
-                const manager = managers.find(m => m.restaurant_ids?.includes(restaurant.id));
+                const manager = (managers || []).find(m => (m.restaurant_ids || []).includes(restaurant.id));
                 setCurrentManager(manager);
             };
             loadCurrentManager();
@@ -204,7 +204,7 @@ export default function AssignOwnerDialog({ open, onClose, restaurant, users = [
                                 <SelectContent>
                                     {users.map(user => (
                                         <SelectItem key={user.id} value={user.id}>
-                                            {user.full_name || user.email} {user.restaurant_id ? '(Has restaurant)' : ''}
+                                            {user.full_name || user.email}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

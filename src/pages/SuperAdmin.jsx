@@ -35,7 +35,7 @@ import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
 import WeeklyOpsHealthDashboard from '@/components/superadmin/WeeklyOpsHealthDashboard';
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile.jsx';
 
 function SidebarContent({ menuGroups, activeTab, setActiveTab, setMobileSheetOpen, sidebarOpen, isMobile, user }) {
     return (

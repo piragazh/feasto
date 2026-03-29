@@ -205,8 +205,8 @@ export default function EnhancedAnalytics() {
     const orderTypeData = useMemo(() => {
         const breakdown = { delivery: 0, collection: 0 };
         filteredOrders.forEach(order => {
-            const type = order.order_type || 'delivery';
-            breakdown[type] = (breakdown[type] || 0) + (order.total || 0);
+            const orderType = order.order_type || 'delivery';
+            breakdown[orderType] = (breakdown[orderType] || 0) + (order.total || 0);
         });
         return Object.entries(breakdown)
             .filter(([_, value]) => value > 0)

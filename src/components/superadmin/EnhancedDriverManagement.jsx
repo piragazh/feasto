@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,7 @@ export default function EnhancedDriverManagement() {
     });
 
     // Load fare settings
-    React.useEffect(() => {
+    useEffect(() => {
         const baseFare = systemSettings.find(s => s.setting_key === 'base_fare');
         const perMile = systemSettings.find(s => s.setting_key === 'per_mile_rate');
         const perMinute = systemSettings.find(s => s.setting_key === 'per_minute_rate');
@@ -80,9 +80,11 @@ export default function EnhancedDriverManagement() {
             await base44.users.inviteUser(data.email, 'user');
             // Create driver profile
             return base44.entities.Driver.create({
+                email: data.email,
                 full_name: data.full_name,
                 phone: data.phone,
                 vehicle_type: data.vehicle_type,
+                restaurant_ids: [],
                 is_available: false,
                 total_deliveries: 0,
                 rating: 5.0
