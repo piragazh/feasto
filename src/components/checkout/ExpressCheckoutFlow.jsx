@@ -26,7 +26,14 @@ export default function ExpressCheckoutFlow({ amount, onSuccess, onError, client
         clientSecretRef.current = clientSecret;
     }, [clientSecret]);
 
-    if (!stripe || !elements || !clientSecret) {
+    // Guard: must have all Stripe context and props before rendering
+    if (!stripe || !elements) {
+        console.warn('[ExpressCheckoutFlow] Missing Stripe context — stripe=' + !!stripe + ' elements=' + !!elements);
+        return null;
+    }
+    
+    if (!clientSecret) {
+        console.warn('[ExpressCheckoutFlow] Missing clientSecret');
         return null;
     }
 

@@ -1824,7 +1824,7 @@ export default function Checkout() {
 
                             {(paymentMethod === 'card') && showStripeForm && clientSecret ? (
                                 <div className="space-y-6">
-                                    {stripeLoadedPromise && clientSecret ? (
+                                    {stripeLoadedPromise ? (
                                         <>
                                             {/* Express Checkout (wallets) — own Elements wrapper */}
                                             <Elements
