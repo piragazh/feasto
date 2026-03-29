@@ -22,19 +22,21 @@
  */
 export const getApiBaseUrl = () => {
   if (typeof window === 'undefined') {
-    // SSR fallback
     return process.env.VITE_PUBLIC_API_BASE_URL || 'https://api.base44.app';
   }
 
-  // Check for explicit API base URL (can be set via env var or injected at runtime)
   const explicitApiBase = import.meta.env.VITE_PUBLIC_API_BASE_URL;
   if (explicitApiBase) {
     console.log('[API-Origin] Using explicit API base:', explicitApiBase);
     return explicitApiBase;
   }
 
-  // For custom domains, assume API lives on platform domain (passed via window config)
-  // In production, this would be injected by deployment config
+  const sessionApiBase = window.sessionStorage.getItem('base44_api_base_url');
+  if (sessionApiBase) {
+    console.log('[API-Origin] Using session API base:', sessionApiBase);
+    return sessionApiBase;
+  }
+
   const platformDomain = window.__BASE44_PLATFORM_DOMAIN || import.meta.env.VITE_PUBLIC_PLATFORM_DOMAIN;
   if (platformDomain) {
     const apiBase = `https://${platformDomain}`;
@@ -42,21 +44,25 @@ export const getApiBaseUrl = () => {
     return apiBase;
   }
 
-  // Auto-detect custom domains: if hostname is not a Base44/local domain, use the configured platform domain when available.
   const hostname = window.location.hostname;
-  const isCustomDomain = !hostname.includes('base44.app') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
-  if (isCustomDomain) {
-    const sessionApiBase = window.sessionStorage.getItem('base44_api_base_url');
-    if (sessionApiBase) {
-      console.log('[API-Origin] Using session API base:', sessionApiBase);
-      return sessionApiBase;
+  const isPlatformHost = hostname.includes('base44.app') || hostname.includes('localhost') || hostname.includes('127.0.0.1');
+
+  if (!isPlatformHost) {
+    const serverUrlParam = new URLSearchParams(window.location.search).get('server_url');
+    if (serverUrlParam) {
+      try {
+        const origin = new URL(serverUrlParam).origin;
+        window.sessionStorage.setItem('base44_api_base_url', origin);
+        console.log('[API-Origin] Using server_url param for API:', origin);
+        return origin;
+      } catch {
+      }
     }
 
-    console.warn('[API-Origin] Custom domain detected without explicit API base/platform domain; falling back to current origin.');
+    console.warn('[API-Origin] Custom domain detected without known API base; using current origin until platform origin is discovered.');
     return window.location.origin;
   }
 
-  // Fallback: assume frontend and API are on same origin (local dev, platform domain)
   console.log('[API-Origin] Using current origin for API:', window.location.origin);
   return window.location.origin;
 };

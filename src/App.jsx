@@ -82,9 +82,21 @@ const DomainChecker = ({ children }) => {
         try {
           const { base44 } = await import('@/api/base44Client');
           console.log('[DomainChecker] Querying for restaurant with custom_domain:', hostname);
-          const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+          let restaurants = [];
+          let fallbackRestaurants = [];
+
+          try {
+            restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+          } catch (primaryError) {
+            const message = primaryError?.message || '';
+            if (/Unexpected token|JSON|HTML|doctype|Network Error|Failed to fetch/i.test(message)) {
+              throw new Error(`Custom-domain API bootstrap failed while loading restaurant mapping for ${hostname}. The backend origin is likely wrong or returned HTML instead of JSON.`);
+            }
+            throw primaryError;
+          }
+
           if (!restaurants?.length) {
-            const fallbackRestaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname });
+            fallbackRestaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname });
             if (fallbackRestaurants?.[0]) {
               sessionStorage.setItem('customDomainRestaurantId', fallbackRestaurants[0].id);
               sessionStorage.setItem('customDomainCheckedFor', hostname);

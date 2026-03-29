@@ -28,8 +28,18 @@
         window.dispatchEvent(new Event('pwaInstallPromptReady'));
       });
       
-      // Platform domain is auto-managed by Base44 SDK infrastructure.
-       // No manual injection needed - the SDK routes correctly on custom domains.
+      // Persist platform/backend origin when Base44 provides it in the URL.
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var serverUrl = params.get('server_url');
+          if (serverUrl) {
+            var origin = new URL(serverUrl).origin;
+            sessionStorage.setItem('base44_api_base_url', origin);
+            window.__BASE44_PLATFORM_DOMAIN = new URL(serverUrl).host;
+          }
+        } catch (e) {}
+      })();
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
