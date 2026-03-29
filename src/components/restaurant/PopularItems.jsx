@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import useEmblaCarousel from 'embla-carousel-react';
 import { base44 } from '@/api/base44Client';
 import { TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import MenuItemCard from './MenuItemCard';
@@ -8,32 +7,36 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
 export default function PopularItems({ restaurantId, onItemClick }) {
-    const [emblaRef, emblaApi] = useEmblaCarousel({
-        align: 'start',
-        slidesToScroll: 1,
-        skipSnaps: false,
-        breakpoints: {
-            '(max-width: 640px)': { slides: { perView: 1 } },
-            '(min-width: 641px)': { slides: { perView: 2 } },
-            '(min-width: 1024px)': { slides: { perView: 3 } },
-        }
-    });
+    const scrollRef = React.useRef(null);
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
 
-    const scrollPrev = React.useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-    const scrollNext = React.useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+    const updateButtons = React.useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setCanScrollPrev(el.scrollLeft > 0);
+        setCanScrollNext(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+    }, []);
+
+    const scrollPrev = React.useCallback(() => {
+        scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' });
+    }, []);
+
+    const scrollNext = React.useCallback(() => {
+        scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' });
+    }, []);
 
     React.useEffect(() => {
-        if (!emblaApi) return;
-        const updateButtons = () => {
-            setCanScrollPrev(emblaApi.canScrollPrev());
-            setCanScrollNext(emblaApi.canScrollNext());
-        };
         updateButtons();
-        emblaApi.on('select', updateButtons);
-        return () => emblaApi.off('select', updateButtons);
-    }, [emblaApi]);
+        const el = scrollRef.current;
+        if (!el) return;
+        el.addEventListener('scroll', updateButtons);
+        window.addEventListener('resize', updateButtons);
+        return () => {
+            el.removeEventListener('scroll', updateButtons);
+            window.removeEventListener('resize', updateButtons);
+        };
+    }, [updateButtons]);
 
     const { data: orders = [] } = useQuery({
         queryKey: ['restaurant-orders', restaurantId],
@@ -129,17 +132,18 @@ export default function PopularItems({ restaurantId, onItemClick }) {
             </div>
 
             {showCarousel ? (
-                <div className="overflow-hidden" ref={emblaRef}>
-                    <div className="flex gap-4">
-                        {popularItems.map((item, index) => (
-                            <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
-                                <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
-                                    {index + 1}
-                                </div>
-                                <MenuItemCard item={item} onAddToCart={onItemClick} />
+                <div
+                    ref={scrollRef}
+                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2"
+                >
+                    {popularItems.map((item, index) => (
+                        <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
+                            <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
+                                {index + 1}
                             </div>
-                        ))}
-                    </div>
+                            <MenuItemCard item={item} onAddToCart={onItemClick} />
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <div className="space-y-5">
