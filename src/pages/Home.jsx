@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ export default function Home() {
     const [userLocation, setUserLocation] = useState(null);
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
     const [domainCheckDone, setDomainCheckDone] = useState(false);
+    const redirectedCustomDomainRef = useRef(false);
 
     // Directly check the current domain for a matching restaurant (no sessionStorage dependency)
     useEffect(() => {
@@ -150,9 +151,14 @@ export default function Home() {
         );
     }
 
-    // If on custom domain, render Restaurant page directly with ID (SEO-friendly)
+    useEffect(() => {
+        if (!customDomainRestaurantId || redirectedCustomDomainRef.current) return;
+        redirectedCustomDomainRef.current = true;
+        navigate(createPageUrl('Restaurant') + `?id=${customDomainRestaurantId}`, { replace: true });
+    }, [customDomainRestaurantId, navigate]);
+
     if (customDomainRestaurantId) {
-        return <Restaurant restaurantId={customDomainRestaurantId} />;
+        return null;
     }
 
     return (
