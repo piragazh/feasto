@@ -889,13 +889,13 @@ export default function Checkout() {
                  ? (typeof formData.delivery_address === 'string' && formData.delivery_address.trim() 
                      ? sanitizeAddress(formData.delivery_address)
                      : 'Address not provided')
-                 : sanitizeAddress(restaurant?.address || 'Collection');
+                 : '';
             
             const fullAddress = orderType === 'delivery'
                 ? (isExistingAddress
                     ? deliveryAddressString  // saved address already includes door number
                     : `${formData.door_number ? formData.door_number + ', ' : ''}${deliveryAddressString}`)
-                : deliveryAddressString;
+                : '';
             
             // Generate order number for collection orders
             const orderNumber = orderType === 'collection' 
@@ -1752,10 +1752,9 @@ export default function Checkout() {
                                         if (!isExistingAddress && !formData.door_number) return false;
                                         if (!deliveryCoordinates?.lat || !deliveryCoordinates?.lng) return false;
                                         if (!zoneCheckComplete || (deliveryZoneInfo && deliveryZoneInfo.available === false)) return false;
-                                    } else {
-                                        if (!formData.phone) return false;
+                                        return true;
                                     }
-                                    return true;
+                                    return !!formData.phone;
                                 };
 
                                 if (!isAddressValid()) {

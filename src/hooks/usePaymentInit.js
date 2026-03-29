@@ -330,7 +330,7 @@ export function usePaymentInit({
                     ? (isExistingAddress
                         ? formData.delivery_address
                         : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
-                    : (restaurant?.address || 'Collection');
+                    : '';
 
                 const payload = {
                     amount: total,
@@ -344,7 +344,7 @@ export function usePaymentInit({
                     small_order_surcharge: smallOrderSurcharge || 0,
                     order_type: orderType,
                     delivery_address: fullAddress,
-                    delivery_coordinates: deliveryCoordinates,
+                    delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
                     phone: formData.phone,
                     guest_name: formData.guest_name,
                     guest_email: formData.guest_email,
