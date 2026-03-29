@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useSEO } from '@/lib/useSEO';
+import { useSEO } from '@/lib/useSEO.js';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -8,10 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-    Building2, PoundSterling, ShoppingBag, TrendingUp, Star,
+    Building2, PoundSterling, TrendingUp, Star,
     Users, LayoutDashboard, ArrowUpRight, ArrowDownRight,
-    Clock, CheckCircle2, XCircle, RefreshCw, ChevronRight,
-    BarChart3, Package, Percent, AlertCircle, Settings, Tag
+    Clock, CheckCircle2, XCircle, RefreshCw, Settings, Tag
 } from 'lucide-react';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -31,7 +30,7 @@ const STATUS_COLORS = {
 
 const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#06b6d4', '#6b7280'];
 
-const StatCard = ({ title, value, subtitle, icon: Icon, iconColor, trend, trendLabel }) => (
+const StatCard = ({ title, value, subtitle, icon: Icon, iconColor, trend }) => (
     <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">

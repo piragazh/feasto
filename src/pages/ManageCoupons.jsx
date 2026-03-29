@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Percent, DollarSign, Calendar, Trash2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { createPageUrl } from '@/utils';
 import { useEffect } from 'react';
 
 export default function ManageCoupons() {
