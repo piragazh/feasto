@@ -407,7 +407,7 @@ export function usePaymentInit({
 
         runInit();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentFingerprint, zoneCheckComplete, retryCounterRef]);
+    }, [currentFingerprint, ...(orderType === 'delivery' ? [zoneCheckComplete] : []), retryCounterRef]);
 
     return {
         clientSecret,
