@@ -367,8 +367,8 @@ export default function Layout({ children, currentPageName }) {
     const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
     
     // Custom domain home link
-    const homeUrl = customDomainRestaurantId 
-        ? createPageUrl('Restaurant') + `?id=${customDomainRestaurantId}`
+    const homeUrl = customDomainRestaurantId
+        ? '/'
         : createPageUrl('Home');
 
     // Determine if we should show back button (not on Home or custom domain restaurant page)

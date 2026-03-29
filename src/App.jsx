@@ -56,10 +56,6 @@ const CustomDomainRestaurantRoute = ({ customDomainRestaurantId }) => {
   );
 };
 
-const reqOriginFromLocation = () => {
-  const currentOrigin = window.location.origin;
-  return currentOrigin;
-};
 
 const DomainChecker = ({ children }) => {
   const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
@@ -70,16 +66,29 @@ const DomainChecker = ({ children }) => {
     const checkDomain = async () => {
       try {
         const hostname = window.location.hostname;
+        const cached = sessionStorage.getItem('customDomainRestaurantId');
+        const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
+        const urlParams = new URLSearchParams(window.location.search);
+        const forcedRestaurantId = urlParams.get('id') || cached;
         const isPlatform = hostname === 'localhost' || hostname.includes('base44') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes('127.0.0.1');
+
+        if (forcedRestaurantId && (window.location.pathname === '/' || /^\/home$/i.test(window.location.pathname))) {
+          console.log('[DomainChecker] Using forced custom-domain restaurant context:', forcedRestaurantId);
+          setCustomDomainRestaurantId(forcedRestaurantId);
+          setDomainCheckDone(true);
+          return;
+        }
+
         if (isPlatform) {
           console.log('[DomainChecker] Platform domain detected:', hostname);
+          if (cached && cachedFor === hostname) {
+            setCustomDomainRestaurantId(cached);
+          }
           setDomainCheckDone(true);
           return;
         }
         console.log('[DomainChecker] Custom domain detected:', hostname);
         
-        const cached = sessionStorage.getItem('customDomainRestaurantId');
-        const cachedFor = sessionStorage.getItem('customDomainCheckedFor');
         if (cached && cachedFor === hostname) {
           console.log('[DomainChecker] Using cached restaurant ID:', cached);
           setCustomDomainRestaurantId(cached);
