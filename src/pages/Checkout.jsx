@@ -409,8 +409,9 @@ export default function Checkout() {
         
         setCheckingEmail(true);
         try {
-            const users = await base44.entities.User.filter({ email: email.toLowerCase() });
-            setEmailExists(users && users.length > 0);
+            // Don't check if user already exists — skip this for registered users
+            // Users can checkout with their registered email directly
+            setEmailExists(false);
             setEmailChecked(true);
         } catch (error) {
             setEmailExists(false);
