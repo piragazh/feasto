@@ -95,20 +95,10 @@ Deno.serve(async (req) => {
     const requestId = `pi_req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
     try {
-        const base44 = createClientFromRequest(req);
-
-        // ── Auth (guests allowed) ─────────────────────────────────────────────
-        let user = null;
+        // ── Auth (guests allowed) — no auth.me() call needed ──────────────────
+        // Just check if Authorization header exists; user email comes from request body
         const authHeader = req.headers.get('authorization');
-        const isGuestRequest = !authHeader;
-        try {
-            if (!isGuestRequest) {
-                user = await base44.auth.me();
-            }
-        } catch (_) {
-            user = null;
-        }
-        const isGuest = !user;
+        const isGuest = !authHeader;
 
         // ── Parse body ────────────────────────────────────────────────────────
         let body;
@@ -139,7 +129,7 @@ Deno.serve(async (req) => {
             scheduled_for
         } = body;
 
-        const userLabel = isGuest ? `guest:${guest_email || 'unknown'}` : `user:${user?.email}`;
+        const userLabel = isGuest ? `guest:${guest_email || 'unknown'}` : `user:authenticated`;
         console.log(`${LOG_PREFIX} [START] request_id=${requestId} user=${userLabel} idempotency_key=${idempotency_key}`);
 
         // ── 1. Validate amount ────────────────────────────────────────────────
@@ -198,8 +188,8 @@ Deno.serve(async (req) => {
 
         // ── 7. Build metadata (safely truncated) ──────────────────────────────
         const enrichedMetadata = {
-            user_email: truncateMeta(!isGuest ? user?.email : (guest_email || 'guest')),
-            user_id: truncateMeta(!isGuest ? user?.id : 'guest'),
+            user_email: truncateMeta(guest_email || 'guest'),
+            user_id: truncateMeta(isGuest ? 'guest' : 'authenticated'),
             idempotency_key: truncateMeta(idempotency_key),
             restaurant_id: truncateMeta(restaurant_id),
             items_json: serializeItemsMeta(items),
