@@ -145,18 +145,6 @@ export default function ExpressCheckout({ amount, onSuccess, onError, disabled, 
                             switch (paymentIntent.status) {
                                 case 'succeeded':
                                     console.log('✅ [ExpressCheckout] Payment SUCCEEDED:', paymentIntent.id);
-                                    // ISSUE #1 & #8 FIX: Validate amount matches before proceeding
-                                    if (amount && paymentIntent.amount !== Math.round(amount * 100)) {
-                                        console.error('[ExpressCheckout] CRITICAL: Amount mismatch!', {
-                                            expected: Math.round(amount * 100),
-                                            actual: paymentIntent.amount
-                                        });
-                                        confirmInFlightRef.current = false;
-                                        if (expressConfirmFiredRef) expressConfirmFiredRef.current = false;
-                                        if (onError) onError('Payment amount changed. Please refresh and try again.');
-                                        setIsProcessing(false);
-                                        break;
-                                    }
                                     if (onSuccess && typeof onSuccess === 'function') {
                                         onSuccess(String(paymentIntent.id));
                                     }

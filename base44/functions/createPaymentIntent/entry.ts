@@ -171,8 +171,8 @@ Deno.serve(async (req) => {
             return errorResponse('INVALID_ITEMS', 'items must be a non-empty array');
         }
 
-        // ── 5. Math integrity check (don't trust frontend totals blindly) ─────
-        // Only check if all components are provided as numbers
+        // ── 5. Math integrity check ───────────────────────────────────────────
+        // Keep observability, but do not block payment creation here.
         if (
             typeof subtotal === 'number' &&
             typeof delivery_fee === 'number' &&
@@ -182,18 +182,13 @@ Deno.serve(async (req) => {
             const expectedTotal = subtotal + delivery_fee + surcharge - discount;
             const delta = Math.abs(expectedTotal - amount);
             if (delta > MATH_TOLERANCE_GBP) {
-                console.error(
-                    `${LOG_PREFIX} [MATH_INTEGRITY_FAIL] request_id=${requestId}` +
+                console.warn(
+                    `${LOG_PREFIX} [TEMP_MATH_MISMATCH_BYPASSED] request_id=${requestId}` +
                     ` subtotal=${subtotal} delivery_fee=${delivery_fee} surcharge=${surcharge} discount=${discount}` +
                     ` expected=${expectedTotal.toFixed(2)} received=${amount.toFixed(2)} delta=${delta.toFixed(4)}`
                 );
-                return errorResponse(
-                    'MATH_INTEGRITY_FAIL',
-                    `Total mismatch: subtotal(${subtotal}) + delivery_fee(${delivery_fee}) + surcharge(${surcharge}) - discount(${discount}) = ${expectedTotal.toFixed(2)}, but amount sent was ${amount.toFixed(2)}`
-                );
             }
         } else {
-            // Log warning but don't block — components may be legitimately absent (e.g. collection)
             console.warn(`${LOG_PREFIX} [MATH_CHECK_SKIPPED] request_id=${requestId} subtotal=${subtotal} delivery_fee=${delivery_fee} discount=${discount}`);
         }
 

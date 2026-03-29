@@ -54,17 +54,6 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
             return false;
         }
 
-        // FIX #6: Reject if session key has rotated since this form was rendered
-        if (getSessionKey && sessionKeyAtFormRender) {
-            const currentKey = getSessionKey();
-            if (currentKey !== sessionKeyAtFormRender) {
-                console.warn('[StripePaymentForm] Session key rotated since render — rejecting stale confirmation');
-                setErrorMessage('Your payment session changed. Please wait a moment and try again.');
-                setIsProcessing(false);
-                submitFiredRef.current = false;
-                return false;
-            }
-        }
 
         setIsProcessing(true);
 

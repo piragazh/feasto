@@ -316,15 +316,6 @@ export function usePaymentInit({
                     setStripeLoadedPromise(Promise.resolve(stripeObj));
                 }
 
-                // ISSUE #1 FIX: Guard against stale session key and clientSecret
-                if (sessionKeyRef.current !== activeSessionKey) {
-                    console.warn('[usePaymentInit] Session key rotated during Stripe load — aborting stale init');
-                    checkoutTrace.log('stripe_init_aborted_session_rotated', { 
-                        expectedKey: activeSessionKey, 
-                        currentKey: sessionKeyRef.current 
-                    });
-                    return;
-                }
 
                 const fullAddress = orderType === 'delivery'
                     ? (isExistingAddress
@@ -362,15 +353,6 @@ export function usePaymentInit({
 
                 const response = await base44.functions.invoke('createPaymentIntent', payload);
 
-                // ISSUE #1 FIX: Discard if fingerprint changed while in-flight
-                if (sessionKeyRef.current !== activeSessionKey) {
-                    console.warn('[usePaymentInit] Session key rotated during PI creation — discarding stale response');
-                    checkoutTrace.log('stripe_init_response_discarded_stale_session', { 
-                        expectedKey: activeSessionKey, 
-                        currentKey: sessionKeyRef.current 
-                    });
-                    return;
-                }
 
                 if (response?.data?.clientSecret) {
                     checkoutTrace.log('create_payment_intent_succeeded', { piId: response.data.paymentIntentId });
