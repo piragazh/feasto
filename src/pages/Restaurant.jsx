@@ -30,14 +30,15 @@ const CategoryDealCustomizationModal = lazy(() => import('@/components/restauran
 
 export default function Restaurant({ restaurantId: propRestaurantId }) {
     const navigate = useNavigate();
-    const urlParams = new URLSearchParams(window.location.search);
     // Accept restaurantId from props (from Home page) or fall back to sessionStorage/URL
-    const [restaurantId, setRestaurantId] = useState(() => 
-        propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
-    );
+    const [restaurantId, setRestaurantId] = useState(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id');
+    });
     
     useEffect(() => {
         const syncRestaurantId = () => {
+            const urlParams = new URLSearchParams(window.location.search);
             const paramId = urlParams.get('id');
             const customId = sessionStorage.getItem('customDomainRestaurantId');
             const nextId = propRestaurantId || customId || paramId;

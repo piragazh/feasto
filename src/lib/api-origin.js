@@ -46,6 +46,12 @@ export const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
   const isCustomDomain = !hostname.includes('base44.app') && !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
   if (isCustomDomain) {
+    const sessionApiBase = window.sessionStorage.getItem('base44_api_base_url');
+    if (sessionApiBase) {
+      console.log('[API-Origin] Using session API base:', sessionApiBase);
+      return sessionApiBase;
+    }
+
     console.warn('[API-Origin] Custom domain detected without explicit API base/platform domain; falling back to current origin.');
     return window.location.origin;
   }

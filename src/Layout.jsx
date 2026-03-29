@@ -105,10 +105,6 @@ export default function Layout({ children, currentPageName }) {
     const [customDomainRestaurantId, setCustomDomainRestaurantId] = useState(null);
 
     useEffect(() => {
-        setCustomDomainRestaurantId(sessionStorage.getItem('customDomainRestaurantId') || null);
-    }, []);
-
-    useEffect(() => {
         const syncCustomDomainRestaurant = () => {
             const id = sessionStorage.getItem('customDomainRestaurantId') || null;
             setCustomDomainRestaurantId((prev) => (prev === id ? prev : id));

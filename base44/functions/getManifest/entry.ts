@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
                     manifest.short_name = restaurant.name.substring(0, 12);
                     manifest.description = restaurant.description || `Order from ${restaurant.name}`;
                     manifest.start_url = `/`;
+                    manifest.id = `/`;
                     manifest.theme_color = themeColor;
                     manifest.scope = "/";
                     manifest.categories = ["food"];

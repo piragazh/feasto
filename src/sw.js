@@ -108,11 +108,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(async () => {
-        const cachedHome = await caches.match('/');
-        return cachedHome || Response.error();
-      })
-    );
+    event.respondWith(fetch(request));
   }
 });

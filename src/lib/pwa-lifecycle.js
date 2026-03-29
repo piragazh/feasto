@@ -135,15 +135,10 @@ export function registerServiceWorker() {
     }
   };
 
-  if (document.readyState === 'complete') {
-    register();
-  } else {
-    window.addEventListener('load', register, { once: true });
-  }
+  register();
 
   return () => {
     navigator.serviceWorker.removeEventListener('message', onMessage);
-    window.removeEventListener('load', register);
   };
 }
 

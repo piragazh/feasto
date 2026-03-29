@@ -31,13 +31,22 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const CustomDomainRestaurantRoute = ({ customDomainRestaurantId }) => {
-  if (!customDomainRestaurantId) {
-    return <Navigate to="/Home" replace />;
-  }
+  const [shouldRedirectHome, setShouldRedirectHome] = React.useState(false);
 
-  const normalizedPath = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '/';
-  if (normalizedPath === '/home') {
-    return <Navigate to="/" replace />;
+  React.useEffect(() => {
+    if (!customDomainRestaurantId) {
+      setShouldRedirectHome(true);
+      return;
+    }
+
+    const normalizedPath = window.location.pathname.toLowerCase();
+    if (normalizedPath === '/home') {
+      window.history.replaceState({}, document.title, '/');
+    }
+  }, [customDomainRestaurantId]);
+
+  if (!customDomainRestaurantId) {
+    return shouldRedirectHome ? <Navigate to="/Home" replace /> : null;
   }
 
   return (
@@ -45,6 +54,11 @@ const CustomDomainRestaurantRoute = ({ customDomainRestaurantId }) => {
       <Restaurant restaurantId={customDomainRestaurantId} />
     </LayoutWrapper>
   );
+};
+
+const reqOriginFromLocation = () => {
+  const currentOrigin = window.location.origin;
+  return currentOrigin;
 };
 
 const DomainChecker = ({ children }) => {
@@ -91,6 +105,7 @@ const DomainChecker = ({ children }) => {
             console.log('[DomainChecker] Found restaurant:', found.id, found.name);
             sessionStorage.setItem('customDomainRestaurantId', found.id);
             sessionStorage.setItem('customDomainCheckedFor', hostname);
+            sessionStorage.setItem('base44_api_base_url', reqOriginFromLocation());
             setCustomDomainRestaurantId(found.id);
           } else {
             console.log('[DomainChecker] No verified restaurant found for custom domain');
