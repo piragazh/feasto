@@ -36,27 +36,23 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         propRestaurantId || sessionStorage.getItem('customDomainRestaurantId') || urlParams.get('id')
     );
     
-    // Poll sessionStorage for custom domain ID set by Layout in the same tab
     useEffect(() => {
-        let found = false;
-        const paramId = urlParams.get('id');
-        const interval = setInterval(() => {
-            if (found) return; // Stop polling once found
+        const syncRestaurantId = () => {
+            const paramId = urlParams.get('id');
             const customId = sessionStorage.getItem('customDomainRestaurantId');
-            if (customId || paramId) {
-                setRestaurantId(customId || paramId);
-                found = true;
-            }
-        }, 100);
+            const nextId = propRestaurantId || customId || paramId;
+            setRestaurantId((prev) => (prev === nextId ? prev : nextId));
+        };
 
-        // Stop polling after 5 seconds
-        const timeout = setTimeout(() => clearInterval(interval), 5000);
+        syncRestaurantId();
+        window.addEventListener('focus', syncRestaurantId);
+        window.addEventListener('storage', syncRestaurantId);
 
         return () => {
-            clearInterval(interval);
-            clearTimeout(timeout);
+            window.removeEventListener('focus', syncRestaurantId);
+            window.removeEventListener('storage', syncRestaurantId);
         };
-    }, []);
+    }, [propRestaurantId]);
     
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);

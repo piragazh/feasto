@@ -60,6 +60,15 @@ const DomainChecker = ({ children }) => {
           const { base44 } = await import('@/api/base44Client');
           console.log('[DomainChecker] Querying for restaurant with custom_domain:', hostname);
           const restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+          if (!restaurants?.length) {
+            const fallbackRestaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname });
+            if (fallbackRestaurants?.[0]) {
+              sessionStorage.setItem('customDomainRestaurantId', fallbackRestaurants[0].id);
+              sessionStorage.setItem('customDomainCheckedFor', hostname);
+              setCustomDomainRestaurantId(fallbackRestaurants[0].id);
+              return;
+            }
+          }
           const found = restaurants?.[0];
           if (found) {
             console.log('[DomainChecker] Found restaurant:', found.id, found.name);
