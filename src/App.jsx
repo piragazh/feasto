@@ -18,6 +18,9 @@ const ReconciliationDashboard = React.lazy(() => import('./pages/ReconciliationD
 const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const AdminRestaurants = React.lazy(() => import('./pages/AdminRestaurants'));
+const KioskDashboard = React.lazy(() => import('./pages/KioskDashboard'));
+const POSDashboard = React.lazy(() => import('./pages/POSDashboard'));
+const TabletDashboard = React.lazy(() => import('./pages/TabletDashboard'));
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
 
@@ -330,6 +333,9 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
               </Suspense>
             )}
           />
+          <Route path="/KioskDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><KioskDashboard /></Suspense>} />
+          <Route path="/POSDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><POSDashboard /></Suspense>} />
+          <Route path="/TabletDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><TabletDashboard /></Suspense>} />
           <Route path="/home" element={<Navigate to="/Home" replace />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="*" element={<PageNotFound />} />
