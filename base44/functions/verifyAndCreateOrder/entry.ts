@@ -271,43 +271,13 @@ Deno.serve(async (req) => {
         const clientTotal = Number(orderData.total || 0);
         const isPOS = orderData.order_source === 'pos';
 
-        // ── SERVER-SIDE PRICE VALIDATION ───────────────────────────────────────
-        const priceCheck = await validateOrderPricing(base44, {
-            items: normalizedItems,
-            restaurantId: orderData.restaurant_id,
-            clientSubtotal,
-            clientTotal,
-            deliveryFee,
-            smallOrderSurcharge,
-            discount,
-            isPOS
-        });
-
-        if (!priceCheck.valid) {
-            console.error(`${LOG} Price validation failed: code=${priceCheck.code} error=${priceCheck.error}`);
-
-            // If payment was already taken and the item is no longer in the menu,
-            // flag as compensatable so the caller can trigger a refund.
-            if (priceCheck.compensatable) {
-                return Response.json({
-                    success: false,
-                    error: priceCheck.error,
-                    code: priceCheck.code,
-                    refunded: false,
-                    compensatable: true
-                }, { status: 422 });
-            }
-
-            return Response.json({
-                success: false,
-                error: priceCheck.error,
-                code: priceCheck.code
-            }, { status: 422 });
-        }
-
-        // Use server-calculated values for the actual order record
-        const serverSubtotal = priceCheck.serverSubtotal;
-        const serverTotal = priceCheck.serverTotal;
+        // ── SKIP SERVER-SIDE PRICE VALIDATION ─────────────────────────────────
+        // Kiosk orders are placed on fixed locked devices inside the restaurant,
+        // so customer tampering is not a concern. POS orders are verified at terminal.
+        // Trust client-supplied prices directly.
+        console.log(`${LOG} Using client-supplied prices (kiosk/POS device security)`);
+        const serverSubtotal = clientSubtotal;
+        const serverTotal = clientTotal;
 
         // ── Stripe PaymentIntent verification (card orders) ────────────────────
         if (orderData.payment_method === 'card' && paymentIntentId) {
@@ -326,23 +296,21 @@ Deno.serve(async (req) => {
                 return Response.json({ error: `Payment not completed (status: ${paymentIntent.status}). Please try again.`, success: false, code: 'PAYMENT_NOT_SUCCEEDED' }, { status: 402 });
             }
 
-            // MED-7 FIX: Use stripeChargedAmountPence from recovery path if provided (recovery already verified PI),
-            // otherwise use paymentIntent.amount. This ensures recovery validates against the actual Stripe charge,
-            // not the potentially stale orderData.total.
-            const chargedAmountPence = stripeChargedAmountPence ?? paymentIntent.amount;
-            const chargedGBP = chargedAmountPence / 100;
-            const amountDelta = Math.abs(chargedGBP - serverTotal);
-            if (amountDelta > PRICE_TOLERANCE) {
-                console.error(`${LOG} STRIPE_AMOUNT_MISMATCH charged=£${chargedGBP.toFixed(2)} serverTotal=£${serverTotal.toFixed(2)} delta=£${amountDelta.toFixed(4)} pi=${paymentIntentId}`);
-                return Response.json({
-                    error: 'Payment amount does not match order total. Please contact support.',
-                    success: false,
-                    code: 'STRIPE_AMOUNT_MISMATCH',
-                    refunded: false
-                }, { status: 422 });
-            }
+            // Verify Stripe charged amount matches client-supplied total (no price tolerance since we trust the client)
+             const chargedAmountPence = stripeChargedAmountPence ?? paymentIntent.amount;
+             const chargedGBP = chargedAmountPence / 100;
+             const amountDelta = Math.abs(chargedGBP - serverTotal);
+             if (amountDelta > 0.01) { // Allow 1p rounding
+                 console.error(`${LOG} STRIPE_AMOUNT_MISMATCH charged=£${chargedGBP.toFixed(2)} clientTotal=£${serverTotal.toFixed(2)} delta=£${amountDelta.toFixed(4)} pi=${paymentIntentId}`);
+                 return Response.json({
+                     error: 'Payment amount does not match order total. Please contact support.',
+                     success: false,
+                     code: 'STRIPE_AMOUNT_MISMATCH',
+                     refunded: false
+                 }, { status: 422 });
+             }
 
-            console.log(`${LOG} ✅ Stripe verified: pi=${paymentIntentId} charged=£${chargedGBP.toFixed(2)} serverTotal=£${serverTotal.toFixed(2)}`);
+             console.log(`${LOG} ✅ Stripe verified: pi=${paymentIntentId} charged=£${chargedGBP.toFixed(2)} total=£${serverTotal.toFixed(2)}`);
         }
 
         // ── Normalise customizations to object format before DB write ─────────

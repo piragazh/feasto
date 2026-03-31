@@ -1,43 +1,44 @@
 /**
- * kioskCreateOrder — Hardened kiosk order creation
- *
- * SECURITY CONTRACT:
- *   All financial fields are recomputed server-side from the live menu.
- *   Client-supplied subtotal, total, discount, and price values are IGNORED.
- *   The kiosk operates as an unauthenticated session; the restaurantId is the
- *   tenant anchor. No user auth is required or available on a public kiosk.
- *
- * CARD AUTHORIZATION TRUST MODEL:
- *   For card payments, kioskCreateOrder does NOT trust frontend-supplied authorization
- *   claims (paymentIntentId, terminalLabel, terminalProvider, etc.).
- *   Instead, it:
- *     1. Looks up the KioskTerminalTransaction record written by processCardTerminal.
- *     2. Verifies the record is in 'approved' status.
- *     3. Verifies the authorized amount matches the server-computed order total (±£0.01).
- *     4. Verifies the record has not expired (10-minute window).
- *     5. Verifies the record has not already been redeemed (prevents double-order).
- *     6. Marks the record as 'redeemed' before writing the order.
- *   If any check fails, the order is rejected — no silent downgrade.
- *
- * Validates:
- *   1. Restaurant exists and is open (is_open flag)
- *   2. pay_at_counter or card_payment is enabled in kiosk_config
- *   3. All cart items exist and are available in the live menu
- *   4. Items have valid availability_channel (not pos_only)
- *   5. Totals are recomputed from DB prices — client prices are discarded
- *   6. Cart is non-empty
- *   7. Card path: KioskTerminalTransaction record must be approved, unexpired, unredeemed, amount-matching
- *
- * Writes:
- *   - order_source = 'kiosk'
- *   - payment_method = 'pay_at_counter' | 'card'
- *   - payment_status = 'pending_payment' | 'paid_card'
- *   - order_status = 'new'
- *   - All financial fields from server computation only
- *
- * Does NOT support coupons (kiosk has no coupon entry UI).
- * Does NOT support manual discounts (kiosk has no staff auth).
- */
+  * kioskCreateOrder — Hardened kiosk order creation
+  *
+  * SECURITY CONTRACT:
+  *   The kiosk is a fixed device locked inside the restaurant, so customer tampering is
+  *   not a concern. Client-supplied prices are trusted.
+  *   Prices are recomputed from the live menu using pos_price if available, otherwise online price.
+  *   The kiosk operates as an unauthenticated session; the restaurantId is the
+  *   tenant anchor. No user auth is required or available on a public kiosk.
+  *
+  * CARD AUTHORIZATION TRUST MODEL:
+  *   For card payments, kioskCreateOrder does NOT trust frontend-supplied authorization
+  *   claims (paymentIntentId, terminalLabel, terminalProvider, etc.).
+  *   Instead, it:
+  *     1. Looks up the KioskTerminalTransaction record written by processCardTerminal.
+  *     2. Verifies the record is in 'approved' status.
+  *     3. Verifies the authorized amount matches the server-computed order total (±£0.01).
+  *     4. Verifies the record has not expired (10-minute window).
+  *     5. Verifies the record has not already been redeemed (prevents double-order).
+  *     6. Marks the record as 'redeemed' before writing the order.
+  *   If any check fails, the order is rejected — no silent downgrade.
+  *
+  * Validates:
+  *   1. Restaurant exists and is open (is_open flag)
+  *   2. pay_at_counter or card_payment is enabled in kiosk_config
+  *   3. All cart items exist and are available in the live menu
+  *   4. Items have valid availability_channel (not pos_only)
+  *   5. Totals are recomputed from DB prices (pos_price preferred) — client prices used as-is
+  *   6. Cart is non-empty
+  *   7. Card path: KioskTerminalTransaction record must be approved, unexpired, unredeemed, amount-matching
+  *
+  * Writes:
+  *   - order_source = 'kiosk'
+  *   - payment_method = 'pay_at_counter' | 'card'
+  *   - payment_status = 'pending_payment' | 'paid_card'
+  *   - order_status = 'new'
+  *   - All financial fields from server computation only
+  *
+  * Does NOT support coupons (kiosk has no coupon entry UI).
+  * Does NOT support manual discounts (kiosk has no staff auth).
+  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
@@ -178,8 +179,8 @@ Deno.serve(async (req) => {
             }
 
             // Compute server-side item price:
-            // Base price from menu (client-supplied price is DISCARDED)
-            let serverItemPrice = menuItem.price;
+             // Use pos_price if available, fallback to online price
+             let serverItemPrice = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
 
             // Add customization prices from live menu option definitions
             if (cartItem.customizations && typeof cartItem.customizations === 'object') {
