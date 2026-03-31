@@ -72,12 +72,14 @@ export default function OrderHistoryManagement() {
     const totalOrders = filteredOrders.length;
 
     const exportToCSV = () => {
-        const headers = ['Order ID', 'Date', 'Restaurant', 'Customer', 'Items', 'Total', 'Status', 'Payment Method', 'Type'];
+        const headers = ['Order ID', 'Date', 'Restaurant', 'Customer Name', 'Customer Email', 'Customer Phone', 'Items', 'Total', 'Status', 'Payment Method', 'Type'];
         const rows = filteredOrders.map(order => [
             order.id,
             format(new Date(order.created_date), 'yyyy-MM-dd HH:mm'),
             order.restaurant_name || 'N/A',
-            order.created_by || order.guest_email || 'Guest',
+            order.guest_name || order.created_by?.split('@')[0] || 'Guest',
+            order.guest_email || order.created_by || 'N/A',
+            order.phone || 'N/A',
             order.items?.length || 0,
             order.total?.toFixed(2) || '0.00',
             order.status,
@@ -103,13 +105,14 @@ export default function OrderHistoryManagement() {
             id: order.id,
             date: order.created_date,
             restaurant: order.restaurant_name,
-            customer: order.created_by || order.guest_email,
+            customer_name: order.guest_name || order.created_by?.split('@')[0] || 'Guest',
+            customer_email: order.guest_email || order.created_by || 'N/A',
+            customer_phone: order.phone || 'N/A',
             items: order.items,
             total: order.total,
             status: order.status,
             payment_method: order.payment_method,
             delivery_address: order.delivery_address,
-            phone: order.phone,
             order_type: order.order_type
         }));
 
@@ -359,7 +362,13 @@ export default function OrderHistoryManagement() {
                                             <td className="py-3 text-sm font-mono">#{order.id.slice(-8)}</td>
                                             <td className="py-3 text-sm">{format(new Date(order.created_date), 'MMM dd, yyyy HH:mm')}</td>
                                             <td className="py-3 text-sm font-medium">{order.restaurant_name || 'N/A'}</td>
-                                            <td className="py-3 text-sm">{order.created_by || order.guest_email || 'Guest'}</td>
+                                            <td className="py-3 text-sm">
+                                                <div>
+                                                    <div className="font-medium">{order.guest_name || order.created_by?.split('@')[0] || 'Guest'}</div>
+                                                    <div className="text-xs text-gray-500">{order.guest_email || order.created_by || order.phone}</div>
+                                                    {order.phone && <div className="text-xs text-gray-500">{order.phone}</div>}
+                                                </div>
+                                            </td>
                                             <td className="py-3 text-sm">{order.items?.length || 0} items</td>
                                             <td className="py-3 text-sm font-semibold">£{order.total?.toFixed(2) || '0.00'}</td>
                                             <td className="py-3">
@@ -469,13 +478,22 @@ export default function OrderHistoryManagement() {
                                     <p className="text-sm text-gray-600">Restaurant</p>
                                     <p className="font-medium">{selectedOrder.restaurant_name}</p>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Customer</p>
-                                    <p className="font-medium">{selectedOrder.created_by || selectedOrder.guest_email || 'Guest'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Phone</p>
-                                    <p className="font-medium">{selectedOrder.phone}</p>
+                                <div className="col-span-2">
+                                    <p className="text-sm text-gray-600 mb-2">Customer Details</p>
+                                    <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-700">Name:</span>
+                                            <span className="font-medium">{selectedOrder.guest_name || selectedOrder.created_by?.split('@')[0] || 'Guest'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-700">Email:</span>
+                                            <span className="font-medium text-sm">{selectedOrder.guest_email || selectedOrder.created_by || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-700">Phone:</span>
+                                            <span className="font-medium">{selectedOrder.phone || 'N/A'}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-600">Order Type</p>

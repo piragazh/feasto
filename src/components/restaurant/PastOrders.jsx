@@ -108,7 +108,8 @@ export default function PastOrders({ restaurantId }) {
                                 </div>
                             </div>
                             <div className="text-sm text-gray-600 mb-3">
-                                <p><strong>Customer:</strong> {order.phone}</p>
+                                <p><strong>Customer:</strong> {order.guest_name || order.created_by?.split('@')[0] || 'Guest'}</p>
+                                <p><strong>Contact:</strong> {order.phone} {order.guest_email && `• ${order.guest_email}`}</p>
                                 <p><strong>Address:</strong> {order.delivery_address}</p>
                                 <p><strong>Items:</strong> {order.items?.length || 0} items</p>
                                 <p><strong>Payment:</strong> {order.payment_method || 'N/A'}</p>
