@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/**
  * Smoke tests: confirmKioskPayment backend function
  *
  * Tests security invariants:

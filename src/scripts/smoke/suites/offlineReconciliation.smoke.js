@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/**
  * Offline Reconciliation Smoke Tests
  * 
  * Verifies explicit sync outcomes, manager visibility, retry safety,

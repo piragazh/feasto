@@ -83,9 +83,13 @@ const DomainChecker = ({ children }) => {
 
           try {
             restaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname, domain_verified: true });
+            // CRIT-3 FIX: Validate response is array, not HTML/malformed
+            if (!Array.isArray(restaurants)) {
+              throw new Error(`Invalid restaurants response (not an array). Backend may have returned HTML or error page.`);
+            }
           } catch (primaryError) {
             const message = primaryError?.message || '';
-            if (/Unexpected token|JSON|HTML|doctype|Network Error|Failed to fetch/i.test(message)) {
+            if (/Unexpected token|JSON|HTML|doctype|Network Error|Failed to fetch|not an array/i.test(message)) {
               throw new Error(`Custom-domain API bootstrap failed while loading restaurant mapping for ${hostname}. The backend origin is likely wrong or returned HTML instead of JSON.`);
             }
             throw primaryError;

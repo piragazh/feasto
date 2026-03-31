@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/**
  * Kiosk State Model Smoke Tests
  *
  * Validates explicit separation of payment_status and order_status

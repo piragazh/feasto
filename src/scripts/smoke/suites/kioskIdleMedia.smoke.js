@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/**
  * Kiosk Idle Media Mode Smoke Tests
  * 
  * Validates:

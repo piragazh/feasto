@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/**
  * Offline POS Hardening Smoke Tests
  * Verifies that offline mode enforces safe constraints and sync re-validates properly
  * 

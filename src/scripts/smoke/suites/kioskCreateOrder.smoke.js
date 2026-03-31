@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/**
  * Smoke tests — kioskCreateOrder backend function
  *
  * Tests:
