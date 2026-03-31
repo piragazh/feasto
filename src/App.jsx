@@ -14,6 +14,9 @@ import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
 const OfflineRiskControlCenter = React.lazy(() => import('./pages/OfflineRiskControlCenter'));
 const RestaurantOfflineRiskOverview = React.lazy(() => import('./pages/RestaurantOfflineRiskOverview'));
 const ReconciliationDashboard = React.lazy(() => import('./pages/ReconciliationDashboard'));
+const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const AdminRestaurants = React.lazy(() => import('./pages/AdminRestaurants'));
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
 
@@ -276,6 +279,27 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="ReconciliationDashboard">
                 <ReconciliationDashboard />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/SuperAdmin" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="SuperAdmin">
+                <SuperAdmin />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/AdminDashboard" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="AdminDashboard">
+                <AdminDashboard />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/AdminRestaurants" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="AdminRestaurants">
+                <AdminRestaurants />
               </LayoutWrapper>
             </Suspense>
           } />
