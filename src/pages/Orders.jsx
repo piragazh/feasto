@@ -59,19 +59,11 @@ export default function Orders() {
     
     const { data: orders = [], isLoading, refetch, error } = useQuery({
         queryKey: ['orders'],
-        enabled: !isLoadingAuth,
+        enabled: !isLoadingAuth && user !== undefined,
         queryFn: async () => {
             try {
-                // Try authenticated user first
-                const isAuthenticated = await base44.auth.isAuthenticated();
-
-                if (isAuthenticated) {
-                    const user = await base44.auth.me();
-                    if (!user?.email) {
-                        base44.auth.redirectToLogin();
-                        return [];
-                    }
-
+                // Use context user instead of querying again - avoid race conditions
+                if (user) {
                     const phone = user.phone || sessionStorage.getItem('guest_order_phone') || null;
 
                     // Fetch by all known identifiers in parallel:

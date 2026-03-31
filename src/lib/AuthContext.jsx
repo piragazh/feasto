@@ -48,11 +48,21 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setAuthError(null);
     } catch (error) {
-      console.warn('[AuthProvider] User auth check failed (public app allowed):', error?.message);
+      // Distinguish between "not logged in" (expected) vs "auth system error" (unexpected)
+      const isNotAuthenticatedError = error?.message?.includes('not authenticated') || error?.message?.includes('unauthorized');
+      console.warn('[AuthProvider] Auth check:', isNotAuthenticatedError ? 'User not logged in' : 'Auth error -', error?.message);
       setUser(null);
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
-      setAuthError(null); // Don't treat unauthenticated as error (public app)
+      // Only set error if it's NOT a normal "not authenticated" response
+      if (!isNotAuthenticatedError) {
+        setAuthError({
+          type: 'auth_check_error',
+          message: 'Failed to verify authentication'
+        });
+      } else {
+        setAuthError(null);
+      }
     }
   };
 
