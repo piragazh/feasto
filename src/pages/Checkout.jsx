@@ -939,13 +939,15 @@ export default function Checkout() {
 
             // CRITICAL SECURITY: Use backend verification function instead of direct create
               // This ensures payment is verified and restaurant is open
-              const currentSessionKey = getSessionKey();
-              checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType, sessionKey: currentSessionKey });
-              console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId, 'session_key:', currentSessionKey);
+              // BUG-M03 FIX: Use locked session key (captured at handleStripeSuccess start)
+              // to prevent rotation during payment processing
+              const sessionKeyToUse = paymentIntentId ? lockedSessionKey : getSessionKey();
+              checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType, sessionKey: sessionKeyToUse });
+              console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId, 'session_key:', sessionKeyToUse);
               const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
                   orderData,
                   paymentIntentId: paymentIntentId || null,
-                  idempotency_key: currentSessionKey
+                  idempotency_key: sessionKeyToUse
               });
 
             if (!verificationResponse?.data?.success) {
@@ -1135,6 +1137,9 @@ export default function Checkout() {
         // ISSUE #4 FIX: Lock form immediately to block all back-button / double-submit races
         setIsSubmitting(true);
 
+        // BUG-M03 FIX: Lock session key immediately to prevent rotation during payment processing
+        const lockedSessionKey = getSessionKey();
+
         // Validate payment intent before proceeding
         if (!paymentIntentId || typeof paymentIntentId !== 'string') {
             console.error('[Checkout] Invalid payment intent ID:', paymentIntentId);
@@ -1163,7 +1168,7 @@ export default function Checkout() {
         // next mount will detect this record and replay order creation safely.
         pendingPayment.save({
             paymentIntentId,
-            idempotencyKey: getSessionKey(),
+            idempotencyKey: lockedSessionKey,
             total,
             restaurantId,
             restaurantName,
