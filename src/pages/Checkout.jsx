@@ -494,7 +494,9 @@ export default function Checkout() {
 
     // Re-run zone check when restaurantId or deliveryCoordinates change (handles async load race with saved address)
     useEffect(() => {
-        if (!restaurantId || !deliveryCoordinates?.lat || !deliveryCoordinates?.lng || orderType !== 'delivery') return;
+        if (!restaurantId || !deliveryCoordinates?.lat || !deliveryCoordinates?.lng) return;
+        // AUDIT FIX: Run zone check for delivery orders only
+        if (orderType !== 'delivery') return;
 
         let cancelled = false;
         setZoneCheckComplete(false);
