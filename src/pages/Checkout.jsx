@@ -1072,13 +1072,14 @@ export default function Checkout() {
             // NOTE: Coupon usage_count is now incremented server-side in verifyAndCreateOrder.
             // No client-side coupon update needed here.
 
-            // Increment promotion usage (parallel per promo)
+            // MED-4 FIX: Increment promotion usage server-side to avoid stale read-modify-write race condition
             appliedPromotions.filter(p => !p.is_automatic).forEach(promo => {
                 backgroundTasks.push(
-                    base44.entities.Promotion.update(promo.id, {
-                        usage_count: (promo.usage_count || 0) + 1,
-                        total_revenue_generated: (promo.total_revenue_generated || 0) + total,
-                        total_discount_given: (promo.total_discount_given || 0) + promo.discount
+                    base44.functions.invoke('incrementPromotionUsage', {
+                        promoId: promo.id,
+                        orderId: newOrder.id,
+                        orderTotal: total,
+                        promoDiscount: promo.discount || 0,
                     }).catch(e => console.error('Failed to update promotion usage:', e))
                 );
             });
