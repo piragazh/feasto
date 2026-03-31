@@ -48,11 +48,17 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ allowed: true }), { status: 200 });
         }
 
-        const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
-        const recentOrders = await base44.asServiceRole.entities.Order.filter({
-            created_by: user.email,
-            created_date: { $gt: oneMinuteAgo }
-        });
+        const oneMinuteAgo = Date.now() - 60_000;
+        // Fetch recent orders without relying on $gt operator (may not be supported)
+        // Sort descending, fetch top 10, then filter in-app for 1-minute window
+        const allRecentOrders = await base44.asServiceRole.entities.Order.filter(
+            { created_by: user.email },
+            '-created_date',
+            10
+        );
+        const recentOrders = (allRecentOrders || []).filter(
+            o => new Date(o.created_date).getTime() > oneMinuteAgo
+        );
 
         // Delegates to shared pure function — same logic tested in src/lib/__tests__/abuse-controls.test.js
         const { blocked, retryAfter } = checkPerUserBurst(recentOrders);
