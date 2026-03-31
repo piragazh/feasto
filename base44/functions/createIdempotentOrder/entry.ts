@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
         const subtotal = draftOrderData?.subtotal ?? parseFloat(meta.subtotal) ?? 0;
         const delivery_fee = draftOrderData?.delivery_fee ?? parseFloat(meta.delivery_fee) ?? 0;
         const discount = draftOrderData?.discount ?? parseFloat(meta.discount) ?? 0;
-        const small_order_surcharge = draftOrderData?.small_order_surcharge ?? 0;
+        const small_order_surcharge = draftOrderData?.small_order_surcharge ?? parseFloat(meta.small_order_surcharge) ?? 0;
         const total = draftOrderData?.total ?? parseFloat(meta.total) ?? 0;
         const order_type = draftOrderData?.order_type || meta.order_type || 'delivery';
         const delivery_address = draftOrderData?.delivery_address || meta.delivery_address || '';
@@ -306,7 +306,7 @@ Deno.serve(async (req) => {
             restaurantId: restaurant_id,
             chargedAmountGBP: chargedGBP,
             deliveryFee: parseFloat(delivery_fee) || 0,
-            smallOrderSurcharge: 0, // not stored in PI metadata
+            smallOrderSurcharge: parseFloat(small_order_surcharge) || 0,
             discount: parseFloat(discount) || 0
         });
 
