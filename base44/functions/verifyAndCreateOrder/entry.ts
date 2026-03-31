@@ -24,8 +24,9 @@ async function fetchMenuItemMap(base44, restaurantId, requiredIds) {
     let skip = 0;
     let hasMore = true;
     while (hasMore && itemMap.size < requiredIds.length) {
+        // MED-2 FIX: Use stable sort to ensure consistent pagination across pages
         const batch = await base44.asServiceRole.entities.MenuItem.filter(
-            { restaurant_id: restaurantId }, null, PAGE_SIZE, skip
+            { restaurant_id: restaurantId }, 'created_date', PAGE_SIZE, skip
         );
         if (!Array.isArray(batch) || batch.length === 0) { hasMore = false; break; }
         for (const item of batch) {
