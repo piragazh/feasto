@@ -282,10 +282,39 @@ Deno.serve(async (req) => {
             console.log(`${LOG} ✅ Stripe verified: pi=${paymentIntentId} charged=£${chargedGBP.toFixed(2)} serverTotal=£${serverTotal.toFixed(2)}`);
         }
 
+        // ── Normalise customizations to object format before DB write ─────────
+        // The DB entity schema requires customizations to be a plain dict/object.
+        // The frontend may send either an array of {name, selected_options} objects
+        // or already a plain object — convert array → object here to avoid validation errors.
+        const normalizeCustomizationsForDB = (customizations) => {
+            if (!customizations) return {};
+            if (Array.isArray(customizations)) {
+                // Convert [{name: "Chips", selected_options: ["With Chips"]}, ...] → {"Chips": "With Chips", ...}
+                const obj = {};
+                for (const group of customizations) {
+                    if (!group.name) continue;
+                    const val = group.selected_options ?? (group.selected_option ? [group.selected_option] : group.value);
+                    obj[group.name] = Array.isArray(val) && val.length === 1 ? val[0] : val;
+                    // Preserve nested meal_customizations as a sub-object if present
+                    if (group.meal_customizations) {
+                        obj[`${group.name}__meal`] = normalizeCustomizationsForDB(group.meal_customizations);
+                    }
+                }
+                return obj;
+            }
+            // Already an object — return as-is
+            return customizations;
+        };
+
+        const itemsForDB = normalizedItems.map(item => ({
+            ...item,
+            customizations: normalizeCustomizationsForDB(item.customizations),
+        }));
+
         // ── Create order using server-validated values ─────────────────────────
         const newOrder = await base44.asServiceRole.entities.Order.create({
             ...orderData,
-            items: normalizedItems,
+            items: itemsForDB,
             subtotal: serverSubtotal,
             delivery_fee: deliveryFee,
             small_order_surcharge: smallOrderSurcharge,
