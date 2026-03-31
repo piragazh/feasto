@@ -596,10 +596,13 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     if (content.length === 0) {
         return (
             <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 text-white">
-                <div className="text-center">
-                    <h1 className="text-4xl font-bold mb-4">{restaurant?.name}</h1>
+                <div className="text-center space-y-4">
+                    <h1 className="text-4xl font-bold">{restaurant?.name || 'Restaurant'}</h1>
                     <p className="text-xl">
-                        {!isOnline ? 'Waiting for connection…' : 'No content configured for this screen'}
+                        {!isOnline ? '🌐 Waiting for connection…' : '📺 No content configured for this screen'}
+                    </p>
+                    <p className="text-sm opacity-80">
+                        Screen: {screenName} | Restaurant: {restaurantId}
                     </p>
                 </div>
             </div>
