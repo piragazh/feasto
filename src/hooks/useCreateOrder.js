@@ -74,8 +74,8 @@ export function useCreateOrder({
                 return;
             }
 
-            if (!restaurantId || !restaurantName) {
-                toast.error('Restaurant information missing');
+            if (!restaurantId || !restaurantName || typeof restaurantName !== 'string' || !restaurantName.trim()) {
+                toast.error('Restaurant information is still loading. Please try again.');
                 setIsSubmitting(false);
                 return;
             }

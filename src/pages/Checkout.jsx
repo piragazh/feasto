@@ -176,18 +176,34 @@ export default function Checkout() {
             setFormData(prev => ({ ...prev, delivery_address: savedAddress }));
         }
         
-        // Restore address coordinates
+        // Restore address coordinates — guarded against corrupted data
         if (savedCoords) {
-            setDeliveryCoordinates(JSON.parse(savedCoords));
+            try {
+                const parsed = JSON.parse(savedCoords);
+                if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+                    setDeliveryCoordinates(parsed);
+                }
+            } catch (e) {
+                console.warn('[Checkout] Corrupted coordinates in localStorage, ignoring');
+                localStorage.removeItem('userCoordinates');
+            }
         }
 
         // Restore order type
         setOrderType(savedOrderType);
 
-        // Restore applied promotions from cart drawer
+        // Restore applied promotions from cart drawer — guarded against corrupted data
         const savedPromotions = localStorage.getItem('appliedPromotions');
         if (savedPromotions) {
-            setAppliedPromotions(JSON.parse(savedPromotions));
+            try {
+                const parsed = JSON.parse(savedPromotions);
+                if (Array.isArray(parsed)) {
+                    setAppliedPromotions(parsed);
+                }
+            } catch (e) {
+                console.warn('[Checkout] Corrupted promotions in localStorage, ignoring');
+                localStorage.removeItem('appliedPromotions');
+            }
         }
     }, []); // Only on mount
 
@@ -788,10 +804,15 @@ export default function Checkout() {
         
         // ---- VALIDATION: Check Required Fields ----
 
-        // For guest users, name and email are required
+        // For guest users, name and email are required and email must be valid format
         if (isGuest && (!formData.guest_name || !formData.guest_email)) {
             console.log('BLOCKED: Guest name/email missing');
             toast.error('Please provide your name and email');
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (isGuest && formData.guest_email && !emailRegex.test(formData.guest_email)) {
+            toast.error('Please enter a valid email address');
             return;
         }
 
@@ -1554,6 +1575,8 @@ export default function Checkout() {
                             {(() => {
                                 // Validation checks before showing payment methods
                                 const isAddressValid = () => {
+                                    // Guests must fill name + email before payment options appear
+                                    if (isGuest && (!formData.guest_name || !formData.guest_email || !formData.guest_email.includes('@'))) return false;
                                     if (orderType === 'delivery') {
                                         if (!formData.delivery_address || !formData.phone) return false;
                                         if (!isExistingAddress && !formData.door_number) return false;
