@@ -25,13 +25,8 @@ export const AuthProvider = ({ children }) => {
       setAppPublicSettings({});
       setIsLoadingPublicSettings(false);
 
-      // Check authentication if token present
-      if (appParams.token) {
-        await loadUserAuth();
-      } else {
-        setIsLoadingAuth(false);
-        setIsAuthenticated(false);
-      }
+      // Always attempt to load auth — cookie-based sessions don't use URL tokens
+      await loadUserAuth();
     } catch (err) {
       console.error('[AuthProvider] Init failed:', err);
       setAuthError({
