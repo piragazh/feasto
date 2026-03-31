@@ -92,38 +92,36 @@ Deno.serve(async (req) => {
             : 0;
 
         return Response.json({
-            data: {
-                timestamp: new Date().toISOString(),
-                moneySafety: {
-                    refundPercent,
-                    refundCount: refunds.length,
-                    refundFailures: failedRefunds.length,
-                    orphanedPayments,
-                    totalAmount: Math.round(totalAmount),
-                    totalPayments: recentOrders.length
-                },
-                orderHealth: {
-                    successRate,
-                    rejectionRate,
-                    avgOrderValue,
-                    totalOrders: recentOrders.length
-                },
-                failures: {
-                    totalFailures: recentFailures.length,
-                    criticalFailures,
-                    topFailures
-                },
-                reconciliation: {
-                    openIssues,
-                    criticalIssues: criticalReconIssues,
-                    avgResolutionHours: Math.round(avgResolutionHours * 10) / 10,
-                    oldestIssueAgeHours: Math.round(oldestIssue)
-                },
-                trends: {
-                    orders: ordersTrend,
-                    refunds: refundsTrend,
-                    failures: failuresTrend
-                }
+            timestamp: new Date().toISOString(),
+            moneySafety: {
+                refundPercent,
+                refundCount: refunds.length,
+                refundFailures: failedRefunds.length,
+                orphanedPayments,
+                totalAmount: Math.round(totalAmount),
+                totalPayments: recentOrders.length
+            },
+            orderHealth: {
+                successRate,
+                rejectionRate,
+                avgOrderValue,
+                totalOrders: recentOrders.length
+            },
+            failures: {
+                totalFailures: recentFailures.length,
+                criticalFailures,
+                topFailures
+            },
+            reconciliation: {
+                openIssues,
+                criticalIssues: criticalReconIssues,
+                avgResolutionHours: Math.round(avgResolutionHours * 10) / 10,
+                oldestIssueAgeHours: Math.round(oldestIssue)
+            },
+            trends: {
+                orders: ordersTrend,
+                refunds: refundsTrend,
+                failures: failuresTrend
             }
         });
     } catch (error) {
