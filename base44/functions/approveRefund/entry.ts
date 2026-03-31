@@ -90,11 +90,23 @@ Deno.serve(async (req) => {
                     error: `Partial refund items total £${itemsTotal.toFixed(2)} does not match requested £${requestedAmount.toFixed(2)}`,
                 }, { status: 400 });
             }
-            const orderItemNames = (order.items || []).map(i => i.name?.toLowerCase());
             for (const ri of order.refund_requested_items) {
-                if (!orderItemNames.includes(ri.name?.toLowerCase())) {
+                const match = (order.items || []).find(i => i.menu_item_id === ri.menu_item_id);
+                if (!match) {
                     return Response.json({
-                        error: `Item "${ri.name}" was not in the original order`,
+                        error: `Item "${ri.name || ri.menu_item_id}" was not in the original order`,
+                    }, { status: 400 });
+                }
+                if ((ri.quantity || 1) > (match.quantity || 1)) {
+                    return Response.json({
+                        error: `Refund quantity (${ri.quantity}) exceeds ordered quantity (${match.quantity}) for "${match.name}"`,
+                    }, { status: 400 });
+                }
+                const expectedPrice = match.price * (ri.quantity || 1);
+                const claimedPrice = (ri.price || 0) * (ri.quantity || 1);
+                if (Math.abs(claimedPrice - expectedPrice) > 0.02) {
+                    return Response.json({
+                        error: `Refund price for "${match.name}" does not match the original order price`,
                     }, { status: 400 });
                 }
             }
