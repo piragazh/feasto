@@ -25,7 +25,9 @@ function validateStripeKeys() {
 
 const _stripeMode = validateStripeKeys();
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
-const MAX_RETRIES = 3;
+// MAX_RETRIES=2 keeps total backoff at 1s+2s=3s, safely within serverless timeout.
+// 3 retries (1s+2s+4s=7s) risked timeout mid-refund leaving PT in ambiguous state.
+const MAX_RETRIES = 2;
 const INITIAL_BACKOFF_MS = 1000; // 1 second
 
 async function attemptRefund(paymentIntentId, attempt = 1) {
