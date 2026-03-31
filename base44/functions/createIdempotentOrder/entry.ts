@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
                 scheduled_for,
                 payment_intent_id: paymentIntentId,
                 idempotency_key,
-                order_source: sourceType === 'webhook_recovery' ? 'webhook' : 'online'
+                order_source: 'online'
             });
 
             console.log(`${LOG} ✅ Order created: id=${newOrder.id} from ${sourceType} total=£${finalTotal.toFixed(2)}`);
