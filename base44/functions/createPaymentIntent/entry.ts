@@ -274,7 +274,46 @@ Deno.serve(async (req) => {
             );
         }
 
-        // ── 10. Success ───────────────────────────────────────────────────────
+        // ── 10. Write OrderDraft — authoritative payload for webhook/recovery ─────
+        // Written BEFORE returning the clientSecret so recovery always has full data.
+        // Non-blocking: failure is logged but never blocks the checkout flow.
+        try {
+            const base44 = createClientFromRequest(req);
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+            await base44.asServiceRole.entities.OrderDraft.create({
+                payment_intent_id: paymentIntent.id,
+                idempotency_key: idempotency_key || null,
+                restaurant_id,
+                amount,
+                status: 'pending',
+                expires_at: expiresAt,
+                order_data: {
+                    restaurant_id,
+                    items,
+                    subtotal,
+                    delivery_fee,
+                    discount,
+                    small_order_surcharge: small_order_surcharge || 0,
+                    order_type: order_type || 'delivery',
+                    delivery_address: delivery_address || '',
+                    delivery_coordinates: delivery_coordinates || null,
+                    phone: phone || '',
+                    guest_name: guest_name || '',
+                    guest_email: guest_email || '',
+                    notes: notes || '',
+                    is_scheduled: is_scheduled || false,
+                    scheduled_for: scheduled_for || null,
+                    total: amount,
+                    idempotency_key: idempotency_key || null,
+                }
+            });
+            console.log(`${LOG_PREFIX} [ORDER_DRAFT] Written for pi=${paymentIntent.id}`);
+        } catch (draftErr) {
+            // Non-fatal: webhook recovery will fall back to Stripe metadata
+            console.warn(`${LOG_PREFIX} [ORDER_DRAFT_WARN] Failed to write draft for pi=${paymentIntent.id}: ${draftErr.message}`);
+        }
+
+        // ── 11. Success ───────────────────────────────────────────────────────
         console.log(
             `${LOG_PREFIX} [SUCCESS] request_id=${requestId}` +
             ` pi=${paymentIntent.id} amount=${amountInPence}p status=${paymentIntent.status}`

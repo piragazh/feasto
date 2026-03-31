@@ -1,15 +1,21 @@
 /**
- * pendingPayment — sessionStorage-based pending payment persistence with recovery tracking
+ * pendingPayment — localStorage-based pending payment persistence with recovery tracking
  * =====================================================================================
  *
  * Written immediately when a PaymentIntent succeeds (before createOrder runs).
  * Read on checkout mount to detect interrupted payments.
  * Cleared on terminal outcomes: order_found, order_created, already_refunded, needs_review.
  *
- * Why sessionStorage not localStorage:
- *   - sessionStorage is tab-scoped: a new tab won't see another tab's pending payment
- *   - Cleared automatically when the browser session ends (unlike localStorage)
- *   - Sufficient durability: we only need to survive a page reload in the same tab
+ * Why localStorage (not sessionStorage):
+ *   - localStorage persists across tab close and browser restarts.
+ *   - This means recovery triggers even if the user reopens the browser after a crash.
+ *   - A 24-hour TTL prevents stale records from accumulating.
+ *   - sessionStorage was tab-scoped: a crash or new tab = silent loss.
+ *
+ * NOTE: The primary authoritative recovery source is now the OrderDraft entity in the DB,
+ * written by createPaymentIntent before returning the clientSecret. This client-side record
+ * is a convenience layer for fast same-session recovery; the webhook + OrderDraft path
+ * handles cross-session/crash recovery server-side.
  *
  * Schema:
  *   {
@@ -20,25 +26,29 @@
  *     restaurantName:  string,
  *     orderData:       object,     // full order payload for replay (validated+normalized)
  *     savedAt:         string,     // ISO timestamp when payment succeeded
+ *     expiresAt:       string,     // ISO timestamp — 24h TTL
  *     recovery_attempts: number,   // count of recovery replay attempts
  *     last_attempted_at: string,   // ISO timestamp of last recovery attempt
  *     recovery_status: string,     // 'replayable' | 'terminal_refunded' | 'terminal_manual_review' | 'terminal_invalid_payload'
  *   }
  */
 
-const STORAGE_KEY = 'pending_payment_v1';
+const STORAGE_KEY = 'pending_payment_v2';
 const MAX_RECOVERY_ATTEMPTS = 2;
+const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const pendingPayment = {
     /**
      * Persist the pending payment immediately after PI succeeds.
-     * Called BEFORE createOrder to ensure durability across reloads.
+     * Called BEFORE createOrder to ensure durability across reloads and tab closes.
      */
     save(payload) {
         try {
-            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+            const now = new Date().toISOString();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 ...payload,
-                savedAt: new Date().toISOString(),
+                savedAt: now,
+                expiresAt: new Date(Date.now() + TTL_MS).toISOString(),
                 recovery_attempts: 0,
                 last_attempted_at: null,
                 recovery_status: 'replayable',
@@ -50,15 +60,21 @@ export const pendingPayment = {
     },
 
     /**
-     * Read the persisted pending payment (or null if none).
+     * Read the persisted pending payment (or null if none / expired).
      */
     read() {
         try {
-            const raw = sessionStorage.getItem(STORAGE_KEY);
+            const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             // Sanity check: must have a valid PI ID
             if (!parsed?.paymentIntentId?.startsWith('pi_')) return null;
+            // TTL check — discard expired records silently
+            if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
+                console.log('[pendingPayment] record expired, clearing');
+                localStorage.removeItem(STORAGE_KEY);
+                return null;
+            }
             return parsed;
         } catch (e) {
             console.warn('[pendingPayment] read failed:', e.message);
@@ -78,7 +94,7 @@ export const pendingPayment = {
             const attempts = (current.recovery_attempts || 0) + 1;
             const withinLimit = attempts <= MAX_RECOVERY_ATTEMPTS;
             
-            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 ...current,
                 recovery_attempts: attempts,
                 last_attempted_at: new Date().toISOString(),
@@ -94,7 +110,6 @@ export const pendingPayment = {
 
     /**
      * Update recovery status to terminal state.
-     * Used to mark when recovery should stop being attempted.
      */
     setTerminalStatus(status) {
         try {
@@ -107,7 +122,7 @@ export const pendingPayment = {
                 return;
             }
             
-            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 ...current,
                 recovery_status: status,
             }));
@@ -120,11 +135,12 @@ export const pendingPayment = {
 
     /**
      * Clear after confirmed order creation or terminal outcome.
-     * Called when: order_found, order_created, already_refunded, needs_review, or max attempts exceeded.
      */
     clear() {
         try {
-            sessionStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(STORAGE_KEY);
+            // Also clear any legacy sessionStorage record from v1
+            sessionStorage.removeItem('pending_payment_v1');
             console.log('[pendingPayment] cleared');
         } catch (e) {
             console.warn('[pendingPayment] clear failed:', e.message);
@@ -140,7 +156,7 @@ export const pendingPayment = {
 
     /**
      * Check if recovery should be attempted.
-     * False if: status is terminal, or attempts exceeded.
+     * False if: status is terminal, attempts exceeded, or record expired.
      */
     isReplayable() {
         const record = this.read();

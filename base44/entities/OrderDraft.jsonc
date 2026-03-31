@@ -1,0 +1,51 @@
+{
+  "name": "OrderDraft",
+  "type": "object",
+  "description": "Stores full order payload before payment confirmation. Acts as the authoritative source for webhook/recovery order reconstruction, replacing truncation-prone Stripe metadata.",
+  "properties": {
+    "payment_intent_id": {
+      "type": "string",
+      "description": "Stripe PaymentIntent ID \u2014 primary lookup key"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Client idempotency key \u2014 secondary dedup key"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "order_data": {
+      "type": "object",
+      "description": "Full order payload (items with customizations, fees, delivery details, etc.)"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Total amount in GBP"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "consumed",
+        "expired"
+      ],
+      "default": "pending",
+      "description": "pending = awaiting order creation; consumed = order successfully created; expired = TTL passed"
+    },
+    "consumed_order_id": {
+      "type": "string",
+      "description": "Set when consumed \u2014 the resulting Order ID"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Auto-expiry timestamp (24h after creation)"
+    }
+  },
+  "required": [
+    "payment_intent_id",
+    "restaurant_id",
+    "order_data",
+    "amount"
+  ]
+}

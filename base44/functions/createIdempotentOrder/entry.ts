@@ -207,26 +207,70 @@ Deno.serve(async (req) => {
             }
         }
 
-        // ── Extract metadata fields ────────────────────────────────────────────
-        const {
-            restaurant_id, items_json, subtotal, delivery_fee, discount, total,
-            order_type, delivery_address, delivery_coordinates, phone,
-            guest_name, guest_email, notes, is_scheduled, scheduled_for, idempotency_key
-        } = paymentIntentMetadata;
+        // ── Extract order data: prefer OrderDraft over Stripe metadata ───────────
+        // OrderDraft stores the full payload without the 490-char truncation limit
+        // that affects Stripe PI metadata. Fall back to metadata if no draft found.
+        let draftOrderData = null;
+        let orderDraftId = null;
+        try {
+            const drafts = await base44.asServiceRole.entities.OrderDraft.filter({
+                payment_intent_id: paymentIntentId
+            });
+            const activeDraft = (drafts || []).find(d => d.status === 'pending');
+            if (activeDraft?.order_data) {
+                draftOrderData = activeDraft.order_data;
+                orderDraftId = activeDraft.id;
+                console.log(`${LOG} ✅ Found OrderDraft id=${orderDraftId} for pi=${paymentIntentId} — using full payload`);
+            }
+        } catch (draftErr) {
+            console.warn(`${LOG} OrderDraft lookup failed (non-fatal, falling back to metadata): ${draftErr.message}`);
+        }
 
-        if (!restaurant_id || !items_json || total === undefined) {
-            console.error(`${LOG} Missing critical metadata fields`);
-            return Response.json({ error: 'Incomplete order metadata', success: false }, { status: 400 });
+        // Resolve order fields: draft takes precedence over PI metadata
+        const meta = paymentIntentMetadata;
+        const restaurant_id = draftOrderData?.restaurant_id || meta.restaurant_id;
+        const subtotal = draftOrderData?.subtotal ?? parseFloat(meta.subtotal) ?? 0;
+        const delivery_fee = draftOrderData?.delivery_fee ?? parseFloat(meta.delivery_fee) ?? 0;
+        const discount = draftOrderData?.discount ?? parseFloat(meta.discount) ?? 0;
+        const small_order_surcharge = draftOrderData?.small_order_surcharge ?? 0;
+        const total = draftOrderData?.total ?? parseFloat(meta.total) ?? 0;
+        const order_type = draftOrderData?.order_type || meta.order_type || 'delivery';
+        const delivery_address = draftOrderData?.delivery_address || meta.delivery_address || '';
+        const delivery_coordinates = draftOrderData?.delivery_coordinates || (meta.delivery_coordinates ? (() => { try { return JSON.parse(meta.delivery_coordinates); } catch { return null; } })() : null);
+        const phone = draftOrderData?.phone || meta.phone || '';
+        const guest_name = draftOrderData?.guest_name || meta.guest_name || '';
+        const guest_email = draftOrderData?.guest_email || meta.guest_email || '';
+        const notes = draftOrderData?.notes || meta.notes || '';
+        const is_scheduled = draftOrderData?.is_scheduled ?? (meta.is_scheduled === 'true' || meta.is_scheduled === true);
+        const scheduled_for = draftOrderData?.scheduled_for || meta.scheduled_for || null;
+        const idempotency_key = draftOrderData?.idempotency_key || meta.idempotency_key || null;
+
+        if (!restaurant_id) {
+            console.error(`${LOG} Missing restaurant_id in both draft and metadata`);
+            return Response.json({ error: 'Incomplete order data: missing restaurant_id', success: false }, { status: 400 });
         }
 
         // ── Parse items ────────────────────────────────────────────────────────
         let items;
-        try {
-            items = JSON.parse(items_json);
-            if (!Array.isArray(items) || items.length === 0) throw new Error('Items must be non-empty array');
-        } catch (e) {
-            console.error(`${LOG} Failed to parse items: ${e.message}`);
-            return Response.json({ error: 'Invalid items data', success: false }, { status: 400 });
+        if (draftOrderData?.items && Array.isArray(draftOrderData.items) && draftOrderData.items.length > 0) {
+            // Full items with customizations from OrderDraft
+            items = draftOrderData.items;
+            console.log(`${LOG} Using ${items.length} items from OrderDraft (full fidelity)`);
+        } else {
+            // Fallback: parse from Stripe metadata items_json (may be truncated)
+            const items_json = meta.items_json;
+            if (!items_json) {
+                console.error(`${LOG} No items in draft or metadata`);
+                return Response.json({ error: 'Incomplete order data: no items', success: false }, { status: 400 });
+            }
+            try {
+                items = JSON.parse(items_json);
+                if (!Array.isArray(items) || items.length === 0) throw new Error('Items must be non-empty array');
+                console.warn(`${LOG} ⚠️ Using items from Stripe metadata fallback (may be truncated) for pi=${paymentIntentId}`);
+            } catch (e) {
+                console.error(`${LOG} Failed to parse items_json: ${e.message} — metadata may be truncated`);
+                return Response.json({ error: 'Invalid items data (metadata truncated)', success: false, code: 'METADATA_TRUNCATED', recoverable: false }, { status: 400 });
+            }
         }
 
         // Normalize schema
@@ -294,7 +338,7 @@ Deno.serve(async (req) => {
                 status: 'confirmed',
                 order_type: order_type || 'delivery',
                 delivery_address: delivery_address || '',
-                delivery_coordinates: delivery_coordinates ? JSON.parse(delivery_coordinates) : null,
+                delivery_coordinates: delivery_coordinates || null,
                 phone,
                 guest_name,
                 guest_email,
@@ -307,6 +351,14 @@ Deno.serve(async (req) => {
             });
 
             console.log(`${LOG} ✅ Order created: id=${newOrder.id} from ${sourceType} total=£${finalTotal.toFixed(2)}`);
+
+            // Mark OrderDraft as consumed
+            if (orderDraftId) {
+                base44.asServiceRole.entities.OrderDraft.update(orderDraftId, {
+                    status: 'consumed',
+                    consumed_order_id: newOrder.id
+                }).catch(e => console.warn(`${LOG} Failed to mark draft consumed: ${e.message}`));
+            }
         } catch (createError) {
             console.error(`${LOG} Order creation failed: ${createError.message}`);
             await base44.asServiceRole.entities.FailureLog.create({
