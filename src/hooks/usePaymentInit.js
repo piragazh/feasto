@@ -127,12 +127,17 @@ export function usePaymentInit({
         prevTotalRef.current = total;
     }, [total, clientSecret, resetPaymentState]);
 
-    // Preflight validation
+    // Preflight validation — must match Checkout's validatePayment rules
     const preflightValid = useMemo(() => {
         if (paymentMethod !== 'card') return false;
         
-        if (isGuest && (!formData.guest_name || !formData.guest_email)) return false;
-        if (!formData.phone) return false;
+        // Guest must provide name + valid email before payment init
+        if (isGuest) {
+            if (!formData.guest_name?.trim() || !formData.guest_email?.trim()) return false;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.guest_email)) return false;
+        }
+        if (!formData.phone?.trim()) return false;
         
         if (orderType === 'delivery') {
             if (!formData.delivery_address?.trim()) return false;

@@ -107,8 +107,14 @@ Deno.serve(async (req) => {
                 return Response.json({ status: 'order_found', order_id: pt.order_id, order_number: pt.order_number });
             }
             if (pt.status === 'refunded') {
-                console.log(`${LOG} [trace=${traceId}] PT already refunded`);
-                return Response.json({ status: 'already_refunded' });
+                // CRIT-9 FIX: Verify refund actually completed before claiming success
+                if (pt.refund_confirmed_at) {
+                    console.log(`${LOG} [trace=${traceId}] PT already refunded (confirmed at ${pt.refund_confirmed_at})`);
+                    return Response.json({ status: 'already_refunded' });
+                } else {
+                    console.warn(`${LOG} [trace=${traceId}] PT marked refunded but refund_confirmed_at is empty — may be pending`);
+                    // Fall through to retry recovery (replayable)
+                }
             }
             if (pt.status === 'needs_review') {
                 console.log(`${LOG} [trace=${traceId}] PT needs_review`);

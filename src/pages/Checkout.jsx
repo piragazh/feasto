@@ -123,7 +123,8 @@ export default function Checkout() {
     const [setAsDefault, setSetAsDefault] = useState(false);
     const [isExistingAddress, setIsExistingAddress] = useState(false);
     const [isExistingPhone, setIsExistingPhone] = useState(false);
-    const [user, setUser] = useState(null);
+    // CRIT-8 FIX: Initialize to undefined to distinguish "loading" from "not authenticated"
+    const [user, setUser] = useState(undefined);
     const [showManualAddressEntry, setShowManualAddressEntry] = useState(false);
     const [pointsPerPound, setPointsPerPound] = useState(1);
 
@@ -356,11 +357,16 @@ export default function Checkout() {
     // ── Recovery: detect interrupted payments on page reload ──────────────────
     // If a pending payment was persisted (PI succeeded but browser closed before
     // order creation confirmed), attempt to recover it automatically.
-    // FIX #7: Pass user context to pendingPayment.read() for user binding validation
-    // AUDIT FIX: Guard on user state — recovery needs user to be resolved first (null = still loading)
+    // CRIT-8 FIX: Only run recovery after auth resolution AND user binding is certain.
+    // If user is still undefined (async auth ongoing), do not read pending payment yet.
     useEffect(() => {
-        if (user === null && !isGuest) return; // Wait: user not yet resolved (loading)
+        // Guard 1: If authenticated user not yet resolved, wait for resolution (user = undefined or null)
+        if (user === undefined) return; // Still loading auth
+        // Guard 2: If guest but isGuest not yet set, skip (isGuest = false initially)
+        if (!isGuest && user === null) return; // Auth failed or async — treat as unauthenticated
+        
         const detectRecovery = async () => {
+            // At this point, user is fully resolved: either {email, ...} or null (guest/failed auth)
             const pending = await pendingPayment.read(user);
             if (!pending) return;
 

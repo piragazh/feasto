@@ -196,16 +196,18 @@ export const pendingPayment = {
 
     /**
      * Returns true if a pending payment exists that is NOT yet resolved.
+     * NOTE: ASYNC — must be awaited. Synchronous check would always be false.
      */
-    hasPending() {
-        return this.read() !== null;
+    async hasPending() {
+        const record = await this.read();
+        return record !== null;
     },
 
     /**
-     * Check if recovery should be attempted.
-     * False if: status is terminal, attempts exceeded, or record expired.
-     * NOTE: Reads from raw localStorage synchronously (without boundTo check) for
-     * fast startup validation before async user context is available.
+     * Check if recovery should be attempted (synchronous, fast startup check).
+     * False if: status is terminal, attempts exceeded, or record expired/missing.
+     * NOTE: Does NOT verify boundTo — that's checked in async read().
+     * Use isReplayable() for fast pre-async validation; use read() for full binding check.
      */
     isReplayable() {
         try {
@@ -213,7 +215,11 @@ export const pendingPayment = {
             if (!raw) return false;
             const record = JSON.parse(raw);
             if (!record?.paymentIntentId?.startsWith('pi_')) return false;
-            if (record.expiresAt && new Date(record.expiresAt) < new Date()) return false;
+            if (record.expiresAt && new Date(record.expiresAt) < new Date()) {
+                // Expired record — silently clear it
+                localStorage.removeItem(STORAGE_KEY);
+                return false;
+            }
 
             const isTerminal = record.recovery_status?.startsWith('terminal_');
             const exceedsLimit = (record.recovery_attempts || 0) >= MAX_RECOVERY_ATTEMPTS;
