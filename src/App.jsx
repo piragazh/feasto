@@ -9,6 +9,7 @@ import React, { Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import RequireAdmin from '@/components/auth/RequireAdmin';
+import RequireAuth from '@/components/auth/RequireAuth';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
@@ -333,7 +334,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
               </Suspense>
             )}
           />
-          <Route path="/KioskDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><KioskDashboard /></Suspense>} />
+          <Route path="/KioskDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><RequireAuth><KioskDashboard /></RequireAuth></Suspense>} />
           <Route path="/POSDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><POSDashboard /></Suspense>} />
           <Route path="/TabletDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><TabletDashboard /></Suspense>} />
           <Route path="/home" element={<Navigate to="/Home" replace />} />
