@@ -71,42 +71,22 @@ const CustomTooltip = ({ active, payload, label, prefix = '' }) => {
 export default function AdminDashboard() {
     useSEO({ title: 'Admin Dashboard', noindex: true });
     const navigate = useNavigate();
-    const [isAuthorized, setIsAuthorized] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
 
     const { data: restaurants = [], isLoading: restaurantsLoading } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
-        enabled: isAuthorized,
     });
 
     const { data: orders = [], isLoading: ordersLoading } = useQuery({
         queryKey: ['all-orders-admin'],
         queryFn: () => base44.entities.Order.list('-created_date', 500),
-        enabled: isAuthorized,
     });
 
     const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
         queryKey: ['all-reviews-admin'],
         queryFn: () => base44.entities.Review.list(),
-        enabled: isAuthorized,
     });
-
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const user = await base44.auth.me();
-                if (!user || user.role !== 'admin') {
-                    base44.auth.redirectToLogin(window.location.pathname);
-                    return;
-                }
-                setIsAuthorized(true);
-            } catch (e) {
-                base44.auth.redirectToLogin(window.location.pathname);
-            }
-        };
-        checkAuth();
-    }, []);
 
     // ── Computed metrics ──────────────────────────────────────────────
     const metrics = useMemo(() => {
@@ -167,17 +147,6 @@ export default function AdminDashboard() {
     const recentOrders = orders.slice(0, 10);
 
     const isLoading = restaurantsLoading || ordersLoading || reviewsLoading;
-
-    if (!isAuthorized) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-14 h-14 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-white/70 text-sm">Verifying access...</p>
-                </div>
-            </div>
-        );
-    }
 
     const tabs = [
         { id: 'overview', label: 'Overview' },

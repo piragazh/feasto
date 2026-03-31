@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,6 @@ import { createPageUrl } from '@/utils/index.ts';
 
 export default function AdminRestaurants() {
     const navigate = useNavigate();
-    const [isChecking, setIsChecking] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [editingRestaurant, setEditingRestaurant] = useState(null);
     const [assigningRestaurant, setAssigningRestaurant] = useState(null);
@@ -28,19 +27,16 @@ export default function AdminRestaurants() {
     const { data: restaurants = [], isLoading } = useQuery({
         queryKey: ['admin-restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
-        enabled: !isChecking,
     });
 
     const { data: users = [] } = useQuery({
         queryKey: ['all-users'],
         queryFn: () => base44.entities.User.list(),
-        enabled: !isChecking,
     });
 
     const { data: managers = [] } = useQuery({
         queryKey: ['restaurant-managers'],
         queryFn: () => base44.entities.RestaurantManager.list(),
-        enabled: !isChecking,
     });
 
     const deleteRestaurantMutation = useMutation({
@@ -88,33 +84,7 @@ export default function AdminRestaurants() {
         }
     });
 
-    // Check authentication and admin role
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const user = await base44.auth.me();
-                if (!user || user.role !== 'admin') {
-                    base44.auth.redirectToLogin(window.location.pathname);
-                    return;
-                }
-                setIsChecking(false);
-            } catch (e) {
-                base44.auth.redirectToLogin(window.location.pathname);
-            }
-        };
-        checkAuth();
-    }, []);
 
-    if (isChecking) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Checking access...</p>
-                </div>
-            </div>
-        );
-    }
 
     const filteredRestaurants = restaurants.filter(r =>
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
