@@ -174,7 +174,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         gcTime: 15 * 60 * 1000,
     });
 
-    const { data: mealDeals = [] } = useQuery({
+    const { data: mealDeals = [], error: dealsError } = useQuery({
         queryKey: ['mealDeals', restaurantId],
         queryFn: async () => {
             const deals = await base44.entities.MealDeal.filter({ restaurant_id: restaurantId, is_active: true });
@@ -929,6 +929,20 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Restaurant not found</h2>
+                    <Link to={sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home')}>
+                        <Button>Go Back Home</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (dealsError) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to load meal deals</h2>
+                    <p className="text-gray-600 mb-4">{dealsError.message || 'Please try again later'}</p>
                     <Link to={sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home')}>
                         <Button>Go Back Home</Button>
                     </Link>
