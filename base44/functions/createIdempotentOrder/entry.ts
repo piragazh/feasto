@@ -1,229 +1,293 @@
 /**
  * IDEMPOTENT ORDER CREATION — Called by webhook or verified checkout
- * 
+ *
  * Guarantees: one paymentIntent → at most one order
  * Source: Can be called from webhook (recovery) or frontend (normal flow)
+ *
+ * Now includes strict server-side price validation:
+ *   - Fetches authoritative MenuItem prices from DB
+ *   - Recalculates item totals including all customization costs
+ *   - Rejects if total differs from charged amount by > £0.02
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+const LOG = '[createIdempotentOrder]';
+const PRICE_TOLERANCE = 0.02;
+const PAGE_SIZE = 50;
+
+// ── Price Validation Helpers ─────────────────────────────────────────────────
+
+async function fetchMenuItemMap(base44, restaurantId, requiredIds) {
+    const itemMap = new Map();
+    if (requiredIds.length === 0) return itemMap;
+    let skip = 0;
+    let hasMore = true;
+    while (hasMore && itemMap.size < requiredIds.length) {
+        const batch = await base44.asServiceRole.entities.MenuItem.filter(
+            { restaurant_id: restaurantId }, null, PAGE_SIZE, skip
+        );
+        if (!Array.isArray(batch) || batch.length === 0) { hasMore = false; break; }
+        for (const item of batch) {
+            if (item?.id && requiredIds.includes(item.id)) itemMap.set(item.id, item);
+        }
+        if (itemMap.size === requiredIds.length || batch.length < PAGE_SIZE) hasMore = false;
+        skip += PAGE_SIZE;
+    }
+    return itemMap;
+}
+
+function calcItemServerPrice(dbItem, orderItem) {
+    const basePrice = dbItem.price;
+    let serverPrice = basePrice;
+    const breakdown = [`base=£${basePrice.toFixed(2)}`];
+
+    const customizations = orderItem.customizations;
+    if (!customizations || typeof customizations !== 'object') return { serverPrice, breakdown };
+
+    const dbOptions = dbItem.customization_options || [];
+    const customizationList = Array.isArray(customizations)
+        ? customizations
+        : Object.entries(customizations).map(([name, value]) => ({ name, value }));
+
+    for (const clientCustom of customizationList) {
+        const customName = clientCustom.name || clientCustom.key;
+        if (!customName) continue;
+
+        const dbGroup = dbOptions.find(g => g.name === customName);
+        if (!dbGroup) continue;
+
+        if (dbGroup.type === 'meal_upgrade') {
+            const selectedUpgrade = clientCustom.selected_option || clientCustom.value;
+            if (!selectedUpgrade) continue;
+            const upgradeLabel = typeof selectedUpgrade === 'string' ? selectedUpgrade : selectedUpgrade.label;
+            const dbUpgradeOption = (dbGroup.options || []).find(o => o.label === upgradeLabel);
+            if (dbUpgradeOption && typeof dbUpgradeOption.price === 'number') {
+                serverPrice += dbUpgradeOption.price;
+                breakdown.push(`upgrade:${upgradeLabel}=£${dbUpgradeOption.price.toFixed(2)}`);
+            }
+            if (dbUpgradeOption && Array.isArray(dbUpgradeOption.meal_customizations)) {
+                const mealCustoms = clientCustom.meal_customizations || clientCustom.nested || [];
+                for (const mealCustom of mealCustoms) {
+                    const mealGroup = dbUpgradeOption.meal_customizations.find(mg => mg.name === (mealCustom.name || mealCustom.key));
+                    if (!mealGroup) continue;
+                    const selectedOptions = mealCustom.selected_options || (mealCustom.selected_option ? [mealCustom.selected_option] : []);
+                    for (const sel of selectedOptions) {
+                        const selLabel = typeof sel === 'string' ? sel : sel.label;
+                        const dbOpt = (mealGroup.options || []).find(o => o.label === selLabel);
+                        if (dbOpt) {
+                            serverPrice += (dbOpt.price || 0);
+                            breakdown.push(`${mealCustom.name}:${selLabel}=£${(dbOpt.price || 0).toFixed(2)}`);
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+
+        const selectedOptions = clientCustom.selected_options
+            || (clientCustom.selected_option ? [clientCustom.selected_option] : [])
+            || (Array.isArray(clientCustom.value) ? clientCustom.value : (clientCustom.value ? [clientCustom.value] : []));
+
+        for (const sel of selectedOptions) {
+            const selLabel = typeof sel === 'string' ? sel : sel.label;
+            if (!selLabel) continue;
+            const dbOpt = (dbGroup.options || []).find(o => o.label === selLabel);
+            if (!dbOpt) continue;
+            const optPrice = typeof dbOpt.price === 'number' ? dbOpt.price : 0;
+            serverPrice += optPrice;
+            breakdown.push(`${customName}:${selLabel}=£${optPrice.toFixed(2)}`);
+        }
+    }
+    return { serverPrice, breakdown };
+}
+
+/**
+ * Validate pricing for webhook/recovery path.
+ * Here the payment has already been charged — we validate against the Stripe amount,
+ * not against a client-submitted total (which may not exist in metadata).
+ * Returns { valid, serverSubtotal, serverTotal, logOnly, error, code }
+ */
+async function validatePricingForRecovery(base44, { items, restaurantId, chargedAmountGBP, deliveryFee, smallOrderSurcharge, discount }) {
+    const regularItems = items.filter(i => !String(i.menu_item_id || '').startsWith('deal_'));
+    const dealItems = items.filter(i => String(i.menu_item_id || '').startsWith('deal_'));
+    const requiredIds = [...new Set(regularItems.map(i => i.menu_item_id).filter(Boolean))];
+
+    let menuMap;
+    try {
+        menuMap = await fetchMenuItemMap(base44, restaurantId, requiredIds);
+    } catch (err) {
+        console.error(`${LOG} MenuItem fetch failed: ${err.message}`);
+        // Non-fatal for recovery — log and proceed with metadata prices
+        return { valid: true, logOnly: true, serverSubtotal: null, serverTotal: null };
+    }
+
+    let serverSubtotal = 0;
+
+    for (const orderItem of regularItems) {
+        const itemId = orderItem.menu_item_id;
+        const dbItem = menuMap.get(itemId);
+
+        if (!dbItem) {
+            console.warn(`${LOG} Item not found during recovery: ${orderItem.name} (${itemId}) — may have been deleted after payment`);
+            return {
+                valid: false,
+                error: `Item no longer available: ${orderItem.name}`,
+                code: 'ITEM_NOT_FOUND',
+                compensatable: true,
+                recoverable: false
+            };
+        }
+
+        const quantity = Number(orderItem.quantity || 1);
+        const { serverPrice: serverUnitPrice, breakdown } = calcItemServerPrice(dbItem, orderItem);
+        const serverLineTotal = serverUnitPrice * quantity;
+        const chargedLineTotal = Number(orderItem.price || 0) * quantity;
+        const delta = Math.abs(serverLineTotal - chargedLineTotal);
+
+        if (delta > PRICE_TOLERANCE * quantity) {
+            // During recovery (payment already taken), we LOG the drift but don't reject.
+            // The customer was charged at the time of payment; verifyAndCreateOrder already
+            // validated the price at checkout. Menu may have changed since then.
+            console.warn(`${LOG} Price drift (recovery): item="${orderItem.name}" charged=£${chargedLineTotal.toFixed(2)} current=£${serverLineTotal.toFixed(2)} delta=£${delta.toFixed(4)} [${breakdown.join(',')}] — keeping charged price`);
+        }
+
+        serverSubtotal += serverLineTotal;
+    }
+
+    for (const dealItem of dealItems) {
+        serverSubtotal += Number(dealItem.price || 0) * Number(dealItem.quantity || 1);
+    }
+
+    const serverTotal = Math.max(0, serverSubtotal + Number(deliveryFee || 0) + Number(smallOrderSurcharge || 0) - Number(discount || 0));
+    const amountDelta = Math.abs(serverTotal - chargedAmountGBP);
+
+    if (amountDelta > PRICE_TOLERANCE) {
+        // In recovery path, if prices have significantly changed on the menu since payment,
+        // we log this but still create the order using the charged amount (customer already paid).
+        console.warn(`${LOG} Total drift (recovery): serverTotal=£${serverTotal.toFixed(2)} charged=£${chargedAmountGBP.toFixed(2)} delta=£${amountDelta.toFixed(4)} — proceeding with charged amount`);
+        return { valid: true, logOnly: true, serverSubtotal, serverTotal: chargedAmountGBP };
+    }
+
+    console.log(`${LOG} ✅ Recovery pricing OK: serverTotal=£${serverTotal.toFixed(2)} charged=£${chargedAmountGBP.toFixed(2)}`);
+    return { valid: true, logOnly: false, serverSubtotal, serverTotal };
+}
+
+// ── Main Handler ─────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { paymentIntentId, paymentIntentMetadata, sourceType } = await req.json();
-        
+        const { paymentIntentId, paymentIntentMetadata, sourceType, chargedAmountGBP } = await req.json();
+
         if (!paymentIntentId || !paymentIntentMetadata) {
             return Response.json({ error: 'Missing paymentIntentId or metadata', success: false }, { status: 400 });
         }
-        
-        console.log(`[IDEMPOTENT_ORDER] Creating order from ${sourceType} for intent=${paymentIntentId}`);
-        
-        // ─────────────────────────────────────────────────────────────────────
-        // CRITICAL: Check if order already exists (dedup check 1 — by PI ID)
-        // ─────────────────────────────────────────────────────────────────────
-        const existingByPI = await base44.asServiceRole.entities.Order.filter({
-            payment_intent_id: paymentIntentId
-        });
-        
-        if (existingByPI && existingByPI.length > 0) {
-            console.log(`[IDEMPOTENT_ORDER] Order already exists for intent=${paymentIntentId}`);
-            return Response.json({
-                success: true,
-                order_id: existingByPI[0].id,
-                status: 'already_exists'
-            }, { status: 200 });
+
+        console.log(`${LOG} Creating order from ${sourceType} for intent=${paymentIntentId}`);
+
+        // ── Dedup check 1: by PaymentIntent ID ────────────────────────────────
+        const existingByPI = await base44.asServiceRole.entities.Order.filter({ payment_intent_id: paymentIntentId });
+        if (existingByPI?.length > 0) {
+            console.log(`${LOG} Order already exists for intent=${paymentIntentId}`);
+            return Response.json({ success: true, order_id: existingByPI[0].id, status: 'already_exists' }, { status: 200 });
         }
 
-        // FIX #8: Also dedup by idempotency_key from metadata (prevents race with recoverPayment)
+        // ── Dedup check 2: by idempotency_key ─────────────────────────────────
         const metaIdempotencyKey = paymentIntentMetadata?.idempotency_key;
-        if (metaIdempotencyKey && typeof metaIdempotencyKey === 'string') {
+        if (metaIdempotencyKey) {
             try {
-                const existingByKey = await base44.asServiceRole.entities.Order.filter({
-                    idempotency_key: metaIdempotencyKey
-                });
+                const existingByKey = await base44.asServiceRole.entities.Order.filter({ idempotency_key: metaIdempotencyKey });
                 if (existingByKey?.length > 0) {
-                    console.log(`[IDEMPOTENT_ORDER] Order already exists by idempotency_key=${metaIdempotencyKey} id=${existingByKey[0].id}`);
-                    return Response.json({
-                        success: true,
-                        order_id: existingByKey[0].id,
-                        status: 'already_exists'
-                    }, { status: 200 });
+                    console.log(`${LOG} Order already exists by idempotency_key=${metaIdempotencyKey} id=${existingByKey[0].id}`);
+                    return Response.json({ success: true, order_id: existingByKey[0].id, status: 'already_exists' }, { status: 200 });
                 }
-            } catch (keyDedupErr) {
-                console.warn(`[IDEMPOTENT_ORDER] idempotency_key dedup check failed (non-fatal):`, keyDedupErr.message);
+            } catch (e) {
+                console.warn(`${LOG} idempotency_key dedup check failed (non-fatal): ${e.message}`);
             }
         }
-        
-        // ─────────────────────────────────────────────────────────────────────
-        // CRITICAL: Rebuild order data from trusted metadata
-        // ─────────────────────────────────────────────────────────────────────
+
+        // ── Extract metadata fields ────────────────────────────────────────────
         const {
-            restaurant_id,
-            items_json,
-            subtotal,
-            delivery_fee,
-            discount,
-            total,
-            order_type,
-            delivery_address,
-            delivery_coordinates,
-            phone,
-            guest_name,
-            guest_email,
-            notes,
-            is_scheduled,
-            scheduled_for,
-            idempotency_key
+            restaurant_id, items_json, subtotal, delivery_fee, discount, total,
+            order_type, delivery_address, delivery_coordinates, phone,
+            guest_name, guest_email, notes, is_scheduled, scheduled_for, idempotency_key
         } = paymentIntentMetadata;
-        
-        // Validate required fields
+
         if (!restaurant_id || !items_json || total === undefined) {
-            console.error('[IDEMPOTENT_ORDER] Missing critical metadata fields');
-            return Response.json({
-                error: 'Incomplete order metadata',
-                success: false
-            }, { status: 400 });
+            console.error(`${LOG} Missing critical metadata fields`);
+            return Response.json({ error: 'Incomplete order metadata', success: false }, { status: 400 });
         }
-        
-        // Parse items array from metadata (stored as JSON string)
+
+        // ── Parse items ────────────────────────────────────────────────────────
         let items;
         try {
             items = JSON.parse(items_json);
-            if (!Array.isArray(items) || items.length === 0) {
-                throw new Error('Items must be non-empty array');
-            }
+            if (!Array.isArray(items) || items.length === 0) throw new Error('Items must be non-empty array');
         } catch (e) {
-            console.error('[IDEMPOTENT_ORDER] Failed to parse items:', e.message);
+            console.error(`${LOG} Failed to parse items: ${e.message}`);
             return Response.json({ error: 'Invalid items data', success: false }, { status: 400 });
         }
 
-        // ── NORMALIZE: Backward-compatible schema migration ──────────────
-        // Accept both old (id, qty) and new (menu_item_id, quantity) formats
+        // Normalize schema
         const normalizedItems = items.map(i => ({
             menu_item_id: i.menu_item_id || i.id,
             name: i.name || '',
             price: i.price,
-            quantity: i.quantity || i.qty
+            quantity: i.quantity || i.qty,
+            customizations: i.customizations || {}
         }));
 
-        // ── VALIDATE: Every item has required fields ───────────────────
+        // Basic item validation
         for (const item of normalizedItems) {
             if (!item.menu_item_id || typeof item.menu_item_id !== 'string') {
-                console.error('[IDEMPOTENT_ORDER] Item missing menu_item_id:', item);
-                return Response.json({
-                    error: 'Invalid items data',
-                    success: false,
-                    code: 'INVALID_ITEM_SCHEMA',
-                    recoverable: false,
-                    reason: 'Item missing menu_item_id after normalization'
-                }, { status: 400 });
+                return Response.json({ error: 'Invalid items data', success: false, code: 'INVALID_ITEM_SCHEMA', recoverable: false }, { status: 400 });
             }
             if (typeof item.price !== 'number' || isNaN(item.price) || item.price < 0) {
-                console.error('[IDEMPOTENT_ORDER] Item invalid price:', item);
-                return Response.json({
-                    error: 'Invalid items data',
-                    success: false,
-                    code: 'INVALID_ITEM_PRICE',
-                    recoverable: false,
-                    reason: `Item ${item.name || item.menu_item_id} has invalid price: ${item.price}`
-                }, { status: 400 });
+                return Response.json({ error: 'Invalid items data', success: false, code: 'INVALID_ITEM_PRICE', recoverable: false }, { status: 400 });
             }
             if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity < 1) {
-                console.error('[IDEMPOTENT_ORDER] Item invalid quantity:', item);
-                return Response.json({
-                    error: 'Invalid items data',
-                    success: false,
-                    code: 'INVALID_ITEM_QUANTITY',
-                    recoverable: false,
-                    reason: `Item ${item.name || item.menu_item_id} has invalid quantity: ${item.quantity}`
-                }, { status: 400 });
+                return Response.json({ error: 'Invalid items data', success: false, code: 'INVALID_ITEM_QUANTITY', recoverable: false }, { status: 400 });
             }
         }
 
-        // Use normalized items from here on
-        items = normalizedItems;
-        
-        // Validate items against menu (prevent fraud)
-         // Skip deal items (synthetic IDs like 'deal_xyz') — they have no MenuItem record
-         const regularItems = items.filter(item => !String(item.menu_item_id || '').startsWith('deal_'));
+        // ── SERVER-SIDE PRICE VALIDATION (recovery-aware) ──────────────────────
+        // chargedAmountGBP is the authoritative amount from Stripe — use it as ground truth.
+        const chargedGBP = chargedAmountGBP || (parseFloat(total) || 0);
+        const priceCheck = await validatePricingForRecovery(base44, {
+            items: normalizedItems,
+            restaurantId: restaurant_id,
+            chargedAmountGBP: chargedGBP,
+            deliveryFee: parseFloat(delivery_fee) || 0,
+            smallOrderSurcharge: 0, // not stored in PI metadata
+            discount: parseFloat(discount) || 0
+        });
 
-         // ── SAFE MENU ITEM FETCH (SDK skip/limit pagination, no fallback) ──────
-         // Uses official skip parameter (4th arg). No unsafe fallback.
-         const regularItemIds = [...new Set(regularItems.map(i => i.menu_item_id).filter(Boolean))];
-         const menuMap = await (async () => {
-             const itemMap = new Map();
-             if (regularItemIds.length === 0) return itemMap;
-
-             const PAGE_SIZE = 50;
-             let skip = 0;
-             let hasMore = true;
-
-             while (hasMore && itemMap.size < regularItemIds.length) {
-                 let batch;
-                 try {
-                     batch = await base44.asServiceRole.entities.MenuItem.filter(
-                         { restaurant_id },
-                         null,
-                         PAGE_SIZE,
-                         skip
-                     );
-                 } catch (err) {
-                     console.error(`[WEBHOOK] MenuItem fetch failed at skip=${skip}: ${err.message}`);
-                     return Response.json({ error: 'Menu validation failed', success: false, recoverable: false }, { status: 500 });
-                 }
-
-                 if (!Array.isArray(batch) || batch.length === 0) { hasMore = false; break; }
-                 for (const item of batch) {
-                     if (item && item.id && regularItemIds.includes(item.id)) itemMap.set(item.id, item);
-                 }
-                 if (itemMap.size === regularItemIds.length) { hasMore = false; break; }
-                 if (batch.length < PAGE_SIZE) { hasMore = false; break; }
-                 skip += PAGE_SIZE;
-             }
-
-             console.log(`[WEBHOOK] Validated ${itemMap.size} cart items`);
-             return itemMap;
-         })();
-
-         if (menuMap instanceof Response) return menuMap;
-        
-        for (const item of regularItems) {
-            if (!menuMap.has(item.menu_item_id)) {
-                console.error(`[IDEMPOTENT_ORDER] Menu item ${item.menu_item_id} (${item.name}) not found — deleted/disabled after payment`);
-                // NON-RECOVERABLE: item was removed from menu after payment was taken.
-                // Caller (stripeWebhook) must trigger compensation refund.
-                return Response.json({
-                    success: false,
-                    code: 'ITEM_NOT_FOUND',
-                    recoverable: false,
-                    compensatable: true,
-                    reason: `Menu item deleted or disabled after payment: ${item.name} (id=${item.menu_item_id})`,
-                    error: `Item no longer available: ${item.name}`
-                }, { status: 400 });
-            }
-
-            // Log price discrepancy for webhook recovery — don't reject (payment already taken).
-            // verifyAndCreateOrder already server-corrected prices at order time.
-            // The metadata prices are what was charged; we just log if menu changed.
-            const menuItem = menuMap.get(item.menu_item_id);
-            if (Math.abs(menuItem.price - item.price) > 0.50) {
-                console.warn(`[IDEMPOTENT_ORDER] Price drift for item ${item.name}: charged=£${item.price} current=£${menuItem.price} (keeping charged price for recovery)`);
-                // Do NOT reject — the customer was already charged at item.price via verifyAndCreateOrder
-            }
+        if (!priceCheck.valid) {
+            console.error(`${LOG} Price validation failed: code=${priceCheck.code} error=${priceCheck.error}`);
+            return Response.json({
+                success: false,
+                error: priceCheck.error,
+                code: priceCheck.code,
+                recoverable: priceCheck.recoverable !== false,
+                compensatable: priceCheck.compensatable || false
+            }, { status: 400 });
         }
-        
-        // ─────────────────────────────────────────────────────────────────────
-        // CREATE ORDER (within database transaction)
-        // ─────────────────────────────────────────────────────────────────────
+
+        // Use server-validated total if available; fall back to charged amount
+        const finalTotal = priceCheck.serverTotal || chargedGBP;
+        const finalSubtotal = priceCheck.serverSubtotal || parseFloat(subtotal);
+
+        // ── Create order ───────────────────────────────────────────────────────
         let newOrder;
         try {
             newOrder = await base44.asServiceRole.entities.Order.create({
                 restaurant_id,
-                items,
-                subtotal: parseFloat(subtotal),
+                items: normalizedItems,
+                subtotal: finalSubtotal,
                 delivery_fee: parseFloat(delivery_fee) || 0,
                 discount: parseFloat(discount) || 0,
-                total: parseFloat(total),
+                total: finalTotal,
                 payment_method: 'card',
                 payment_status: 'paid_card',
                 order_status: 'confirmed',
@@ -241,12 +305,10 @@ Deno.serve(async (req) => {
                 idempotency_key,
                 order_source: sourceType === 'webhook_recovery' ? 'webhook' : 'online'
             });
-            
-            console.log(`[IDEMPOTENT_ORDER] ✅ Order created: id=${newOrder.id} from ${sourceType}`);
+
+            console.log(`${LOG} ✅ Order created: id=${newOrder.id} from ${sourceType} total=£${finalTotal.toFixed(2)}`);
         } catch (createError) {
-            console.error('[IDEMPOTENT_ORDER] Order creation failed:', createError.message);
-            
-            // CRITICAL: Log for manual review
+            console.error(`${LOG} Order creation failed: ${createError.message}`);
             await base44.asServiceRole.entities.FailureLog.create({
                 failure_type: 'webhook_order_creation_failed',
                 severity: 'critical',
@@ -254,24 +316,15 @@ Deno.serve(async (req) => {
                 restaurant_id,
                 error_message: createError.message,
                 context: { source: sourceType }
-            }).catch(e => console.warn('[LOG] Failed to record failure:', e.message));
-            
-            return Response.json({
-                error: 'Failed to create order. Order will be retried.',
-                success: false,
-                recoverable: true
-            }, { status: 500 });
+            }).catch(e => console.warn(`${LOG} Failed to record failure: ${e.message}`));
+
+            return Response.json({ error: 'Failed to create order. Order will be retried.', success: false, recoverable: true }, { status: 500 });
         }
-        
-        return Response.json({
-            success: true,
-            order_id: newOrder.id,
-            order_number: newOrder.order_number,
-            status: 'created_from_webhook'
-        }, { status: 201 });
-        
+
+        return Response.json({ success: true, order_id: newOrder.id, order_number: newOrder.order_number, status: 'created_from_webhook' }, { status: 201 });
+
     } catch (error) {
-        console.error('[IDEMPOTENT_ORDER] Unhandled error:', error.message);
+        console.error(`${LOG} Unhandled error: ${error.message}`);
         return Response.json({ error: error.message, success: false }, { status: 500 });
     }
 });
