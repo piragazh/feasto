@@ -37,7 +37,7 @@ const OfflineRiskDigest = React.lazy(() => import('@/components/superadmin/Offli
 const WeeklyOpsHealthDashboard = React.lazy(() => import('@/components/superadmin/WeeklyOpsHealthDashboard'));
 const FailureMonitoringDashboard = React.lazy(() => import('@/components/superadmin/FailureMonitoringDashboard'));
 const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmin/KioskMonitoringDashboard'));
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, Trash2 } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
 
@@ -104,7 +104,30 @@ function SuperAdminInner() {
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+    const [clearingLogs, setClearingLogs] = useState(false);
     const isMobile = useIsMobile();
+
+    const handleClearLogs = async () => {
+        if (!window.confirm('Delete all failure logs and reconciliation issues? This cannot be undone.')) return;
+        setClearingLogs(true);
+        try {
+            const response = await fetch('/api/functions/clearOldLogs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert(`✅ Cleared: ${data.failureLogsDeleted} FailureLogs, ${data.reconciliationIssuesDeleted} ReconciliationIssues`);
+            } else {
+                alert('❌ Error: ' + (data.error || 'Failed to clear logs'));
+            }
+        } catch (error) {
+            alert('❌ Error: ' + error.message);
+        } finally {
+            setClearingLogs(false);
+        }
+    };
 
     const menuGroups = [
         {
@@ -164,6 +187,12 @@ function SuperAdminInner() {
                 { id: 'loyalty', label: 'Loyalty Program', icon: Award },
                 { id: 'tier-benefits', label: 'Tier Benefits', icon: Gift },
                 { id: 'files', label: 'Files', icon: Upload },
+            ]
+        },
+        {
+            title: 'Maintenance',
+            items: [
+                { id: 'clear-logs', label: 'Clear Logs', icon: Trash2 },
             ]
         }
     ];
@@ -272,6 +301,27 @@ function SuperAdminInner() {
                                 className="w-full h-full border-0"
                                 title="Reconciliation Dashboard"
                             />
+                        </div>
+                    )}
+                    {activeTab === 'clear-logs' && (
+                        <div className="max-w-2xl">
+                            <div className="bg-white rounded-lg border border-gray-200 p-8">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Trash2 className="h-6 w-6 text-red-500" />
+                                    <h2 className="text-2xl font-bold text-gray-900">Clear Old Logs</h2>
+                                </div>
+                                <p className="text-gray-600 mb-6">Delete all failure logs and reconciliation issues from the database to free up space.</p>
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                                    <p className="text-sm text-red-700"><strong>Warning:</strong> This action will permanently delete all FailureLog and ReconciliationIssue records. This cannot be undone.</p>
+                                </div>
+                                <Button
+                                    onClick={handleClearLogs}
+                                    disabled={clearingLogs}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                    {clearingLogs ? 'Clearing...' : 'Clear All Logs'}
+                                </Button>
+                            </div>
                         </div>
                     )}
                     </React.Suspense>
