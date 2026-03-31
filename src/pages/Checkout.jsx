@@ -293,74 +293,78 @@ export default function Checkout() {
     // ── Recovery: detect interrupted payments on page reload ──────────────────
     // If a pending payment was persisted (PI succeeded but browser closed before
     // order creation confirmed), attempt to recover it automatically.
+    // FIX #7: Pass user context to pendingPayment.read() for user binding validation
     useEffect(() => {
-        const pending = pendingPayment.read();
-        if (!pending) return;
+        const detectRecovery = async () => {
+            const pending = await pendingPayment.read(user);
+            if (!pending) return;
 
-        // Skip if already terminal (max attempts exhausted, refunded, etc.)
-        if (!pendingPayment.isReplayable()) {
-            console.log('[Checkout] Pending payment not replayable — clearing');
-            pendingPayment.clear();
-            return;
-        }
-
-        console.log('[Checkout] Detected pending payment pi=', pending.paymentIntentId, 'savedAt=', pending.savedAt);
-        checkoutTrace.log('recovery_detected', { piId: pending.paymentIntentId, savedAt: pending.savedAt });
-
-        setIsRecovering(true);
-
-        base44.functions.invoke('recoverPayment', {
-            paymentIntentId: pending.paymentIntentId,
-            idempotencyKey: pending.idempotencyKey,
-            orderData: pending.orderData,
-        }).then(response => {
-            const result = response?.data;
-            console.log('[Checkout] Recovery result:', result?.status, result?.order_id);
-            checkoutTrace.log('recovery_result', { status: result?.status, orderId: result?.order_id });
-
-            const { orderPlaced: didRecover, recoveryError: errMsg } = handleRecoveryResult(result);
-            if (didRecover) {
-                setOrderPlaced(true);
-                toast.success('Your previous order has been confirmed!');
-                setTimeout(() => navigate(createPageUrl('Orders')), 2000);
-            } else if (errMsg) {
-                setRecoveryError(errMsg);
+            // Skip if already terminal (max attempts exhausted, refunded, etc.)
+            if (!pendingPayment.isReplayable()) {
+                console.log('[Checkout] Pending payment not replayable — clearing');
+                pendingPayment.clear();
+                return;
             }
-        }).catch(async (err) => {
-            console.error('[Checkout] Recovery request failed:', err.message);
-            checkoutTrace.error('recovery_request_failed', { error: err.message });
 
-            // ISSUE #7 FIX: Before marking terminal, check if order was created despite network error
-            try {
-                const pending = pendingPayment.read();
-                if (pending?.idempotencyKey) {
-                    const maybeOrders = await base44.entities.Order.filter({ idempotency_key: pending.idempotencyKey });
-                    if (maybeOrders?.length > 0) {
-                        console.log('[Checkout] Order found via idempotency check despite network error — clearing pending');
-                        pendingPayment.clear();
-                        setOrderPlaced(true);
-                        toast.success('Your order has been confirmed!');
-                        setTimeout(() => navigate(createPageUrl('Orders')), 2000);
-                        return;
-                    }
+            console.log('[Checkout] Detected pending payment pi=', pending.paymentIntentId, 'savedAt=', pending.savedAt);
+            checkoutTrace.log('recovery_detected', { piId: pending.paymentIntentId, savedAt: pending.savedAt });
+
+            setIsRecovering(true);
+
+            base44.functions.invoke('recoverPayment', {
+                paymentIntentId: pending.paymentIntentId,
+                idempotencyKey: pending.idempotencyKey,
+                orderData: pending.orderData,
+            }).then(response => {
+                const result = response?.data;
+                console.log('[Checkout] Recovery result:', result?.status, result?.order_id);
+                checkoutTrace.log('recovery_result', { status: result?.status, orderId: result?.order_id });
+
+                const { orderPlaced: didRecover, recoveryError: errMsg } = handleRecoveryResult(result);
+                if (didRecover) {
+                    setOrderPlaced(true);
+                    toast.success('Your previous order has been confirmed!');
+                    setTimeout(() => navigate(createPageUrl('Orders')), 2000);
+                } else if (errMsg) {
+                    setRecoveryError(errMsg);
                 }
-            } catch (lookupErr) {
-                console.warn('[Checkout] Idempotency lookup failed (non-fatal):', lookupErr.message);
-            }
+            }).catch(async (err) => {
+                console.error('[Checkout] Recovery request failed:', err.message);
+                checkoutTrace.error('recovery_request_failed', { error: err.message });
 
-            // Non-terminal network error — count attempt, cap retries
-            const canRetry = pendingPayment.recordAttempt();
-            if (!canRetry) {
-                pendingPayment.setTerminalStatus('terminal_manual_review');
-                setRecoveryError('We could not verify your previous payment after multiple attempts. Please check your orders page or contact support.');
-            } else {
-                setRecoveryError('Could not verify your previous payment. Please check your orders or contact support.');
-            }
-        }).finally(() => {
-            setIsRecovering(false);
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run once on mount only
+                // Before marking terminal, check if order was created despite network error
+                try {
+                    const currentPending = await pendingPayment.read(user);
+                    if (currentPending?.idempotencyKey) {
+                        const maybeOrders = await base44.entities.Order.filter({ idempotency_key: currentPending.idempotencyKey });
+                        if (maybeOrders?.length > 0) {
+                            console.log('[Checkout] Order found via idempotency check despite network error — clearing pending');
+                            pendingPayment.clear();
+                            setOrderPlaced(true);
+                            toast.success('Your order has been confirmed!');
+                            setTimeout(() => navigate(createPageUrl('Orders')), 2000);
+                            return;
+                        }
+                    }
+                } catch (lookupErr) {
+                    console.warn('[Checkout] Idempotency lookup failed (non-fatal):', lookupErr.message);
+                }
+
+                // Non-terminal network error — count attempt, cap retries
+                const canRetry = pendingPayment.recordAttempt();
+                if (!canRetry) {
+                    pendingPayment.setTerminalStatus('terminal_manual_review');
+                    setRecoveryError('We could not verify your previous payment after multiple attempts. Please check your orders page or contact support.');
+                } else {
+                    setRecoveryError('Could not verify your previous payment. Please check your orders or contact support.');
+                }
+            }).finally(() => {
+                setIsRecovering(false);
+            });
+            };
+
+            detectRecovery();
+            }, [user]);
 
     // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
@@ -1168,6 +1172,7 @@ export default function Checkout() {
         // If the browser closes/refreshes after this line, the recovery flow on
         // next mount will detect this record and replay order creation safely.
         pendingPayment.save({
+            // FIX #7: Bind to current user to prevent cross-user recovery
             paymentIntentId,
             idempotencyKey: lockedSessionKey,
             total,
@@ -1197,7 +1202,7 @@ export default function Checkout() {
                 guest_email: formData.guest_email,
                 order_source: 'online',
             },
-        });
+        }, user);
 
         // Mark payment as completed for UI only (not for concurrency guard)
         setPaymentCompleted(true);

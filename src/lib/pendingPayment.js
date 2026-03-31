@@ -17,6 +17,12 @@
  * is a convenience layer for fast same-session recovery; the webhook + OrderDraft path
  * handles cross-session/crash recovery server-side.
  *
+ * FIX #7: User binding (HIGH-7 — cross-user recovery on shared devices)
+ *   - Pending payments are now bound to the session user (email) or 'guest'.
+ *   - read() verifies boundTo matches current user before returning the record.
+ *   - Prevents User A's pending payment from firing recovery under User B's session
+ *     on shared computers.
+ *
  * Schema:
  *   {
  *     paymentIntentId: string,     // pi_xxx — used as dedup key
@@ -27,11 +33,14 @@
  *     orderData:       object,     // full order payload for replay (validated+normalized)
  *     savedAt:         string,     // ISO timestamp when payment succeeded
  *     expiresAt:       string,     // ISO timestamp — 24h TTL
+ *     boundTo:         string,     // user email or 'guest' — validated on read()
  *     recovery_attempts: number,   // count of recovery replay attempts
  *     last_attempted_at: string,   // ISO timestamp of last recovery attempt
  *     recovery_status: string,     // 'replayable' | 'terminal_refunded' | 'terminal_manual_review' | 'terminal_invalid_payload'
  *   }
  */
+
+import { base44 } from '@/api/base44Client';
 
 const STORAGE_KEY = 'pending_payment_v2';
 const MAX_RECOVERY_ATTEMPTS = 2;
@@ -41,28 +50,44 @@ export const pendingPayment = {
     /**
      * Persist the pending payment immediately after PI succeeds.
      * Called BEFORE createOrder to ensure durability across reloads and tab closes.
+     * FIX #7: Bind to current user to prevent cross-user recovery on shared devices.
      */
-    save(payload) {
+    async save(payload, currentUser = null) {
         try {
+            // FIX #7: Determine bound user (email or 'guest')
+            let boundTo = 'guest';
+            if (currentUser) {
+                boundTo = currentUser.email || 'guest';
+            } else {
+                try {
+                    const user = await base44.auth.me();
+                    boundTo = user.email || 'guest';
+                } catch (_) {
+                    // Not authenticated — will bind as 'guest'
+                }
+            }
+
             const now = new Date().toISOString();
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 ...payload,
+                boundTo,
                 savedAt: now,
                 expiresAt: new Date(Date.now() + TTL_MS).toISOString(),
                 recovery_attempts: 0,
                 last_attempted_at: null,
                 recovery_status: 'replayable',
             }));
-            console.log('[pendingPayment] saved pi=', payload.paymentIntentId);
+            console.log('[pendingPayment] saved pi=', payload.paymentIntentId, 'boundTo=', boundTo);
         } catch (e) {
             console.warn('[pendingPayment] save failed:', e.message);
         }
     },
 
     /**
-     * Read the persisted pending payment (or null if none / expired).
+     * Read the persisted pending payment (or null if none / expired / bound to different user).
+     * FIX #7: Verify boundTo matches current user before returning.
      */
-    read() {
+    async read(currentUser = null) {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) return null;
@@ -75,6 +100,26 @@ export const pendingPayment = {
                 localStorage.removeItem(STORAGE_KEY);
                 return null;
             }
+
+            // FIX #7: Verify boundTo matches current user
+            let currentBoundTo = 'guest';
+            if (currentUser) {
+                currentBoundTo = currentUser.email || 'guest';
+            } else {
+                try {
+                    const user = await base44.auth.me();
+                    currentBoundTo = user.email || 'guest';
+                } catch (_) {
+                    // Not authenticated — assume 'guest'
+                }
+            }
+
+            if (parsed.boundTo !== currentBoundTo) {
+                console.warn('[pendingPayment] boundTo mismatch: stored=', parsed.boundTo, 'current=', currentBoundTo, '— clearing');
+                localStorage.removeItem(STORAGE_KEY);
+                return null;
+            }
+
             return parsed;
         } catch (e) {
             console.warn('[pendingPayment] read failed:', e.message);
