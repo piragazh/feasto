@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         if (restaurant.whatsapp_alerts_enabled) {
             try {
                 const waResult = await base44.asServiceRole.functions.invoke('sendWhatsAppOrder', { order_id: orderId });
-                return Response.json({ success: true, channel: 'whatsapp', result: waResult });
+                return Response.json({ success: true, channel: 'whatsapp', result: waResult?.data ?? null });
             } catch (waError) {
                 console.error('WhatsApp alert failed, falling back to SMS:', waError);
             }
