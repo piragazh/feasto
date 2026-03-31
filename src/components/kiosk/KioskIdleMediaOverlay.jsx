@@ -54,7 +54,8 @@ export default function KioskIdleMediaOverlay({
 
                     {/* Invisible exit overlay (any touch/click anywhere exits) */}
                     <div
-                        className="absolute inset-0 cursor-pointer"
+                        className="absolute inset-0 cursor-pointer z-50"
+                        style={{ pointerEvents: 'auto' }}
                         onClick={handleExit}
                         onTouchStart={handleExit}
                         role="button"
