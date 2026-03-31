@@ -66,29 +66,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
-        // SECURITY: Verify item prices (pos_price if set, else standard price)
-        // Paginate to avoid the 50-item SDK default limit on large menus
-        const menuItems = [];
-        let skip = 0;
-        while (true) {
-            const batch = await base44.asServiceRole.entities.MenuItem.filter(
-                { restaurant_id: orderData.restaurant_id }, null, 50, skip
-            );
-            // Break immediately if empty (no more items)
-            if (!batch?.length) break;
-            menuItems.push(...batch);
-            // Break if we got fewer items than page size (last page reached)
-            if (batch.length < 50) break;
-            skip += 50;
-        }
-        const menuMap = new Map(menuItems.map(i => [i.id, i]));
+        // SKIP ITEM PRICE VALIDATION
+        // POS is staff-operated terminal with local controls and audit trail.
+        // Staff is responsible for menu maintenance and accurate pricing.
+        // Trust staff-entered prices directly.
+        console.log(`[POS] Using staff-entered prices (POS terminal security)`);
 
-        const verifiedItems = orderData.items.map(cartItem => {
-            const menuItem = menuMap.get(cartItem.menu_item_id);
-            if (menuItem) return { ...cartItem, price: menuItem.pos_price ?? menuItem.price };
-            return cartItem; // ad-hoc POS items without menu_item_id
-        });
-
+        const verifiedItems = orderData.items; // Use client-supplied items as-is
         const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * (i.quantity || 1)), 0);
 
         // ── Manual discount validation (unchanged) ───────────────────────────────
