@@ -26,6 +26,7 @@ export default function MenuManagement({ restaurantId }) {
     const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryImage, setNewCategoryImage] = useState('');
 
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterAvailable, setFilterAvailable] = useState('all');

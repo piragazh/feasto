@@ -22,7 +22,7 @@
  */
 export const getApiBaseUrl = () => {
   if (typeof window === 'undefined') {
-    return process.env.VITE_PUBLIC_API_BASE_URL || 'https://api.base44.app';
+    return 'https://api.base44.app';
   }
 
   const explicitApiBase = import.meta.env.VITE_PUBLIC_API_BASE_URL;

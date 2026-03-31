@@ -1,4 +1,5 @@
 import base44 from "@base44/vite-plugin"
+/* eslint-disable no-undef */
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'url'

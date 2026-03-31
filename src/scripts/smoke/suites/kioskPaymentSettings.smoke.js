@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Smoke suite: kioskPaymentSettings
  *
  * Tests the KioskPaymentSettings component logic without mounting React.

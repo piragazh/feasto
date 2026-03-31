@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Online Ordering Regression Smoke Suite
  * =====================================
  *

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-undef */
 /**
  * MealDrop Backend Smoke Test Runner
  * ====================================

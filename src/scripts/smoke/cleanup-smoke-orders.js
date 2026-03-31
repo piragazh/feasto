@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-undef */
 /**
  * Cleanup smoke test orders.
  * Deletes any Order records where notes contains "[SMOKE_TEST]".

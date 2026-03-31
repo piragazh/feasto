@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { base44 } from '@/api/base44Client';
@@ -35,6 +36,16 @@ export default function ReconciliationDashboard() {
         refetchInterval: 60000,
     });
 
+    // filteredIssues must be declared before any early returns (Rules of Hooks)
+    const filteredIssues = useMemo(() => {
+        return allIssues.filter((issue) => {
+            if (filterStatus !== 'all' && issue.status !== filterStatus) return false;
+            if (filterType !== 'all' && issue.issue_type !== filterType) return false;
+            if (filterSeverity !== 'all' && issue.severity !== filterSeverity) return false;
+            return true;
+        });
+    }, [allIssues, filterStatus, filterType, filterSeverity]);
+
     if (userLoading) {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
     }
@@ -53,15 +64,7 @@ export default function ReconciliationDashboard() {
         );
     }
 
-    // Filter issues based on UI state
-    const filteredIssues = useMemo(() => {
-        return allIssues.filter((issue) => {
-            if (filterStatus !== 'all' && issue.status !== filterStatus) return false;
-            if (filterType !== 'all' && issue.issue_type !== filterType) return false;
-            if (filterSeverity !== 'all' && issue.severity !== filterSeverity) return false;
-            return true;
-        });
-    }, [allIssues, filterStatus, filterType, filterSeverity]);
+    // filteredIssues computed above (before early returns)
 
     // Summary stats
     const stats = {

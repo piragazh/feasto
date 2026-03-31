@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Offline Review Reason Codes — Smoke Tests
  * 
  * Validates:

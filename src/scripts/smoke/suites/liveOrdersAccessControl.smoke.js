@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Live Orders Access Control Tests
  * 
  * Validates hardened order status update endpoints with role checks,

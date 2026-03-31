@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Operator Analytics Smoke Tests
  * 
  * Verifies real operator-level offline analytics:

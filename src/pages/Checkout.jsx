@@ -38,6 +38,7 @@ import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
 import { useSEO } from '@/lib/useSEO.js';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { usePaymentInit } from '@/hooks/usePaymentInit';
+import { useCreateOrder } from '@/hooks/useCreateOrder';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 
@@ -558,6 +559,20 @@ export default function Checkout() {
         anyPaymentPathInFlightRef.current = false;
     };
 
+    // CRIT-2 FIX: createOrder extracted to useCreateOrder hook — locked session key is now
+    // enforced as required for card payments to prevent idempotency mismatches.
+    const { createOrder } = useCreateOrder({
+        cart, restaurantId, restaurantName, restaurant,
+        orderType, isGuest, formData, isExistingAddress,
+        deliveryCoordinates, deliveryFee, smallOrderSurcharge,
+        subtotal, discount, total, isScheduled, scheduledFor,
+        appliedCoupons, appliedPromotions, groupOrderId,
+        clientSecret, paymentMethod,
+        user, savePhone, saveAddress, addressLabel, setAsDefault,
+        isExistingPhone, pointsPerPound,
+        setIsSubmitting, setOrderPlaced, setTraceError, setUser,
+    });
+
     // ============================================
     // FORM SUBMISSION - When user clicks "Place Order"
     // ============================================
@@ -811,324 +826,6 @@ export default function Checkout() {
         setShowCashConfirmation(false);
         await createOrder();
     };
-
-    const createOrder = async (paymentIntentId = null, _lockedSessionKey = null) => {
-        // ABSOLUTE CRITICAL: Block any order creation if card payment was initiated but not completed
-        if (clientSecret && !paymentIntentId) {
-            console.error('[Checkout] Order creation blocked: payment initiated but not completed');
-            toast.error('❌ Card payment was initiated. Please complete payment or refresh the page.');
-            setIsSubmitting(false);
-            return;
-        }
-
-        // ABSOLUTE CRITICAL: Block any order creation if card was selected without payment
-        if (paymentMethod === 'card' && !paymentIntentId) {
-            console.error('[Checkout] Order creation blocked: card payment selected but not completed');
-            toast.error('❌ Payment required. Please complete card payment first.');
-            setIsSubmitting(false);
-            return;
-        }
-        
-        checkoutTrace.log('create_order_started', { method: paymentMethod, hasPi: !!paymentIntentId });
-        console.log('[Checkout] Creating order with payment method:', paymentMethod, 'and payment intent ID:', paymentIntentId || 'none');
-        setIsSubmitting(true);
-
-        try {
-            // Determine actual payment method based on paymentIntentId presence
-            const actualPaymentMethod = paymentIntentId ? 'card' : paymentMethod;
-
-            // Validate payment intent format if provided
-            if (paymentIntentId && (typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_'))) {
-                toast.error('❌ Invalid payment verification. Please try again.');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // Guard: only 'cash' and 'card' are valid at this point
-            if (!['cash', 'card'].includes(actualPaymentMethod)) {
-                toast.error('Please select a valid payment method.');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // Validate cart
-            if (!cart || cart.length === 0) {
-                toast.error('Your cart is empty');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // Validate restaurant
-            if (!restaurantId || !restaurantName) {
-                toast.error('Restaurant information missing');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // CRITICAL: Ensure cart items have required fields (ID mapping from cart structure)
-            const validatedItems = cart.map(item => ({
-                menu_item_id: item.id || item.menu_item_id, // Handle both 'id' and 'menu_item_id' keys
-                name: item.name || 'Unknown item',
-                price: item.price || 0,
-                quantity: item.quantity || 1,
-                customizations: item.customizations || {},
-                itemQuantities: item.itemQuantities || {}
-            }));
-
-            // NOTE: Item availability is validated server-side in verifyAndCreateOrder/createIdempotentOrder.
-            // The client-side check was redundant, bypassable, and added unnecessary latency.
-
-            // Sanitize delivery address to prevent XSS
-             const sanitizeAddress = (addr) => {
-                 if (typeof addr !== 'string') return '';
-                 return String(addr)
-                     .trim()
-                     .replace(/</g, '&lt;')
-                     .replace(/>/g, '&gt;')
-                     .replace(/"/g, '&quot;')
-                     .slice(0, 500); // Cap length
-             };
-
-             const deliveryAddressString = orderType === 'delivery'
-                 ? (typeof formData.delivery_address === 'string' && formData.delivery_address.trim() 
-                     ? sanitizeAddress(formData.delivery_address)
-                     : 'Address not provided')
-                 : '';
-            
-            const fullAddress = orderType === 'delivery'
-                ? (isExistingAddress
-                    ? deliveryAddressString  // saved address already includes door number
-                    : `${formData.door_number ? formData.door_number + ', ' : ''}${deliveryAddressString}`)
-                : '';
-            
-            // Generate order number for collection orders
-            const orderNumber = orderType === 'collection' 
-                ? `C-${Date.now().toString().slice(-6)}` 
-                : null;
-
-            // Calculate loyalty points
-            const earnLoyalty = restaurant?.loyalty_program_enabled !== false;
-            const pointsMultiplier = restaurant?.loyalty_points_multiplier || 1;
-            const pointsToEarn = earnLoyalty ? Math.floor(total * pointsPerPound * pointsMultiplier) : 0;
-
-            // CRITICAL SECURITY: Sanitize order notes to prevent XSS
-            const sanitizeInput = (input) => {
-                if (!input || typeof input !== 'string') return '';
-                return String(input)
-                    .replace(/[<>]/g, '') // Remove angle brackets
-                    .slice(0, 500); // Cap length
-            };
-
-            const orderData = {
-                order_number: orderNumber,
-                restaurant_id: restaurantId,
-                restaurant_name: restaurantName,
-                loyalty_points_earned: pointsToEarn,
-                items: validatedItems,
-                subtotal,
-                delivery_fee: deliveryFee,
-                small_order_surcharge: smallOrderSurcharge,
-                discount: discount,
-                coupon_codes: appliedCoupons.length > 0 ? appliedCoupons.map(c => c.code) : [],
-                promotion_codes: appliedPromotions.length > 0 ? appliedPromotions.map(p => p.promotion_code || p.name) : [],
-                total,
-                payment_method: actualPaymentMethod,
-                order_type: orderType,
-                status: 'pending',
-                delivery_address: fullAddress,
-                delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
-                phone: formData.phone,
-                notes: sanitizeInput(formData.notes),
-                estimated_delivery: isScheduled ? 'Scheduled' : (orderType === 'collection' ? '15-20 minutes' : '30-45 minutes'),
-                is_scheduled: isScheduled,
-                scheduled_for: isScheduled ? scheduledFor : null,
-                is_group_order: !!groupOrderId,
-                group_order_id: groupOrderId,
-                payment_intent_id: paymentIntentId
-            };
-
-            // Add guest info if not logged in
-            if (isGuest) {
-                orderData.guest_name = formData.guest_name;
-                orderData.guest_email = formData.guest_email;
-            }
-
-            // CRITICAL SECURITY: Use backend verification function instead of direct create
-              // This ensures payment is verified and restaurant is open
-              // BUG-M03 FIX: Use locked session key (captured at handleStripeSuccess start)
-              // to prevent rotation during payment processing
-              const sessionKeyToUse = paymentIntentId ? (_lockedSessionKey || getSessionKey()) : getSessionKey();
-              checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType, sessionKey: sessionKeyToUse });
-              console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId, 'session_key:', sessionKeyToUse);
-              const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
-                  orderData,
-                  paymentIntentId: paymentIntentId || null,
-                  idempotency_key: sessionKeyToUse
-              });
-
-            if (!verificationResponse?.data?.success) {
-                const errorMsg = verificationResponse?.data?.error || 'Order creation failed';
-                const refunded = verificationResponse?.data?.refunded === true;
-                const code = verificationResponse?.data?.code || '';
-                checkoutTrace.error('verify_and_create_order_failed', { error: errorMsg, refunded, duplicate: verificationResponse?.data?.duplicate });
-                setTraceError(`ORDER_FAILED: ${errorMsg}`);
-                console.error('[Checkout] Order creation failed:', errorMsg, 'Refunded:', refunded);
-                if (refunded) {
-                    if (code === 'ITEM_NOT_FOUND' || code === 'ITEM_UNAVAILABLE') {
-                        toast.error('One or more items in your cart are no longer available. Your payment has been fully refunded. Please refresh and reorder.', { duration: 8000 });
-                    } else {
-                        toast.error(errorMsg + ' — Your payment has been automatically refunded.', { duration: 8000 });
-                    }
-                } else {
-                    toast.error(errorMsg);
-                }
-                setIsSubmitting(false);
-                return;
-            }
-
-            checkoutTrace.log('verify_and_create_order_succeeded', { orderId: verificationResponse?.data?.order_id, duplicate: verificationResponse?.data?.duplicate });
-            console.log('[Checkout] ✅ Order created successfully:', verificationResponse?.data?.order_id);
-            
-            if (!verificationResponse?.data?.order_id) {
-                throw new Error('Order ID not returned');
-            }
-
-            const newOrder = { 
-                id: verificationResponse.data.order_id,
-                order_number: verificationResponse.data.order_number 
-            };
-
-            // Clear cart & pending payment record — order is confirmed
-            localStorage.removeItem('cart');
-            localStorage.removeItem('cartRestaurantId');
-            localStorage.removeItem('cartRestaurantName');
-            localStorage.removeItem('groupOrderId');
-            localStorage.removeItem('orderType');
-            localStorage.removeItem('appliedPromotions');
-            localStorage.removeItem('userAddress');
-            localStorage.removeItem('userCoordinates');
-            pendingPayment.clear(); // Safe: idempotent if already cleared by recovery
-
-            // Haptic feedback on successful order (Android)
-            window.navigator?.vibrate?.([50, 30, 50]);
-
-            // Persist guest phone + email in sessionStorage so the Orders page
-            // can look up this guest's orders without requiring login
-            if (formData.phone) {
-                sessionStorage.setItem('guest_order_phone', formData.phone);
-            }
-            if (formData.guest_email) {
-                sessionStorage.setItem('guest_order_email', formData.guest_email);
-            }
-
-            setOrderPlaced(true);
-
-            // Fire all post-order background tasks in parallel — none block the user
-            const backgroundTasks = [];
-
-            // Save user phone/address using already-loaded user state
-            if (!isGuest && user) {
-                backgroundTasks.push(
-                    Promise.resolve().then(() => {
-                        const updates = {};
-                        if (savePhone && formData.phone && formData.phone !== user.phone) {
-                            updates.phone = formData.phone;
-                        }
-                        if (saveAddress && orderType === 'delivery' && formData.delivery_address && formData.door_number) {
-                            const currentAddresses = user.saved_addresses || [];
-                            const addressExists = currentAddresses.some(addr =>
-                                addr.address === formData.delivery_address && addr.door_number === formData.door_number
-                            );
-                            if (!addressExists) {
-                                const newAddress = {
-                                    label: addressLabel,
-                                    address: formData.delivery_address,
-                                    door_number: formData.door_number,
-                                    coordinates: deliveryCoordinates,
-                                    instructions: formData.notes || '',
-                                    is_default: setAsDefault
-                                };
-                                const updatedAddresses = setAsDefault
-                                    ? currentAddresses.map(addr => ({ ...addr, is_default: false }))
-                                    : currentAddresses;
-                                updates.saved_addresses = [...updatedAddresses, newAddress];
-                            }
-                        }
-                        if (Object.keys(updates).length > 0) {
-                            return base44.auth.updateMe(updates).then(() => {
-                                setUser(prev => prev ? { ...prev, ...updates } : prev);
-                            });
-                        }
-                    }).catch(e => console.error('Failed to save user data:', e))
-                );
-            }
-
-            // Update group order
-            if (groupOrderId) {
-                backgroundTasks.push(
-                    base44.entities.GroupOrder.update(groupOrderId, { status: 'placed' })
-                        .catch(e => console.error('Failed to update group order:', e))
-                );
-            }
-
-            // NOTE: Coupon usage_count is now incremented server-side in verifyAndCreateOrder.
-            // No client-side coupon update needed here.
-
-            // MED-4 FIX: Increment promotion usage server-side to avoid stale read-modify-write race condition
-            appliedPromotions.filter(p => !p.is_automatic).forEach(promo => {
-                backgroundTasks.push(
-                    base44.functions.invoke('incrementPromotionUsage', {
-                        promoId: promo.id,
-                        orderId: newOrder.id,
-                        orderTotal: total,
-                        promoDiscount: promo.discount || 0,
-                    }).catch(e => console.error('Failed to update promotion usage:', e))
-                );
-            });
-
-            // Send customer confirmation via WhatsApp or SMS (whichever is enabled, WhatsApp takes priority)
-            backgroundTasks.push(
-                base44.functions.invoke('shouldSendOrderStatusNotification', { restaurantId, status: 'confirmed' })
-                    .then(checkResult => {
-                        const { shouldSendSms, shouldSendWhatsApp } = checkResult?.data || {};
-                        if (!shouldSendSms && !shouldSendWhatsApp) return;
-                        const orderLabel = orderType === 'collection' && newOrder.order_number
-                            ? newOrder.order_number : `#${newOrder.id.slice(-6)}`;
-                        const itemsList = cart.slice(0, 3).map(item => `${item.quantity}x ${item.name}`).join('\n');
-                        const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
-                        const customerMessage = orderType === 'collection'
-                            ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min`
-                            : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}`;
-                        // WhatsApp takes priority to avoid duplicates
-                        if (shouldSendWhatsApp) {
-                            return base44.functions.invoke('sendWhatsAppCustomer', { to: formData.phone, message: customerMessage, orderId: newOrder.id, restaurantId, restaurantName });
-                        } else {
-                            return base44.functions.invoke('sendSMS', { to: formData.phone, message: customerMessage, orderId: newOrder.id, restaurantId, restaurantName });
-                        }
-                    }).catch(e => console.error('Customer notification failed:', e))
-            );
-
-            // Notify restaurant — always route through notifyRestaurantNewOrder which handles
-            // WhatsApp vs SMS channel selection internally to prevent double-sending.
-            backgroundTasks.push(
-                base44.functions.invoke('notifyRestaurantNewOrder', { orderId: newOrder.id, restaurantId, restaurantName })
-                    .catch(() => {})
-            );
-
-            // Wait for all background tasks to complete before redirecting
-            await Promise.allSettled(backgroundTasks);
-
-            setTimeout(() => {
-                navigate(createPageUrl('Orders'));
-            }, 2000);
-            } catch (error) {
-                console.error('Order creation error:', error);
-                const errorMessage = error?.message || 'Failed to place order. Please check your connection and try again.';
-                toast.error(errorMessage);
-            } finally {
-                setIsSubmitting(false);
-            }
-                };
 
     // ISSUE #4 FIX: Warn users if they try to navigate away during order submission
     useEffect(() => {

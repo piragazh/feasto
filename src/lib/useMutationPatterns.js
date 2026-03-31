@@ -1,5 +1,8 @@
 import { useOptimisticMutation } from './useOptimisticMutation';
 
+import { useQueryClient } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/lib/useOptimisticMutation';
+
 /**
  * Common mutation patterns with pre-configured optimistic updates
  * Systematizes optimistic UI across the app
@@ -9,6 +12,7 @@ import { useOptimisticMutation } from './useOptimisticMutation';
  * useAddItemMutation - Add item to a list with optimistic UI
  */
 export function useAddItemMutation(queryKey, newItem) {
+  const queryClient = useQueryClient();
   return useOptimisticMutation(null, {
     queryKey,
     onMutate: async () => {
@@ -33,6 +37,7 @@ export function useAddItemMutation(queryKey, newItem) {
  * useUpdateItemMutation - Update item in a list with optimistic UI
  */
 export function useUpdateItemMutation(queryKey, itemId, updates) {
+  const queryClient = useQueryClient();
   return useOptimisticMutation(null, {
     queryKey,
     onMutate: async () => {
@@ -58,6 +63,7 @@ export function useUpdateItemMutation(queryKey, itemId, updates) {
  * useDeleteItemMutation - Delete item from a list with optimistic UI
  */
 export function useDeleteItemMutation(queryKey, itemId) {
+  const queryClient = useQueryClient();
   return useOptimisticMutation(null, {
     queryKey,
     onMutate: async () => {
@@ -81,6 +87,7 @@ export function useDeleteItemMutation(queryKey, itemId) {
  * useToggleMutation - Toggle boolean field with optimistic UI
  */
 export function useToggleMutation(queryKey, itemId, field) {
+  const queryClient = useQueryClient();
   return useOptimisticMutation(null, {
     queryKey,
     onMutate: async () => {

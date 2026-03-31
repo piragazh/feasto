@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Kiosk Payment Status Model — Smoke Tests
  *
  * Validates that payment_status and status are properly separated

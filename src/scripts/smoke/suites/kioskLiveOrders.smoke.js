@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Smoke tests: kiosk order integration in Live Orders
  *
  * Tests order source identification, filter logic, payment confirmation gating,

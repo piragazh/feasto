@@ -377,7 +377,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                                         <SelectItem value="all">All</SelectItem>
                                         <SelectItem value="frequent">Frequent (≤2 weeks)</SelectItem>
                                         <SelectItem value="regular">Regular (2-4 weeks)</SelectItem>
-                                        <SelectItem value="occasional">Occasional (>1 month)</SelectItem>
+                                        <SelectItem value="occasional">{"Occasional (>1 month)"}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

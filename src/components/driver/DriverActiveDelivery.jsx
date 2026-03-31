@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,15 +26,11 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     const [showRatingDialog, setShowRatingDialog] = useState(false);
     const queryClient = useQueryClient();
 
-    if (!driver || !driver.id) {
-        return null;
-    }
-
     // Real-time ETA with traffic
     const { eta, distance, loading: etaLoading } = useRealtimeETA(
         currentLocation,
-        order.delivery_coordinates,
-        order.id
+        order?.delivery_coordinates,
+        order?.id
     );
 
     // Push driver location into the order record so restaurant/customer can see it
@@ -43,7 +40,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     }, [currentLocation?.lat, currentLocation?.lng, order?.id]);
 
     const { data: messages = [] } = useQuery({
-        queryKey: ['driver-messages', order.id],
+        queryKey: ['driver-messages', order?.id],
         queryFn: () => base44.entities.DriverMessage.filter({
             order_id: order.id,
             driver_id: driver.id
@@ -113,6 +110,11 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
             toast.success('Message sent');
         },
     });
+
+    // Early return AFTER all hooks to comply with Rules of Hooks
+    if (!driver || !driver.id) {
+        return null;
+    }
 
     const handleSendMessage = () => {
         if (!messageText.trim()) return;

@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Smoke tests: kioskTerminalReadiness
  *
  * Tests the pure getTerminalReadiness() and getKioskPaymentOptions() logic.

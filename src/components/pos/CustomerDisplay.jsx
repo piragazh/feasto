@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle2, CreditCard, Banknote, Clock, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,7 +27,18 @@ export default function CustomerDisplay() {
         return () => { clearInterval(interval); window.removeEventListener('storage', read); };
     }, []);
 
-    // Idle / waiting screen
+    // Active order — extract state first (hooks below must come before early returns)
+    const { items = [], subtotal = 0, discount, total = 0, remaining, paymentMethod, restaurantName, logoUrl } = state || {};
+    const effectiveTotal = total;
+
+    // Hooks must be called unconditionally before any early returns — moved up
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const t = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(t);
+    }, []);
+
+    // Idle / waiting screen — early return AFTER hooks
     if (!state || state.status === 'idle') {
         return <IdleScreen restaurantName={state?.restaurantName} logoUrl={state?.logoUrl} />;
     }
@@ -34,15 +46,6 @@ export default function CustomerDisplay() {
     if (state.status === 'paid') {
         return <ThankYouScreen restaurantName={state?.restaurantName} logoUrl={state?.logoUrl} change={state.change} />;
     }
-
-    // Active order
-    const { items = [], subtotal = 0, discount, total = 0, remaining, paymentMethod, restaurantName, logoUrl } = state;
-    const effectiveTotal = total;
-    const [time, setTime] = useState(new Date());
-    useEffect(() => {
-        const t = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(t);
-    }, []);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col font-sans overflow-hidden">

@@ -1,4 +1,5 @@
 /**
+/* eslint-disable no-undef */
  * Offline Order Review Workflow Smoke Tests
  * 
  * Verifies manager review actions for flagged offline orders:
