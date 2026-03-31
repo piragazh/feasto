@@ -111,17 +111,9 @@ function SuperAdminInner() {
         if (!window.confirm('Delete all failure logs and reconciliation issues? This cannot be undone.')) return;
         setClearingLogs(true);
         try {
-            const response = await fetch('/api/functions/clearOldLogs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            const data = await response.json();
-            if (response.ok) {
-                alert(`✅ Cleared: ${data.failureLogsDeleted} FailureLogs, ${data.reconciliationIssuesDeleted} ReconciliationIssues`);
-            } else {
-                alert('❌ Error: ' + (data.error || 'Failed to clear logs'));
-            }
+            const { base44 } = await import('@/api/base44Client');
+            const response = await base44.functions.invoke('clearOldLogs', {});
+            alert(`✅ Cleared: ${response.data.failureLogsDeleted} FailureLogs, ${response.data.reconciliationIssuesDeleted} ReconciliationIssues`);
         } catch (error) {
             alert('❌ Error: ' + error.message);
         } finally {
