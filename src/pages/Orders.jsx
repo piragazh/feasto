@@ -513,7 +513,7 @@ export default function Orders() {
                                             </div>
 
                                             <div className="space-y-2 mb-4">
-                                               {(order.items || []).map((item, i) => (
+                                                                {(order.items || []).map((item, i) => (
                                                    <div key={i} className="text-sm">
                                                        <div className="flex justify-between">
                                                            <span className="text-gray-600">
@@ -558,7 +558,7 @@ export default function Orders() {
                                                ))}
                                                </div>
 
-                                                <div className="border-t pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                               <div className="border-t pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                 {order?.order_type !== 'dine_in' && (
                                                     <div className="flex items-start gap-2 text-sm text-gray-500">
                                                         <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
@@ -674,11 +674,11 @@ export default function Orders() {
                                                                 >
                                                                     <AlertCircle className="h-4 w-4 mr-2" />
                                                                     Refund
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                        </CardContent>
+                                                                    </Button>
+                                                                    )}
+                                                                    </div>
+                                                                    )}
+                                                                    </CardContent>
                                     </Card>
                                 </motion.div>
                             );
@@ -716,5 +716,5 @@ export default function Orders() {
             </Dialog>
             </div>
         </PullToRefresh>
-            );
-            }
+    );
+}
