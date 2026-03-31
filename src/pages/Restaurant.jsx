@@ -1147,16 +1147,20 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
                 {/* Popular Items */}
                 <RestaurantSectionErrorBoundary sectionName="popular-items">
-                    <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+                    <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
+                        <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+                    </Suspense>
                 </RestaurantSectionErrorBoundary>
 
                 {/* Meal Deals Section */}
                 <RestaurantSectionErrorBoundary sectionName="meal-deals">
-                    <MealDealsSection 
-                        deals={mealDeals}
-                        onAddToCart={addMealDealToCart}
-                        onCustomize={handleCustomizeDeal}
-                    />
+                    <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
+                        <MealDealsSection 
+                            deals={mealDeals}
+                            onAddToCart={addMealDealToCart}
+                            onCustomize={handleCustomizeDeal}
+                        />
+                    </Suspense>
                 </RestaurantSectionErrorBoundary>
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Full Menu</h2>

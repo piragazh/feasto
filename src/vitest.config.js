@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/* global process */
 /**
  * Vitest configuration — kept separate from vite.config.js so Vitest
  * doesn't load browser-only plugins (base44, react) during test runs.
