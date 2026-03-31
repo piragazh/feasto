@@ -260,19 +260,8 @@ async function handlePaymentIntentSucceeded(base44, paymentIntent) {
         return { success: false, error: 'Failed to check for existing order', recoverable: true };
     }
 
-    // FIX #2: Check if frontend recovery already completed for this PI
-    // Skip webhook processing if order exists (recovery won)
-    try {
-        const existingOrder = await base44.asServiceRole.entities.Order.filter({ payment_intent_id: piId });
-        if (existingOrder?.length > 0) {
-            console.log(`[WEBHOOK] Order already exists for ${piId} — recovery completed or order created. Webhook yielding.`);
-            return { success: true, status: 'recovered_by_frontend', order_id: existingOrder[0].id };
-        }
-    } catch (checkErr) {
-        console.warn(`[WEBHOOK] Order existence check failed (non-fatal):`, checkErr.message);
-    }
-    
     // Order does not exist — attempt to create it from webhook payload
+    // createIdempotentOrder handles any race that happened since the check above
     console.log(`[WEBHOOK] No existing order for intent=${piId}. Attempting webhook recovery...`);
     
     let result;
