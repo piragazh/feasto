@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, AlertCircle, Search, RefreshCw, CreditCard, ShieldAlert, Store } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Search, RefreshCw, CreditCard, ShieldAlert, Store, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
@@ -101,6 +101,22 @@ export default function FailureMonitoringDashboard() {
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [issueStatusFilter, setIssueStatusFilter] = useState('all');
+  const [clearingLogs, setClearingLogs] = useState(false);
+
+  const handleClearLogs = async () => {
+    if (!window.confirm('Delete all failure logs and reconciliation issues? This cannot be undone.')) return;
+    setClearingLogs(true);
+    try {
+      const response = await base44.functions.invoke('clearOldLogs', {});
+      alert(`✅ Cleared: ${response.data.failureLogsDeleted} FailureLogs, ${response.data.reconciliationIssuesDeleted} ReconciliationIssues`);
+      refetchFailures();
+      refetchIssues();
+    } catch (error) {
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setClearingLogs(false);
+    }
+  };
 
   const { data: failures = [], refetch: refetchFailures, isFetching: loadingFailures } = useQuery({
     queryKey: ['failure-logs-dashboard'],
@@ -175,15 +191,21 @@ export default function FailureMonitoringDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Failure Monitoring</h2>
-          <p className="text-sm text-slate-500">Track critical failures, refund problems, and issues needing manual review.</p>
-        </div>
-        <Button onClick={refreshAll} variant="outline" className="gap-2 w-full md:w-auto">
-          <RefreshCw className={`h-4 w-4 ${(loadingFailures || loadingIssues) ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
+         <div>
+           <h2 className="text-2xl font-bold text-slate-900">Failure Monitoring</h2>
+           <p className="text-sm text-slate-500">Track critical failures, refund problems, and issues needing manual review.</p>
+         </div>
+         <div className="flex gap-2 w-full md:w-auto">
+           <Button onClick={refreshAll} variant="outline" className="gap-2 flex-1 md:flex-initial">
+             <RefreshCw className={`h-4 w-4 ${(loadingFailures || loadingIssues) ? 'animate-spin' : ''}`} />
+             Refresh
+           </Button>
+           <Button onClick={handleClearLogs} disabled={clearingLogs} variant="destructive" className="gap-2 flex-1 md:flex-initial">
+             <Trash2 className="h-4 w-4" />
+             {clearingLogs ? 'Clearing...' : 'Clear Logs'}
+           </Button>
+         </div>
+       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard title="Critical Failures" value={criticalFailures} icon={AlertTriangle} tone="text-red-600" />
