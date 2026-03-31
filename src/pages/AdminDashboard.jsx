@@ -17,6 +17,7 @@ import {
     Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
+import { useAuth } from '@/lib/AuthContext';
 
 const STATUS_COLORS = {
     pending: '#f59e0b',
@@ -71,20 +72,24 @@ const CustomTooltip = ({ active, payload, label, prefix = '' }) => {
 export default function AdminDashboard() {
     useSEO({ title: 'Admin Dashboard', noindex: true });
     const navigate = useNavigate();
+    const { user, isLoadingAuth } = useAuth();
     const [activeTab, setActiveTab] = useState('overview');
 
     const { data: restaurants = [], isLoading: restaurantsLoading } = useQuery({
         queryKey: ['all-restaurants'],
+        enabled: !isLoadingAuth && user?.role === 'admin',
         queryFn: () => base44.entities.Restaurant.list(),
     });
 
     const { data: orders = [], isLoading: ordersLoading } = useQuery({
         queryKey: ['all-orders-admin'],
+        enabled: !isLoadingAuth && user?.role === 'admin',
         queryFn: () => base44.entities.Order.list('-created_date', 500),
     });
 
     const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
         queryKey: ['all-reviews-admin'],
+        enabled: !isLoadingAuth && user?.role === 'admin',
         queryFn: () => base44.entities.Review.list(),
     });
 

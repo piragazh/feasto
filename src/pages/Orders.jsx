@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useSEO } from '@/lib/useSEO';
+import { useAuth } from '@/lib/AuthContext';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -41,6 +42,7 @@ const statusConfig = {
 export default function Orders() {
     useSEO({ title: 'My Orders', noindex: true });
     const navigate = useNavigate();
+    const { user, isLoadingAuth } = useAuth();
     const queryClient = useQueryClient();
     const [reviewingOrder, setReviewingOrder] = useState(null);
     const [refundingOrder, setRefundingOrder] = useState(null);
@@ -56,6 +58,7 @@ export default function Orders() {
     
     const { data: orders = [], isLoading, refetch, error } = useQuery({
         queryKey: ['orders'],
+        enabled: !isLoadingAuth,
         queryFn: async () => {
             try {
                 // Try authenticated user first
