@@ -4,36 +4,37 @@ import RequireAdmin from '@/components/auth/RequireAdmin';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from 'lucide-react';
-import SystemOverview from '@/components/superadmin/SystemOverview';
-import RestaurantManagement from '@/components/superadmin/RestaurantManagement';
-import MessagingCenter from '@/components/superadmin/MessagingCenter';
-import CommissionManagement from '@/components/superadmin/CommissionManagement';
-import SystemMonitoring from '@/components/superadmin/SystemMonitoring';
-import CuisineTypeManagement from '@/components/superadmin/CuisineTypeManagement';
-import DomainManagement from '@/components/superadmin/DomainManagement';
-import EnhancedAnalytics from '@/components/superadmin/EnhancedAnalytics';
-import EnhancedDriverManagement from '@/components/superadmin/EnhancedDriverManagement';
-import PlatformRefundOversight from '@/components/superadmin/PlatformRefundOversight';
-import PayoutManagement from '@/components/superadmin/PayoutManagement';
-import PayoutHistory from '@/components/superadmin/PayoutHistory';
-import OrderHistoryManagement from '@/components/superadmin/OrderHistoryManagement';
-import ReviewModerationSuper from '@/components/superadmin/ReviewModeration';
-import PromotionOversight from '@/components/superadmin/PromotionOversight';
-import LoyaltyProgramSettings from '@/components/superadmin/LoyaltyProgramSettings';
-import TierBenefitsManagement from '@/components/superadmin/TierBenefitsManagement';
-import PublicFilesManagement from '@/components/superadmin/PublicFilesManagement';
-import GlobalScreenHealthMonitor from '@/components/superadmin/GlobalScreenHealthMonitor';
-import SmsLogViewer from '@/components/superadmin/SmsLogViewer';
-import BulkPriceAdjustment from '@/components/superadmin/BulkPriceAdjustment';
-import BackupRestore from '@/components/superadmin/BackupRestore';
-import OfflineReviewPortfolio from '@/components/superadmin/OfflineReviewPortfolio';
-import ManagerOperatorAnalytics from '@/components/superadmin/ManagerOperatorAnalytics';
-import OfflineTemporalAnalytics from '@/components/superadmin/OfflineTemporalAnalytics';
-import OperatorAnalytics from '@/components/superadmin/OperatorAnalytics';
-import ShiftWindowAnalytics from '@/components/superadmin/ShiftWindowAnalytics';
-import OfflineRiskDigest from '@/components/superadmin/OfflineRiskDigest';
-import WeeklyOpsHealthDashboard from '@/components/superadmin/WeeklyOpsHealthDashboard';
-import FailureMonitoringDashboard from '@/components/superadmin/FailureMonitoringDashboard';
+// Lazy load components to isolate import errors
+const SystemOverview = React.lazy(() => import('@/components/superadmin/SystemOverview'));
+const RestaurantManagement = React.lazy(() => import('@/components/superadmin/RestaurantManagement'));
+const MessagingCenter = React.lazy(() => import('@/components/superadmin/MessagingCenter'));
+const CommissionManagement = React.lazy(() => import('@/components/superadmin/CommissionManagement'));
+const SystemMonitoring = React.lazy(() => import('@/components/superadmin/SystemMonitoring'));
+const CuisineTypeManagement = React.lazy(() => import('@/components/superadmin/CuisineTypeManagement'));
+const DomainManagement = React.lazy(() => import('@/components/superadmin/DomainManagement'));
+const EnhancedAnalytics = React.lazy(() => import('@/components/superadmin/EnhancedAnalytics'));
+const EnhancedDriverManagement = React.lazy(() => import('@/components/superadmin/EnhancedDriverManagement'));
+const PlatformRefundOversight = React.lazy(() => import('@/components/superadmin/PlatformRefundOversight'));
+const PayoutManagement = React.lazy(() => import('@/components/superadmin/PayoutManagement'));
+const PayoutHistory = React.lazy(() => import('@/components/superadmin/PayoutHistory'));
+const OrderHistoryManagement = React.lazy(() => import('@/components/superadmin/OrderHistoryManagement'));
+const ReviewModerationSuper = React.lazy(() => import('@/components/superadmin/ReviewModeration'));
+const PromotionOversight = React.lazy(() => import('@/components/superadmin/PromotionOversight'));
+const LoyaltyProgramSettings = React.lazy(() => import('@/components/superadmin/LoyaltyProgramSettings'));
+const TierBenefitsManagement = React.lazy(() => import('@/components/superadmin/TierBenefitsManagement'));
+const PublicFilesManagement = React.lazy(() => import('@/components/superadmin/PublicFilesManagement'));
+const GlobalScreenHealthMonitor = React.lazy(() => import('@/components/superadmin/GlobalScreenHealthMonitor'));
+const SmsLogViewer = React.lazy(() => import('@/components/superadmin/SmsLogViewer'));
+const BulkPriceAdjustment = React.lazy(() => import('@/components/superadmin/BulkPriceAdjustment'));
+const BackupRestore = React.lazy(() => import('@/components/superadmin/BackupRestore'));
+const OfflineReviewPortfolio = React.lazy(() => import('@/components/superadmin/OfflineReviewPortfolio'));
+const ManagerOperatorAnalytics = React.lazy(() => import('@/components/superadmin/ManagerOperatorAnalytics'));
+const OfflineTemporalAnalytics = React.lazy(() => import('@/components/superadmin/OfflineTemporalAnalytics'));
+const OperatorAnalytics = React.lazy(() => import('@/components/superadmin/OperatorAnalytics'));
+const ShiftWindowAnalytics = React.lazy(() => import('@/components/superadmin/ShiftWindowAnalytics'));
+const OfflineRiskDigest = React.lazy(() => import('@/components/superadmin/OfflineRiskDigest'));
+const WeeklyOpsHealthDashboard = React.lazy(() => import('@/components/superadmin/WeeklyOpsHealthDashboard'));
+const FailureMonitoringDashboard = React.lazy(() => import('@/components/superadmin/FailureMonitoringDashboard'));
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
@@ -211,6 +212,7 @@ function SuperAdminInner() {
 
                 {/* Page Content */}
                 <div className="px-6 md:px-8 py-8 md:py-10">
+                    <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
                     {activeTab === 'overview' && <SystemOverview />}
                     {activeTab === 'ops-health' && <WeeklyOpsHealthDashboard />}
                     {activeTab === 'risk-digest' && <OfflineRiskDigest />}
@@ -268,6 +270,7 @@ function SuperAdminInner() {
                             />
                         </div>
                     )}
+                    </React.Suspense>
                 </div>
             </div>
         </div>
