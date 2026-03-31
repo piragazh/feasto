@@ -68,26 +68,27 @@ export default function Orders() {
                         return [];
                     }
 
-                    // Fetch by customer_email (covers both logged-in and guest orders placed with same email)
-                    // Also fetch by phone as fallback to catch older orders
                     const phone = user.phone || sessionStorage.getItem('guest_order_phone') || null;
 
-                    const [byEmail, byPhone] = await Promise.all([
+                    // Fetch by all known identifiers in parallel:
+                    // 1. created_by — legacy orders created directly by this user
+                    // 2. customer_email — new field set by verifyAndCreateOrder
+                    // 3. customer_phone — covers orders where phone is the only link
+                    const queries = [
+                        base44.entities.Order.filter({ created_by: user.email }, '-created_date'),
                         base44.entities.Order.filter({ customer_email: user.email }, '-created_date'),
                         phone ? base44.entities.Order.filter({ customer_phone: phone }, '-created_date') : Promise.resolve([])
-                    ]);
+                    ];
 
-                    // Merge and deduplicate by order id
-                    const merged = [...(byEmail || []), ...(byPhone || [])];
+                    const results = await Promise.all(queries);
+                    const merged = results.flat();
                     const seen = new Set();
-                    const unique = merged.filter(o => {
-                        if (!o?.id || seen.has(o.id)) return false;
-                        seen.add(o.id);
-                        return true;
-                    });
-
-                    return unique
-                        .filter(order => order && order.id && order.restaurant_name)
+                    return merged
+                        .filter(o => {
+                            if (!o?.id || !o?.restaurant_name || seen.has(o.id)) return false;
+                            seen.add(o.id);
+                            return true;
+                        })
                         .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
                 }
 
