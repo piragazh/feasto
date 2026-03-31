@@ -17,37 +17,14 @@ export function DeleteAccountDialog({ open, onClose, userEmail }) {
         }
 
         setIsDeleting(true);
-        
+
         try {
-            // Find and delete user record
-            const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
-            if (users.length > 0) {
-                await base44.asServiceRole.entities.User.delete(users[0].id);
+            const response = await base44.functions.invoke('deleteUserAccount', {});
+            if (!response?.data?.success) {
+                throw new Error(response?.data?.error || 'Deletion failed');
             }
-
-            // Delete all user-related data
-            const [favorites, addresses, loyaltyTransactions, orders] = await Promise.all([
-                base44.asServiceRole.entities.Favorite.filter({ user_email: userEmail }),
-                base44.asServiceRole.entities.User.filter({ email: userEmail }),
-                base44.asServiceRole.entities.LoyaltyTransaction.filter({ user_email: userEmail }),
-                base44.asServiceRole.entities.Order.filter({ created_by: userEmail }),
-            ]);
-
-            await Promise.all([
-                ...favorites.map(f => base44.asServiceRole.entities.Favorite.delete(f.id)),
-                ...loyaltyTransactions.map(t => base44.asServiceRole.entities.LoyaltyTransaction.delete(t.id)),
-                ...orders.map(o => base44.asServiceRole.entities.Order.update(o.id, { 
-                    created_by: 'deleted_user',
-                    guest_email: userEmail,
-                })),
-            ]);
-
             toast.success('Account deleted successfully');
-            
-            // Logout and redirect
-            setTimeout(() => {
-                base44.auth.logout();
-            }, 1000);
+            setTimeout(() => base44.auth.logout(), 1000);
         } catch (error) {
             console.error('Delete account error:', error);
             toast.error('Failed to delete account. Please contact support.');

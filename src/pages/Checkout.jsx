@@ -1011,6 +1011,9 @@ export default function Checkout() {
             localStorage.removeItem('userCoordinates');
             pendingPayment.clear(); // Safe: idempotent if already cleared by recovery
 
+            // Haptic feedback on successful order (Android)
+            window.navigator?.vibrate?.([50, 30, 50]);
+
             // Persist guest phone + email in sessionStorage so the Orders page
             // can look up this guest's orders without requiring login
             if (formData.phone) {
