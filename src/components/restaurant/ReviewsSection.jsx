@@ -44,7 +44,7 @@ export default function ReviewsSection({ restaurantId }) {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
 
             {reviews.length > 0 ? (
-                <>
+                <div className="space-y-6">
                     {/* Ratings Summary */}
                     <Card className="mb-6">
                         <CardContent className="pt-6">
@@ -143,7 +143,7 @@ export default function ReviewsSection({ restaurantId }) {
                             </Card>
                         ))}
                     </div>
-                </>
+                </div>
             ) : (
                 <Card>
                     <CardContent className="py-12 text-center">
