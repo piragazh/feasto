@@ -161,28 +161,31 @@ Deno.serve(async (req) => {
             return errorResponse('INVALID_ITEMS', 'items must be a non-empty array');
         }
 
-        // ── 5. Math integrity check ───────────────────────────────────────────
+        // ── 5. Math integrity check — ENFORCED (not optional) ────────────────
+        // All three components are required; missing/non-numeric values are rejected.
         if (
-            typeof subtotal === 'number' &&
-            typeof delivery_fee === 'number' &&
-            typeof discount === 'number'
+            typeof subtotal !== 'number' || isNaN(subtotal) ||
+            typeof delivery_fee !== 'number' || isNaN(delivery_fee) ||
+            typeof discount !== 'number' || isNaN(discount)
         ) {
-            const surcharge = typeof small_order_surcharge === 'number' ? small_order_surcharge : 0;
-            const expectedTotal = subtotal + delivery_fee + surcharge - discount;
-            const delta = Math.abs(expectedTotal - amount);
-            if (delta > MATH_TOLERANCE_GBP) {
-                console.error(
-                    `${LOG_PREFIX} [MATH_INTEGRITY_FAIL] request_id=${requestId}` +
-                    ` subtotal=${subtotal} delivery_fee=${delivery_fee} surcharge=${surcharge} discount=${discount}` +
-                    ` expected=${expectedTotal.toFixed(2)} received=${amount.toFixed(2)} delta=${delta.toFixed(4)}`
-                );
-                return errorResponse(
-                    'MATH_INTEGRITY_FAIL',
-                    `Order total £${amount.toFixed(2)} does not match components (expected £${expectedTotal.toFixed(2)}). Please refresh and try again.`
-                );
-            }
-        } else {
-            console.warn(`${LOG_PREFIX} [MATH_CHECK_SKIPPED] request_id=${requestId} subtotal=${subtotal} delivery_fee=${delivery_fee} discount=${discount}`);
+            return errorResponse(
+                'MATH_INTEGRITY_FAIL',
+                'Order components (subtotal, delivery_fee, discount) are required and must be numbers.'
+            );
+        }
+        const surcharge = typeof small_order_surcharge === 'number' && !isNaN(small_order_surcharge) ? small_order_surcharge : 0;
+        const expectedTotal = subtotal + delivery_fee + surcharge - discount;
+        const delta = Math.abs(expectedTotal - amount);
+        if (delta > MATH_TOLERANCE_GBP) {
+            console.error(
+                `${LOG_PREFIX} [MATH_INTEGRITY_FAIL] request_id=${requestId}` +
+                ` subtotal=${subtotal} delivery_fee=${delivery_fee} surcharge=${surcharge} discount=${discount}` +
+                ` expected=${expectedTotal.toFixed(2)} received=${amount.toFixed(2)} delta=${delta.toFixed(4)}`
+            );
+            return errorResponse(
+                'MATH_INTEGRITY_FAIL',
+                `Order total £${amount.toFixed(2)} does not match components (expected £${expectedTotal.toFixed(2)}). Please refresh and try again.`
+            );
         }
 
         // ── 6. Convert to pence ───────────────────────────────────────────────
