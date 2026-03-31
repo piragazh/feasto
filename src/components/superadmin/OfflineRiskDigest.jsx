@@ -21,12 +21,12 @@ export default function OfflineRiskDigest() {
     const [copiedToClipboard, setCopiedToClipboard] = useState(false);
     const [activeTab, setActiveTab] = useState('current');
 
-    const { data: restaurants = [] } = useQuery({
+    const { data: restaurants = [], isLoading: restLoading } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list()
     });
 
-    const { data: orders = [] } = useQuery({
+    const { data: orders = [], isLoading: ordersLoading } = useQuery({
         queryKey: ['all-orders'],
         queryFn: () => base44.entities.Order.list('-offline_synced_at', 1000)
     });
@@ -124,6 +124,10 @@ export default function OfflineRiskDigest() {
         setCopiedToClipboard(true);
         setTimeout(() => setCopiedToClipboard(false), 2000);
     };
+
+    if (restLoading || ordersLoading) {
+        return <Card><CardContent className="p-4 text-center text-sm text-gray-500">Loading digest...</CardContent></Card>;
+    }
 
     return (
         <div className="space-y-4">
