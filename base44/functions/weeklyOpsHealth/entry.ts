@@ -1,140 +1,133 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
-    if (req.method !== 'GET') {
-        return Response.json({ error: 'GET only' }, { status: 405 });
-    }
-
     try {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
 
         if (!user || user.role !== 'admin') {
-            return Response.json({ error: 'Admin only' }, { status: 403 });
+            return Response.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const now = new Date();
-        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        // Get data from last 7 days
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-        // Current week data
-        const orders = await base44.asServiceRole.entities.Order.filter({});
-        const payments = await base44.asServiceRole.entities.PaymentTransaction.filter({});
-        const failures = await base44.asServiceRole.entities.FailureLog.filter({});
-        const issues = await base44.asServiceRole.entities.ReconciliationIssue.filter({});
+        // Fetch orders
+        const orders = await base44.entities.Order.list();
+        const recentOrders = orders.filter(o => new Date(o.created_date) >= sevenDaysAgo);
 
-        // Filter to last 7 days
-        const currentWeekOrders = orders.filter(o => new Date(o.created_date) >= sevenDaysAgo);
-        const currentWeekPayments = payments.filter(p => new Date(p.created_date || p.stripe_verified_at) >= sevenDaysAgo);
-        const currentWeekFailures = failures.filter(f => new Date(f.logged_at) >= sevenDaysAgo);
-        const currentWeekIssues = issues.filter(i => new Date(i.detected_at) >= sevenDaysAgo);
+        // Fetch failure logs
+        const failureLogs = await base44.entities.FailureLog.list().catch(() => []);
+        const recentFailures = failureLogs.filter(f => new Date(f.created_date || 0) >= sevenDaysAgo);
 
-        // Previous week data
-        const prevWeekOrders = orders.filter(o => {
+        // Fetch reconciliation issues
+        const reconIssues = await base44.entities.ReconciliationIssue.list().catch(() => []);
+        const recentReconIssues = reconIssues.filter(r => new Date(r.created_date || 0) >= sevenDaysAgo);
+
+        // Calculate Money Safety
+        const refunds = recentOrders.filter(o => o.status === 'refunded' || o.status === 'refund_rejected_by_restaurant');
+        const failedRefunds = recentOrders.filter(o => o.status === 'refund_rejected_by_restaurant');
+        const orphanedPayments = recentReconIssues.filter(r => r.issue_type === 'orphaned_payment').length;
+
+        const totalAmount = recentOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const refundAmount = refunds.reduce((sum, o) => sum + (o.total || 0), 0);
+        const refundPercent = recentOrders.length > 0 ? Math.round((refunds.length / recentOrders.length) * 100) : 0;
+
+        // Calculate Order Health
+        const successfulOrders = recentOrders.filter(o => o.status === 'delivered' || o.status === 'collected').length;
+        const rejectedOrders = recentOrders.filter(o => o.status === 'cancelled').length;
+        const successRate = recentOrders.length > 0 ? Math.round((successfulOrders / recentOrders.length) * 100) : 100;
+        const rejectionRate = recentOrders.length > 0 ? Math.round((rejectedOrders / recentOrders.length) * 100) : 0;
+        const avgOrderValue = recentOrders.length > 0 ? (totalAmount / recentOrders.length).toFixed(2) : '0.00';
+
+        // Failures analysis
+        const criticalFailures = recentFailures.filter(f => f.severity === 'critical').length;
+        const failureTypes = {};
+        recentFailures.forEach(f => {
+            const type = f.error_type || 'Unknown';
+            failureTypes[type] = (failureTypes[type] || 0) + 1;
+        });
+        const topFailures = Object.entries(failureTypes)
+            .map(([type, count]) => ({ type, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+
+        // Reconciliation
+        const openIssues = recentReconIssues.filter(r => r.status !== 'resolved').length;
+        const criticalReconIssues = recentReconIssues.filter(r => r.severity === 'critical').length;
+        const avgResolutionHours = recentReconIssues.length > 0
+            ? recentReconIssues.reduce((sum, r) => {
+                if (r.resolved_at && r.created_date) {
+                    const diff = new Date(r.resolved_at) - new Date(r.created_date);
+                    return sum + (diff / (1000 * 60 * 60));
+                }
+                return sum;
+            }, 0) / recentReconIssues.length
+            : 0;
+
+        const oldestIssue = recentReconIssues.length > 0
+            ? Math.min(...recentReconIssues.map(r => (Date.now() - new Date(r.created_date)) / (1000 * 60 * 60)))
+            : 0;
+
+        // Trends (compare with previous 7 days)
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+        const prevPeriodOrders = orders.filter(o => {
             const d = new Date(o.created_date);
             return d >= fourteenDaysAgo && d < sevenDaysAgo;
         });
-        const prevWeekPayments = payments.filter(p => {
-            const d = new Date(p.created_date || p.stripe_verified_at);
+        const prevPeriodFailures = failureLogs.filter(f => {
+            const d = new Date(f.created_date || 0);
             return d >= fourteenDaysAgo && d < sevenDaysAgo;
         });
-        const prevWeekFailures = failures.filter(f => {
-            const d = new Date(f.logged_at);
-            return d >= fourteenDaysAgo && d < sevenDaysAgo;
-        });
+        const prevRefunds = prevPeriodOrders.filter(o => o.status === 'refunded' || o.status === 'refund_rejected_by_restaurant');
 
-        // ============ MONEY SAFETY ============
-        const totalPayments = currentWeekPayments.length;
-        const refundedPayments = currentWeekPayments.filter(p => ['refunded', 'refund_initiated'].includes(p.status));
-        const refundCount = refundedPayments.length;
-        const refundPercent = totalPayments > 0 ? (refundCount / totalPayments * 100).toFixed(1) : 0;
-        const refundFailures = currentWeekPayments.filter(p => p.status === 'refund_failed').length;
-        const orphanedPayments = currentWeekPayments.filter(p => p.status === 'authorized' && !p.order_id).length;
-        const totalAmount = currentWeekPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-        // ============ ORDER HEALTH ============
-        const totalOrders = currentWeekOrders.length;
-        const successOrders = currentWeekOrders.filter(o => o.status === 'delivered' || o.status === 'collected').length;
-        const rejectedOrders = currentWeekOrders.filter(o => o.status === 'cancelled').length;
-        const successRate = totalOrders > 0 ? (successOrders / totalOrders * 100).toFixed(1) : 0;
-        const rejectionRate = totalOrders > 0 ? (rejectedOrders / totalOrders * 100).toFixed(1) : 0;
-        const avgOrderValue = totalOrders > 0 ? (currentWeekOrders.reduce((sum, o) => sum + (o.total || 0), 0) / totalOrders).toFixed(2) : 0;
-
-        // ============ FAILURES ============
-        const totalFailures = currentWeekFailures.length;
-        const criticalFailures = currentWeekFailures.filter(f => f.severity === 'critical').length;
-        const failureTypes = {};
-        currentWeekFailures.forEach(f => {
-            failureTypes[f.failure_type] = (failureTypes[f.failure_type] || 0) + 1;
-        });
-        const topFailures = Object.entries(failureTypes)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
-            .map(([type, count]) => ({ type, count }));
-
-        // ============ RECONCILIATION ============
-        const openIssues = currentWeekIssues.filter(i => ['open', 'reviewed'].includes(i.status)).length;
-        const criticalIssues = currentWeekIssues.filter(i => i.severity === 'critical' && ['open', 'reviewed'].includes(i.status)).length;
-        
-        // Oldest issue
-        const oldestIssue = currentWeekIssues
-            .filter(i => ['open', 'reviewed'].includes(i.status))
-            .sort((a, b) => new Date(a.detected_at) - new Date(b.detected_at))[0];
-        const oldestIssueAge = oldestIssue 
-            ? Math.floor((now - new Date(oldestIssue.detected_at)) / (1000 * 60 * 60))
+        const ordersTrend = prevPeriodOrders.length > 0
+            ? Math.round(((recentOrders.length - prevPeriodOrders.length) / prevPeriodOrders.length) * 100)
             : 0;
-
-        // Avg resolution time
-        const resolvedIssues = currentWeekIssues.filter(i => i.status === 'resolved' && i.resolved_at);
-        const avgResolutionTime = resolvedIssues.length > 0
-            ? resolvedIssues.reduce((sum, i) => {
-                const hours = (new Date(i.resolved_at) - new Date(i.detected_at)) / (1000 * 60 * 60);
-                return sum + hours;
-            }, 0) / resolvedIssues.length
+        const refundsTrend = prevRefunds.length > 0
+            ? Math.round(((refunds.length - prevRefunds.length) / prevRefunds.length) * 100)
             : 0;
-
-        // ============ TRENDS ============
-        const orderTrend = ((currentWeekOrders.length - prevWeekOrders.length) / (prevWeekOrders.length || 1) * 100).toFixed(1);
-        const refundTrend = ((refundCount - prevWeekPayments.filter(p => ['refunded', 'refund_initiated'].includes(p.status)).length) / (prevWeekPayments.length || 1) * 100).toFixed(1);
-        const failureTrend = ((totalFailures - prevWeekFailures.length) / (prevWeekFailures.length || 1) * 100).toFixed(1);
+        const failuresTrend = prevPeriodFailures.length > 0
+            ? Math.round(((recentFailures.length - prevPeriodFailures.length) / prevPeriodFailures.length) * 100)
+            : 0;
 
         return Response.json({
-            success: true,
-            timestamp: new Date().toISOString(),
-            period: { start: sevenDaysAgo.toISOString(), end: now.toISOString() },
-            moneySafety: {
-                totalPayments,
-                totalAmount: parseFloat(totalAmount.toFixed(2)),
-                refundCount,
-                refundPercent: parseFloat(refundPercent),
-                refundFailures,
-                orphanedPayments,
-            },
-            orderHealth: {
-                totalOrders,
-                successRate: parseFloat(successRate),
-                rejectionRate: parseFloat(rejectionRate),
-                avgOrderValue: parseFloat(avgOrderValue),
-            },
-            failures: {
-                totalFailures,
-                criticalFailures,
-                topFailures,
-            },
-            reconciliation: {
-                openIssues,
-                criticalIssues,
-                avgResolutionHours: parseFloat(avgResolutionTime.toFixed(1)),
-                oldestIssueAgeHours: oldestIssueAge,
-            },
-            trends: {
-                orders: parseFloat(orderTrend),
-                refunds: parseFloat(refundTrend),
-                failures: parseFloat(failureTrend),
-            },
+            data: {
+                timestamp: new Date().toISOString(),
+                moneySafety: {
+                    refundPercent,
+                    refundCount: refunds.length,
+                    refundFailures: failedRefunds.length,
+                    orphanedPayments,
+                    totalAmount: Math.round(totalAmount),
+                    totalPayments: recentOrders.length
+                },
+                orderHealth: {
+                    successRate,
+                    rejectionRate,
+                    avgOrderValue,
+                    totalOrders: recentOrders.length
+                },
+                failures: {
+                    totalFailures: recentFailures.length,
+                    criticalFailures,
+                    topFailures
+                },
+                reconciliation: {
+                    openIssues,
+                    criticalIssues: criticalReconIssues,
+                    avgResolutionHours: Math.round(avgResolutionHours * 10) / 10,
+                    oldestIssueAgeHours: Math.round(oldestIssue)
+                },
+                trends: {
+                    orders: ordersTrend,
+                    refunds: refundsTrend,
+                    failures: failuresTrend
+                }
+            }
         });
     } catch (error) {
-        console.error('[OPS_HEALTH] Error:', error);
-        return Response.json({ error: 'Failed to compute health metrics' }, { status: 500 });
+        console.error('weeklyOpsHealth error:', error);
+        return Response.json({ error: error.message }, { status: 500 });
     }
 });
