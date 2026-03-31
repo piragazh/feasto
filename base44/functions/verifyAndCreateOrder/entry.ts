@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'POST only', success: false }, { status: 405 });
         }
 
-        const { orderData, paymentIntentId, idempotency_key } = await req.json();
+        const { orderData, paymentIntentId, idempotency_key, stripeChargedAmountPence } = await req.json();
         const base44 = createClientFromRequest(req);
         let user = null;
         try { user = await base44.auth.me(); } catch (_) { user = null; }
@@ -295,8 +295,11 @@ Deno.serve(async (req) => {
                 return Response.json({ error: `Payment not completed (status: ${paymentIntent.status}). Please try again.`, success: false, code: 'PAYMENT_NOT_SUCCEEDED' }, { status: 402 });
             }
 
-            // Verify charged amount matches server-calculated total (within £0.02)
-            const chargedGBP = paymentIntent.amount / 100;
+            // MED-7 FIX: Use stripeChargedAmountPence from recovery path if provided (recovery already verified PI),
+            // otherwise use paymentIntent.amount. This ensures recovery validates against the actual Stripe charge,
+            // not the potentially stale orderData.total.
+            const chargedAmountPence = stripeChargedAmountPence ?? paymentIntent.amount;
+            const chargedGBP = chargedAmountPence / 100;
             const amountDelta = Math.abs(chargedGBP - serverTotal);
             if (amountDelta > PRICE_TOLERANCE) {
                 console.error(`${LOG} STRIPE_AMOUNT_MISMATCH charged=£${chargedGBP.toFixed(2)} serverTotal=£${serverTotal.toFixed(2)} delta=£${amountDelta.toFixed(4)} pi=${paymentIntentId}`);

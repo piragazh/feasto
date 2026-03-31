@@ -203,11 +203,16 @@ Deno.serve(async (req) => {
     }
 
     // Replay via verifyAndCreateOrder — idempotency_key ensures no duplicate
+    // MED-7 FIX: Pass the authoritative Stripe amount to verifyAndCreateOrder for recovery path.
+    // This ensures that if a coupon was applied after PI creation but before the crash,
+    // the recovery validation uses the charged amount (source of truth) rather than the
+    // stale orderData.total which was set at initial payment time.
     try {
         const replayResponse = await base44.asServiceRole.functions.invoke('verifyAndCreateOrder', {
             orderData,
             paymentIntentId,
             idempotency_key: idempotencyKey,
+            stripeChargedAmountPence: paymentIntent.amount, // Authoritative amount Stripe charged
         });
 
         const result = replayResponse?.data;
