@@ -271,7 +271,8 @@ Deno.serve(async (req) => {
 
         // Total discount = manual XOR coupon (mutually exclusive, enforced above)
         const totalDiscount = approvedDiscount + approvedCouponDiscount;
-        const serverTotal = Math.max(0, serverSubtotal - totalDiscount);
+        const deliveryFee = typeof orderData.delivery_fee === 'number' ? orderData.delivery_fee : 0;
+        const serverTotal = Math.max(0, serverSubtotal + deliveryFee - totalDiscount);
 
         // Strip spoofable / computed fields
         const {
