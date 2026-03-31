@@ -796,7 +796,7 @@ export default function Checkout() {
         await createOrder();
     };
 
-    const createOrder = async (paymentIntentId = null) => {
+    const createOrder = async (paymentIntentId = null, _lockedSessionKey = null) => {
         // ABSOLUTE CRITICAL: Block any order creation if card payment was initiated but not completed
         if (clientSecret && !paymentIntentId) {
             console.error('[Checkout] Order creation blocked: payment initiated but not completed');
@@ -941,7 +941,7 @@ export default function Checkout() {
               // This ensures payment is verified and restaurant is open
               // BUG-M03 FIX: Use locked session key (captured at handleStripeSuccess start)
               // to prevent rotation during payment processing
-              const sessionKeyToUse = paymentIntentId ? lockedSessionKey : getSessionKey();
+              const sessionKeyToUse = paymentIntentId ? (_lockedSessionKey || getSessionKey()) : getSessionKey();
               checkoutTrace.log('verify_and_create_order_started', { piId: paymentIntentId, total, orderType, sessionKey: sessionKeyToUse });
               console.log('[Checkout] Invoking verifyAndCreateOrder with paymentIntentId:', paymentIntentId, 'session_key:', sessionKeyToUse);
               const verificationResponse = await base44.functions.invoke('verifyAndCreateOrder', {
@@ -1203,11 +1203,11 @@ export default function Checkout() {
         toast.success('Payment authorised! Creating your order...');
         
         try {
-            // CRITICAL: Call createOrder() with paymentIntentId
+            // CRITICAL: Call createOrder() with paymentIntentId and lockedSessionKey
             // This ensures BOTH normal card entry AND express checkout converge
             // into the same secure order-creation path
             console.log('[Checkout] Initiating order creation with paymentIntentId:', paymentIntentId);
-            await createOrder(paymentIntentId);
+            await createOrder(paymentIntentId, lockedSessionKey);
         } catch (err) {
             // If order creation throws unexpectedly, ensure UI is not stuck
             // Reset guards only on retry-safe failures
