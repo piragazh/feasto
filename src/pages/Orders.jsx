@@ -423,7 +423,7 @@ export default function Orders() {
                                         Clear Filters
                                     </Button>
                                 )}
-                            </div>
+                                </div>
                         </motion.div>
                     )}
                 </div>
@@ -516,7 +516,7 @@ export default function Orders() {
                                             </div>
 
                                             <div className="space-y-2 mb-4">
-                                                                {(order.items || []).map((item, i) => (
+                                {(order.items || []).map((item, i) => (
                                                    <div key={i} className="text-sm">
                                                        <div className="flex justify-between">
                                                            <span className="text-gray-600">
