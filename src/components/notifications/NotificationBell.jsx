@@ -17,7 +17,8 @@ export default function NotificationBell({ userEmail }) {
     const { data: notifications = [] } = useQuery({
         queryKey: ['notifications', userEmail],
         queryFn: () => base44.entities.Notification.filter({ user_email: userEmail }, '-created_date', 50),
-        refetchInterval: 5000,
+        refetchInterval: 30_000, // 30s — was 5s, causing 429s
+        staleTime: 20_000,
         enabled: !!userEmail
     });
 
@@ -29,6 +30,7 @@ export default function NotificationBell({ userEmail }) {
             });
             return result?.[0] || null;
         },
+        staleTime: 5 * 60_000, // 5 min — static setting, no need to refetch frequently
         enabled: !!userEmail
     });
 
