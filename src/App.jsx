@@ -8,6 +8,7 @@ import React, { Suspense } from 'react';
 // NOTE: Toaster is rendered inside Layout.jsx for every page. Do NOT add another Toaster here.
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import RequireAdmin from '@/components/auth/RequireAdmin';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
@@ -285,21 +286,27 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
           <Route path="/SuperAdmin" element={
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="SuperAdmin">
-                <SuperAdmin />
+                <RequireAdmin>
+                  <SuperAdmin />
+                </RequireAdmin>
               </LayoutWrapper>
             </Suspense>
           } />
           <Route path="/AdminDashboard" element={
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="AdminDashboard">
-                <AdminDashboard />
+                <RequireAdmin>
+                  <AdminDashboard />
+                </RequireAdmin>
               </LayoutWrapper>
             </Suspense>
           } />
           <Route path="/AdminRestaurants" element={
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="AdminRestaurants">
-                <AdminRestaurants />
+                <RequireAdmin>
+                  <AdminRestaurants />
+                </RequireAdmin>
               </LayoutWrapper>
             </Suspense>
           } />
