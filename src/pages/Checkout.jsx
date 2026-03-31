@@ -598,10 +598,10 @@ export default function Checkout() {
     // Check if restaurant is currently closed and auto-enable scheduling
     const checkRestaurantStatus = () => {
         if (!restaurant) return false;
-        
+
         const now = new Date();
         const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
-        
+
         let hours;
         if (orderType === 'collection' && restaurant.collection_hours) {
             hours = restaurant.collection_hours[dayName];
@@ -611,7 +611,12 @@ export default function Checkout() {
             hours = restaurant.opening_hours?.[dayName];
         }
 
+        // If no specific hours but restaurant is marked as open, assume it's available
+        if (!hours && restaurant.is_open) return false;
         if (!hours || hours.closed) return true;
+
+        // Validate hours object has required fields
+        if (!hours.open || !hours.close) return false;
 
         const [openHour, openMin] = hours.open.split(':').map(Number);
         const [closeHour, closeMin] = hours.close.split(':').map(Number);
