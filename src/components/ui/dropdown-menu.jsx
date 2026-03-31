@@ -231,20 +231,46 @@ const DropdownMenuRadioItem = forwardRef(({ className, children, ...props }, ref
 ))
 DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName
 
-const DropdownMenuLabel = forwardRef(({ className, inset, ...props }, ref) => (
-  <DropdownMenuPrimitive.Label
-    ref={ref}
-    className={cn("px-2 py-1.5 text-sm font-semibold", inset && "pl-8", className)}
-    {...props} />
-))
+const DropdownMenuLabel = forwardRef(({ className, inset, ...props }, ref) => {
+  const ctx = useContext(DropdownMobileCtx);
+  if (ctx) {
+    return (
+      <div
+        ref={ref}
+        className={cn("px-2 py-1.5 text-sm font-semibold", inset && "pl-8", className)}
+        {...props}
+      />
+    );
+  }
+  return (
+    <DropdownMenuPrimitive.Label
+      ref={ref}
+      className={cn("px-2 py-1.5 text-sm font-semibold", inset && "pl-8", className)}
+      {...props}
+    />
+  );
+})
 DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName
 
-const DropdownMenuSeparator = forwardRef(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.Separator
-    ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-muted", className)}
-    {...props} />
-))
+const DropdownMenuSeparator = forwardRef(({ className, ...props }, ref) => {
+  const ctx = useContext(DropdownMobileCtx);
+  if (ctx) {
+    return (
+      <div
+        ref={ref}
+        className={cn("-mx-1 my-1 h-px bg-muted", className)}
+        {...props}
+      />
+    );
+  }
+  return (
+    <DropdownMenuPrimitive.Separator
+      ref={ref}
+      className={cn("-mx-1 my-1 h-px bg-muted", className)}
+      {...props}
+    />
+  );
+})
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName
 
 const DropdownMenuShortcut = ({
