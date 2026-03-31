@@ -1010,6 +1010,16 @@ export default function Checkout() {
             localStorage.removeItem('userAddress');
             localStorage.removeItem('userCoordinates');
             pendingPayment.clear(); // Safe: idempotent if already cleared by recovery
+
+            // Persist guest phone + email in sessionStorage so the Orders page
+            // can look up this guest's orders without requiring login
+            if (formData.phone) {
+                sessionStorage.setItem('guest_order_phone', formData.phone);
+            }
+            if (formData.guest_email) {
+                sessionStorage.setItem('guest_order_email', formData.guest_email);
+            }
+
             setOrderPlaced(true);
 
             // Fire all post-order background tasks in parallel — none block the user

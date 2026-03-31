@@ -58,16 +58,66 @@ export default function Orders() {
         queryKey: ['orders'],
         queryFn: async () => {
             try {
-                const user = await base44.auth.me();
-                if (!user?.email) {
-                    base44.auth.redirectToLogin();
+                // Try authenticated user first
+                const isAuthenticated = await base44.auth.isAuthenticated();
+
+                if (isAuthenticated) {
+                    const user = await base44.auth.me();
+                    if (!user?.email) {
+                        base44.auth.redirectToLogin();
+                        return [];
+                    }
+
+                    // Fetch by customer_email (covers both logged-in and guest orders placed with same email)
+                    // Also fetch by phone as fallback to catch older orders
+                    const phone = user.phone || sessionStorage.getItem('guest_order_phone') || null;
+
+                    const [byEmail, byPhone] = await Promise.all([
+                        base44.entities.Order.filter({ customer_email: user.email }, '-created_date'),
+                        phone ? base44.entities.Order.filter({ customer_phone: phone }, '-created_date') : Promise.resolve([])
+                    ]);
+
+                    // Merge and deduplicate by order id
+                    const merged = [...(byEmail || []), ...(byPhone || [])];
+                    const seen = new Set();
+                    const unique = merged.filter(o => {
+                        if (!o?.id || seen.has(o.id)) return false;
+                        seen.add(o.id);
+                        return true;
+                    });
+
+                    return unique
+                        .filter(order => order && order.id && order.restaurant_name)
+                        .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+                }
+
+                // Guest: look up by phone saved in sessionStorage after checkout
+                const guestPhone = sessionStorage.getItem('guest_order_phone');
+                const guestEmail = sessionStorage.getItem('guest_order_email');
+
+                if (!guestPhone && !guestEmail) {
+                    // No guest context — redirect to login
+                    base44.auth.redirectToLogin(window.location.pathname);
                     return [];
                 }
-                const result = await base44.entities.Order.filter({ created_by: user.email }, '-created_date');
-                return Array.isArray(result) ? result.filter(order => order && order.id && order.restaurant_name) : [];
+
+                const queries = [];
+                if (guestPhone) queries.push(base44.entities.Order.filter({ customer_phone: guestPhone }, '-created_date'));
+                if (guestEmail) queries.push(base44.entities.Order.filter({ customer_email: guestEmail }, '-created_date'));
+
+                const results = await Promise.all(queries);
+                const merged = results.flat();
+                const seen = new Set();
+                return merged
+                    .filter(o => {
+                        if (!o?.id || !o?.restaurant_name || seen.has(o.id)) return false;
+                        seen.add(o.id);
+                        return true;
+                    })
+                    .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+
             } catch (e) {
                 console.error('Error fetching orders:', e);
-                base44.auth.redirectToLogin();
                 return [];
             }
         },

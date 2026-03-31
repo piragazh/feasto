@@ -15,7 +15,7 @@
         "third_party"
       ],
       "default": "online",
-      "description": "Channel through which the order was placed. 'kiosk' = self-service kiosk terminal. Used for display, filtering, and kitchen ticket labelling."
+      "description": "Channel through which the order was placed."
     },
     "idempotency_key": {
       "type": "string",
@@ -23,13 +23,21 @@
     },
     "payment_intent_id": {
       "type": "string",
-      "description": "Stripe PaymentIntent ID or kiosk terminal transaction ref \u2014 used as dedup key to prevent double-payment creating two orders"
+      "description": "Stripe PaymentIntent ID or kiosk terminal transaction ref"
     },
     "restaurant_id": {
       "type": "string"
     },
     "restaurant_name": {
       "type": "string"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Email of the customer who placed the order \u2014 authenticated user email or guest email. Used for order lookup on Orders page."
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Phone number of the customer who placed the order. Used for order lookup on Orders page (covers guest checkout)."
     },
     "driver_id": {
       "type": "string",
@@ -81,12 +89,10 @@
             "type": "number"
           },
           "customizations": {
-            "type": "object",
-            "description": "Customer's customization choices (e.g., size, toppings, extras)"
+            "type": "object"
           },
           "itemQuantities": {
-            "type": "object",
-            "description": "Quantities for multiple-choice customizations"
+            "type": "object"
           }
         }
       }
@@ -99,37 +105,33 @@
     },
     "small_order_surcharge": {
       "type": "number",
-      "default": 0,
-      "description": "Surcharge added when order is below minimum (delivery only)"
+      "default": 0
     },
     "discount": {
       "type": "number"
     },
     "discount_reason_code": {
-      "type": "string",
-      "description": "Reason code for manual discount (e.g., loyalty_gesture, damage_compensation)"
+      "type": "string"
     },
     "coupon_code": {
       "type": "string",
-      "description": "LEGACY: Single coupon code for backward compatibility. New orders use coupon_codes array. Kept for historic order queries (per-customer limit checks filter on this field)."
+      "description": "LEGACY: Single coupon code for backward compatibility."
     },
     "coupon_codes": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "CURRENT: Array of up to 3 validated coupon codes applied to this order. Populated server-side only. Never trust client-supplied values."
+      "description": "CURRENT: Array of up to 3 validated coupon codes."
     },
     "total": {
       "type": "number"
     },
     "platform_commission_amount": {
-      "type": "number",
-      "description": "Commission taken by platform"
+      "type": "number"
     },
     "restaurant_earnings": {
-      "type": "number",
-      "description": "Amount restaurant receives (total - commission)"
+      "type": "number"
     },
     "payment_method": {
       "type": "string",
@@ -140,8 +142,7 @@
         "google_pay",
         "pay_at_counter"
       ],
-      "default": "cash",
-      "description": "How the order was or will be paid. 'pay_at_counter' = kiosk order placed, payment NOT yet collected. 'card' = paid via card (online Stripe or kiosk terminal). 'cash' = cash on delivery."
+      "default": "cash"
     },
     "payment_status": {
       "type": "string",
@@ -152,8 +153,7 @@
         "failed_payment",
         "cancelled_payment"
       ],
-      "default": "pending_payment",
-      "description": "KIOSK: Explicit payment state, independent of order preparation. pending_payment=awaiting staff confirmation. payment_confirmed=staff confirmed counter payment. paid_card=card terminal authorized. For non-kiosk orders, follows payment_method (card/apple_pay\u2192paid_card, cash\u2192pending_payment until collected, etc.)"
+      "default": "pending_payment"
     },
     "order_status": {
       "type": "string",
@@ -165,8 +165,7 @@
         "completed",
         "cancelled"
       ],
-      "default": "new",
-      "description": "KIOSK: Explicit order preparation state, independent of payment. new=order received, not yet confirmed by kitchen. confirmed=staff confirmed payment (kiosk) or order accepted. preparing=kitchen actively preparing. ready=ready for customer/delivery. completed=delivered/collected. cancelled=order voided. Standard orders use legacy 'status' field."
+      "default": "new"
     },
     "status": {
       "type": "string",
@@ -184,8 +183,7 @@
         "refund_under_platform_review",
         "refunded"
       ],
-      "default": "pending",
-      "description": "LEGACY: Universal order workflow status. For non-kiosk orders. For kiosk orders, use order_status + payment_status instead."
+      "default": "pending"
     },
     "order_type": {
       "type": "string",
@@ -195,16 +193,13 @@
         "takeaway",
         "dine_in"
       ],
-      "default": "delivery",
-      "description": "Whether order is for delivery, collection, takeaway, or dine-in"
+      "default": "delivery"
     },
     "table_id": {
-      "type": "string",
-      "description": "Table ID for dine-in orders"
+      "type": "string"
     },
     "table_number": {
-      "type": "string",
-      "description": "Human-readable table number for dine-in orders (e.g., Table 5)"
+      "type": "string"
     },
     "rejection_reason": {
       "type": "string"
@@ -254,8 +249,7 @@
       "enum": [
         "restaurant",
         "platform"
-      ],
-      "description": "Who covers the refund cost"
+      ]
     },
     "platform_override_reason": {
       "type": "string"
@@ -287,7 +281,6 @@
     },
     "payment_audit_trail": {
       "type": "array",
-      "description": "Audit trail for manual payment confirmations (kiosk counter-pay only)",
       "items": {
         "type": "object",
         "properties": {
@@ -295,40 +288,33 @@
             "type": "string",
             "enum": [
               "payment_confirmed_at_counter"
-            ],
-            "description": "Action performed"
+            ]
           },
           "actor_email": {
-            "type": "string",
-            "description": "Staff member email who confirmed"
+            "type": "string"
           },
           "actor_name": {
-            "type": "string",
-            "description": "Staff member full name"
+            "type": "string"
           },
           "actor_role": {
-            "type": "string",
-            "description": "Staff role at time of confirmation"
+            "type": "string"
           },
           "timestamp": {
             "type": "string",
             "format": "date-time"
           },
           "note": {
-            "type": "string",
-            "description": "Human-readable note"
+            "type": "string"
           }
         }
       }
     },
     "payment_confirmed_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Timestamp when counter-payment was confirmed by staff"
+      "format": "date-time"
     },
     "payment_confirmed_by": {
-      "type": "string",
-      "description": "Email of staff member who confirmed counter-payment"
+      "type": "string"
     },
     "delivery_address": {
       "type": "string"
@@ -375,55 +361,44 @@
     },
     "loyalty_points_awarded": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether loyalty points have been credited \u2014 also acts as optimistic-lock flag for concurrent award calls"
+      "default": false
     },
     "third_party_platform": {
       "type": "string"
     },
     "third_party_order_id": {
-      "type": "string",
-      "description": "External platform order ID (e.g. Uber Eats) \u2014 dedup key for webhook retries"
+      "type": "string"
     },
     "offline_id": {
-      "type": "string",
-      "description": "Unique UUID generated at offline order creation time \u2014 used for idempotent sync (prevents duplicates)"
+      "type": "string"
     },
     "offline_created": {
       "type": "boolean",
-      "default": false,
-      "description": "True if order originated from offline POS mode and synced later"
+      "default": false
     },
     "offline_created_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the order was created in offline mode (local timestamp)"
+      "format": "date-time"
     },
     "offline_created_by": {
-      "type": "string",
-      "description": "POS operator email/staff_id who created this offline order"
+      "type": "string"
     },
     "offline_created_by_name": {
-      "type": "string",
-      "description": "POS operator full name (snapshot at creation time for audit readability)"
+      "type": "string"
     },
     "offline_created_by_role": {
-      "type": "string",
-      "description": "POS operator role (cashier/waiter/manager/kitchen_staff) at time of order creation"
+      "type": "string"
     },
     "offline_synced_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the offline order was synced to server"
+      "format": "date-time"
     },
     "needs_review": {
       "type": "boolean",
-      "default": false,
-      "description": "True if offline sync validation flagged issues (discount capped, coupon rejected, etc.)"
+      "default": false
     },
     "sync_validation_notes": {
-      "type": "string",
-      "description": "Details of any validation issues found during offline sync (for audit trail)"
+      "type": "string"
     },
     "offline_review_status": {
       "type": "string",
@@ -432,17 +407,14 @@
         "acknowledged",
         "resolved",
         "escalated"
-      ],
-      "description": "Manager review state for flagged offline orders (new=just flagged, acknowledged=manager confirmed, resolved=acceptable as-is, escalated=needs investigation)"
+      ]
     },
     "offline_review_by": {
-      "type": "string",
-      "description": "Email of manager who reviewed/acknowledged the flagged order"
+      "type": "string"
     },
     "offline_review_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When manager last reviewed/acknowledged this flagged order"
+      "format": "date-time"
     },
     "offline_review_reason_code": {
       "type": "string",
@@ -456,12 +428,10 @@
         "repeated_offline_issues",
         "needs_refund_followup",
         "other"
-      ],
-      "description": "Structured reason code for resolved/escalated decision (required for terminal actions)"
+      ]
     },
     "offline_review_notes": {
-      "type": "string",
-      "description": "Manager notes: required if reason_code='other', optional otherwise"
+      "type": "string"
     }
   },
   "required": [

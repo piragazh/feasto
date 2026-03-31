@@ -312,6 +312,11 @@ Deno.serve(async (req) => {
         }));
 
         // ── Create order using server-validated values ─────────────────────────
+        // customer_email: authenticated user email, or guest email if provided
+        // customer_phone: the phone number submitted with the order (always present)
+        const customerEmail = user?.email || orderData.guest_email || null;
+        const customerPhone = orderData.phone || null;
+
         const newOrder = await base44.asServiceRole.entities.Order.create({
             ...orderData,
             items: itemsForDB,
@@ -326,7 +331,9 @@ Deno.serve(async (req) => {
             order_source: orderData.order_source || 'online',
             guest_email: orderData.guest_email || null,
             guest_name: orderData.guest_name || null,
-            phone: orderData.phone || null,
+            phone: customerPhone,
+            customer_email: customerEmail,
+            customer_phone: customerPhone,
         });
 
         // ── Update/create PaymentTransaction record ────────────────────────────
