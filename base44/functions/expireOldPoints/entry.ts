@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     try {
@@ -72,15 +72,16 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Deactivate expired reward coupons
-        const allCoupons = await base44.asServiceRole.entities.Coupon.list();
-        let deactivatedCount = 0;
+        // Deactivate expired reward coupons - use filter instead of list for efficiency
+        const expiredCoupons = await base44.asServiceRole.entities.Coupon.filter({
+            is_active: true,
+            expires_at: { $lt: now.toISOString() }
+        });
 
-        for (const coupon of allCoupons) {
-            if (coupon.expires_at && new Date(coupon.expires_at) < now && coupon.is_active) {
-                await base44.asServiceRole.entities.Coupon.update(coupon.id, { is_active: false });
-                deactivatedCount++;
-            }
+        let deactivatedCount = 0;
+        for (const coupon of (expiredCoupons || [])) {
+            await base44.asServiceRole.entities.Coupon.update(coupon.id, { is_active: false });
+            deactivatedCount++;
         }
 
         return Response.json({
