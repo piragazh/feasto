@@ -31,6 +31,8 @@ export default function NotificationBell({ userEmail }) {
             return result?.[0] || null;
         },
         staleTime: 5 * 60_000, // 5 min — static setting, no need to refetch frequently
+        refetchOnWindowFocus: false, // prevent refetch on mobile app backgrounding
+        refetchOnReconnect: false, // prevent refetch on network reconnect
         enabled: !!userEmail
     });
 
