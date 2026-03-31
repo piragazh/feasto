@@ -97,6 +97,10 @@ const DomainChecker = ({ children }) => {
 
           if (!restaurants?.length) {
             fallbackRestaurants = await base44.entities.Restaurant.filter({ custom_domain: hostname });
+            // CRIT-2 FIX: Validate fallback response is array (not HTML/error)
+            if (!Array.isArray(fallbackRestaurants)) {
+              throw new Error(`Invalid fallback restaurants response (not an array). Backend may have returned HTML or error page.`);
+            }
             if (fallbackRestaurants?.[0]) {
               sessionStorage.setItem('customDomainRestaurantId', fallbackRestaurants[0].id);
               sessionStorage.setItem('customDomainCheckedFor', hostname);

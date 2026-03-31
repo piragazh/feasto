@@ -243,7 +243,7 @@ export function usePaymentInit({
 
         runInit();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [preflightValid, attemptCount]);
+    }, [preflightValid, attemptCount, clientSecret]);
 
     return {
         clientSecret,

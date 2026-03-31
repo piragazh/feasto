@@ -142,9 +142,21 @@ export default function Checkout() {
         const savedCoords = localStorage.getItem('userCoordinates'); // Address GPS coordinates
         const savedOrderType = localStorage.getItem('orderType') || 'delivery'; // Order type
         
-        // Restore cart if items exist
+        // Restore cart if items exist — guarded against corrupted localStorage
         if (savedCart) {
-            setCart(JSON.parse(savedCart)); // Convert JSON string back to array
+            try {
+                const parsed = JSON.parse(savedCart);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setCart(parsed);
+                } else {
+                    localStorage.removeItem('cart');
+                }
+            } catch (e) {
+                console.warn('[Checkout] Corrupted cart data in localStorage, clearing:', e.message);
+                localStorage.removeItem('cart');
+                localStorage.removeItem('cartRestaurantId');
+                localStorage.removeItem('cartRestaurantName');
+            }
         }
         
         // Restore restaurant info
@@ -847,6 +859,10 @@ export default function Checkout() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [isSubmitting]);
 
+    const resetAnyPathInFlight = () => {
+        anyPaymentPathInFlightRef.current = false;
+    };
+
     const handleStripeSuccess = async (paymentIntentId) => {
         // FIX #1: Cross-path guard — blocks if Express Checkout or any other path already in-flight
         if (anyPaymentPathInFlightRef.current) {
@@ -867,7 +883,7 @@ export default function Checkout() {
             toast.error('Invalid payment confirmation. Please try again.');
             setIsSubmitting(false);
             setPaymentCompleted(false);
-            anyPaymentPathInFlightRef.current = false;
+            resetAnyPathInFlight();  // CRIT-3 FIX
             return;
         }
 
@@ -939,7 +955,7 @@ export default function Checkout() {
             paymentSuccessHandledRef.current = false;
             setPaymentCompleted(false);
             expressConfirmFiredRef.current = false;
-            anyPaymentPathInFlightRef.current = false;
+            resetAnyPathInFlight();
             setIsSubmitting(false);
         }
     };

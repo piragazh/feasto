@@ -102,13 +102,14 @@ export const pendingPayment = {
             }
 
             // FIX #7: Verify boundTo matches current user
+            // CRIT-1 FIX: Don't re-fetch auth if currentUser was passed
             let currentBoundTo = 'guest';
-            if (currentUser) {
-                currentBoundTo = currentUser.email || 'guest';
-            } else {
+            if (currentUser?.email) {
+                currentBoundTo = currentUser.email;
+            } else if (!currentUser) {
                 try {
                     const user = await base44.auth.me();
-                    currentBoundTo = user.email || 'guest';
+                    currentBoundTo = user?.email || 'guest';
                 } catch (_) {
                     // Not authenticated — assume 'guest'
                 }
@@ -130,10 +131,11 @@ export const pendingPayment = {
     /**
      * Increment recovery attempt counter.
      * Return true if within limit; false if exceeded.
+     * CRIT-7 FIX: Make async to properly await read()
      */
-    recordAttempt() {
+    async recordAttempt() {
         try {
-            const current = this.read();
+            const current = await this.read();
             if (!current) return false;
             
             const attempts = (current.recovery_attempts || 0) + 1;
@@ -156,9 +158,9 @@ export const pendingPayment = {
     /**
      * Update recovery status to terminal state.
      */
-    setTerminalStatus(status) {
+    async setTerminalStatus(status) {
         try {
-            const current = this.read();
+            const current = await this.read();
             if (!current) return;
             
             const validStatuses = ['terminal_refunded', 'terminal_manual_review', 'terminal_invalid_payload'];
@@ -202,14 +204,23 @@ export const pendingPayment = {
     /**
      * Check if recovery should be attempted.
      * False if: status is terminal, attempts exceeded, or record expired.
+     * NOTE: Reads from raw localStorage synchronously (without boundTo check) for
+     * fast startup validation before async user context is available.
      */
     isReplayable() {
-        const record = this.read();
-        if (!record) return false;
-        
-        const isTerminal = record.recovery_status?.startsWith('terminal_');
-        const exceedsLimit = (record.recovery_attempts || 0) >= MAX_RECOVERY_ATTEMPTS;
-        
-        return !isTerminal && !exceedsLimit;
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const record = JSON.parse(raw);
+            if (!record?.paymentIntentId?.startsWith('pi_')) return false;
+            if (record.expiresAt && new Date(record.expiresAt) < new Date()) return false;
+
+            const isTerminal = record.recovery_status?.startsWith('terminal_');
+            const exceedsLimit = (record.recovery_attempts || 0) >= MAX_RECOVERY_ATTEMPTS;
+
+            return !isTerminal && !exceedsLimit;
+        } catch (e) {
+            return false;
+        }
     },
 };
