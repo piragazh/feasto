@@ -1,5 +1,6 @@
 /**
 /* eslint-disable no-undef */
+/* eslint-disable no-undef */
 /**
  * Smoke test runner core utilities.
  * Pure Node.js — no external dependencies.

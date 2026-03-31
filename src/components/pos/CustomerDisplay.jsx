@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useState, useEffect } from 'react';
 import { CheckCircle2, CreditCard, Banknote, Clock, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

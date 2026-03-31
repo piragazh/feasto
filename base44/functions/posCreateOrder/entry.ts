@@ -74,8 +74,10 @@ Deno.serve(async (req) => {
             const batch = await base44.asServiceRole.entities.MenuItem.filter(
                 { restaurant_id: orderData.restaurant_id }, null, 50, skip
             );
+            // Break immediately if empty (no more items)
             if (!batch?.length) break;
             menuItems.push(...batch);
+            // Break if we got fewer items than page size (last page reached)
             if (batch.length < 50) break;
             skip += 50;
         }
