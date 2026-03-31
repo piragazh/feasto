@@ -537,11 +537,11 @@ export default function Orders() {
                                         </Button>
                                     )}
                                 </div>
-                                </motion.div>
-                                )}
-                                </div>
-                                </div>
-                                </PullToRefresh>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            </div>
 
             <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 {isLoading ? (
