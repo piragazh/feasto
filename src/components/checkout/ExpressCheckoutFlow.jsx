@@ -75,6 +75,10 @@ export default function ExpressCheckoutFlow({ amount, onSuccess, onError, client
                                 onSuccess?.(result.paymentIntent.id);
                             } else if (result.paymentIntent?.status === 'processing') {
                                 onSuccess?.(result.paymentIntent.id);
+                            } else {
+                                // Reject non-terminal statuses (e.g., requires_action for 3DS)
+                                onError?.(`Payment status: ${result.paymentIntent?.status || 'unknown'}. Please complete payment or try again.`);
+                                confirmFiredRef.current = false;
                             }
                         } catch (err) {
                             onError?.(err.message);
