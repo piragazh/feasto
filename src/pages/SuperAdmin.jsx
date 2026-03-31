@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
+import RequireAdmin from '@/components/auth/RequireAdmin';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from 'lucide-react';
@@ -96,28 +96,12 @@ function SidebarContent({ menuGroups, activeTab, setActiveTab, setMobileSheetOpe
     );
 }
 
-export default function SuperAdmin() {
+function SuperAdminInner() {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
     const isMobile = useIsMobile();
-
-    const { data: user, isLoading } = useQuery({
-        queryKey: ['current-user'],
-        queryFn: async () => {
-            try {
-                const userData = await base44.auth.me();
-                if (!userData || userData.role !== 'admin') {
-                    base44.auth.redirectToLogin();
-                    return null;
-                }
-                return userData;
-            } catch (error) {
-                base44.auth.redirectToLogin();
-                return null;
-            }
-        },
-    });
 
     const menuGroups = [
         {
@@ -179,21 +163,6 @@ export default function SuperAdmin() {
             ]
         }
     ];
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Checking access...</p>
-                </div>
-            </div>
-        );
-    }
-    
-    if (!user) {
-        return null;
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -302,5 +271,13 @@ export default function SuperAdmin() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function SuperAdmin() {
+    return (
+        <RequireAdmin>
+            <SuperAdminInner />
+        </RequireAdmin>
     );
 }
