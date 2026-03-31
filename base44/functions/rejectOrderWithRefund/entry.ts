@@ -42,6 +42,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    // IDEMPOTENCY GUARD: If order is already cancelled/refunded, reject retry
+    if (['cancelled', 'refunded'].includes(order.status)) {
+      console.log(`[REJECT-IDEMPOTENT] Order ${order_id} already in status=${order.status} — blocking double rejection`);
+      return Response.json({
+        success: true,
+        message: 'Order already cancelled/refunded',
+        refunded: order.status === 'refunded',
+      });
+    }
+
     // Permission check: user must belong to restaurant or be admin
     if (user.role !== 'admin') {
       const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
