@@ -362,11 +362,20 @@ export default function OrderHistoryManagement() {
                                             <td className="py-3 text-sm font-mono">#{order.id.slice(-8)}</td>
                                             <td className="py-3 text-sm">{format(new Date(order.created_date), 'MMM dd, yyyy HH:mm')}</td>
                                             <td className="py-3 text-sm font-medium">{order.restaurant_name || 'N/A'}</td>
-                                            <td className="py-3 text-sm">
-                                                <div>
-                                                    <div className="font-medium">{order.guest_name || order.created_by?.split('@')[0] || 'Guest'}</div>
-                                                    <div className="text-xs text-gray-500">{order.guest_email || order.created_by || order.phone}</div>
-                                                    {order.phone && <div className="text-xs text-gray-500">{order.phone}</div>}
+                                            <td className="py-3 text-sm min-w-48">
+                                                <div className="space-y-1">
+                                                    <div className="font-medium">
+                                                        {order.guest_name ? order.guest_name : (order.created_by && !order.created_by.includes('service') ? order.created_by.split('@')[0] : 'Guest')}
+                                                    </div>
+                                                    {order.guest_email && (
+                                                        <div className="text-xs text-gray-600 truncate" title={order.guest_email}>{order.guest_email}</div>
+                                                    )}
+                                                    {order.created_by && !order.guest_email && (
+                                                        <div className="text-xs text-gray-600 truncate" title={order.created_by}>{order.created_by}</div>
+                                                    )}
+                                                    {order.phone && (
+                                                        <div className="text-xs text-gray-600">{order.phone}</div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="py-3 text-sm">{order.items?.length || 0} items</td>
