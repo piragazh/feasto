@@ -862,25 +862,8 @@ export default function Checkout() {
                 itemQuantities: item.itemQuantities || {}
             }));
 
-            // Validate cart items still exist in the DB (catch stale/deleted items before charging)
-            const nonDealItems = validatedItems.filter(i => !String(i.menu_item_id || '').startsWith('deal_'));
-            if (nonDealItems.length > 0) {
-                try {
-                    const itemChecks = await Promise.all(
-                        nonDealItems.map(i => base44.entities.MenuItem.filter({ id: i.menu_item_id }))
-                    );
-                    const staleItems = nonDealItems.filter((item, idx) => !itemChecks[idx]?.length || itemChecks[idx][0]?.is_available === false);
-                    if (staleItems.length > 0) {
-                        const names = staleItems.map(i => i.name).join(', ');
-                        toast.error(`Some items are no longer available: ${names}. Please remove them from your cart and try again.`);
-                        setIsSubmitting(false);
-                        return;
-                    }
-                } catch (e) {
-                    // Non-fatal — let backend validate
-                    console.warn('[Checkout] Pre-flight item check failed (non-fatal):', e.message);
-                }
-            }
+            // NOTE: Item availability is validated server-side in verifyAndCreateOrder/createIdempotentOrder.
+            // The client-side check was redundant, bypassable, and added unnecessary latency.
 
             // Sanitize delivery address to prevent XSS
              const sanitizeAddress = (addr) => {
