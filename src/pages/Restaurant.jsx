@@ -174,9 +174,12 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         gcTime: 15 * 60 * 1000,
     });
 
-    const { data: mealDeals = [], isLoading: dealsLoading } = useQuery({
+    const { data: mealDeals = [] } = useQuery({
         queryKey: ['mealDeals', restaurantId],
-        queryFn: () => base44.entities.MealDeal.filter({ restaurant_id: restaurantId, is_active: true }),
+        queryFn: async () => {
+            const deals = await base44.entities.MealDeal.filter({ restaurant_id: restaurantId, is_active: true });
+            return Array.isArray(deals) ? deals : [];
+        },
         enabled: !!restaurantId,
         staleTime: 10 * 60 * 1000,
         gcTime: 15 * 60 * 1000,
