@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Offline POS Hardening Smoke Tests

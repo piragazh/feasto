@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Smoke tests: kiosk order integration in Live Orders

@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Offline Order Review Workflow Smoke Tests

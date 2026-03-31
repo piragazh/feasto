@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Offline Reconciliation Smoke Tests

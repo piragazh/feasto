@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Smoke suite: kioskPaymentSettings

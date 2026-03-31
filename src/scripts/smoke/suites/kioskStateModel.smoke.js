@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Kiosk State Model Smoke Tests

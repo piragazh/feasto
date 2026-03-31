@@ -344,6 +344,7 @@ export default function Checkout() {
                             setOrderPlaced(true);
                             toast.success('Your order has been confirmed!');
                             setTimeout(() => navigate(createPageUrl('Orders')), 2000);
+                            setIsRecovering(false);
                             return;
                         }
                     }
