@@ -41,14 +41,18 @@ export const AuthProvider = ({ children }) => {
   const loadUserAuth = async () => {
     try {
       setIsLoadingAuth(true);
+      setIsAuthenticated(false);
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
+      setAuthError(null);
     } catch (error) {
       console.warn('[AuthProvider] User auth check failed (public app allowed):', error?.message);
-      setIsLoadingAuth(false);
+      setUser(null);
       setIsAuthenticated(false);
+      setIsLoadingAuth(false);
+      setAuthError(null); // Don't treat unauthenticated as error (public app)
     }
   };
 

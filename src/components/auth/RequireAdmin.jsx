@@ -7,7 +7,8 @@ import { base44 } from '@/api/base44Client';
  * Prevents child components from firing queries before auth resolves.
  */
 export default function RequireAdmin({ children }) {
-    const { user, isLoadingAuth, isLoadingPublicSettings } = useAuth();
+    const context = useAuth();
+    const { user, isLoadingAuth, isLoadingPublicSettings } = context || { user: null, isLoadingAuth: true, isLoadingPublicSettings: true };
 
     // ── Trigger redirect as side effect (not during render) ────────────────────
     useEffect(() => {
@@ -16,17 +17,30 @@ export default function RequireAdmin({ children }) {
         }
     }, [user, isLoadingAuth, isLoadingPublicSettings]);
 
-    if (isLoadingPublicSettings || isLoadingAuth) {
+    // Safety check: context must exist
+    if (!context) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Checking access...</p>
+                    <p className="text-red-600 font-semibold">Error: Auth context not available</p>
                 </div>
             </div>
         );
     }
 
+    // Always wait for auth to fully load before checking role
+    if (isLoadingPublicSettings || isLoadingAuth) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Checking admin access...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // After loading, verify user is admin
     if (!user || user.role !== 'admin') {
         return null;
     }
