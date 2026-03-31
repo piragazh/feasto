@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function OrderHistoryManagement() {
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(''); // Fixed duplicate imports
     const [selectedRestaurant, setSelectedRestaurant] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [dateFrom, setDateFrom] = useState(null);
