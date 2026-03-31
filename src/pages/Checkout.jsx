@@ -516,8 +516,6 @@ export default function Checkout() {
     // Final total = subtotal + delivery + surcharge - discount (floor at 0)
     const total = Math.max(0, subtotal + deliveryFee + smallOrderSurcharge - discount);
 
-    const [paymentSessionKey, setPaymentSessionKey] = useState(() => `ps_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
-
     const {
         clientSecret,
         showStripeForm,
@@ -544,7 +542,6 @@ export default function Checkout() {
         deliveryFee,
         discount,
         smallOrderSurcharge,
-        onPaymentSessionKeyRotated: setPaymentSessionKey,
     });
 
     const resetPaymentState = () => {
