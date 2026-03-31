@@ -16,23 +16,24 @@ export default function KioskConfirmation({ order, orderType, restaurant, onDone
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-8 text-center">
-            {/* Success animation */}
-            <div className="relative mb-8">
-                <div className="w-36 h-36 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-                    <CheckCircle className="h-20 w-20 text-green-400" />
-                </div>
-                <div className="absolute inset-0 rounded-full border-2 border-green-500/20 animate-ping" />
-            </div>
+         <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-8 text-center">
+             {/* Success animation */}
+             <div className="relative mb-8">
+                 <div className="w-36 h-36 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                     <CheckCircle className="h-20 w-20 text-green-400" />
+                 </div>
+                 <div className="absolute inset-0 rounded-full border-2 border-green-500/20 animate-ping" />
+             </div>
 
-            <h1 className="text-white text-4xl font-black mb-3">Order Placed!</h1>
-            <p className="text-gray-400 text-xl mb-8 max-w-md">
-                {paymentMethod === 'pay_at_counter'
-                    ? 'Please go to the counter to pay. Your order will be prepared after payment is confirmed.'
-                    : orderType === 'dine_in'
-                        ? 'Your food will be brought to your table'
-                        : 'Your order is being prepared. You\'ll be called when it\'s ready'}
-            </p>
+             <h1 className="text-white text-4xl font-black mb-3">Order Placed!</h1>
+             <p className="text-gray-400 text-xl mb-2 max-w-md">
+                 {paymentMethod === 'pay_at_counter'
+                     ? 'Please go to the counter to pay. Your order will be prepared after payment is confirmed.'
+                     : orderType === 'dine_in'
+                         ? 'Your food will be brought to your table'
+                         : 'Your order is being prepared. You\'ll be called when it\'s ready'}
+             </p>
+             <p className="text-gray-500 text-sm mb-8">Payment: {paymentMethod === 'pay_at_counter' ? 'Counter' : 'Card'}</p>
 
             {paymentMethod === 'pay_at_counter' && (
                 <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/30 rounded-2xl px-6 py-4 mb-6 max-w-sm w-full">

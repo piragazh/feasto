@@ -118,7 +118,7 @@ export default function KioskPayment({
         setPaymentState('processing');
         try {
             // Generate idempotency key once — prevents double-order on rapid re-tap or retry
-            const iKey = `kiosk-pac-${restaurantId.slice(-8)}-${Date.now()}`;
+            const iKey = `kiosk-pac-${restaurantId.slice(-8)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
             const response = await base44.functions.invoke('kioskCreateOrder', {
                 restaurantId,
@@ -131,7 +131,7 @@ export default function KioskPayment({
                 // Send menu_item_id references + customization choices only.
                 // Server discards client-supplied price and recomputes from live menu.
                 items: cart.map(item => ({
-                    menu_item_id: item.id,
+                    menu_item_id: item.menu_item_id || item.id, // Support both field names
                     name: item.name,
                     quantity: item.quantity,
                     customizations: item.customizations || {},
@@ -262,7 +262,7 @@ export default function KioskPayment({
                     table_number: selectedTable.table_number,
                 } : null,
                 items: cart.map(item => ({
-                    menu_item_id: item.id,
+                    menu_item_id: item.menu_item_id || item.id, // Support both field names
                     name: item.name,
                     quantity: item.quantity,
                     customizations: item.customizations || {},
@@ -313,6 +313,17 @@ export default function KioskPayment({
     };
 
     const handleProceed = () => {
+        // Validate cart before proceeding
+        if (!cart || cart.length === 0) {
+            setErrorMessage('Your cart is empty');
+            return;
+        }
+        const invalidItems = cart.filter(i => !i.id);
+        if (invalidItems.length > 0) {
+            setErrorMessage('Some items in your cart are invalid. Please go back and refresh your order.');
+            return;
+        }
+
         if (paymentMethod === 'cash') {
             placeCashOrder();
         } else {

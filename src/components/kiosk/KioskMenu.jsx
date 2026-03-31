@@ -20,8 +20,10 @@ export default function KioskMenu({
             return items.filter(i => !i.availability_channel || i.availability_channel !== 'online_only');
         },
         enabled: !!restaurantId,
-        retry: 2,
+        retry: 3,
+        retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 10000),
         staleTime: 60_000,
+        gcTime: 5 * 60_000,
     });
 
     const getOrderedCategories = () => {

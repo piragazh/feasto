@@ -27,19 +27,35 @@ import { resolveRestaurantId } from '@/lib/kioskDeviceBinding';
 // MODES: ordering (show kiosk) | idle_media (show promotions fullscreen)
 export default function KioskDashboard() {
     const [screen, setScreen] = useState('welcome');
-    const [mode, setMode] = useState('ordering'); // 'ordering' | 'idle_media'
-    const [orderType, setOrderType] = useState('takeaway');
-    const [cart, setCart] = useState([]);
-    const [placedOrder, setPlacedOrder] = useState(null);
-    const [printerError, setPrinterError] = useState(false);
-    const [restaurant, setRestaurant] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [showAdmin, setShowAdmin] = useState(false);
-    const [adminTapCount, setAdminTapCount] = useState(0);
-    const [selectedTable, setSelectedTable] = useState(null);
+     const [mode, setMode] = useState('ordering'); // 'ordering' | 'idle_media'
+     const [orderType, setOrderType] = useState('takeaway');
+     const [cart, setCart] = useState(() => {
+         try {
+             const saved = sessionStorage.getItem('kiosk_cart');
+             return saved ? JSON.parse(saved) : [];
+         } catch {
+             return [];
+         }
+     });
+     const [placedOrder, setPlacedOrder] = useState(null);
+     const [printerError, setPrinterError] = useState(false);
+     const [restaurant, setRestaurant] = useState(null);
+     const [loading, setLoading] = useState(true);
+     const [showAdmin, setShowAdmin] = useState(false);
+     const [adminTapCount, setAdminTapCount] = useState(0);
+     const [selectedTable, setSelectedTable] = useState(null);
 
     // Resolve restaurant ID from binding (localStorage-first, URL only for first setup)
     const { restaurantId } = resolveRestaurantId();
+
+    // Persist cart to sessionStorage
+    useEffect(() => {
+        try {
+            sessionStorage.setItem('kiosk_cart', JSON.stringify(cart));
+        } catch {
+            // ignore storage quota errors
+        }
+    }, [cart]);
 
     useEffect(() => {
         if (restaurantId) loadRestaurant(restaurantId);
@@ -140,8 +156,12 @@ export default function KioskDashboard() {
         ));
     };
 
-    const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+    const cartTotal = cart.reduce((s, i) => {
+        const itemPrice = Number(i.price) || 0;
+        const qty = Number(i.quantity) || 1;
+        return s + (itemPrice * qty);
+    }, 0);
+    const cartCount = cart.reduce((s, i) => s + (Number(i.quantity) || 1), 0);
 
     const handleOrderPlaced = (order, hadPrinterError = false) => {
         setPlacedOrder(order);
