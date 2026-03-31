@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useSEO } from '@/lib/useSEO.js';
 import { useQuery } from '@tanstack/react-query';
