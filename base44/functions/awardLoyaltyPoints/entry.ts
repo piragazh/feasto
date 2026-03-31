@@ -85,22 +85,20 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ pointsAwarded: 0, message: 'Already awarded' }), { status: 200 });
         }
 
-        // ── CLAIM THE AWARD SLOT (best-effort flag + transaction dedup guard) ──
-        // The flag write is not atomic, so we use the LoyaltyTransaction record
-        // as the true idempotency key: check for an existing transaction for this
-        // order BEFORE writing points. This is the authoritative dedup check.
-        await base44.asServiceRole.entities.Order.update(orderId, { loyalty_points_awarded: true });
-
-        // Hard dedup: if a transaction for this order already exists, another call
-        // already completed the award — exit regardless of the flag race.
+        // MED-6 FIX: Check for existing transaction BEFORE writing the flag.
+        // This moves the authoritative dedup check before the non-atomic flag write,
+        // preventing TOCTOU race where two concurrent calls both miss the check.
         const existingTx = await base44.asServiceRole.entities.LoyaltyTransaction.filter({
             order_id: orderId,
             transaction_type: 'earned',
         });
         if (existingTx?.length > 0) {
             console.log(`[loyalty] Duplicate detected for order ${orderId} — aborting (transaction already exists)`);
-            return new Response(JSON.stringify({ pointsAwarded: 0, message: 'Already awarded (race)' }), { status: 200 });
+            return new Response(JSON.stringify({ pointsAwarded: 0, message: 'Already awarded' }), { status: 200 });
         }
+
+        // Write the flag after confirming no transaction exists
+        await base44.asServiceRole.entities.Order.update(orderId, { loyalty_points_awarded: true });
 
         const identifier = getLoyaltyIdentifier(order);
         if (!identifier) {
