@@ -545,6 +545,13 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
 
                                     {/* Customer Info */}
                                     <div className="space-y-2 text-sm bg-blue-50 p-3 rounded">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-gray-900">
+                                                {order.guest_name || order.customer_name || 'Guest'}
+                                            </span>
+                                            {order.guest_email && <span className="text-gray-600">• {order.guest_email}</span>}
+                                            {order.customer_email && <span className="text-gray-600">• {order.customer_email}</span>}
+                                        </div>
                                         {order.order_type === 'delivery' && (
                                             <div className="flex items-start gap-2">
                                                 <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
