@@ -14,7 +14,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 function normalizePhone(phone) {
-    return (phone || '').replace(/\D/g, '');
+    let digits = (phone || '').replace(/\D/g, '');
+    if (digits.startsWith('44') && digits.length === 12) {
+        digits = '0' + digits.slice(2);
+    }
+    return digits;
 }
 
 function getLoyaltyIdentifier(order) {
