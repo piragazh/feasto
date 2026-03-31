@@ -68,43 +68,42 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
-                <SheetHeader className="p-6 border-b">
-                    <div className="flex items-center gap-3">
+            <SheetContent className="w-full sm:max-w-lg flex flex-col p-0 bg-white">
+                {/* Modern Header */}
+                <SheetHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-br from-white to-gray-50">
+                    <div className="flex items-center gap-2">
                         {restaurantId && (
                             <Link to={createPageUrl('Restaurant') + `?id=${restaurantId}`}>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="rounded-full hover:bg-gray-100"
+                                    className="rounded-full hover:bg-orange-100 text-gray-700"
                                     onClick={() => onOpenChange(false)}
                                 >
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
                             </Link>
                         )}
-                        <div className="flex-1 flex items-center justify-between">
-                            <div>
-                                <SheetTitle className="flex items-center gap-2">
-                                    <ShoppingBag className="h-5 w-5" />
-                                    Your Order
-                                </SheetTitle>
-                                {restaurantName && (
-                                    <p className="text-sm text-gray-500">from {restaurantName}</p>
-                                )}
-                            </div>
-                            {cart.length > 0 && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleClearCart}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Clear All
-                                </Button>
+                        <div className="flex-1">
+                            <SheetTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                <ShoppingBag className="h-6 w-6 text-orange-500" />
+                                Order
+                            </SheetTitle>
+                            {restaurantName && (
+                                <p className="text-sm text-gray-600 font-medium mt-1">from <span className="font-semibold text-gray-900">{restaurantName}</span></p>
                             )}
                         </div>
+                        {cart.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleClearCart}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9"
+                            >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Clear
+                            </Button>
+                        )}
                     </div>
                 </SheetHeader>
 
@@ -122,44 +121,45 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
 
                 {/* Order Type Selector */}
                 {cart.length > 0 && onOrderTypeChange && collectionEnabled && (
-                    <div className="px-6 pt-4 pb-2 bg-gray-50 border-b">
+                    <div className="px-6 pt-4 pb-3 bg-gradient-to-br from-gray-50 to-white border-b">
+                        <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Order type</p>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => onOrderTypeChange('delivery')}
-                                className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+                                className={`flex-1 py-3 px-3 rounded-xl font-bold text-sm transition-all ${
                                     orderType === 'delivery'
-                                        ? 'bg-orange-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
                                 }`}
                             >
                                 🚚 Delivery
                             </button>
                             <button
                                 onClick={() => onOrderTypeChange('collection')}
-                                className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+                                className={`flex-1 py-3 px-3 rounded-xl font-bold text-sm transition-all ${
                                     orderType === 'collection'
-                                        ? 'bg-orange-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
                                 }`}
                             >
-                                🏪 Collection <span className="text-xs">FREE</span>
+                                🏪 Collection<br/><span className="text-xs font-semibold">FREE</span>
                             </button>
                         </div>
                     </div>
                 )}
                 
                 <div className="flex-1 overflow-y-auto p-6">
-                    {cart.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                <ShoppingBag className="h-10 w-10 text-gray-400" />
+                {cart.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                            <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-orange-50 rounded-full flex items-center justify-center mb-6">
+                                <ShoppingBag className="h-12 w-12 text-orange-400" />
                             </div>
-                            <h3 className="font-medium text-gray-900 mb-2">Your cart is empty</h3>
-                            <p className="text-gray-500 text-sm">Add items from a restaurant to get started</p>
+                            <h3 className="font-bold text-gray-900 mb-2 text-lg">Your cart is empty</h3>
+                            <p className="text-gray-600 text-sm">Add items from a restaurant to get started</p>
                         </div>
                     ) : (
                         <AnimatePresence>
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {optimisticCart.map((item) => (
                                     <motion.div
                                         key={item.menu_item_id}
@@ -167,7 +167,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, x: -100 }}
-                                        className="flex gap-4 p-4 bg-gray-50 rounded-xl"
+                                        className="flex gap-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-md transition-all"
                                     >
                                         {item.image_url && (
                                             <img
@@ -177,8 +177,8 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                 loading="lazy"
                                             />
                                         )}
-                                        <div className="flex-1">
-                                            <h4 className="font-medium text-gray-900">{item.name}</h4>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
                                             {item.is_category_deal && item.selected_items && (
                                                 <p className="text-xs text-gray-500 mt-0.5">
                                                     {item.selected_items.map(si => si.name).join(', ')}
@@ -215,7 +215,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                     }
                                                 </div>
                                             )}
-                                            <p className="text-orange-500 font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
+                                            <p className="text-orange-600 font-bold text-sm">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <button
@@ -275,48 +275,71 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                 </div>
                 
                 {cart.length > 0 && (
-                    <div className="border-t p-6 bg-white">
-                        <div className="space-y-3 mb-6">
-                            <div className="flex justify-between text-gray-600">
-                                <span>Subtotal</span>
-                                <span>£{subtotal.toFixed(2)}</span>
+                    <div className="border-t border-gray-200 p-6 bg-gradient-to-br from-white to-gray-50 space-y-5">
+                        {/* Price Breakdown */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between text-gray-700">
+                                <span className="font-medium">Subtotal</span>
+                                <span className="font-semibold">£{subtotal.toFixed(2)}</span>
                             </div>
                             {orderType === 'delivery' && (
-                                <div className="flex justify-between text-gray-600">
-                                    <span>
+                                <div className="flex justify-between text-gray-700">
+                                    <span className="font-medium">
                                         Delivery Fee
-                                        {activeTierLabel && <span className="text-xs text-amber-600 ml-1">({activeTierLabel})</span>}
+                                        {activeTierLabel && <span className="text-xs text-orange-600 ml-1">({activeTierLabel})</span>}
                                     </span>
-                                    <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
+                                    <span className="font-semibold">{deliveryFee === 0 ? '🎉 FREE' : `£${deliveryFee.toFixed(2)}`}</span>
                                 </div>
                             )}
                             {orderType === 'collection' && (
-                                <div className="flex justify-between text-green-600 font-medium">
+                                <div className="flex justify-between text-green-700 font-bold">
                                     <span>🏪 Collection Savings</span>
-                                    <span>FREE</span>
-                                </div>
-                            )}
-                            {/* Tiered delivery hint */}
-                            {orderType === 'delivery' && tiered?.enabled && subtotal < tiered.lower_minimum && (
-                                <div className="text-xs text-amber-600 bg-amber-50 rounded p-2">
-                                    Add £{(tiered.lower_minimum - subtotal).toFixed(2)} more to qualify for £{(tiered.lower_minimum_fee ?? 0).toFixed(2)} delivery fee
-                                </div>
-                            )}
-                            {orderType === 'delivery' && tiered?.enabled && subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity) && (
-                                <div className="text-xs text-green-600 bg-green-50 rounded p-2">
-                                    Add £{((restaurant?.minimum_order || 0) - subtotal).toFixed(2)} more for free delivery
-                                </div>
-                            )}
-                            <div className="flex justify-between font-semibold text-lg pt-3 border-t">
-                                <span>Total</span>
-                                <span>£{total.toFixed(2)}</span>
-                            </div>
-                            {minimumOrder > 0 && subtotal < minimumOrder && (
-                                <div className="text-xs text-red-500 pt-1">
-                                    * Minimum order: £{minimumOrder.toFixed(2)}
+                                    <span>🎉 FREE</span>
                                 </div>
                             )}
                         </div>
+
+                        {/* Delivery Incentive - Highlighted */}
+                        {orderType === 'delivery' && tiered?.enabled && subtotal < tiered.lower_minimum && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg p-3 text-center"
+                            >
+                                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">Special Offer</p>
+                                <p className="text-sm font-bold text-amber-900">
+                                    Add £{(tiered.lower_minimum - subtotal).toFixed(2)} more
+                                </p>
+                                <p className="text-xs text-amber-800 mt-1">for just £{(tiered.lower_minimum_fee ?? 0).toFixed(2)} delivery!</p>
+                            </motion.div>
+                        )}
+
+                        {orderType === 'delivery' && tiered?.enabled && subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity) && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-3 text-center"
+                            >
+                                <p className="text-xs font-bold text-green-700 uppercase tracking-wider mb-1">You're Almost There!</p>
+                                <p className="text-sm font-bold text-green-900">
+                                    Add £{((restaurant?.minimum_order || 0) - subtotal).toFixed(2)} more
+                                </p>
+                                <p className="text-xs text-green-800 mt-1">for 🎉 Free Delivery!</p>
+                            </motion.div>
+                        )}
+
+                        {/* Total */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 text-white text-center">
+                            <p className="text-xs font-bold uppercase tracking-wider opacity-90 mb-1">Order Total</p>
+                            <p className="text-3xl font-bold">£{total.toFixed(2)}</p>
+                        </div>
+
+                        {minimumOrder > 0 && subtotal < minimumOrder && (
+                            <div className="text-xs text-center text-red-600 font-medium">
+                                Minimum order: £{minimumOrder.toFixed(2)}
+                            </div>
+                        )}
+
                         <Button 
                             onClick={() => {
                                 if (onProceedToCheckout) {
@@ -324,9 +347,9 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                 }
                             }}
                             disabled={subtotal < minimumOrder}
-                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg disabled:opacity-50"
+                            className="w-full h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-xl text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
-                            {orderType === 'collection' ? 'Schedule Collection' : 'Go to Checkout'}
+                            {orderType === 'collection' ? '📋 Finalize Collection' : '🛒 Proceed to Checkout'}
                         </Button>
                     </div>
                 )}

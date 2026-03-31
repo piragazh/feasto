@@ -1080,13 +1080,13 @@ export default function Checkout() {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <div className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+            <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
+                <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
                         <Button
                             size="icon"
                             variant="ghost"
-                            className="rounded-full"
+                            className="rounded-full hover:bg-orange-100 hover:text-orange-700"
                             onClick={() => {
                                 if (restaurantId) {
                                     const isCustomDomainRestaurant = sessionStorage.getItem('customDomainRestaurantId') === restaurantId;
@@ -1098,19 +1098,22 @@ export default function Checkout() {
                         >
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
-                        <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900 leading-tight">Checkout</h1>
+                            {restaurantName && <p className="text-xs text-gray-500 font-medium">{restaurantName}</p>}
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                        <span className={`px-3 py-1.5 rounded-lg font-medium ${
+                        <span className={`px-3 py-1.5 rounded-full font-bold text-sm shadow-sm ${
                             orderType === 'delivery' 
-                                ? 'bg-orange-100 text-orange-700' 
-                                : 'bg-blue-100 text-blue-700'
+                                ? 'bg-orange-500 text-white' 
+                                : 'bg-green-500 text-white'
                         }`}>
-                            {orderType === 'delivery' ? '🚚 Delivery' : '🏪 Collection'}
+                            {orderType === 'delivery' ? '🚚 Delivery' : '🏪 Free Collection'}
                         </span>
                     </div>
                 </div>
-                </div>
+            </div>
 
             {recoveryError && (
                 <div className="max-w-4xl mx-auto px-4 pt-4">
@@ -1134,29 +1137,31 @@ export default function Checkout() {
                 </div>
             )}
 
-            <div className="max-w-4xl mx-auto px-4 py-8">
-                <div className="grid md:grid-cols-5 gap-8">
+            <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <div className="grid md:grid-cols-5 gap-6 md:gap-8">
                     {/* Form */}
                     <div className="md:col-span-3">
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                             {isGuest && (
-                                <Card>
-                                    <CardHeader>
+                                <Card className="border-orange-200 shadow-sm overflow-hidden">
+                                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-6 py-4 border-b border-orange-100">
                                         <div className="flex items-center justify-between">
-                                            <CardTitle className="flex items-center gap-2">
-                                                <User className="h-5 w-5 text-orange-500" />
-                                                Your Details
-                                            </CardTitle>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                                                    <User className="h-4 w-4 text-white" />
+                                                </div>
+                                                <span className="font-bold text-gray-900">Your Details</span>
+                                            </div>
                                             <Button
                                                 type="button"
                                                 variant="link"
                                                 onClick={() => base44.auth.redirectToLogin(window.location.href)}
-                                                className="text-orange-500 hover:text-orange-600 text-sm h-auto p-0"
+                                                className="text-orange-600 hover:text-orange-700 text-xs font-bold h-auto p-0"
                                             >
-                                                Already registered? Sign in
+                                                Sign in →
                                             </Button>
                                         </div>
-                                    </CardHeader>
+                                    </div>
                                     <CardContent className="space-y-3">
                                         <div>
                                             <Label htmlFor="guest_email">Email Address *</Label>
@@ -1208,13 +1213,15 @@ export default function Checkout() {
                             )}
 
                             {orderType === 'delivery' && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <MapPin className="h-5 w-5 text-orange-500" />
-                                            Delivery Address
-                                        </CardTitle>
-                                    </CardHeader>
+                                <Card className="border-0 shadow-md overflow-hidden">
+                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-blue-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                                <MapPin className="h-4 w-4 text-white" />
+                                            </div>
+                                            <span className="font-bold text-gray-900">Delivery Address</span>
+                                        </div>
+                                    </div>
                                     <CardContent className="space-y-3">
                                         {/* Saved Addresses Section */}
                                         {!isGuest && !showManualAddressEntry && (
@@ -1470,13 +1477,15 @@ export default function Checkout() {
                                 </Card>
                             )}
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Phone className="h-5 w-5 text-orange-500" />
-                                        Contact Number
-                                    </CardTitle>
-                                </CardHeader>
+                            <Card className="border-0 shadow-md overflow-hidden">
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-green-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                            <Phone className="h-4 w-4 text-white" />
+                                        </div>
+                                        <span className="font-bold text-gray-900">Contact Number</span>
+                                    </div>
+                                </div>
                                 <CardContent className="space-y-3">
                                     <div>
                                         <Label htmlFor="phone">UK Mobile Number *</Label>
@@ -1517,13 +1526,15 @@ export default function Checkout() {
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <FileText className="h-5 w-5 text-orange-500" />
-                                        Special Instructions
-                                    </CardTitle>
-                                </CardHeader>
+                            <Card className="border-0 shadow-md overflow-hidden">
+                                <div className="bg-gradient-to-r from-purple-50 to-violet-50 px-6 py-4 border-b border-purple-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                                            <FileText className="h-4 w-4 text-white" />
+                                        </div>
+                                        <span className="font-bold text-gray-900">Special Instructions</span>
+                                    </div>
+                                </div>
                                 <CardContent>
                                     <Label htmlFor="special_instructions" className="sr-only">Special Instructions</Label>
                                     <Textarea
@@ -1552,11 +1563,18 @@ export default function Checkout() {
                                 onPromotionApply={setAppliedPromotions}
                             />
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Discount Code</CardTitle>
-                                    <p className="text-xs text-gray-500 mt-1">Enter a coupon or promo code</p>
-                                </CardHeader>
+                            <Card className="border-0 shadow-md overflow-hidden">
+                                <div className="bg-gradient-to-r from-pink-50 to-rose-50 px-6 py-4 border-b border-pink-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-sm font-bold">%</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-gray-900">Discount Code</span>
+                                            <p className="text-xs text-gray-600">Enter a coupon or promo code</p>
+                                        </div>
+                                    </div>
+                                </div>
                                 <CardContent>
                                     <DiscountCodeInput
                                         restaurantId={restaurantId}
@@ -1691,7 +1709,7 @@ export default function Checkout() {
                                 <Button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg"
+                                    className="w-full h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-orange-500/30 transition-all"
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -1699,7 +1717,7 @@ export default function Checkout() {
                                             Placing Order...
                                         </>
                                     ) : (
-                                        `Place Order • £${total.toFixed(2)}`
+                                        `🛒 Place Order • £${total.toFixed(2)}`
                                     )}
                                 </Button>
                             ) : null}
