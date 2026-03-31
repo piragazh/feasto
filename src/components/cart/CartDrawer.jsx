@@ -159,7 +159,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                         </div>
                     ) : (
                         <AnimatePresence>
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 {optimisticCart.map((item) => (
                                     <motion.div
                                         key={item.menu_item_id}
@@ -167,25 +167,25 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, x: -100 }}
-                                        className="flex gap-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-md transition-all"
+                                        className="flex gap-2 p-2.5 bg-white rounded-lg border border-gray-100 hover:border-orange-200 transition-all"
                                     >
                                         {item.image_url && (
                                             <img
                                                 src={item.image_url}
                                                 alt={item.name}
-                                                className="w-16 h-16 rounded-lg object-cover"
+                                                className="w-12 h-12 rounded-md object-cover"
                                                 loading="lazy"
                                             />
                                         )}
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
+                                            <h4 className="font-bold text-gray-900 text-xs">{item.name}</h4>
                                             {item.is_category_deal && item.selected_items && (
-                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                                                     {item.selected_items.map(si => si.name).join(', ')}
                                                 </p>
                                             )}
                                             {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                                <div className="text-xs text-gray-500 mt-1">
+                                                <div className="text-xs text-gray-500 mt-0.5">
                                                     {Object.entries(item.customizations)
                                                         .filter(([key]) => !key.includes('meal_customizations'))
                                                         .map(([key, val]) => {
@@ -215,9 +215,9 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                     }
                                                 </div>
                                             )}
-                                            <p className="text-orange-600 font-bold text-sm">£{(item.price * item.quantity).toFixed(2)}</p>
+                                            <p className="text-orange-600 font-bold text-xs">£{(item.price * item.quantity).toFixed(2)}</p>
                                         </div>
-                                        <div className="flex flex-col items-end gap-2">
+                                        <div className="flex items-center gap-1">
                                             <button
                                                 onClick={() => {
                                                     const customizationKey = item.customizations || item.itemQuantities 
@@ -229,11 +229,27 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                     removeFromCart(item.menu_item_id, customizationKey);
                                                 }}
                                                 aria-label={`Remove ${item.name} from cart`}
-                                                className="text-gray-400 hover:text-red-500 transition-colors"
+                                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
                                             >
-                                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                                <Trash2 className="h-3 w-3" aria-hidden="true" />
                                             </button>
-                                            <div className="flex items-center gap-2 bg-white rounded-full border px-1" role="group" aria-label={`Quantity for ${item.name}`}>
+                                            <div className="flex items-center gap-1 bg-white rounded-full border px-0.5 py-0.5" role="group" aria-label={`Quantity for ${item.name}`}>
+                                                 <button
+                                                      onClick={() => {
+                                                          const customizationKey = (item.customizations || item.itemQuantities) 
+                                                              ? JSON.stringify({
+                                                                  customizations: item.customizations || {},
+                                                                  itemQuantities: item.itemQuantities || {}
+                                                              })
+                                                              : null;
+                                                          handleQuantityChange(item.menu_item_id, item.quantity - 1, customizationKey);
+                                                      }}
+                                                     aria-label={`Decrease quantity of ${item.name}`}
+                                                     className="p-0.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
+                                                 >
+                                                     <Minus className="h-2 w-2" aria-hidden="true" />
+                                                 </button>
+                                                 <span className="w-5 text-center font-medium text-xs" aria-live="polite" aria-atomic="true">{item.quantity}</span>
                                                  <button
                                                      onClick={() => {
                                                          const customizationKey = (item.customizations || item.itemQuantities) 
@@ -242,29 +258,13 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                                  itemQuantities: item.itemQuantities || {}
                                                              })
                                                              : null;
-                                                         handleQuantityChange(item.menu_item_id, item.quantity - 1, customizationKey);
+                                                         handleQuantityChange(item.menu_item_id, item.quantity + 1, customizationKey);
                                                      }}
-                                                    aria-label={`Decrease quantity of ${item.name}`}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
-                                                >
-                                                    <Minus className="h-3 w-3" aria-hidden="true" />
-                                                </button>
-                                                <span className="w-6 text-center font-medium text-sm" aria-live="polite" aria-atomic="true">{item.quantity}</span>
-                                                <button
-                                                    onClick={() => {
-                                                        const customizationKey = (item.customizations || item.itemQuantities) 
-                                                            ? JSON.stringify({
-                                                                customizations: item.customizations || {},
-                                                                itemQuantities: item.itemQuantities || {}
-                                                            })
-                                                            : null;
-                                                        handleQuantityChange(item.menu_item_id, item.quantity + 1, customizationKey);
-                                                    }}
-                                                    aria-label={`Increase quantity of ${item.name}`}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
-                                                >
-                                                    <Plus className="h-3 w-3" aria-hidden="true" />
-                                                </button>
+                                                     aria-label={`Increase quantity of ${item.name}`}
+                                                     className="p-0.5 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
+                                                 >
+                                                     <Plus className="h-2 w-2" aria-hidden="true" />
+                                                 </button>
                                             </div>
                                         </div>
                                     </motion.div>
