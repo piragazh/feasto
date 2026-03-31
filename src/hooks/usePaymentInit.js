@@ -89,6 +89,9 @@ export function usePaymentInit({
     // Guard against concurrent PI creation
     const paymentInitInFlightRef = useRef(false);
 
+    // Track previous total to detect coupon/discount changes
+    const prevTotalRef = useRef(total);
+
     // Reset all payment state
     const resetPaymentState = useCallback(() => {
         sessionKeyRef.current = generateSessionKey();
@@ -105,10 +108,24 @@ export function usePaymentInit({
         return sessionKeyRef.current;
     }, []);
 
-    // Reset when method changes
+    // Reset when payment method changes
     useEffect(() => {
         resetPaymentState();
     }, [paymentMethod, resetPaymentState]);
+
+    // ── ATOMIC GUARD: Reset when total changes after PI created ────────────────
+    // Prevents stale idempotency keys when coupon/promotion changes the total.
+    // Without this, applying a coupon after PI creation causes STRIPE_IDEMPOTENCY_CONFLICT.
+    useEffect(() => {
+        if (prevTotalRef.current !== total && clientSecret) {
+            console.log('[usePaymentInit] Total changed (coupon/promotion applied) — resetting payment state', {
+                oldTotal: prevTotalRef.current,
+                newTotal: total,
+            });
+            resetPaymentState();
+        }
+        prevTotalRef.current = total;
+    }, [total, clientSecret, resetPaymentState]);
 
     // Preflight validation
     const preflightValid = useMemo(() => {
