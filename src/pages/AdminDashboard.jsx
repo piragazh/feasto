@@ -161,14 +161,17 @@ export default function AdminDashboard() {
                             <p className="text-slate-400 text-sm mt-1">Platform-wide analytics & management</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {quickLinks.map(link => (
+                            {quickLinks.map(link => {
+                                const LinkIcon = link.Icon;
+                                return (
                                 <Link key={link.label} to={link.to}>
                                     <Button size="sm" variant="ghost" className="bg-white/10 hover:bg-white/20 text-white border border-white/10 text-xs h-9">
-                                        <link.Icon className="h-3.5 w-3.5 mr-1.5" />
+                                        <LinkIcon className="h-3.5 w-3.5 mr-1.5" />
                                         {link.label}
                                     </Button>
                                 </Link>
-                            ))}
+                            );
+                            })}
                         </div>
                     </div>
                     <div className="flex gap-1 mt-6 border-b border-white/10">
@@ -210,17 +213,20 @@ export default function AdminDashboard() {
 
                         {!isLoading && (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                                {kpiCards.map(item => (
+                                {kpiCards.map(item => {
+                                    const ItemIcon = item.Icon;
+                                    return (
                                     <Card key={item.label} className={`border-0 shadow-sm ${item.bg}`}>
                                         <CardContent className="p-4 flex items-center gap-3">
-                                            <item.Icon className={`h-5 w-5 ${item.color} flex-shrink-0`} />
+                                            <ItemIcon className={`h-5 w-5 ${item.color} flex-shrink-0`} />
                                             <div>
                                                 <p className={`text-lg font-bold ${item.color}`}>{item.value}</p>
                                                 <p className="text-xs text-gray-500">{item.label}</p>
                                             </div>
                                         </CardContent>
                                     </Card>
-                                ))}
+                                );
+                                })}
                             </div>
                         )}
 
