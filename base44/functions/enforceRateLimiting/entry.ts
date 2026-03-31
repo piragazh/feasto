@@ -27,6 +27,11 @@ function checkPerUserBurst(recentOrders, limit = 5) {
     return { blocked: true, retryAfter };
 }
 
+function normalizePhone(phone) {
+    if (!phone || typeof phone !== 'string') return null;
+    return phone.replace(/\D/g, '');
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'POST only' }), { status: 400 });
@@ -38,14 +43,63 @@ Deno.serve(async (req) => {
         try {
             user = await base44.auth.me();
         } catch (_) {
-            // Guest or unauthenticated — allow through.
-            // Full guest throttling happens in orderVelocityThrottle using guest_email/phone.
-            return new Response(JSON.stringify({ allowed: true }), { status: 200 });
+            user = null;
         }
 
+        // ── Guest rate limiting by phone ──────────────────────────────────────────
         if (!user) {
-            // Guest pre-submit check: no user context available yet, allow through.
-            return new Response(JSON.stringify({ allowed: true }), { status: 200 });
+            const body = await req.json().catch(() => ({}));
+            const { phone, guest_email } = body;
+
+            // If no phone or email provided, allow through (can't throttle completely anonymous)
+            if (!phone && !guest_email) {
+                return new Response(
+                    JSON.stringify({ allowed: true }),
+                    { status: 200 }
+                );
+            }
+
+            // Throttle by phone (primary identifier for guests)
+            if (phone) {
+                const normalizedPhone = normalizePhone(phone);
+                if (normalizedPhone) {
+                    const oneMinuteAgo = Date.now() - 60_000;
+                    const allRecentOrders = await base44.asServiceRole.entities.Order.filter(
+                        { phone: normalizedPhone },
+                        '-created_date',
+                        10
+                    );
+                    const recentOrders = (allRecentOrders || []).filter(
+                        o => new Date(o.created_date).getTime() > oneMinuteAgo
+                    );
+
+                    // Stricter limit for guests: 3 orders per minute (vs 5 for authenticated)
+                    const GUEST_BURST_LIMIT = 3;
+                    if (recentOrders.length >= GUEST_BURST_LIMIT) {
+                        const oldestOrder = recentOrders.sort(
+                            (a, b) => new Date(a.created_date).getTime() - new Date(b.created_date).getTime()
+                        )[0];
+                        const retryAfter = Math.max(
+                            1,
+                            Math.ceil((new Date(oldestOrder.created_date).getTime() + 60_000 - Date.now()) / 1000)
+                        );
+                        return new Response(
+                            JSON.stringify({
+                                allowed: false,
+                                error: 'Too many orders. Please wait before placing another order.',
+                                retryAfter,
+                                ordersThisMinute: recentOrders.length
+                            }),
+                            { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+                        );
+                    }
+                }
+            }
+
+            return new Response(
+                JSON.stringify({ allowed: true }),
+                { status: 200 }
+            );
         }
 
         const oneMinuteAgo = Date.now() - 60_000;

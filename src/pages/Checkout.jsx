@@ -679,18 +679,19 @@ export default function Checkout() {
             return;
         }
         
-        // CRITICAL SECURITY: Check rate limiting — guests skip (no user context yet)
-        if (!isGuest) {
-            try {
-                const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {});
-                if (!rateLimitResponse?.data?.allowed) {
-                    toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
-                    return;
-                }
-            } catch (error) {
-                // Non-fatal — log but don't block legitimate order
-                console.error('Rate limit check failed:', error);
+        // CRITICAL SECURITY: Check rate limiting — applies to both authenticated and guest users
+        try {
+            const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {
+                phone: formData.phone,
+                guest_email: formData.guest_email
+            });
+            if (!rateLimitResponse?.data?.allowed) {
+                toast.error(`Too many orders. Please wait ${rateLimitResponse?.data?.retryAfter || 60} seconds.`);
+                return;
             }
+        } catch (error) {
+            // Non-fatal — log but don't block legitimate order
+            console.error('Rate limit check failed:', error);
         }
         
         // ---- VALIDATION: Check Required Fields ----
