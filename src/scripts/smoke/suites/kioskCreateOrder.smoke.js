@@ -1,7 +1,6 @@
 /**
-/* eslint-disable no-undef */
-/**
  * Smoke tests — kioskCreateOrder backend function
+ * /* eslint-disable no-undef */
  *
  * Tests:
  *  1. Normal pay-at-counter order accepted (happy path)

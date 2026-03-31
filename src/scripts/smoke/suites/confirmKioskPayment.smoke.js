@@ -1,7 +1,6 @@
 /**
-/* eslint-disable no-undef */
-/**
  * Smoke tests: confirmKioskPayment backend function
+ * /* eslint-disable no-undef */
  *
  * Tests security invariants:
  * 1. Only kiosk counter-pay pending orders can be confirmed

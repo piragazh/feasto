@@ -26,6 +26,7 @@ function validateStripeWebhookEnv() {
     if (skMode === 'unknown') throw new Error(`[STRIPE_ENV] FATAL: STRIPE_SECRET_KEY has unrecognised format (prefix: ${sk.slice(0, 8)}...)`);
     if (pk && skMode !== pkMode) throw new Error(`[STRIPE_ENV] FATAL: KEY MODE MISMATCH — secret=${skMode} but publishable=${pkMode}. Mixed live/test keys rejected.`);
     if (!wh) throw new Error('[STRIPE_ENV] FATAL: STRIPE_WEBHOOK_SECRET is not set — signature verification impossible');
+    if (!wh.startsWith('whsec_')) throw new Error(`[STRIPE_ENV] FATAL: STRIPE_WEBHOOK_SECRET has invalid format (must start with 'whsec_', got '${wh.slice(0, 20)}...')`);
     return skMode;
 }
 
