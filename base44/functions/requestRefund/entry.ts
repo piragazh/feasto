@@ -37,8 +37,12 @@ Deno.serve(async (req) => {
         const order = orders[0];
 
         // CRITICAL: Verify the caller owns this order
-        if (order.created_by !== user.email) {
-            console.error(`[SECURITY] IDOR attempt: ${user.email} tried to refund order ${orderId} owned by ${order.created_by}`);
+        // Check both customer_email (set by verifyAndCreateOrder) and created_by (legacy/direct)
+        const isOwner =
+            order.customer_email === user.email ||
+            order.created_by === user.email;
+        if (!isOwner) {
+            console.error(`[SECURITY] IDOR attempt: ${user.email} tried to refund order ${orderId} owned by customer_email=${order.customer_email} created_by=${order.created_by}`);
             return Response.json({ error: 'Access denied' }, { status: 403 });
         }
 
