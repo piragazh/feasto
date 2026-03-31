@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     };
 
     try {
-      await base44.functions.invoke('auditLog', auditPayload);
+      await base44.asServiceRole.functions.invoke('auditLog', auditPayload);
     } catch (e) {
       console.error('[updateOrderStatus] Audit log failed:', e);
       // Don't block the operation on audit failure
