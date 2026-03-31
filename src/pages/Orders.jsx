@@ -714,7 +714,7 @@ export default function Orders() {
                     )}
                 </DialogContent>
             </Dialog>
-            </div>
+        </div>
         </PullToRefresh>
     );
 }
