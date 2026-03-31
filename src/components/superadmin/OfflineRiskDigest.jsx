@@ -21,18 +21,20 @@ export default function OfflineRiskDigest() {
     const [copiedToClipboard, setCopiedToClipboard] = useState(false);
     const [activeTab, setActiveTab] = useState('current');
 
-    const { data: restaurants = [], isLoading: restLoading } = useQuery({
+    const { data: restaurants = [], isLoading: restLoading, error: restError } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: () => base44.entities.Restaurant.list()
     });
 
-    const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useQuery({
         queryKey: ['all-orders'],
         queryFn: () => base44.entities.Order.list('-offline_synced_at', 1000)
     });
 
     // Mock portfolio analytics (in real setup, fetch from dashboard state)
     const portfolioAnalytics = useMemo(() => {
+        if (!restaurants.length || !orders.length) return { rankedRestaurants: [] };
+        
         const restaurantRisks = restaurants.map(r => {
             const rOrders = orders.filter(o => o.restaurant_id === r.id && o.offline_created);
             const flagged = rOrders.filter(o => o.needs_review).length;
@@ -59,6 +61,8 @@ export default function OfflineRiskDigest() {
 
     // Mock operator analytics
     const operatorAnalytics = useMemo(() => {
+        if (!orders.length) return { outliers: [] };
+        
         const operatorStats = {};
         orders
             .filter(o => o.offline_created && o.offline_created_by)
@@ -117,16 +121,21 @@ export default function OfflineRiskDigest() {
         snapshot();
     }, [digest, plaintext]);
 
+    // Check loading/error state AFTER all hooks are called
+    if (restLoading || ordersLoading) {
+        return <Card><CardContent className="p-4 text-center text-sm text-gray-500">Loading digest...</CardContent></Card>;
+    }
+
+    if (restError || ordersError) {
+        return <Card className="border-red-200 bg-red-50"><CardContent className="p-4"><p className="text-sm text-red-900">Failed to load digest data</p></CardContent></Card>;
+    }
+
     const isCritical = isDigestCritical(digest);
 
     const handleCopyToClipboard = () => {
         navigator.clipboard.writeText(plaintext);
         setCopiedToClipboard(true);
         setTimeout(() => setCopiedToClipboard(false), 2000);
-    };
-
-    if (restLoading || ordersLoading) {
-        return <Card><CardContent className="p-4 text-center text-sm text-gray-500">Loading digest...</CardContent></Card>;
     }
 
     return (
