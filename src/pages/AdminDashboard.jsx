@@ -9,10 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, PoundSterling, TrendingUp, Star, Users, LayoutDashboard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, XCircle, RefreshCw, Settings, Tag } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
+
 import { format, subDays, startOfDay } from 'date-fns';
 
-const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#06b6d4', '#6b7280'];
+
 
 function StatCard({ title, value, subtitle, icon: Icon, iconColor, trend }) {
     return (
@@ -37,22 +37,7 @@ function StatCard({ title, value, subtitle, icon: Icon, iconColor, trend }) {
     );
 }
 
-function CustomTooltip({ active, payload, label, prefix = '' }) {
-    if (active && payload && payload.length) {
-        return (
-            <div className="bg-white border border-gray-100 rounded-xl shadow-lg p-3">
-                <p className="text-xs font-semibold text-gray-600 mb-1">{label}</p>
-                {payload.map((entry, i) => (
-                    <p key={i} className="text-sm font-bold" style={{ color: entry.color }}>
-                        {prefix}{typeof entry.value === 'number' ? entry.value.toLocaleString('en-GB', { minimumFractionDigits: prefix === '£' ? 2 : 0, maximumFractionDigits: prefix === '£' ? 2 : 0 }) : entry.value}
-                        <span className="text-xs font-normal text-gray-500 ml-1">{entry.name}</span>
-                    </p>
-                ))}
-            </div>
-        );
-    }
-    return null;
-}
+
 
 export default function AdminDashboard() {
     useSEO({ title: 'Admin Dashboard', noindex: true });
@@ -90,27 +75,7 @@ export default function AdminDashboard() {
         return { delivered, pending, cancelled, refunded, totalRevenue, totalOrders, avgOrderValue, openRestaurants };
     }, [orders, restaurants]);
 
-    const revenueTimeline = useMemo(() => {
-        const days = Array.from({ length: 14 }, (_, i) => {
-            const d = subDays(new Date(), 13 - i);
-            const key = format(startOfDay(d), 'yyyy-MM-dd');
-            return { date: format(d, 'dd MMM'), key, revenue: 0, orders: 0 };
-        });
-        orders.forEach(o => {
-            if (o.status === 'delivered' && o.created_date) {
-                const key = format(startOfDay(new Date(o.created_date)), 'yyyy-MM-dd');
-                const day = days.find(d => d.key === key);
-                if (day) { day.revenue += o.total || 0; day.orders += 1; }
-            }
-        });
-        return days;
-    }, [orders]);
 
-    const statusBreakdown = useMemo(() => {
-        const counts = {};
-        orders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
-        return Object.entries(counts).map(([name, value]) => ({ name, value }));
-    }, [orders]);
 
     const restaurantStats = useMemo(() =>
         restaurants.map(r => {
@@ -230,78 +195,7 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {isLoading ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                                {[1,2,3].map(i => (
-                                    <Card key={i} className="border-0 shadow-sm">
-                                        <CardContent className="p-5">
-                                            <div className="animate-pulse">
-                                                <div className="h-5 bg-gray-200 rounded w-1/2 mb-4" />
-                                                <div className="h-44 bg-gray-100 rounded" />
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                                <Card className="border-0 shadow-sm lg:col-span-2">
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-gray-700">Revenue – Last 14 Days</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <ResponsiveContainer width="100%" height={200}>
-                                            <AreaChart data={revenueTimeline}>
-                                                <defs>
-                                                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                                                        <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                                                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `£${v}`} />
-                                                <Tooltip content={<CustomTooltip prefix="£" />} />
-                                                <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#revGrad)" name="Revenue" />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
-                                <Card className="border-0 shadow-sm">
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-gray-700">Order Status Mix</CardTitle></CardHeader>
-                                    <CardContent>
-                                        {statusBreakdown.length > 0 ? (
-                                            <ResponsiveContainer width="100%" height={200}>
-                                                <PieChart>
-                                                    <Pie data={statusBreakdown} cx="50%" cy="45%" innerRadius={45} outerRadius={75} dataKey="value" paddingAngle={2}>
-                                                        {statusBreakdown.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                                                    </Pie>
-                                                    <Tooltip formatter={(v, n) => [v, n]} />
-                                                    <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 10 }} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        ) : (
-                                            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">No data</div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
 
-                        {!isLoading && (
-                            <Card className="border-0 shadow-sm mb-6">
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-gray-700">Daily Orders – Last 14 Days</CardTitle></CardHeader>
-                                <CardContent>
-                                    <ResponsiveContainer width="100%" height={160}>
-                                        <BarChart data={revenueTimeline} barSize={16}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                            <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                                            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                                            <Tooltip content={<CustomTooltip />} />
-                                            <Bar dataKey="orders" fill="#3b82f6" name="Orders" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
-                        )}
                     </>
                 )}
 
@@ -315,22 +209,7 @@ export default function AdminDashboard() {
                                 </Button>
                             </Link>
                         </div>
-                        {!isLoading && topRestaurants.length > 0 && (
-                            <Card className="border-0 shadow-sm mb-6">
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-gray-700">Top Restaurants by Revenue</CardTitle></CardHeader>
-                                <CardContent>
-                                    <ResponsiveContainer width="100%" height={220}>
-                                        <BarChart data={topRestaurants.map(r => ({ name: r.name.slice(0, 12) + (r.name.length > 12 ? '…' : ''), revenue: r.revenue, orders: r.orderCount }))} layout="vertical" barSize={14}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                                            <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `£${v}`} />
-                                            <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                                            <Tooltip content={<CustomTooltip prefix="£" />} />
-                                            <Bar dataKey="revenue" fill="#f97316" name="Revenue" radius={[0, 4, 4, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
-                        )}
+
                         <Card className="border-0 shadow-sm">
                             <CardContent className="p-0">
                                 {isLoading ? (
