@@ -206,6 +206,15 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ── PaymentIntent dedup check (guards against propagation lag on idempotency_key) ──
+        if (paymentIntentId) {
+            const existingByPI = await base44.asServiceRole.entities.Order.filter({ payment_intent_id: paymentIntentId });
+            if (existingByPI?.length > 0) {
+                console.log(`${LOG} Duplicate order request for pi=${paymentIntentId} — returning existing order id=${existingByPI[0].id}`);
+                return Response.json({ success: true, order_id: existingByPI[0].id, order_number: existingByPI[0].order_number, duplicate: true }, { status: 200 });
+            }
+        }
+
         // ── Restaurant exists ──────────────────────────────────────────────────
         const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: orderData.restaurant_id });
         if (!restaurants?.length) {
