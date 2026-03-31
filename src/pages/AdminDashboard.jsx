@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { useSEO } from '@/lib/useSEO.js';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -17,7 +18,6 @@ import {
     Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
-import { useAuth } from '@/lib/AuthContext';
 
 const STATUS_COLORS = {
     pending: '#f59e0b',
