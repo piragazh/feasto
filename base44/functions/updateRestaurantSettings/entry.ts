@@ -79,6 +79,38 @@ const ADMIN_ONLY_FIELDS = new Set([
     'onboarding_status',
 ]);
 
+// ── ATOMIC PERMISSION CHECK (inline, not separate HTTP call) ─────────────────
+async function checkRestaurantPermission(base44, user, restaurantId) {
+    if (!restaurantId) {
+        return { allowed: false, error: 'Restaurant ID required', statusCode: 400 };
+    }
+    if (user.role === 'admin') {
+        console.log(`[AUDIT] Admin ${user.email} accessing restaurant ${restaurantId}`);
+        return { allowed: true, role: 'admin', statusCode: 200 };
+    }
+    let managers;
+    try {
+        managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+            user_email: user.email,
+            is_active: true,
+        });
+    } catch (error) {
+        console.error(`[PERMISSION] Manager fetch failed for ${user.email}:`, error.message);
+        return { allowed: false, error: 'Permission check failed', statusCode: 500 };
+    }
+    if (!managers?.length) {
+        console.error(`[SECURITY] Non-admin user ${user.email} has no restaurant access`);
+        return { allowed: false, error: 'No restaurant access', statusCode: 403 };
+    }
+    const hasAccess = managers.some(m => m.restaurant_ids?.includes(restaurantId));
+    if (!hasAccess) {
+        console.error(`[SECURITY] User ${user.email} attempted unauthorized access to restaurant ${restaurantId}`);
+        return { allowed: false, error: 'Access denied to this restaurant', statusCode: 403 };
+    }
+    console.log(`[AUDIT] Manager ${user.email} accessing restaurant ${restaurantId}`);
+    return { allowed: true, role: 'manager', statusCode: 200 };
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -98,17 +130,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'restaurant_id and updates required' }, { status: 400 });
         }
 
-        // TENANT CHECK
-        if (user.role !== 'admin') {
-            const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
-                user_email: user.email,
-                is_active: true,
-            });
-            const hasAccess = managers.some(m => m.restaurant_ids?.includes(restaurant_id));
-            if (!hasAccess) {
-                console.error(`[SECURITY] ${user.email} attempted to update settings for restaurant ${restaurant_id}`);
-                return Response.json({ error: 'Access denied to this restaurant' }, { status: 403 });
-            }
+        // TENANT CHECK — atomic inline permission enforcement
+        const permissionResult = await checkRestaurantPermission(base44, user, restaurant_id);
+        if (!permissionResult.allowed) {
+            return Response.json({ error: permissionResult.error }, { status: permissionResult.statusCode });
         }
 
         // Fetch current restaurant for before/after diff
