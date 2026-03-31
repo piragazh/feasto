@@ -119,16 +119,22 @@ Deno.serve(async (req) => {
         if (order.payment_method === 'card' && order.payment_intent_id) {
             const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
             try {
-                const refund = await stripe.refunds.create({
-                    payment_intent: order.payment_intent_id,
-                    amount: Math.round(approvedAmount * 100), // pence
-                    reason: 'requested_by_customer',
-                    metadata: {
-                        order_id,
-                        approved_by: user.email,
-                        refund_type: order.refund_request_type || 'full',
+                const refund = await stripe.refunds.create(
+                    {
+                        payment_intent: order.payment_intent_id,
+                        amount: Math.round(approvedAmount * 100), // pence
+                        reason: 'requested_by_customer',
+                        metadata: {
+                            order_id,
+                            approved_by: user.email,
+                            refund_type: order.refund_request_type || 'full',
+                        },
                     },
-                });
+                    {
+                        // Idempotency key prevents double-refund on concurrent approvals
+                        idempotencyKey: `refund_${order_id}_${Math.round(approvedAmount * 100)}`,
+                    }
+                );
                 stripeRefundId = refund.id;
                 console.log(`[REFUND] Stripe refund issued: ${stripeRefundId} amount=£${approvedAmount.toFixed(2)} order=${order_id}`);
             } catch (stripeErr) {
