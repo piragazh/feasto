@@ -135,6 +135,22 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         return { valid: false, error: 'Menu validation unavailable. Please try again.', code: 'MENU_FETCH_FAILED' };
     }
 
+    // ── Fetch and validate meal deals ──────────────────────────────────────
+    let dealMap = new Map();
+    if (dealItems.length > 0) {
+        try {
+            const allDeals = await base44.asServiceRole.entities.MealDeal.filter({ restaurant_id: restaurantId });
+            if (Array.isArray(allDeals)) {
+                for (const deal of allDeals) {
+                    if (deal?.id) dealMap.set(deal.id, deal);
+                }
+            }
+        } catch (err) {
+            console.error(`${LOG} MealDeal fetch failed: ${err.message}`);
+            return { valid: false, error: 'Meal deal validation unavailable. Please try again.', code: 'DEAL_FETCH_FAILED' };
+        }
+    }
+
     let serverSubtotal = 0;
     const itemResults = [];
 
@@ -160,8 +176,23 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
     }
 
     for (const dealItem of dealItems) {
-        const dealLine = Number(dealItem.price || 0) * Number(dealItem.quantity || 1);
-        serverSubtotal += dealLine;
+        const dealId = String(dealItem.menu_item_id || dealItem.id || '').replace(/^deal_/, '');
+        const dbDeal = dealMap.get(dealId);
+        if (!dbDeal) return { valid: false, error: `Meal deal no longer available`, code: 'DEAL_NOT_FOUND', compensatable: true };
+        if (dbDeal.is_active === false) return { valid: false, error: `Meal deal is no longer active`, code: 'DEAL_INACTIVE', compensatable: true };
+
+        const quantity = Number(dealItem.quantity || 1);
+        const clientDealPrice = Number(dealItem.price || 0);
+        const serverDealPrice = Number(dbDeal.deal_price || 0);
+        const clientLineTotal = clientDealPrice * quantity;
+        const serverLineTotal = serverDealPrice * quantity;
+        const delta = Math.abs(serverLineTotal - clientLineTotal);
+
+        if (delta > PRICE_TOLERANCE * quantity) {
+            console.error(`${LOG} DEAL_PRICE_MISMATCH deal="${dbDeal.name}" client=£${clientLineTotal.toFixed(2)} server=£${serverLineTotal.toFixed(2)} delta=£${delta.toFixed(4)}`);
+            return { valid: false, error: `Price mismatch for meal deal "${dbDeal.name}". Please refresh and try again.`, code: 'DEAL_PRICE_MISMATCH', itemResults };
+        }
+        serverSubtotal += serverLineTotal;
     }
 
     const subtotalDelta = Math.abs(serverSubtotal - Number(clientSubtotal));
