@@ -146,12 +146,36 @@ const DropdownMenuContent = forwardRef(({ className, sideOffset = 4, children, t
 })
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
 
-const DropdownMenuItem = forwardRef(({ className, inset, onClick, ...props }, ref) => {
+const DropdownMenuItem = forwardRef(({ className, inset, onClick, children, disabled, ...props }, ref) => {
   const ctx = useContext(DropdownMobileCtx);
   const handleClick = (e) => {
+    if (disabled) return;
     onClick?.(e);
     ctx?.onOpenChange(false);
   };
+
+  // On mobile the items render inside a Drawer (not inside Radix MenuContent),
+  // so DropdownMenuPrimitive.Item would throw "must be used within MenuContent".
+  // Use a plain button instead.
+  if (ctx) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        disabled={disabled}
+        onClick={handleClick}
+        className={cn(
+          "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-2.5 text-base outline-none transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 min-h-[44px]",
+          inset && "pl-8",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
     <DropdownMenuPrimitive.Item
       ref={ref}
@@ -161,7 +185,10 @@ const DropdownMenuItem = forwardRef(({ className, inset, onClick, ...props }, re
         className
       )}
       onClick={handleClick}
-      {...props} />
+      {...props}
+    >
+      {children}
+    </DropdownMenuPrimitive.Item>
   );
 })
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
