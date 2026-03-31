@@ -505,12 +505,14 @@ export default function Checkout() {
             } else {
                 minimumOrder = effectiveMinimum;
             }
-        } else {
+            } else {
             // No zone (or outside zone) — no tiered pricing, use standard minimum
             minimumOrder = standardMin;
-        }
-    }
-    const smallOrderSurcharge = 0;
+            }
+            }
+            // MED-8 FIX: Fetch small_order_surcharge from restaurant config instead of hardcoding to 0
+            // This allows restaurants to configure surcharges per their business logic
+            const smallOrderSurcharge = restaurant?.small_order_surcharge ?? 0;
 
     // Discount from applied coupons and promotions
     const couponDiscount = appliedCoupons.reduce((sum, c) => sum + (c.discount || 0), 0);

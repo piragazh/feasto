@@ -140,6 +140,11 @@
     "minimum_order": {
       "type": "number"
     },
+    "small_order_surcharge": {
+      "type": "number",
+      "default": 0,
+      "description": "Fixed charge (in GBP) applied when order is below minimum_order threshold"
+    },
     "tiered_delivery": {
       "type": "object",
       "properties": {
