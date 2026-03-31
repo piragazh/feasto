@@ -15,7 +15,8 @@ export default defineConfig({
       legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
       hmrNotifier: true,
       navigationNotifier: true,
-      visualEditAgent: true
+      visualEditAgent: true,
+      jsxTransform: false
     }),
   ],
   resolve: {
