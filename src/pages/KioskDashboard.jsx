@@ -74,7 +74,11 @@ export default function KioskDashboard() {
 
         // Don't set inactivity timers during payment, confirmation, or if idle_media disabled
         const isPaymentOrConfirm = screen === 'payment' || screen === 'confirmation';
-        if (isPaymentOrConfirm || !idleMediaEnabled) return;
+        if (isPaymentOrConfirm || !idleMediaEnabled) {
+            clearTimeout(window.__kioskIdleMediaTimer);
+            clearTimeout(window.__kioskResetTimer);
+            return;
+        }
 
         const handleActivity = () => {
             // Reset all timers on any interaction
@@ -84,6 +88,8 @@ export default function KioskDashboard() {
             // Exit media mode immediately on interaction
             if (mode === 'idle_media') {
                 setMode('ordering');
+                setScreen('welcome');
+                return;
             }
 
             // Set idle_media timeout (60s by default)
@@ -99,10 +105,8 @@ export default function KioskDashboard() {
                 
                 // Set order reset timer (if media is shown, full reset happens after this time)
                 window.__kioskResetTimer = setTimeout(() => {
-                    if (mode === 'idle_media') {
-                        setMode('ordering');
-                        setScreen('welcome');
-                    }
+                    setMode('ordering');
+                    setScreen('welcome');
                 }, orderResetTimeout);
             }, idleMediaTimeout);
         };
@@ -118,7 +122,7 @@ export default function KioskDashboard() {
             window.removeEventListener('touchstart', handleActivity);
             window.removeEventListener('click', handleActivity);
         };
-    }, [screen, mode, restaurant]);
+    }, [screen, restaurant]);
 
     // Report kiosk status to admin dashboard every 30 seconds
     useEffect(() => {
