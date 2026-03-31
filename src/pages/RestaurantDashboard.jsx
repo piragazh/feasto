@@ -180,7 +180,13 @@ function RestaurantDashboardInner() {
     const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(m => !m.is_read).length;
     const unresolvedOfflineReviewCount = offlineOrdersForBadge.length;
 
-    useEffect(() => { loadUserAndRestaurant(); requestNotificationPermission(); }, []);
+    useEffect(() => { 
+        const init = async () => {
+            await loadUserAndRestaurant();
+            requestNotificationPermission();
+        };
+        init();
+    }, []);
 
     useEffect(() => {
         if (!restaurant?.id) return;
@@ -202,15 +208,21 @@ function RestaurantDashboardInner() {
             if (userData.role === 'admin') {
                 const allRestaurants = await base44.entities.Restaurant.list();
                 if (restaurantIdParam) {
-                    const r = allRestaurants.find(r => r.id === restaurantIdParam);
+                    const r = allRestaurants.find(res => res.id === restaurantIdParam);
                     if (r) {
                         try {
                             await base44.functions.invoke('enforceRestaurantPermissions', { restaurantId: restaurantIdParam });
-                            setRestaurant(r); return;
-                        } catch { toast.error('Access denied to this restaurant'); return; }
+                            setRestaurant(r);
+                            return;
+                        } catch (e) {
+                            toast.error('Access denied to this restaurant');
+                            return;
+                        }
                     }
                 }
-                if (allRestaurants.length > 0) setRestaurant(allRestaurants[0]);
+                if (allRestaurants.length > 0) {
+                    setRestaurant(allRestaurants[0]);
+                }
                 return;
             }
 
@@ -222,11 +234,21 @@ function RestaurantDashboardInner() {
                     try {
                         await base44.functions.invoke('enforceRestaurantPermissions', { restaurantId });
                         const allRestaurants = await base44.entities.Restaurant.list();
-                        const r = allRestaurants.find(r => r.id === restaurantId);
-                        if (r) setRestaurant(r); else toast.error('Restaurant not found');
-                    } catch { toast.error('Access denied to this restaurant'); }
-                } else { toast.error('No restaurant assigned to your account'); }
-            } else { toast.error('No restaurant assigned. Please contact admin.'); }
+                        const r = allRestaurants.find(res => res.id === restaurantId);
+                        if (r) {
+                            setRestaurant(r);
+                        } else {
+                            toast.error('Restaurant not found');
+                        }
+                    } catch (e) {
+                        toast.error('Access denied to this restaurant');
+                    }
+                } else {
+                    toast.error('No restaurant assigned to your account');
+                }
+            } else {
+                toast.error('No restaurant assigned. Please contact admin.');
+            }
         } catch (e) {
             toast.error('Error loading restaurant dashboard');
             base44.auth.redirectToLogin();
