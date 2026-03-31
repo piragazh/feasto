@@ -11,9 +11,9 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
-import OfflineRiskControlCenter from './pages/OfflineRiskControlCenter';
-import RestaurantOfflineRiskOverview from './pages/RestaurantOfflineRiskOverview';
-import ReconciliationDashboard from './pages/ReconciliationDashboard';
+const OfflineRiskControlCenter = React.lazy(() => import('./pages/OfflineRiskControlCenter'));
+const RestaurantOfflineRiskOverview = React.lazy(() => import('./pages/RestaurantOfflineRiskOverview'));
+const ReconciliationDashboard = React.lazy(() => import('./pages/ReconciliationDashboard'));
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
 

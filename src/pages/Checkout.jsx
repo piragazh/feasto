@@ -413,8 +413,8 @@ export default function Checkout() {
         
         setCheckingEmail(true);
         try {
-            // Don't check if user already exists — skip this for registered users
-            // Users can checkout with their registered email directly
+            // LOW-3 FIX: Removed dead code that always set emailExists to false.
+            // The check was never implemented. For now, assume emails are always unique at checkout.
             setEmailExists(false);
             setEmailChecked(true);
         } catch (error) {

@@ -28,15 +28,20 @@ export default function OrderHistoryManagement() {
     
     const queryClient = useQueryClient();
 
+    const [page, setPage] = useState(0);
+    const PAGE_SIZE = 50;
+
     const { data: orders = [], isLoading: ordersLoading } = useQuery({
-        queryKey: ['allOrders'],
-        queryFn: () => base44.entities.Order.list('-created_date', 1000),
+        queryKey: ['allOrders', page],
+        queryFn: () => base44.entities.Order.list('-created_date', PAGE_SIZE, page * PAGE_SIZE),
     });
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
     });
+
+    const canLoadMore = orders.length === PAGE_SIZE;
 
     const statusConfig = {
         pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
@@ -413,6 +418,13 @@ export default function OrderHistoryManagement() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+                    {!ordersLoading && canLoadMore && (
+                        <div className="mt-4 text-center">
+                            <Button onClick={() => setPage(p => p + 1)} variant="outline">
+                                Load More Orders
+                            </Button>
                         </div>
                     )}
                 </CardContent>

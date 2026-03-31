@@ -15,7 +15,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 function normalizePhone(phone) {
     let digits = (phone || '').replace(/\D/g, '');
-    if (digits.startsWith('44') && digits.length === 12) {
+    // LOW-5 FIX: Handle both '447xxxxxxxxx' (11 digits from posCreateOrder)
+    // and '+447xxxxxxxxx' (12 digits with country code).
+    // posCreateOrder converts 07xxx → 447xxx (11 digits), so check for both 11 and 12.
+    if (digits.startsWith('44') && (digits.length === 11 || digits.length === 12)) {
         digits = '0' + digits.slice(2);
     }
     return digits;
