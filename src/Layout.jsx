@@ -140,9 +140,16 @@ export default function Layout({ children, currentPageName }) {
             if (!favicon) {
                 favicon = document.createElement('link');
                 favicon.rel = 'icon';
+                favicon.type = 'image/x-icon';
                 document.head.appendChild(favicon);
             }
             favicon.href = customDomainRestaurant.logo_url;
+        } else if (!customDomainRestaurantId) {
+            // Reset favicon for non-custom domains
+            let favicon = document.querySelector('link[rel="icon"]');
+            if (favicon) {
+                favicon.href = '/favicon.ico';
+            }
         }
 
         // Add PWA manifest link
@@ -200,15 +207,11 @@ export default function Layout({ children, currentPageName }) {
 
         // Set title and meta tags
         const isRestaurantPage = currentPageName === 'Restaurant';
-        if (!isRestaurantPage) {
-            if (customDomainRestaurant?.name) {
-                const titleText = customDomainRestaurant.description 
-                    ? `${customDomainRestaurant.name} - ${customDomainRestaurant.description}`
-                    : `${customDomainRestaurant.name} - Order Online`;
-                document.title = titleText;
-            } else {
-                document.title = 'MealDrop - Food Delivery from Your Favourite Restaurants';
-            }
+        if (!isRestaurantPage && customDomainRestaurant?.name) {
+            const titleText = customDomainRestaurant.seo_description || customDomainRestaurant.description
+                ? `${customDomainRestaurant.name} - ${customDomainRestaurant.seo_description || customDomainRestaurant.description}`
+                : `${customDomainRestaurant.name} - Order Online`;
+            document.title = titleText;
         }
 
         // Meta description
@@ -219,12 +222,12 @@ export default function Layout({ children, currentPageName }) {
             document.head.appendChild(metaDescription);
         }
         if (customDomainRestaurant?.seo_description) {
-              metaDescription.content = customDomainRestaurant.seo_description;
-          } else if (customDomainRestaurant?.description) {
-              metaDescription.content = customDomainRestaurant.description;
-          } else {
-              metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers. Download the MealDrop app for iOS and Android.';
-          }
+            metaDescription.content = customDomainRestaurant.seo_description;
+        } else if (customDomainRestaurant?.description) {
+            metaDescription.content = customDomainRestaurant.description;
+        } else {
+            metaDescription.content = 'Order food online from top restaurants in the UK. Fast delivery, great food, amazing offers.';
+        }
 
         // Keywords
         let metaKeywords = document.querySelector('meta[name="keywords"]');
@@ -233,7 +236,8 @@ export default function Layout({ children, currentPageName }) {
             metaKeywords.name = 'keywords';
             document.head.appendChild(metaKeywords);
         }
-        metaKeywords.content = 'food delivery, restaurant delivery, online food order, takeaway, food near me, delivery app';
+        const defaultKeywords = 'food delivery, restaurant delivery, online food order, takeaway';
+        metaKeywords.content = customDomainRestaurant?.seo_keywords?.join(', ') || defaultKeywords;
 
         // Open Graph tags
         const ogTags = [
