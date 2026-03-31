@@ -334,7 +334,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
               </Suspense>
             )}
           />
-          <Route path="/KioskDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><RequireAuth><KioskDashboard /></RequireAuth></Suspense>} />
+          <Route path="/KioskDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><KioskDashboard /></Suspense>} />
           <Route path="/POSDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><POSDashboard /></Suspense>} />
           <Route path="/TabletDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><TabletDashboard /></Suspense>} />
           <Route path="/home" element={<Navigate to="/Home" replace />} />
