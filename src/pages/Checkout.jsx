@@ -98,6 +98,7 @@ export default function Checkout() {
     const paymentSuccessHandledRef = useRef(false);
     
     // FIX #1: Top-level cross-path guard — prevents Express + card paths both firing handleStripeSuccess
+    // AUDIT FIX: Explicitly initialize to false so first check `=== true` is not `undefined === true`
     const anyPaymentPathInFlightRef = useRef(false);
     
     // Form Data - Customer Information
@@ -340,7 +341,9 @@ export default function Checkout() {
     // If a pending payment was persisted (PI succeeded but browser closed before
     // order creation confirmed), attempt to recover it automatically.
     // FIX #7: Pass user context to pendingPayment.read() for user binding validation
+    // AUDIT FIX: Guard on user state — recovery needs user to be resolved first (null = still loading)
     useEffect(() => {
+        if (user === null && !isGuest) return; // Wait: user not yet resolved (loading)
         const detectRecovery = async () => {
             const pending = await pendingPayment.read(user);
             if (!pending) return;
@@ -411,7 +414,7 @@ export default function Checkout() {
             };
 
             detectRecovery();
-            }, [user]);
+            }, [user, isGuest]);
 
     // Check if user is authenticated or guest
     const checkAuthStatus = async () => {
