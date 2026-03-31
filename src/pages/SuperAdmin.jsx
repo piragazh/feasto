@@ -36,7 +36,8 @@ const ShiftWindowAnalytics = React.lazy(() => import('@/components/superadmin/Sh
 const OfflineRiskDigest = React.lazy(() => import('@/components/superadmin/OfflineRiskDigest'));
 const WeeklyOpsHealthDashboard = React.lazy(() => import('@/components/superadmin/WeeklyOpsHealthDashboard'));
 const FailureMonitoringDashboard = React.lazy(() => import('@/components/superadmin/FailureMonitoringDashboard'));
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart } from 'lucide-react';
+const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmin/KioskMonitoringDashboard'));
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
 
@@ -135,6 +136,7 @@ function SuperAdminInner() {
                 { id: 'drivers', label: 'Driver Management', icon: Truck },
                 { id: 'monitoring', label: 'Monitoring', icon: Activity },
                 { id: 'failures', label: 'Failures', icon: AlertCircle },
+                { id: 'kiosk-monitoring', label: 'Kiosk Monitoring', icon: Zap },
                 { id: 'screens', label: 'Screen Health', icon: Monitor },
                 { id: 'offline-reviews', label: 'Offline Reviews', icon: Activity },
                 { id: 'operator-analytics', label: 'Operator Analytics', icon: Users },
@@ -223,6 +225,7 @@ function SuperAdminInner() {
                     {activeTab === 'commission' && <CommissionManagement />}
                     {activeTab === 'monitoring' && <SystemMonitoring />}
                     {activeTab === 'failures' && <FailureMonitoringDashboard />}
+                    {activeTab === 'kiosk-monitoring' && <KioskMonitoringDashboard />}
                     {activeTab === 'cuisine' && <CuisineTypeManagement />}
                     {activeTab === 'domains' && <DomainManagement />}
                     {activeTab === 'analytics' && <EnhancedAnalytics />}
