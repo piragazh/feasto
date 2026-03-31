@@ -234,7 +234,9 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
             )}
           />
           {Object.entries(Pages).map(([path, Page]) => {
-            if (path.toLowerCase() === 'home' || path.toLowerCase() === 'restaurant') {
+            if (path.toLowerCase() === 'home' || path.toLowerCase() === 'restaurant' || 
+                path.toLowerCase() === 'offlineriskccontrolcenter' || path.toLowerCase() === 'restaurantofflineriskoverview' || 
+                path.toLowerCase() === 'reconciliationdashboard') {
               return null;
             }
 
