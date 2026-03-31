@@ -120,6 +120,35 @@ export default function KioskDashboard() {
         };
     }, [screen, mode, restaurant]);
 
+    // Report kiosk status to admin dashboard every 30 seconds
+    useEffect(() => {
+        if (!restaurantId || !restaurant) return;
+
+        const reportStatus = async () => {
+            try {
+                const kioskId = localStorage.getItem('kioskDeviceId') || `kiosk_${restaurantId}_${Math.random().toString(36).substr(2, 9)}`;
+                if (!localStorage.getItem('kioskDeviceId')) {
+                    localStorage.setItem('kioskDeviceId', kioskId);
+                }
+
+                const isActive = screen !== 'welcome' || mode === 'ordering';
+                await base44.functions.invoke('trackKioskStatus', {
+                    restaurantId,
+                    kioskId,
+                    status: isActive ? 'active' : 'idle',
+                    orderCount: cart.length,
+                    lastActivity: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('Failed to report kiosk status:', error);
+            }
+        };
+
+        reportStatus();
+        const statusInterval = setInterval(reportStatus, 30000); // Report every 30 seconds
+        return () => clearInterval(statusInterval);
+    }, [restaurantId, restaurant, screen, mode, cart.length]);
+
     const loadRestaurant = async (id) => {
         try {
             const [r] = await base44.entities.Restaurant.filter({ id });
