@@ -54,10 +54,13 @@ export default function KioskIdleMediaOverlay({
 
                     {/* Invisible exit overlay (any touch/click anywhere exits) */}
                     <div
-                        className="absolute inset-0 cursor-pointer z-50"
+                        className="absolute inset-0 cursor-pointer z-[999]"
                         style={{ pointerEvents: 'auto' }}
                         onClick={handleExit}
-                        onTouchStart={handleExit}
+                        onTouchStart={(e) => {
+                            e.preventDefault();
+                            handleExit();
+                        }}
                         role="button"
                         tabIndex={0}
                         aria-label="Tap to return to ordering"
