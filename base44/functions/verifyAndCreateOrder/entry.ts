@@ -340,26 +340,66 @@ Deno.serve(async (req) => {
         }));
 
         // ── Create order using server-validated values ─────────────────────────
-        // customer_email: authenticated user email, or guest email if provided
-        // customer_phone: the phone number submitted with the order (always present)
-        const customerEmail = user?.email || orderData.guest_email || null;
-        const customerPhone = orderData.phone || null;
+        // Allowlist ONLY safe client-provided fields; override all financial/status fields server-side
+        const {
+            restaurant_id,
+            restaurant_name,
+            order_type,
+            delivery_address,
+            delivery_coordinates,
+            phone,
+            notes,
+            is_scheduled,
+            scheduled_for,
+            is_group_order,
+            group_order_id,
+            order_number,
+            guest_name,
+            guest_email,
+            coupon_codes,
+        } = orderData;
+
+        // Compute loyalty points server-side (never trust client)
+        const restaurant = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurant_id });
+        const restaurantData = restaurant?.[0];
+        const earnLoyalty = restaurantData?.loyalty_program_enabled !== false;
+        const pointsMultiplier = restaurantData?.loyalty_points_multiplier || 1;
+        const loyaltyPointsPerPound = 1; // Standard: 1 point per £1
+        const loyaltyPointsEarned = earnLoyalty ? Math.floor(serverTotal * loyaltyPointsPerPound * pointsMultiplier) : 0;
+
+        const customerEmail = user?.email || guest_email || null;
+        const customerPhone = phone || null;
 
         const newOrder = await base44.asServiceRole.entities.Order.create({
-            ...orderData,
+            restaurant_id,
+            restaurant_name,
+            order_type,
+            delivery_address,
+            delivery_coordinates,
+            phone: customerPhone,
+            notes,
+            is_scheduled: is_scheduled === true,
+            scheduled_for,
+            is_group_order: is_group_order === true,
+            group_order_id,
+            order_number,
+            guest_name,
+            guest_email,
+            coupon_codes: Array.isArray(coupon_codes) ? coupon_codes : [],
             items: itemsForDB,
             subtotal: serverSubtotal,
             delivery_fee: deliveryFee,
             small_order_surcharge: smallOrderSurcharge,
             discount,
             total: serverTotal,
+            loyalty_points_earned: loyaltyPointsEarned,
+            loyalty_points_awarded: false,
             ...(idempotency_key ? { idempotency_key } : {}),
             ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
-            status: orderData.status || 'pending',
-            order_source: orderData.order_source || 'online',
-            guest_email: orderData.guest_email || null,
-            guest_name: orderData.guest_name || null,
-            phone: customerPhone,
+            status: 'pending',
+            order_source: 'online',
+            payment_status: paymentIntentId ? 'payment_confirmed' : 'pending_payment',
+            payment_method: orderData.payment_method || 'cash',
             customer_email: customerEmail,
             customer_phone: customerPhone,
         });
