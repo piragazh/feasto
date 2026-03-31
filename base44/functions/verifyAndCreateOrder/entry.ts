@@ -43,9 +43,14 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
     const breakdown = [`base=£${basePrice.toFixed(2)}`];
 
     const customizations = orderItem.customizations;
+    // itemQuantities tracks multi-select quantities: key = "GroupName_OptionLabel" => qty
+    const itemQuantities = orderItem.itemQuantities || {};
+
     if (!customizations || typeof customizations !== 'object') return { serverPrice, breakdown };
 
     const dbOptions = dbItem.customization_options || [];
+
+    // Normalise to array format: [{name, value/selected_options}]
     const customizationList = Array.isArray(customizations)
         ? customizations
         : Object.entries(customizations).map(([name, value]) => ({ name, value }));
@@ -54,10 +59,14 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
         const customName = clientCustom.name || clientCustom.key;
         if (!customName) continue;
 
+        // Skip internal meal_customizations keys stored as "GroupName_meal_customizations"
+        if (customName.endsWith('_meal_customizations')) continue;
+
         const dbGroup = dbOptions.find(g => g.name === customName);
         if (!dbGroup) continue;
 
         if (dbGroup.type === 'meal_upgrade') {
+            // Value is the selected upgrade label (e.g. "Meal" or "Just the item")
             const selectedUpgrade = clientCustom.selected_option || clientCustom.value;
             if (!selectedUpgrade) continue;
             const upgradeLabel = typeof selectedUpgrade === 'string' ? selectedUpgrade : selectedUpgrade.label;
@@ -66,38 +75,47 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
                 serverPrice += dbUpgradeOption.price;
                 breakdown.push(`upgrade:${upgradeLabel}=£${dbUpgradeOption.price.toFixed(2)}`);
             }
+
+            // Handle nested meal customizations — look them up from the flat customizations object
+            const mealCustomsObj = (Array.isArray(customizations)
+                ? null
+                : customizations[`${customName}_meal_customizations`]) || {};
+
             if (dbUpgradeOption && Array.isArray(dbUpgradeOption.meal_customizations)) {
-                const mealCustoms = clientCustom.meal_customizations || clientCustom.nested || [];
-                for (const mealCustom of mealCustoms) {
-                    const mealGroup = dbUpgradeOption.meal_customizations.find(mg => mg.name === (mealCustom.name || mealCustom.key));
-                    if (!mealGroup) continue;
-                    const selectedOptions = mealCustom.selected_options || (mealCustom.selected_option ? [mealCustom.selected_option] : []);
-                    for (const sel of selectedOptions) {
-                        const selLabel = typeof sel === 'string' ? sel : sel.label;
+                for (const mealGroup of dbUpgradeOption.meal_customizations) {
+                    const mealSelections = mealCustomsObj[mealGroup.name];
+                    if (!mealSelections) continue;
+                    const selections = Array.isArray(mealSelections) ? mealSelections : [mealSelections];
+                    for (const selLabel of selections) {
                         const dbOpt = (mealGroup.options || []).find(o => o.label === selLabel);
-                        if (dbOpt) {
-                            const optPrice = isPOS && dbOpt.pos_price != null ? dbOpt.pos_price : (dbOpt.price || 0);
-                            serverPrice += optPrice;
-                            breakdown.push(`${mealCustom.name}:${selLabel}=£${optPrice.toFixed(2)}`);
-                        }
+                        if (!dbOpt) continue;
+                        const optPrice = isPOS && dbOpt.pos_price != null ? dbOpt.pos_price : (dbOpt.price || 0);
+                        // Check for multi-qty via itemQuantities
+                        const qtyKey = `${customName}_meal_${mealGroup.name}_${selLabel}`;
+                        const qty = itemQuantities[qtyKey] || 1;
+                        serverPrice += optPrice * qty;
+                        breakdown.push(`${mealGroup.name}:${selLabel}×${qty}=£${(optPrice * qty).toFixed(2)}`);
                     }
                 }
             }
             continue;
         }
 
-        const selectedOptions = clientCustom.selected_options
-            || (clientCustom.selected_option ? [clientCustom.selected_option] : [])
-            || (Array.isArray(clientCustom.value) ? clientCustom.value : (clientCustom.value ? [clientCustom.value] : []));
+        // single / multiple types
+        const rawValue = clientCustom.selected_options ?? clientCustom.selected_option ?? clientCustom.value;
+        const selectedOptions = Array.isArray(rawValue) ? rawValue : (rawValue != null && rawValue !== '' ? [rawValue] : []);
 
         for (const sel of selectedOptions) {
-            const selLabel = typeof sel === 'string' ? sel : sel.label;
+            const selLabel = typeof sel === 'string' ? sel : sel?.label;
             if (!selLabel) continue;
             const dbOpt = (dbGroup.options || []).find(o => o.label === selLabel);
             if (!dbOpt) continue;
             const optPrice = isPOS && dbOpt.pos_price != null ? dbOpt.pos_price : (typeof dbOpt.price === 'number' ? dbOpt.price : 0);
-            serverPrice += optPrice;
-            breakdown.push(`${customName}:${selLabel}=£${optPrice.toFixed(2)}`);
+            // For multiple-type, respect itemQuantities (qty stepper on the UI)
+            const qtyKey = `${customName}_${selLabel}`;
+            const qty = (dbGroup.type === 'multiple' && itemQuantities[qtyKey]) ? itemQuantities[qtyKey] : 1;
+            serverPrice += optPrice * qty;
+            breakdown.push(`${customName}:${selLabel}×${qty}=£${(optPrice * qty).toFixed(2)}`);
         }
     }
     return { serverPrice, breakdown };
@@ -201,6 +219,7 @@ Deno.serve(async (req) => {
             price: Number(item.price || 0),
             quantity: Number(item.quantity || 1),
             customizations: item.customizations || {},
+            // Pass itemQuantities so server-side price calc respects multi-qty extras
             itemQuantities: item.itemQuantities || {}
         }));
 
