@@ -260,25 +260,16 @@ async function handlePaymentIntentSucceeded(base44, paymentIntent) {
         return { success: false, error: 'Failed to check for existing order', recoverable: true };
     }
 
-    // FIX #2: Check if frontend recovery is already in-flight for this PI
-    // Give it priority to avoid both webhook + recovery racing to createIdempotentOrder
+    // FIX #2: Check if frontend recovery already completed for this PI
+    // Skip webhook processing if order exists (recovery won)
     try {
-        const recoveryLock = await base44.asServiceRole.entities.WebhookEventLog.filter({
-            stripe_event_id: `recovery_lock_${piId}`,
-            status: 'in_progress'
-        });
-        if (recoveryLock?.length > 0) {
-            console.log(`[WEBHOOK] Frontend recovery in-flight for ${piId} — deferring to it`);
-            await new Promise(r => setTimeout(r, 3000));
-            // After waiting, re-check if order was created by recovery
-            const createdByRecovery = await base44.asServiceRole.entities.Order.filter({ payment_intent_id: piId });
-            if (createdByRecovery?.length > 0) {
-                console.log(`[WEBHOOK] Recovery succeeded for ${piId} — webhook yielding`);
-                return { success: true, status: 'recovered_by_frontend', order_id: createdByRecovery[0].id };
-            }
+        const existingOrder = await base44.asServiceRole.entities.Order.filter({ payment_intent_id: piId });
+        if (existingOrder?.length > 0) {
+            console.log(`[WEBHOOK] Order already exists for ${piId} — recovery completed or order created. Webhook yielding.`);
+            return { success: true, status: 'recovered_by_frontend', order_id: existingOrder[0].id };
         }
-    } catch (lockCheckErr) {
-        console.warn(`[WEBHOOK] Recovery lock check failed (non-fatal):`, lockCheckErr.message);
+    } catch (checkErr) {
+        console.warn(`[WEBHOOK] Order existence check failed (non-fatal):`, checkErr.message);
     }
     
     // Order does not exist — attempt to create it from webhook payload
