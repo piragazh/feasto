@@ -35,9 +35,13 @@ const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
 // ─────────────────────────────────────────────────────────────────────
 // EVENT DEDUPLICATION — Stripe retries webhook deliveries
-// FIX #4: Atomic lock-and-check via a single create attempt.
-// If two concurrent instances both try to create the same stripe_event_id,
-// the second write will fail (or return duplicate), preventing double processing.
+//
+// NOTE: This is BEST-EFFORT only. The filter+create sequence is NOT atomic
+// and two simultaneous deliveries of the same event can both pass this check.
+// The TRUE dedup guard is Order.filter({ payment_intent_id }) inside
+// handlePaymentIntentSucceeded, backed by the idempotency check in
+// createIdempotentOrder. This function only fast-paths obvious duplicates
+// (retries of already-terminal events).
 // ─────────────────────────────────────────────────────────────────────
 async function acquireEventLock(base44, stripeEventId, eventType) {
     try {
@@ -53,10 +57,14 @@ async function acquireEventLock(base44, stripeEventId, eventType) {
             return { alreadyProcessed: true, lockId: terminal.id };
         }
 
+        // If a concurrent call is already processing, add a short random jitter then
+        // let the handler's own payment_intent_id dedup be the real guard.
         const activeLock = (existing || []).find((entry) => entry.status === 'processing');
         if (activeLock) {
-            console.log(`[WEBHOOK] Event ${stripeEventId} already has active processing lock`);
-            return { alreadyProcessed: true, lockId: activeLock.id };
+            const jitter = 200 + Math.floor(Math.random() * 300); // 200–500ms
+            console.log(`[WEBHOOK] Event ${stripeEventId} already has active processing lock — jittering ${jitter}ms then relying on PI-level dedup`);
+            await new Promise(r => setTimeout(r, jitter));
+            return { alreadyProcessed: false, lockId: activeLock.id };
         }
 
         const created = await base44.asServiceRole.entities.WebhookEventLog.create({
@@ -69,8 +77,9 @@ async function acquireEventLock(base44, stripeEventId, eventType) {
 
         return { alreadyProcessed: false, lockId: created?.id || null };
     } catch (lockErr) {
-        console.warn(`[WEBHOOK] Lock write failed — falling back to safe skip:`, lockErr.message);
-        return { alreadyProcessed: true, lockId: null };
+        // Lock write failed — proceed anyway; PI-level dedup in createIdempotentOrder is the real guard.
+        console.warn(`[WEBHOOK] Lock write failed — proceeding to handler (PI dedup will guard):`, lockErr.message);
+        return { alreadyProcessed: false, lockId: null };
     }
 }
 
