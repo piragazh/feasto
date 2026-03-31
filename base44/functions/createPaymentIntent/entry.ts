@@ -162,7 +162,6 @@ Deno.serve(async (req) => {
         }
 
         // ── 5. Math integrity check ───────────────────────────────────────────
-        // Keep observability, but do not block payment creation here.
         if (
             typeof subtotal === 'number' &&
             typeof delivery_fee === 'number' &&
@@ -172,10 +171,14 @@ Deno.serve(async (req) => {
             const expectedTotal = subtotal + delivery_fee + surcharge - discount;
             const delta = Math.abs(expectedTotal - amount);
             if (delta > MATH_TOLERANCE_GBP) {
-                console.warn(
-                    `${LOG_PREFIX} [TEMP_MATH_MISMATCH_BYPASSED] request_id=${requestId}` +
+                console.error(
+                    `${LOG_PREFIX} [MATH_INTEGRITY_FAIL] request_id=${requestId}` +
                     ` subtotal=${subtotal} delivery_fee=${delivery_fee} surcharge=${surcharge} discount=${discount}` +
                     ` expected=${expectedTotal.toFixed(2)} received=${amount.toFixed(2)} delta=${delta.toFixed(4)}`
+                );
+                return errorResponse(
+                    'MATH_INTEGRITY_FAIL',
+                    `Order total £${amount.toFixed(2)} does not match components (expected £${expectedTotal.toFixed(2)}). Please refresh and try again.`
                 );
             }
         } else {
