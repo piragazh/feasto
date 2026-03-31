@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 
@@ -7,6 +8,13 @@ import { base44 } from '@/api/base44Client';
  */
 export default function RequireAdmin({ children }) {
     const { user, isLoadingAuth, isLoadingPublicSettings } = useAuth();
+
+    // ── Trigger redirect as side effect (not during render) ────────────────────
+    useEffect(() => {
+        if (!isLoadingAuth && !isLoadingPublicSettings && (!user || user.role !== 'admin')) {
+            base44.auth.redirectToLogin(window.location.pathname);
+        }
+    }, [user, isLoadingAuth, isLoadingPublicSettings]);
 
     if (isLoadingPublicSettings || isLoadingAuth) {
         return (
@@ -20,7 +28,6 @@ export default function RequireAdmin({ children }) {
     }
 
     if (!user || user.role !== 'admin') {
-        base44.auth.redirectToLogin(window.location.pathname);
         return null;
     }
 
