@@ -517,12 +517,18 @@ export default function Checkout() {
             const smallOrderSurcharge = restaurant?.small_order_surcharge ?? 0;
 
     // Discount from applied coupons and promotions
-    const couponDiscount = appliedCoupons.reduce((sum, c) => sum + (c.discount || 0), 0);
-    const promotionDiscount = appliedPromotions.reduce((sum, p) => sum + (p.discount || 0), 0);
-    const discount = couponDiscount + promotionDiscount;
+    // MED-4 FIX: Use integer (pence) arithmetic to avoid floating point drift
+    // e.g. 10.01 + 1.99 - 2.00 in floats = 10.000000000000002
+    const couponDiscountPence = appliedCoupons.reduce((sum, c) => sum + Math.round((c.discount || 0) * 100), 0);
+    const promotionDiscountPence = appliedPromotions.reduce((sum, p) => sum + Math.round((p.discount || 0) * 100), 0);
+    const discount = (couponDiscountPence + promotionDiscountPence) / 100;
 
-    // Final total = subtotal + delivery + surcharge - discount (floor at 0)
-    const total = Math.max(0, subtotal + deliveryFee + smallOrderSurcharge - discount);
+    // Final total: all arithmetic in pence, then convert back to pounds
+    const subtotalPence = Math.round(subtotal * 100);
+    const deliveryFeePence = Math.round(deliveryFee * 100);
+    const surcharge = Math.round(smallOrderSurcharge * 100);
+    const discountPence = couponDiscountPence + promotionDiscountPence;
+    const total = Math.max(0, (subtotalPence + deliveryFeePence + surcharge - discountPence)) / 100;
 
     const {
         clientSecret,

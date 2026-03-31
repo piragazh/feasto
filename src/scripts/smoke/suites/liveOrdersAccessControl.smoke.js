@@ -1,4 +1,3 @@
-/**
 /* eslint-disable no-undef */
 /**
  * Live Orders Access Control Tests
