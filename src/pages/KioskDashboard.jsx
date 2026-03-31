@@ -277,7 +277,7 @@ export default function KioskDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-950 overflow-hidden select-none">
+        <div className="fixed inset-0 bg-gray-950 overflow-hidden select-none">
             <AnimatePresence mode="wait">
                 {screen === 'welcome' && (
                     <motion.div
