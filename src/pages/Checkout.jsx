@@ -583,7 +583,11 @@ export default function Checkout() {
         const openTime = openHour * 60 + openMin;
         const closeTime = closeHour * 60 + closeMin;
 
-        return currentTime < openTime || currentTime >= closeTime;
+        // MED-1 FIX: Handle overnight restaurants (e.g., 22:00–02:00)
+        const isOpen = closeTime > openTime
+            ? currentTime >= openTime && currentTime < closeTime  // same-day: 09:00–17:00
+            : currentTime >= openTime || currentTime < closeTime;  // overnight: 22:00–02:00
+        return !isOpen;
     };
 
     // Get earliest available time for auto-scheduling
@@ -632,11 +636,19 @@ export default function Checkout() {
         const openTime = openHour * 60 + openMin;
         const closeTime = closeHour * 60 + closeMin;
 
+        // MED-1 FIX: Determine if restaurant is currently open (handles overnight)
+        const isOpen = closeTime > openTime
+            ? currentTime >= openTime && currentTime < closeTime  // same-day: 09:00–17:00
+            : currentTime >= openTime || currentTime < closeTime;  // overnight: 22:00–02:00
+
         const scheduleTime = new Date(now);
-        if (currentTime < openTime) {
-            // Before opening today - schedule for today's opening
+        if (isOpen) {
+            // Currently open - no scheduling needed (shouldn't reach here)
+            return '';
+        } else if (currentTime < openTime && closeTime > openTime) {
+            // Before opening today (same-day restaurant) - schedule for today's opening
             scheduleTime.setHours(openHour, openMin, 0, 0);
-        } else if (currentTime >= closeTime) {
+        } else {
             // After closing today - find next open day
             for (let i = 1; i <= 7; i++) {
                 const nextDay = new Date(now);
@@ -656,9 +668,6 @@ export default function Checkout() {
                     return nextDay.toISOString().slice(0, 16);
                 }
             }
-            return '';
-        } else {
-            // Currently open - no scheduling needed (shouldn't reach here)
             return '';
         }
         return scheduleTime.toISOString().slice(0, 16);
