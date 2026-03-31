@@ -133,8 +133,16 @@ Deno.serve(async (req) => {
                 console.log(`[REFUND] Stripe refund issued: ${stripeRefundId} amount=£${approvedAmount.toFixed(2)} order=${order_id}`);
             } catch (stripeErr) {
                 if (stripeErr.code === 'charge_already_refunded') {
-                    // Idempotent: already refunded (e.g. via webhook or previous call) — safe to continue
-                    console.warn(`[REFUND] charge_already_refunded for order ${order_id} — treating as success`);
+                    // Idempotent: already refunded — fetch the existing refund for audit trail
+                    console.warn(`[REFUND] charge_already_refunded for order ${order_id} — retrieving existing refund`);
+                    try {
+                        const charges = await stripe.charges.list({ payment_intent: order.payment_intent_id, limit: 1 });
+                        stripeRefundId = charges.data?.[0]?.refunds?.data?.[0]?.id || 'already_refunded';
+                        console.log(`[REFUND] Retrieved existing refund ID: ${stripeRefundId}`);
+                    } catch (chargesErr) {
+                        console.warn(`[REFUND] Failed to retrieve existing refund: ${chargesErr.message} — setting to placeholder`);
+                        stripeRefundId = 'already_refunded';
+                    }
                 } else {
                     console.error(`[REFUND] Stripe refund FAILED for order ${order_id}:`, stripeErr.message);
                     try {
