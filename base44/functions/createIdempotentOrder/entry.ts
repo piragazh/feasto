@@ -67,18 +67,21 @@ function calcItemServerPrice(dbItem, orderItem) {
                 breakdown.push(`upgrade:${upgradeLabel}=£${dbUpgradeOption.price.toFixed(2)}`);
             }
             if (dbUpgradeOption && Array.isArray(dbUpgradeOption.meal_customizations)) {
-                const mealCustoms = clientCustom.meal_customizations || clientCustom.nested || [];
-                for (const mealCustom of mealCustoms) {
-                    const mealGroup = dbUpgradeOption.meal_customizations.find(mg => mg.name === (mealCustom.name || mealCustom.key));
-                    if (!mealGroup) continue;
-                    const selectedOptions = mealCustom.selected_options || (mealCustom.selected_option ? [mealCustom.selected_option] : []);
-                    for (const sel of selectedOptions) {
-                        const selLabel = typeof sel === 'string' ? sel : sel.label;
+                // Align with verifyAndCreateOrder: look for flat-key meal customizations
+                const mealCustomsObj = (Array.isArray(customizations)
+                    ? null
+                    : customizations[`${customName}_meal_customizations`]) || {};
+
+                for (const mealGroup of dbUpgradeOption.meal_customizations) {
+                    const mealSelections = mealCustomsObj[mealGroup.name];
+                    if (!mealSelections) continue;
+                    const selections = Array.isArray(mealSelections) ? mealSelections : [mealSelections];
+                    for (const selLabel of selections) {
                         const dbOpt = (mealGroup.options || []).find(o => o.label === selLabel);
-                        if (dbOpt) {
-                            serverPrice += (dbOpt.price || 0);
-                            breakdown.push(`${mealCustom.name}:${selLabel}=£${(dbOpt.price || 0).toFixed(2)}`);
-                        }
+                        if (!dbOpt) continue;
+                        const optPrice = dbOpt.price || 0;
+                        serverPrice += optPrice;
+                        breakdown.push(`${mealGroup.name}:${selLabel}=£${optPrice.toFixed(2)}`);
                     }
                 }
             }
