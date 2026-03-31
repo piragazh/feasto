@@ -1,4 +1,4 @@
-import React, { forwardRef, useState, useEffect } from "react"
+import React, { forwardRef, useState, useEffect, useContext, createContext } from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
@@ -10,9 +10,59 @@ const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 };
 
-const DropdownMenu = DropdownMenuPrimitive.Root
+// Provides open state to DropdownMenuContent so it can render a Drawer on mobile
+const DropdownMobileCtx = createContext(null);
 
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
+const DropdownMenu = ({ children, open: controlledOpen, onOpenChange, modal, ...props }) => {
+  const [mounted, setMounted] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const mobile = mounted && isMobile();
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const handleOpenChange = (o) => {
+    if (controlledOpen === undefined) setInternalOpen(o);
+    onOpenChange?.(o);
+  };
+
+  if (!mobile) {
+    return (
+      <DropdownMenuPrimitive.Root open={controlledOpen} onOpenChange={onOpenChange} modal={modal} {...props}>
+        {children}
+      </DropdownMenuPrimitive.Root>
+    );
+  }
+
+  return (
+    <DropdownMobileCtx.Provider value={{ open: isOpen, onOpenChange: handleOpenChange }}>
+      {/* On mobile keep Radix open=false so it never renders its own popover */}
+      <DropdownMenuPrimitive.Root open={false} onOpenChange={() => {}} modal={false} {...props}>
+        {children}
+      </DropdownMenuPrimitive.Root>
+    </DropdownMobileCtx.Provider>
+  );
+};
+
+const DropdownMenuTrigger = forwardRef(({ children, asChild, onClick, ...props }, ref) => {
+  const ctx = useContext(DropdownMobileCtx);
+  if (ctx) {
+    // On mobile: intercept click to open the Drawer
+    const handleClick = (e) => {
+      onClick?.(e);
+      ctx.onOpenChange(true);
+    };
+    return (
+      <DropdownMenuPrimitive.Trigger ref={ref} asChild={asChild} onClick={handleClick} {...props}>
+        {children}
+      </DropdownMenuPrimitive.Trigger>
+    );
+  }
+  return (
+    <DropdownMenuPrimitive.Trigger ref={ref} asChild={asChild} onClick={onClick} {...props}>
+      {children}
+    </DropdownMenuPrimitive.Trigger>
+  );
+});
 
 const DropdownMenuGroup = DropdownMenuPrimitive.Group
 
@@ -50,16 +100,34 @@ const DropdownMenuSubContent = forwardRef(({ className, ...props }, ref) => (
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName
 
-const DropdownMenuContent = forwardRef(({ className, sideOffset = 4, children, ...props }, ref) => {
+const DropdownMenuContent = forwardRef(({ className, sideOffset = 4, children, title, ...props }, ref) => {
   const [mounted, setMounted] = useState(false);
-  
+  // DropdownMenu's open state is controlled by the Root — we read it from context via a parent wrapper
+  const ctx = useContext(DropdownMobileCtx);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const mobile = mounted && isMobile();
 
-  // Desktop: use standard popover
+  if (mobile && ctx) {
+    return (
+      <Drawer open={ctx.open} onOpenChange={ctx.onOpenChange}>
+        <DrawerContent>
+          {title && (
+            <DrawerHeader>
+              <DrawerTitle>{title}</DrawerTitle>
+            </DrawerHeader>
+          )}
+          <div className="px-2 pb-6 overflow-y-auto max-h-[70vh]">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -68,7 +136,6 @@ const DropdownMenuContent = forwardRef(({ className, sideOffset = 4, children, .
         className={cn(
           "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-          mobile ? "w-[calc(100vw-2rem)] max-w-md" : "",
           className
         )}
         {...props}>
@@ -79,16 +146,24 @@ const DropdownMenuContent = forwardRef(({ className, sideOffset = 4, children, .
 })
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
 
-const DropdownMenuItem = forwardRef(({ className, inset, ...props }, ref) => (
-  <DropdownMenuPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-2.5 md:py-1.5 text-base md:text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 min-h-[44px] md:min-h-0",
-      inset && "pl-8",
-      className
-    )}
-    {...props} />
-))
+const DropdownMenuItem = forwardRef(({ className, inset, onClick, ...props }, ref) => {
+  const ctx = useContext(DropdownMobileCtx);
+  const handleClick = (e) => {
+    onClick?.(e);
+    ctx?.onOpenChange(false);
+  };
+  return (
+    <DropdownMenuPrimitive.Item
+      ref={ref}
+      className={cn(
+        "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-2.5 md:py-1.5 text-base md:text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 min-h-[44px] md:min-h-0",
+        inset && "pl-8",
+        className
+      )}
+      onClick={handleClick}
+      {...props} />
+  );
+})
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 
 const DropdownMenuCheckboxItem = forwardRef(({ className, children, checked, ...props }, ref) => (

@@ -15,10 +15,22 @@ export function PullToRefresh({ onRefresh, children }) {
     const maxPull = 100;
 
     const handleTouchStart = useCallback((e) => {
-        if (window.scrollY === 0) {
-            startY.current = e.touches[0].clientY;
-            isPulling.current = true;
+        if (window.scrollY !== 0) return;
+
+        // Don't start pull-to-refresh if the touch began inside a horizontally-scrollable element
+        const target = e.target;
+        let el = target;
+        while (el && el !== containerRef.current) {
+            const style = window.getComputedStyle(el);
+            const overflowX = style.overflowX;
+            if ((overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth) {
+                return; // touch started inside a horizontal carousel — ignore
+            }
+            el = el.parentElement;
         }
+
+        startY.current = e.touches[0].clientY;
+        isPulling.current = true;
     }, []);
 
     const handleTouchMove = useCallback((e) => {
