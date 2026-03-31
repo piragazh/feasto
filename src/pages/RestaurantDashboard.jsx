@@ -50,6 +50,7 @@ import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
 import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
 import SidebarNav from '@/components/restaurant/RestaurantDashboardSidebar';
+import RequireAuth from '@/components/auth/RequireAuth';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -124,7 +125,7 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
 ];
 
 // ── Main component ──────────────────────────────────────────────────────────
-export default function RestaurantDashboard() {
+function RestaurantDashboardInner() {
     const [user, setUser] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
     const [activeTab, setActiveTab] = useState('orders');
@@ -522,5 +523,13 @@ export default function RestaurantDashboard() {
                 </main>
             </div>
         </div>
+    );
+}
+
+export default function RestaurantDashboard() {
+    return (
+        <RequireAuth>
+            <RestaurantDashboardInner />
+        </RequireAuth>
     );
 }
