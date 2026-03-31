@@ -365,13 +365,10 @@ export default function OrderHistoryManagement() {
                                             <td className="py-3 text-sm min-w-48">
                                                 <div className="space-y-1">
                                                     <div className="font-medium">
-                                                        {order.guest_name ? order.guest_name : (order.created_by && !order.created_by.includes('service') ? order.created_by.split('@')[0] : 'Guest')}
+                                                        {order.guest_name || 'Guest'}
                                                     </div>
                                                     {order.guest_email && (
                                                         <div className="text-xs text-gray-600 truncate" title={order.guest_email}>{order.guest_email}</div>
-                                                    )}
-                                                    {order.created_by && !order.guest_email && (
-                                                        <div className="text-xs text-gray-600 truncate" title={order.created_by}>{order.created_by}</div>
                                                     )}
                                                     {order.phone && (
                                                         <div className="text-xs text-gray-600">{order.phone}</div>
