@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,12 +29,27 @@ export default function OrderHistoryManagement() {
     const queryClient = useQueryClient();
 
     const [page, setPage] = useState(0);
+    const [allOrdersLoaded, setAllOrdersLoaded] = useState([]);
     const PAGE_SIZE = 50;
 
     const { data: orders = [], isLoading: ordersLoading } = useQuery({
         queryKey: ['allOrders', page],
         queryFn: () => base44.entities.Order.list('-created_date', PAGE_SIZE, page * PAGE_SIZE),
     });
+
+    React.useEffect(() => {
+        if (orders.length > 0) {
+            setAllOrdersLoaded(prev => {
+                const combined = [...prev];
+                orders.forEach(order => {
+                    if (!combined.find(o => o.id === order.id)) {
+                        combined.push(order);
+                    }
+                });
+                return combined;
+            });
+        }
+    }, [orders]);
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['restaurants'],
@@ -55,7 +70,7 @@ export default function OrderHistoryManagement() {
         refunded: { label: 'Refunded', color: 'bg-gray-100 text-gray-800' },
     };
 
-    const filteredOrders = orders.filter(order => {
+    const filteredOrders = allOrdersLoaded.filter(order => {
         const matchesSearch = !searchQuery || 
             order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             order.restaurant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -356,7 +371,7 @@ export default function OrderHistoryManagement() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredOrders.map(order => (
+                                    {filteredOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(order => (
                                         <tr key={order.id} className="border-b hover:bg-gray-50">
                                             <td className="py-3">
                                                 <Checkbox
@@ -420,13 +435,25 @@ export default function OrderHistoryManagement() {
                             </table>
                         </div>
                     )}
-                    {!ordersLoading && canLoadMore && (
-                        <div className="mt-4 text-center">
-                            <Button onClick={() => setPage(p => p + 1)} variant="outline">
-                                Load More Orders
-                            </Button>
-                        </div>
-                    )}
+                    <div className="mt-4 flex justify-between items-center gap-4">
+                        <Button 
+                            onClick={() => setPage(p => Math.max(0, p - 1))} 
+                            variant="outline"
+                            disabled={page === 0}
+                        >
+                            ← Previous
+                        </Button>
+                        <span className="text-sm text-gray-600">
+                            Page {page + 1} ({filteredOrders.length > 0 ? page * PAGE_SIZE + 1 : 0} - {Math.min((page + 1) * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length})
+                        </span>
+                        <Button 
+                            onClick={() => setPage(p => p + 1)} 
+                            variant="outline"
+                            disabled={!canLoadMore && page * PAGE_SIZE + PAGE_SIZE >= filteredOrders.length}
+                        >
+                            Next →
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
