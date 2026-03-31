@@ -67,7 +67,18 @@ Deno.serve(async (req) => {
         }
 
         // SECURITY: Verify item prices (pos_price if set, else standard price)
-        const menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: orderData.restaurant_id });
+        // Paginate to avoid the 50-item SDK default limit on large menus
+        const menuItems = [];
+        let skip = 0;
+        while (true) {
+            const batch = await base44.asServiceRole.entities.MenuItem.filter(
+                { restaurant_id: orderData.restaurant_id }, null, 50, skip
+            );
+            if (!batch?.length) break;
+            menuItems.push(...batch);
+            if (batch.length < 50) break;
+            skip += 50;
+        }
         const menuMap = new Map(menuItems.map(i => [i.id, i]));
 
         const verifiedItems = orderData.items.map(cartItem => {
