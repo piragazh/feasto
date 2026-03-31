@@ -12,10 +12,11 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-
-        if (!user) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        let user = null;
+        try {
+            user = await base44.auth.me();
+        } catch (_) {
+            // Allow unauthenticated (guest) requests — per-customer limit checks skipped
         }
 
         const { couponId } = await req.json();
@@ -50,8 +51,54 @@ Deno.serve(async (req) => {
 
         const coupon = coupons[0];
 
-        // CRITICAL: Check per-user coupon usage limit.
+        // Check if coupon is active FIRST — prevents unnecessary DB queries for inactive coupons
+        // and provides correct error message priority
+        if (!coupon.is_active) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon is no longer active'
+                }),
+                { status: 400 }
+            );
+        }
+
+        // Check expiry dates early
+        const now = new Date();
+        if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon is not yet valid'
+                }),
+                { status: 400 }
+            );
+        }
+
+        if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon has expired'
+                }),
+                { status: 400 }
+            );
+        }
+
+        // Check global usage limit
+        if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+            return new Response(
+                JSON.stringify({ 
+                    valid: false,
+                    error: 'This coupon has reached its usage limit'
+                }),
+                { status: 400 }
+            );
+        }
+
+        // CRITICAL: Check per-user coupon usage limit (only for authenticated users).
         // Prevents single user from draining entire coupon budget.
+        // Guests skip this check — per_customer_limit enforced server-side at order creation.
         //
         // COMPATIBILITY: Orders may be stored with either or both of:
         //   - coupon_code (string): legacy single-code orders AND first code of new stacked orders
@@ -61,7 +108,7 @@ Deno.serve(async (req) => {
         // orders that have both fields set (all orders created by the new stacking
         // implementation set both). Without deduplication, a customer who used a
         // code once would appear to have used it twice and be incorrectly blocked.
-        if (coupon.per_customer_limit && coupon.per_customer_limit > 0) {
+        if (user && coupon.per_customer_limit && coupon.per_customer_limit > 0) {
             // $all with a single-element array is the correct Base44 operator for
             // "array field contains this value". $contains is NOT supported.
             const [legacyOrders, arrayOrders] = await Promise.all([
@@ -92,49 +139,7 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Check if coupon is expired
-        if (!coupon.is_active) {
-            return new Response(
-                JSON.stringify({ 
-                    valid: false,
-                    error: 'This coupon is no longer active'
-                }),
-                { status: 400 }
-            );
-        }
 
-        // Check usage limit (CRITICAL)
-        if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-            return new Response(
-                JSON.stringify({ 
-                    valid: false,
-                    error: 'This coupon has reached its usage limit'
-                }),
-                { status: 400 }
-            );
-        }
-
-        // Check expiry dates
-        const now = new Date();
-        if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-            return new Response(
-                JSON.stringify({ 
-                    valid: false,
-                    error: 'This coupon is not yet valid'
-                }),
-                { status: 400 }
-            );
-        }
-
-        if (coupon.valid_until && new Date(coupon.valid_until) < now) {
-            return new Response(
-                JSON.stringify({ 
-                    valid: false,
-                    error: 'This coupon has expired'
-                }),
-                { status: 400 }
-            );
-        }
 
         return new Response(
             JSON.stringify({ 
