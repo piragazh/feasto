@@ -81,7 +81,11 @@ export function usePaymentInit({
     
     // Attempt counter — used to trigger retries on idempotency conflict
     const [attemptCount, setAttemptCount] = useState(0);
-    
+
+    // Max retries for idempotency conflicts — prevents infinite PI creation loop
+    const MAX_RETRIES = 3;
+    const retryCountRef = useRef(0);
+
     // Guard against concurrent PI creation
     const paymentInitInFlightRef = useRef(false);
 
@@ -92,6 +96,7 @@ export function usePaymentInit({
         setShowStripeForm(false);
         setInitializingPayment(false);
         setAttemptCount(0);
+        retryCountRef.current = 0;
         paymentInitInFlightRef.current = false;
     }, []);
 
@@ -195,10 +200,16 @@ export function usePaymentInit({
                     console.error('[usePaymentInit] ❌ PI failed:', errorCode, rawMsg);
 
                     if (errorCode === 'STRIPE_IDEMPOTENCY_CONFLICT') {
-                        // Auto-retry with new key
-                        console.log('[usePaymentInit] Idempotency conflict — retrying with fresh key');
-                        sessionKeyRef.current = generateSessionKey();
-                        setAttemptCount(prev => prev + 1); // Triggers effect re-run
+                        if (retryCountRef.current >= MAX_RETRIES) {
+                            console.error('[usePaymentInit] Idempotency conflict — max retries reached, aborting');
+                            toast.error('Payment initialisation failed after multiple attempts. Please refresh and try again.');
+                        } else {
+                            // Auto-retry with new key
+                            retryCountRef.current += 1;
+                            console.log(`[usePaymentInit] Idempotency conflict — retrying with fresh key (attempt ${retryCountRef.current}/${MAX_RETRIES})`);
+                            sessionKeyRef.current = generateSessionKey();
+                            setAttemptCount(prev => prev + 1); // Triggers effect re-run
+                        }
                     } else {
                         toast.error(userMsg);
                     }
