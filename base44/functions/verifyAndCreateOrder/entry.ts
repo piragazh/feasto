@@ -325,8 +325,9 @@ Deno.serve(async (req) => {
                     const val = group.selected_options ?? (group.selected_option ? [group.selected_option] : group.value);
                     obj[group.name] = Array.isArray(val) && val.length === 1 ? val[0] : val;
                     // Preserve nested meal_customizations as a sub-object if present
+                    // MED-3 FIX: Match the key format used in calcItemServerPrice (_meal_customizations, not __meal)
                     if (group.meal_customizations) {
-                        obj[`${group.name}__meal`] = normalizeCustomizationsForDB(group.meal_customizations);
+                        obj[`${group.name}_meal_customizations`] = normalizeCustomizationsForDB(group.meal_customizations);
                     }
                 }
                 return obj;
