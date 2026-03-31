@@ -353,17 +353,29 @@ async function handleChargeRefunded(base44, charge) {
     
     console.log(`[WEBHOOK] charge.refunded: ${chargeId} for intent=${piId}`);
     
-    // Update any pending refund records
+    // Update PaymentTransaction and corresponding Order
     try {
-        await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: piId })
-            .then(pts => {
-                if (pts?.[0]) {
-                    return base44.asServiceRole.entities.PaymentTransaction.update(pts[0].id, {
-                        status: 'refunded',
-                        refund_confirmed_at: new Date().toISOString()
-                    });
-                }
+        const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({ payment_intent_id: piId });
+        if (pts?.[0]) {
+            // Update PaymentTransaction
+            await base44.asServiceRole.entities.PaymentTransaction.update(pts[0].id, {
+                status: 'refunded',
+                refund_confirmed_at: new Date().toISOString()
             });
+            
+            // Also update the Order to refunded status if it exists
+            if (pts[0].order_id) {
+                try {
+                    await base44.asServiceRole.entities.Order.update(pts[0].order_id, {
+                        status: 'refunded',
+                        refund_paid_by: 'platform'
+                    });
+                    console.log(`[WEBHOOK] Updated Order ${pts[0].order_id} to refunded status`);
+                } catch (orderErr) {
+                    console.warn(`[WEBHOOK] Failed to update Order ${pts[0].order_id} on refund:`, orderErr.message);
+                }
+            }
+        }
     } catch (e) {
         console.warn('[WEBHOOK] Failed to update PaymentTransaction on refund:', e.message);
     }
