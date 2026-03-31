@@ -41,27 +41,44 @@ const statusConfig = {
 };
 
 export default function Orders() {
-    useSEO({ title: 'My Orders', noindex: true });
-    const navigate = useNavigate();
-    const { user, isLoadingAuth } = useAuth();
-    const queryClient = useQueryClient();
-    const [reviewingOrder, setReviewingOrder] = useState(null);
-    const [refundingOrder, setRefundingOrder] = useState(null);
-    const [messagingOrder, setMessagingOrder] = useState(null);
-    
-    // Filters and sorting
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [restaurantFilter, setRestaurantFilter] = useState('all');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
-    const [sortBy, setSortBy] = useState('date-desc');
-    const [showFilters, setShowFilters] = useState(false);
+     useSEO({ title: 'My Orders', noindex: true });
+     const navigate = useNavigate();
+     const { user, isLoadingAuth } = useAuth();
+     const queryClient = useQueryClient();
+     const [reviewingOrder, setReviewingOrder] = useState(null);
+     const [refundingOrder, setRefundingOrder] = useState(null);
+     const [messagingOrder, setMessagingOrder] = useState(null);
+
+     // Guest phone lookup
+     const [guestPhoneLookup, setGuestPhoneLookup] = useState('');
+     const [guestOrdersMode, setGuestOrdersMode] = useState(false);
+
+     // Filters and sorting
+     const [statusFilter, setStatusFilter] = useState('all');
+     const [restaurantFilter, setRestaurantFilter] = useState('all');
+     const [dateFrom, setDateFrom] = useState('');
+     const [dateTo, setDateTo] = useState('');
+     const [sortBy, setSortBy] = useState('date-desc');
+     const [showFilters, setShowFilters] = useState(false);
     
     const { data: orders = [], isLoading, refetch, error } = useQuery({
-        queryKey: ['orders'],
-        enabled: !isLoadingAuth && user !== undefined,
+        queryKey: ['orders', guestOrdersMode, guestPhoneLookup],
+        enabled: !isLoadingAuth && (user !== undefined || guestOrdersMode),
         queryFn: async () => {
             try {
+                // Guest lookup mode (unauthenticated user entering phone)
+                if (guestOrdersMode && guestPhoneLookup) {
+                    const results = await base44.entities.Order.filter({ customer_phone: guestPhoneLookup }, '-created_date');
+                    const seen = new Set();
+                    return results
+                        .filter(o => {
+                            if (!o?.id || !o?.restaurant_name || seen.has(o.id)) return false;
+                            seen.add(o.id);
+                            return true;
+                        })
+                        .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+                }
+
                 // Use context user instead of querying again - avoid race conditions
                 if (user) {
                     const phone = user.phone || sessionStorage.getItem('guest_order_phone') || null;
@@ -93,8 +110,7 @@ export default function Orders() {
                 const guestEmail = sessionStorage.getItem('guest_order_email');
 
                 if (!guestPhone && !guestEmail) {
-                    // No guest context — redirect to login
-                    base44.auth.redirectToLogin(window.location.pathname);
+                    // No guest context and not in lookup mode — return empty
                     return [];
                 }
 
@@ -291,21 +307,111 @@ export default function Orders() {
         setDateTo('');
     };
 
-    return (
-        <PullToRefresh onRefresh={() => refetch()}>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                            <Link to={createPageUrl('Home')}>
-                                <Button size="icon" variant="ghost" className="rounded-full">
-                                    <ArrowLeft className="h-5 w-5" />
-                                </Button>
-                            </Link>
-                            <h1 className="text-xl font-bold text-gray-900">Your Orders</h1>
+    // Show guest lookup if not authenticated and no session
+    if (isLoadingAuth) {
+        return (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <Skeleton className="h-48 w-96" />
+            </div>
+        );
+    }
+
+    if (!user && !guestOrdersMode && !sessionStorage.getItem('guest_order_phone')) {
+        return (
+            <PullToRefresh onRefresh={() => refetch()}>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
+                    <div className="max-w-4xl mx-auto px-4 py-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <Link to={createPageUrl('Home')}>
+                                    <Button size="icon" variant="ghost" className="rounded-full">
+                                        <ArrowLeft className="h-5 w-5" />
+                                    </Button>
+                                </Link>
+                                <h1 className="text-xl font-bold text-gray-900">Your Orders</h1>
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <div className="max-w-4xl mx-auto px-3 sm:px-4 py-8 sm:py-12">
+                    <div className="space-y-6">
+                        {/* Login Option */}
+                        <Card>
+                            <CardContent className="pt-6 text-center">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In to View Orders</h2>
+                                <p className="text-gray-500 mb-6">Access all your orders, refunds, and more.</p>
+                                <Button 
+                                    onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
+                                    className="w-full bg-orange-500 hover:bg-orange-600"
+                                >
+                                    Sign In
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        {/* Divider */}
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-200"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-gray-50 text-gray-500">Or continue as guest</span>
+                            </div>
+                        </div>
+
+                        {/* Guest Phone Lookup */}
+                        <Card>
+                            <CardContent className="pt-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Lookup Orders by Phone</h3>
+                                <p className="text-sm text-gray-500 mb-4">Enter the phone number used for your order</p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="tel"
+                                        placeholder="e.g., +447123456789 or 07123456789"
+                                        value={guestPhoneLookup}
+                                        onChange={(e) => setGuestPhoneLookup(e.target.value)}
+                                        className="flex-1"
+                                    />
+                                    <Button
+                                        onClick={() => {
+                                            if (!guestPhoneLookup.trim()) {
+                                                toast.error('Please enter a phone number');
+                                                return;
+                                            }
+                                            setGuestOrdersMode(true);
+                                        }}
+                                        className="bg-orange-500 hover:bg-orange-600"
+                                    >
+                                        Find Orders
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-3">We'll show all orders associated with this phone number</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </div>
+            </PullToRefresh>
+        );
+    }
+
+    return (
+         <PullToRefresh onRefresh={() => refetch()}>
+         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+             {/* Header */}
+             <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
+                 <div className="max-w-4xl mx-auto px-4 py-4">
+                     <div className="flex items-center justify-between mb-4">
+                         <div className="flex items-center gap-4">
+                             <Link to={createPageUrl('Home')}>
+                                 <Button size="icon" variant="ghost" className="rounded-full">
+                                     <ArrowLeft className="h-5 w-5" />
+                                 </Button>
+                             </Link>
+                             <h1 className="text-xl font-bold text-gray-900">{guestOrdersMode ? 'Guest Orders' : 'Your Orders'}</h1>
+                         </div>
                         <div className="flex items-center gap-2">
                             <Button 
                                 variant="outline" 
@@ -410,17 +516,32 @@ export default function Orders() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                {activeFiltersCount > 0 && (
-                                    <Button variant="ghost" size="sm" onClick={clearFilters}>
-                                        <X className="h-4 w-4 mr-2" />
-                                        Clear Filters
-                                    </Button>
+                                <div className="flex items-center gap-2">
+                                    {activeFiltersCount > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={clearFilters}>
+                                            <X className="h-4 w-4 mr-2" />
+                                            Clear Filters
+                                        </Button>
+                                    )}
+                                    {guestOrdersMode && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => {
+                                                setGuestOrdersMode(false);
+                                                setGuestPhoneLookup('');
+                                                clearFilters();
+                                            }}
+                                        >
+                                            Back to Login
+                                        </Button>
+                                    )}
+                                </div>
+                                </motion.div>
                                 )}
                                 </div>
-                        </motion.div>
-                    )}
-                </div>
-            </div>
+                                </div>
+                                </PullToRefresh>
 
             <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 {isLoading ? (
@@ -698,19 +819,19 @@ export default function Orders() {
             />
 
             <Dialog open={!!messagingOrder} onOpenChange={() => setMessagingOrder(null)}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Chat with {messagingOrder?.restaurant_name || 'Restaurant'}</DialogTitle>
-                    </DialogHeader>
-                    {messagingOrder && (
-                        <CustomerMessaging 
-                            orderId={messagingOrder.id} 
-                            restaurantId={messagingOrder.restaurant_id} 
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
-        </div>
-        </PullToRefresh>
-    );
-}
+                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                     <DialogHeader>
+                         <DialogTitle>Chat with {messagingOrder?.restaurant_name || 'Restaurant'}</DialogTitle>
+                     </DialogHeader>
+                     {messagingOrder && (
+                         <CustomerMessaging 
+                             orderId={messagingOrder.id} 
+                             restaurantId={messagingOrder.restaurant_id} 
+                         />
+                     )}
+                 </DialogContent>
+             </Dialog>
+            </div>
+            </PullToRefresh>
+            );
+            }
