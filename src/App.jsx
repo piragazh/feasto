@@ -44,9 +44,7 @@ const CustomDomainRestaurantRoute = ({ customDomainRestaurantId }) => {
 
 
 const DomainChecker = ({ children }) => {
-  const [customDomainRestaurantId, setCustomDomainRestaurantId] = React.useState(null);
-  const [domainCheckDone, setDomainCheckDone] = React.useState(false);
-  const [domainCheckError, setDomainCheckError] = React.useState(null);
+  const [domainState, setDomainState] = React.useState({ id: null, done: false, error: null });
 
   React.useEffect(() => {
     const checkDomain = async () => {
@@ -60,22 +58,20 @@ const DomainChecker = ({ children }) => {
 
         if (forcedRestaurantId) {
           console.log('[DomainChecker] Using forced custom-domain restaurant context:', forcedRestaurantId);
-          setCustomDomainRestaurantId(forcedRestaurantId);
-          setDomainCheckDone(true);
+          setDomainState({ id: forcedRestaurantId, done: true, error: null });
           return;
         }
 
         if (isPlatform) {
           console.log('[DomainChecker] Platform domain detected:', hostname);
-          setDomainCheckDone(true);
+          setDomainState({ id: null, done: true, error: null });
           return;
         }
         console.log('[DomainChecker] Custom domain detected:', hostname);
         
         if (cached && cachedFor === hostname) {
           console.log('[DomainChecker] Using cached restaurant ID:', cached);
-          setCustomDomainRestaurantId(cached);
-          setDomainCheckDone(true);
+          setDomainState({ id: cached, done: true, error: null });
           return;
         }
         
@@ -100,7 +96,7 @@ const DomainChecker = ({ children }) => {
             if (fallbackRestaurants?.[0]) {
               sessionStorage.setItem('customDomainRestaurantId', fallbackRestaurants[0].id);
               sessionStorage.setItem('customDomainCheckedFor', hostname);
-              setCustomDomainRestaurantId(fallbackRestaurants[0].id);
+              setDomainState({ id: fallbackRestaurants[0].id, done: true, error: null });
               return;
             }
           }
@@ -109,25 +105,24 @@ const DomainChecker = ({ children }) => {
             console.log('[DomainChecker] Found restaurant:', found.id, found.name);
             sessionStorage.setItem('customDomainRestaurantId', found.id);
             sessionStorage.setItem('customDomainCheckedFor', hostname);
-            setCustomDomainRestaurantId(found.id);
+            setDomainState({ id: found.id, done: true, error: null });
           } else {
             console.log('[DomainChecker] No verified restaurant found for custom domain');
+            setDomainState({ id: null, done: true, error: null });
           }
         } catch (e) {
           console.error('[DomainChecker] Error querying restaurant:', e?.message || e);
-          setDomainCheckError(e?.message || 'Failed to check custom domain');
+          setDomainState({ id: null, done: true, error: e?.message || 'Failed to check custom domain' });
         }
       } catch (e) {
         console.error('[DomainChecker] Unexpected error:', e?.message || e);
-        setDomainCheckError(e?.message || 'Unexpected error');
-      } finally {
-        setDomainCheckDone(true);
+        setDomainState({ id: null, done: true, error: e?.message || 'Unexpected error' });
       }
     };
     checkDomain();
   }, []);
 
-  if (!domainCheckDone) {
+  if (!domainState.done) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -135,12 +130,12 @@ const DomainChecker = ({ children }) => {
     );
   }
 
-  if (domainCheckError) {
+  if (domainState.error) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background p-4">
         <div className="max-w-md text-center">
           <div className="text-red-600 font-bold mb-2">⚠️ Domain Check Error</div>
-          <p className="text-sm text-gray-600 mb-4">{domainCheckError}</p>
+          <p className="text-sm text-gray-600 mb-4">{domainState.error}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
@@ -152,7 +147,7 @@ const DomainChecker = ({ children }) => {
     );
   }
 
-  return children({ customDomainRestaurantId });
+  return children({ customDomainRestaurantId: domainState.id });
 };
 
 const AuthenticatedApp = ({ customDomainRestaurantId }) => {
