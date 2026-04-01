@@ -48,29 +48,14 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setAuthError(null);
     } catch (error) {
-      // Distinguish between "not logged in" (expected) vs "auth system error" (unexpected)
+      // Always treat auth failures as "not logged in" — the app is public and must load for guests.
+      // Never block page load due to an auth check error (network, CORS, 401, 5xx, etc.)
       const message = error?.message || '';
-      const isNotAuthenticatedError = 
-        message.includes('not authenticated') || 
-        message.includes('unauthorized') ||
-        message.includes('401') ||
-        message.includes('No token');
-
-      console.warn('[AuthProvider] Auth check:', isNotAuthenticatedError ? 'User not logged in (expected)' : 'Auth error -', message);
+      console.warn('[AuthProvider] Auth check failed (treating as guest):', message);
       setUser(null);
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
-      // Only set error if it's NOT a normal "not authenticated" response
-      // Kiosk/POS pages work without auth, so don't block them on 401
-      if (!isNotAuthenticatedError && !message.includes('unauthenticated')) {
-        setAuthError({
-          type: 'auth_check_error',
-          message: 'Failed to verify authentication',
-          data: { status: error?.response?.status, details: message }
-        });
-      } else {
-        setAuthError(null);
-      }
+      setAuthError(null);
     }
   };
 
