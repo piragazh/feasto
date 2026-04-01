@@ -28,11 +28,11 @@ export const AuthProvider = ({ children }) => {
       // Always attempt to load auth — cookie-based sessions don't use URL tokens
       await loadUserAuth();
     } catch (err) {
-      console.error('[AuthProvider] Init failed:', err);
-      setAuthError({
-        type: 'initialization_error',
-        message: err.message || 'Failed to initialize app'
-      });
+      // Never block app load — treat any init error as guest session
+      console.error('[AuthProvider] Init failed (treating as guest):', err);
+      setUser(null);
+      setIsAuthenticated(false);
+      setAuthError(null);
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
