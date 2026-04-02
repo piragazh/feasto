@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
@@ -221,7 +221,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                     <div class="separator"></div>
                     ${config.header_text ? `<p style="text-align: center; font-size: 10px;">${config.header_text}</p><div class="separator"></div>` : ''}
                     ${config.show_order_number ? `<h2 style="text-align: center;">ORDER ${orderNum}</h2>` : `<p><strong>Order:</strong> ${orderNum}</p>`}
-                    <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
+                    <p><strong>Time:</strong> ${formatUKTime(order.created_date, 'time')}</p>
                     <p><strong>Type:</strong> ${order.order_type || 'Delivery'}</p>
                     <div class="separator"></div>
                     ${config.show_customer_details ? `
@@ -464,7 +464,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                    )}
                                                </CardTitle>
                                                <p className="text-sm text-gray-500 mt-1">
-                                                   {format(new Date(order.created_date), 'MMM d, h:mm a')}
+                                                   {formatUKTime(order.created_date, 'datetime12')}
                                                </p>
                                             </div>
                                         </div>

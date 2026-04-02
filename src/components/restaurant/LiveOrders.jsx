@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp, User, MonitorSmartphone, BadgeCheck } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
@@ -645,7 +645,7 @@ Provide only the time range (e.g., "25-30 min").`;
                     ` : ''}
                     ${config.show_order_number !== false ? `<p><strong>Order:</strong> ${orderLabel}</p>` : ''}
                     <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : order.order_type === 'takeaway' ? 'TAKEAWAY' : order.order_type === 'dine_in' ? 'DINE IN' : 'DELIVERY'}</p>
-                    <p><strong>Time:</strong> ${order.created_date ? format(new Date(order.created_date), 'HH:mm') : '--:--'}</p>
+                    <p><strong>Time:</strong> ${order.created_date ? formatUKTime(order.created_date, 'time') : '--:--'}</p>
                     <div class="separator"></div>
                     <h3>ITEMS:</h3>
                     ${order.items.map(item => {
@@ -1059,8 +1059,8 @@ Provide only the time range (e.g., "25-30 min").`;
                                                        )}
                                                    </div>
                                                    <p className="text-sm text-gray-500 mt-1">
-                                                       {order.created_date ? format(new Date(order.created_date), 'MMM d, h:mm a') : '—'}
-                                                   </p>
+                                                                      {order.created_date ? formatUKTime(order.created_date, 'datetime12') : '—'}
+                                                                  </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">

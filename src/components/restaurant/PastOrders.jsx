@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, X, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
 import PartialRefundDialog from './PartialRefundDialog';
 import {
@@ -97,7 +97,7 @@ export default function PastOrders({ restaurantId }) {
                                 <div>
                                     <p className="font-semibold">Order #{order.id.slice(-6)}</p>
                                     <p className="text-sm text-gray-500">
-                                        {format(new Date(order.created_date), 'MMM d, yyyy h:mm a')}
+                                        {formatUKTime(order.created_date, 'full')}
                                     </p>
                                 </div>
                                 <div className="text-right">
@@ -195,7 +195,7 @@ export default function PastOrders({ restaurantId }) {
                                             )}
                                             {order.refund_date && (
                                                 <p className="text-xs text-gray-500 mt-1">
-                                                    Refunded on: {format(new Date(order.refund_date), 'MMM d, yyyy h:mm a')}
+                                                    Refunded on: {formatUKTime(order.refund_date, 'full')}
                                                 </p>
                                             )}
                                         </div>
