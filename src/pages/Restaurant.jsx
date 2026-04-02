@@ -74,6 +74,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const [showTimeWarning, setShowTimeWarning] = useState(false);
     const [timeWarningMessage, setTimeWarningMessage] = useState('');
     const [activeCategoryScroll, setActiveCategoryScroll] = useState('');
+    const scrollSpyPausedRef = useRef(false);
     const [showInfoDialog, setShowInfoDialog] = useState(false);
     const [showCartConflictDialog, setShowCartConflictDialog] = useState(false);
     const [previousCartData, setPreviousCartData] = useState(null);
@@ -291,10 +292,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
+            // Pause scroll spy so the smooth scroll animation doesn't override the active category
+            scrollSpyPausedRef.current = true;
+            setActiveCategoryScroll(category);
             element.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'start'
             });
+            setTimeout(() => { scrollSpyPausedRef.current = false; }, 1000);
         }
     };
 
@@ -346,6 +351,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     // Scroll spy - update active category based on scroll position
      useEffect(() => {
          const handleScroll = () => {
+             if (scrollSpyPausedRef.current) return;
              const scrollPosition = window.scrollY + 200;
              
              for (const category of categories) {
