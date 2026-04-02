@@ -363,6 +363,9 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                     orderId: order.id,
                     restaurantId,
                     restaurantName: order.restaurant_name || undefined,
+                    status,
+                    orderNumber: orderLabel,
+                    rejectionReason: rejectionReason || undefined,
                 });
             } else if (shouldSendSms) {
                 await base44.functions.invoke('sendSMS', {
