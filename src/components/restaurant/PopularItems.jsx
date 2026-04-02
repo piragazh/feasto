@@ -140,7 +140,7 @@ export default function PopularItems({ restaurantId, onItemClick }) {
             {showCarousel ? (
                 <div
                     ref={scrollRef}
-                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 snap-x snap-mandatory touch-pan-x"
+                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 snap-x snap-mandatory"
                 >
                     {popularItems.map((item, index) => (
                         <div key={item.id} className="relative flex-[0_0_85%] min-w-0 snap-start sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
