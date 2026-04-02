@@ -286,19 +286,30 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     }, [menuItems, debouncedSearch, restaurant?.item_order]);
 
     const categoryNavRef = React.useRef(null);
+    const categoryNavContainerRef = React.useRef(null);
     const [showLeftArrow, setShowLeftArrow] = React.useState(false);
     const [showRightArrow, setShowRightArrow] = React.useState(false);
+
+    // Dynamically measure total sticky header height to use as scroll offset
+    const getStickyOffset = () => {
+        // Measure the category nav container's bottom position — everything above it is "covered"
+        if (categoryNavContainerRef.current) {
+            const rect = categoryNavContainerRef.current.getBoundingClientRect();
+            return rect.bottom + 8; // +8px breathing room
+        }
+        return 160; // fallback
+    };
 
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
             scrollSpyPausedRef.current = true;
             setActiveCategoryScroll(category);
-            // Use getBoundingClientRect for accurate position, accounting for all sticky headers
+            const offset = getStickyOffset();
             const elementTop = element.getBoundingClientRect().top + window.scrollY;
-            const offset = 170; // sticky header (~56px) + delivery bar (~56px) + category nav (~58px)
             window.scrollTo({ top: elementTop - offset, behavior: 'smooth' });
-            setTimeout(() => { scrollSpyPausedRef.current = false; }, 1000);
+            // Unpause after scroll animation completes (~800ms is enough for smooth scroll)
+            setTimeout(() => { scrollSpyPausedRef.current = false; }, 900);
         }
     };
 
@@ -351,9 +362,9 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
      useEffect(() => {
          const handleScroll = () => {
              if (scrollSpyPausedRef.current) return;
-             const offset = 180; // same offset as scrollToCategory
+             const offset = getStickyOffset();
              
-             // Find the last category whose top is above the current scroll position + offset
+             // Find the last category whose top edge is above (scrollY + offset)
              let activeCategory = null;
              for (const category of categories) {
                  const element = categoryRefs.current[category];
@@ -1237,7 +1248,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 </div>
 
                 {categories.length > 0 && (
-                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-14 z-20 shadow-md">
+                    <div ref={categoryNavContainerRef} className="bg-white border rounded-xl p-3 mb-6 sticky top-14 z-20 shadow-md">
                         <div className="relative">
                             {showLeftArrow && (
                                 <button
