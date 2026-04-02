@@ -91,11 +91,21 @@ Deno.serve(async (req) => {
 
         if (contentSid) {
             // Use approved Twilio Content Template
+            const itemsList = order.items
+                .map(item => `${item.quantity}x ${item.name}`)
+                .join('\n');
+            const paymentLabel = order.payment_method === 'cash' ? 'Cash' : 
+                                 order.payment_method === 'card' ? 'Card' :
+                                 order.payment_method === 'apple_pay' ? 'Apple Pay' :
+                                 order.payment_method === 'google_pay' ? 'Google Pay' :
+                                 (order.payment_method || 'Unknown');
             msgParams.contentSid = contentSid;
             msgParams.contentVariables = JSON.stringify({
                 "1": order.order_number || order.id.slice(-6),
-                "2": (order.total || 0).toFixed(2),
-                "3": order.order_type || 'delivery',
+                "2": itemsList,
+                "3": (order.total || 0).toFixed(2),
+                "4": order.order_type || 'delivery',
+                "5": paymentLabel,
             });
         } else {
             // Free-form message — only works within a 24h customer-initiated window
