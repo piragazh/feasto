@@ -292,13 +292,12 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
-            // Pause scroll spy so the smooth scroll animation doesn't override the active category
             scrollSpyPausedRef.current = true;
             setActiveCategoryScroll(category);
-            element.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start'
-            });
+            // Use getBoundingClientRect for accurate position, accounting for all sticky headers
+            const elementTop = element.getBoundingClientRect().top + window.scrollY;
+            const offset = 170; // sticky header (~56px) + delivery bar (~56px) + category nav (~58px)
+            window.scrollTo({ top: elementTop - offset, behavior: 'smooth' });
             setTimeout(() => { scrollSpyPausedRef.current = false; }, 1000);
         }
     };
@@ -352,20 +351,20 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
      useEffect(() => {
          const handleScroll = () => {
              if (scrollSpyPausedRef.current) return;
-             const scrollPosition = window.scrollY + 200;
+             const offset = 180; // same offset as scrollToCategory
              
+             // Find the last category whose top is above the current scroll position + offset
+             let activeCategory = null;
              for (const category of categories) {
                  const element = categoryRefs.current[category];
                  if (element) {
-                     const offsetTop = element.offsetTop;
-                     const offsetBottom = offsetTop + element.offsetHeight;
-                     
-                     if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
-                         setActiveCategoryScroll(category);
-                         break;
+                     const elementTop = element.getBoundingClientRect().top + window.scrollY;
+                     if (window.scrollY + offset >= elementTop) {
+                         activeCategory = category;
                      }
                  }
              }
+             if (activeCategory) setActiveCategoryScroll(activeCategory);
          };
 
          window.addEventListener('scroll', handleScroll);
@@ -1313,7 +1312,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                  key={matchingKey} 
                                  ref={el => categoryRefs.current[category] = el}
                                  data-category={category}
-                                 style={{ scrollMarginTop: '180px' }}
+                                 style={{ scrollMarginTop: '0px' }}
                              >
                                  <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
                                      {matchingKey}
