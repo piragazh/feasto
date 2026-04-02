@@ -19,11 +19,17 @@ export default function PopularItems({ restaurantId, onItemClick }) {
     }, []);
 
     const scrollPrev = React.useCallback(() => {
-        scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' });
+        const el = scrollRef.current;
+        if (!el) return;
+        const cardWidth = el.firstElementChild?.offsetWidth || el.clientWidth;
+        el.scrollBy({ left: -cardWidth, behavior: 'smooth' });
     }, []);
 
     const scrollNext = React.useCallback(() => {
-        scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' });
+        const el = scrollRef.current;
+        if (!el) return;
+        const cardWidth = el.firstElementChild?.offsetWidth || el.clientWidth;
+        el.scrollBy({ left: cardWidth, behavior: 'smooth' });
     }, []);
 
     React.useEffect(() => {
@@ -134,10 +140,10 @@ export default function PopularItems({ restaurantId, onItemClick }) {
             {showCarousel ? (
                 <div
                     ref={scrollRef}
-                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2"
+                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 snap-x snap-mandatory touch-pan-x"
                 >
                     {popularItems.map((item, index) => (
-                        <div key={item.id} className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
+                        <div key={item.id} className="relative flex-[0_0_85%] min-w-0 snap-start sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
                             <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
                                 {index + 1}
                             </div>

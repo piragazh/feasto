@@ -16,11 +16,17 @@ export default function MealDealsSection({ deals, onAddToCart, onCustomize }) {
     }, []);
 
     const scrollPrev = React.useCallback(() => {
-        scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' });
+        const el = scrollRef.current;
+        if (!el) return;
+        const cardWidth = el.firstElementChild?.offsetWidth || el.clientWidth;
+        el.scrollBy({ left: -cardWidth, behavior: 'smooth' });
     }, []);
 
     const scrollNext = React.useCallback(() => {
-        scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' });
+        const el = scrollRef.current;
+        if (!el) return;
+        const cardWidth = el.firstElementChild?.offsetWidth || el.clientWidth;
+        el.scrollBy({ left: cardWidth, behavior: 'smooth' });
     }, []);
 
     React.useEffect(() => {
@@ -71,10 +77,10 @@ export default function MealDealsSection({ deals, onAddToCart, onCustomize }) {
             {showCarousel ? (
                 <div
                     ref={scrollRef}
-                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 touch-pan-y"
+                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 snap-x snap-mandatory touch-pan-x"
                 >
                     {deals.map((deal) => (
-                        <div key={deal.id} className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
+                        <div key={deal.id} className="flex-[0_0_85%] min-w-0 snap-start sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
                             <MealDealCard 
                                 deal={deal} 
                                 onAddToCart={onAddToCart}
