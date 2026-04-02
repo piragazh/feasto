@@ -299,7 +299,7 @@ export function useCreateOrder({
 
             backgroundTasks.push(
                 base44.functions.invoke('notifyRestaurantNewOrder', { orderId: newOrder.id, restaurantId, restaurantName })
-                    .catch(() => {})
+                    .catch(e => console.error('[Checkout] Restaurant new order notification failed:', e?.message || e))
             );
 
             await Promise.allSettled(backgroundTasks);

@@ -25,7 +25,10 @@ Deno.serve(async (req) => {
         
         const order = orders[0];
         const orderAge = Date.now() - new Date(order.created_date).getTime();
-        if (orderAge > 5 * 60 * 1000) { // 5 minutes
+        // Extended to 30 minutes to handle slow networks, Stripe webhook recovery paths, and background task delays.
+        // Previously 5 minutes was too tight and silently dropped alerts with no error surfaced.
+        if (orderAge > 30 * 60 * 1000) { // 30 minutes
+            console.warn(`[NOTIFY] Order ${orderId} is ${Math.round(orderAge/60000)} min old — too old for notification`);
             return Response.json({ error: 'Order too old for notification' }, { status: 400 });
         }
         
@@ -64,13 +67,17 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Check if WhatsApp alerts are enabled - use WhatsApp if enabled
+        // Check if WhatsApp alerts are enabled - use WhatsApp if enabled, skip SMS entirely
         if (restaurant.whatsapp_alerts_enabled) {
             try {
                 const waResult = await base44.asServiceRole.functions.invoke('sendWhatsAppOrder', { order_id: orderId });
-                return Response.json({ success: true, channel: 'whatsapp', result: waResult?.data ?? null });
+                if (waResult?.data?.success) {
+                    return Response.json({ success: true, channel: 'whatsapp', result: waResult?.data ?? null });
+                }
+                // WhatsApp returned non-success — fall through to SMS
+                console.warn('[NOTIFY] WhatsApp alert did not succeed, falling back to SMS:', waResult?.data);
             } catch (waError) {
-                console.error('WhatsApp alert failed, falling back to SMS:', waError);
+                console.error('[NOTIFY] WhatsApp alert threw, falling back to SMS:', waError?.message || waError);
             }
         }
 
@@ -92,11 +99,12 @@ Deno.serve(async (req) => {
         else if (alertPhone.startsWith('7')) alertPhone = '+44' + alertPhone;
         else if (!alertPhone.startsWith('+')) alertPhone = '+44' + alertPhone;
 
-        if (!alertPhone.match(/^\+44\d{10}$/)) {
-            console.error(`Invalid phone format for restaurant: ${restaurantId}, phone: ${alertPhone}`);
+        // Validate UK number: must be +44 followed by 9 or 10 digits (covers mobiles and landlines)
+        if (!alertPhone.match(/^\+44\d{9,10}$/)) {
+            console.error(`[NOTIFY] Invalid phone format for restaurant ${restaurantId} (${restaurantName}): "${alertPhone}". Ensure alert_phone is a valid UK number.`);
             return Response.json({ 
                 success: false,
-                message: 'Invalid phone number format'
+                message: `Invalid phone number format: ${alertPhone}`
             }, { status: 400 });
         }
 
