@@ -287,28 +287,28 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
     const categoryNavRef = React.useRef(null);
     const categoryNavContainerRef = React.useRef(null);
+    const stickyOffsetRef = React.useRef(160);
     const [showLeftArrow, setShowLeftArrow] = React.useState(false);
     const [showRightArrow, setShowRightArrow] = React.useState(false);
 
-    // Dynamically measure total sticky header height to use as scroll offset
-    const getStickyOffset = () => {
-        // Measure the category nav container's bottom position — everything above it is "covered"
+    // rect.bottom of the sticky category nav = how many px from viewport top are "covered" by sticky headers
+    // This is the exact offset to use: scroll target = element absolute top - this offset
+    const measureStickyOffset = React.useCallback(() => {
         if (categoryNavContainerRef.current) {
             const rect = categoryNavContainerRef.current.getBoundingClientRect();
-            return rect.bottom + 8; // +8px breathing room
+            stickyOffsetRef.current = rect.bottom + 8;
         }
-        return 160; // fallback
-    };
+    }, []);
 
     const scrollToCategory = (category) => {
         const element = categoryRefs.current[category];
         if (element) {
+            measureStickyOffset();
             scrollSpyPausedRef.current = true;
             setActiveCategoryScroll(category);
-            const offset = getStickyOffset();
+            const offset = stickyOffsetRef.current;
             const elementTop = element.getBoundingClientRect().top + window.scrollY;
             window.scrollTo({ top: elementTop - offset, behavior: 'smooth' });
-            // Unpause after scroll animation completes (~800ms is enough for smooth scroll)
             setTimeout(() => { scrollSpyPausedRef.current = false; }, 900);
         }
     };
@@ -347,6 +347,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
     useEffect(() => {
         checkScrollButtons();
+        // Measure offset after nav renders so first click works without scrolling to top first
+        setTimeout(measureStickyOffset, 100);
         const nav = categoryNavRef.current;
         if (nav) {
             nav.addEventListener('scroll', checkScrollButtons);
@@ -356,13 +358,16 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 window.removeEventListener('resize', checkScrollButtons);
             };
         }
-    }, [categories]);
+    }, [categories, measureStickyOffset]);
 
     // Scroll spy - update active category based on scroll position
      useEffect(() => {
          const handleScroll = () => {
              if (scrollSpyPausedRef.current) return;
-             const offset = getStickyOffset();
+             // Use live rect.bottom of sticky nav — always accurate regardless of scroll position
+             const offset = categoryNavContainerRef.current
+                 ? categoryNavContainerRef.current.getBoundingClientRect().bottom + 8
+                 : stickyOffsetRef.current;
              
              // Find the last category whose top edge is above (scrollY + offset)
              let activeCategory = null;
