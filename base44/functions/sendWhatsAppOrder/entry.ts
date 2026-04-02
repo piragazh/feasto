@@ -81,12 +81,47 @@ Deno.serve(async (req) => {
 
         const client = twilio(accountSid, authToken);
 
-        // Send WhatsApp message with text instructions for reply
-        const message = await client.messages.create({
+        // Check for optional Content Template SID (required for business-initiated WhatsApp messages)
+        const contentSid = Deno.env.get('TWILIO_WHATSAPP_CONTENT_SID');
+
+        const msgParams = {
             from: `whatsapp:${twilioPhoneNumber}`,
             to: `whatsapp:${toPhone}`,
-            body: messageBody + '\n\n✅ Reply "ACCEPT" to confirm\n❌ Reply "REJECT" to decline'
-        });
+        };
+
+        if (contentSid) {
+            // Use approved Twilio Content Template
+            msgParams.contentSid = contentSid;
+            msgParams.contentVariables = JSON.stringify({
+                "1": order.order_number || order.id.slice(-6),
+                "2": (order.total || 0).toFixed(2),
+                "3": order.order_type || 'delivery',
+            });
+        } else {
+            // Free-form message — only works within a 24h customer-initiated window
+            // or on Twilio Sandbox. Will fail for business-initiated messages on production.
+            msgParams.body = messageBody + '\n\n✅ Reply "ACCEPT" to confirm\n❌ Reply "REJECT" to decline';
+        }
+
+        let message;
+        try {
+            message = await client.messages.create(msgParams);
+        } catch (twilioError) {
+            const errMsg = twilioError?.message || String(twilioError);
+            console.error('[WhatsApp] Twilio send failed:', errMsg, '| Code:', twilioError?.code);
+            // Log failure
+            await base44.asServiceRole.entities.SmsLog.create({
+                restaurant_id: order.restaurant_id,
+                restaurant_name: restaurant_data?.name || null,
+                to: toPhone,
+                message: messageBody,
+                order_id: order_id,
+                status: 'failed',
+                error_details: `Twilio error ${twilioError?.code}: ${errMsg}`,
+                type: 'restaurant_alert',
+            });
+            return Response.json({ success: false, error: errMsg, code: twilioError?.code }, { status: 500 });
+        }
 
         // Log the WhatsApp message
         await base44.asServiceRole.entities.SmsLog.create({

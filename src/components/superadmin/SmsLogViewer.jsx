@@ -179,8 +179,13 @@ export default function SmsLogViewer() {
                                                 </Badge>
                                             </td>
                                             <td className="py-2 pr-4">{statusBadge(log.status)}</td>
-                                            <td className="py-2 text-gray-600 max-w-[300px] truncate" title={log.message}>
-                                                {log.message}
+                                            <td className="py-2 text-gray-600 max-w-[300px]">
+                                               <div className="truncate" title={log.message}>{log.message}</div>
+                                               {log.error_details && (
+                                                   <div className="text-xs text-red-600 mt-0.5 truncate" title={log.error_details}>
+                                                       ⚠️ {log.error_details}
+                                                   </div>
+                                               )}
                                             </td>
                                         </tr>
                                     ))}
