@@ -529,10 +529,10 @@ export default function StudioPlaylists({ restaurantId }) {
                                             <Film className="h-2.5 w-2.5 text-white" />
                                         </div>
                                     )}
-                                    {/* Add button — always visible on mobile, hover-only on desktop */}
+                                    {/* Add button — always visible */}
                                     <button
                                         onClick={() => handleAddFromLibrary(file)}
-                                        className="absolute bottom-1.5 right-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-1.5 shadow-lg transition-all md:opacity-0 md:group-hover:opacity-100"
+                                        className="absolute bottom-1.5 right-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-full p-1.5 shadow-lg"
                                         title={`Add "${file.file_name}" to playlist`}
                                     >
                                         <Plus className="h-3.5 w-3.5" />
