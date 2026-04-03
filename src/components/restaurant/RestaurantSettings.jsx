@@ -903,9 +903,8 @@ export default function RestaurantSettings({ restaurantId }) {
                     <CentralizedPrinterSettings restaurantId={restaurantId} />
                 </div>
             )}
-            {false && (<div><div>
-                        <div />
-                             <div className="grid md:grid-cols-2 gap-4">
+            {false && (<div>
+                        <div className="grid md:grid-cols-2 gap-4">
                                  <div>
                                      <Label>Base Font Size</Label>
                                     <select
@@ -1406,10 +1405,9 @@ export default function RestaurantSettings({ restaurantId }) {
                                 Save Settings
                             </Button>
                         </div>
-                        </div></div></div>
-                        )}
+                    </div>)}
 
-                        {(activeSection === 'opening' || activeSection === 'delivery' || activeSection === 'collection') && (
+            {(activeSection === 'opening' || activeSection === 'delivery' || activeSection === 'collection') && (
                 <Card>
                     <CardHeader>
                         <CardTitle>
