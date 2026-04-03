@@ -390,16 +390,18 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                                         <p className="text-sm text-yellow-700 bg-white rounded p-2 border border-yellow-200">No items available. Check menu setup.</p>
                                     ) : (
                                         <>
-                                            <Select value={selectedItemId || ''} onValueChange={setSelectedItemId}>
-                                                <SelectTrigger><SelectValue placeholder="Select an item..." /></SelectTrigger>
-                                                <SelectContent>
-                                                    {availableItems.map(item => (
-                                                        <SelectItem key={item.id} value={item.id}>
-                                                            {item.name} — £{item.price}{item.is_popular ? ' ⭐' : ''}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <select
+                                                value={selectedItemId || ''}
+                                                onChange={e => setSelectedItemId(e.target.value)}
+                                                className="w-full h-11 rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                            >
+                                                <option value="">Select an item...</option>
+                                                {availableItems.map(item => (
+                                                    <option key={item.id} value={item.id}>
+                                                        {item.name} — £{item.price}{item.is_popular ? ' ⭐' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
                                             {selectedItem && (
                                                 <div className="bg-white rounded-lg p-2.5 border border-yellow-200">
                                                     <p className="text-sm font-bold text-gray-900">{selectedItem.name}</p>
