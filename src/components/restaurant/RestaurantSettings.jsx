@@ -7,12 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Truck, Store, Save, Upload, Image as ImageIcon, BookOpen, Search, X, Palette, Printer, TestTube, Info, Bell } from 'lucide-react';
+import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
-import BluetoothPrinterManager from './BluetoothPrinterManager';
-import { printerService } from './PrinterService';
 import InfoSectionSettings from './InfoSectionSettings';
+import CentralizedPrinterSettings from './CentralizedPrinterSettings';
 import SmsNotificationSettings from './SmsNotificationSettings';
 import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
 
@@ -93,8 +92,6 @@ export default function RestaurantSettings({ restaurantId }) {
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingCertificate, setUploadingCertificate] = useState(false);
     const [newKeyword, setNewKeyword] = useState('');
-    const [testPrinting, setTestPrinting] = useState(false);
-
     React.useEffect(() => {
         if (restaurant) {
             // Initialize hours with defaults for all days and fields
@@ -902,58 +899,15 @@ export default function RestaurantSettings({ restaurantId }) {
             )}
 
             {activeSection === 'printing' && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Printer className="h-5 w-5" />
-                            Receipt Printer Configuration
-                        </CardTitle>
-                        <p className="text-sm text-gray-600">
-                            Configure receipt printing settings for your thermal printer
-                        </p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <BluetoothPrinterManager
-                            selectedPrinter={restaurant?.printer_config?.bluetooth_printer}
-                            onPrinterSelect={(printer) => {
-                                // Save printer inside printer_config
-                                const updatedConfig = {
-                                    ...restaurant?.printer_config,
-                                    bluetooth_printer: printer
-                                };
-                                updateMutation.mutate({ 
-                                    printer_config: updatedConfig
-                                });
-                            }}
-                        />
-
-                        <div className="border-t pt-6">
-                            <Label className="text-base font-semibold mb-4 block">Receipt Settings</Label>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <Label>Printer Width</Label>
-                                <select
-                                    value={formData.printer_config.printer_width}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        printer_config: { ...formData.printer_config, printer_width: e.target.value }
-                                    })}
-                                    className="w-full h-9 px-3 rounded-md border border-input bg-transparent"
-                                >
-                                    <option value="58mm">58mm (Compact)</option>
-                                    <option value="80mm">80mm (Standard)</option>
-                                </select>
-                                <p className="text-xs text-gray-500 mt-1">Select your thermal printer paper width</p>
-                            </div>
-                        </div>
-
-                        <div className="border-t pt-6">
-                            <Label className="text-base font-semibold mb-4 block">Font Customization</Label>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Base Font Size</Label>
+                <div>
+                    <CentralizedPrinterSettings restaurantId={restaurantId} />
+                </div>
+            )}
+            {false && (<div><div>
+                        <div />
+                             <div className="grid md:grid-cols-2 gap-4">
+                                 <div>
+                                     <Label>Base Font Size</Label>
                                     <select
                                         value={formData.printer_config.font_size}
                                         onChange={(e) => setFormData({
@@ -1452,11 +1406,10 @@ export default function RestaurantSettings({ restaurantId }) {
                                 Save Settings
                             </Button>
                         </div>
-                    </CardContent>
-                </Card>
-            )}
+                        </div></div></div>
+                        )}
 
-            {(activeSection === 'opening' || activeSection === 'delivery' || activeSection === 'collection') && (
+                        {(activeSection === 'opening' || activeSection === 'delivery' || activeSection === 'collection') && (
                 <Card>
                     <CardHeader>
                         <CardTitle>

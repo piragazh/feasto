@@ -153,7 +153,9 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                     if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
                         if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
                         if (service.isConnected()) {
-                            service.printReceipt(order, restaurant, { ...cfg, bluetooth_printer: printerConfig.bluetooth_printer }).catch(() => {
+                            // Use per-printer settings (width, template, etc.) — fall back to global cfg
+                            const perPrinterCfg = { ...cfg, ...printerConfig, bluetooth_printer: printerConfig.bluetooth_printer };
+                            service.printReceipt(order, restaurant, perPrinterCfg).catch(() => {
                                 if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
                             });
                             return;
@@ -533,7 +535,9 @@ Provide only the time range (e.g., "25-30 min").`;
                     if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
                     if (service.isConnected()) {
                         try {
-                            await service.printReceipt(order, restaurant, { ...config, bluetooth_printer: printerConfig.bluetooth_printer });
+                            // Use per-printer settings (width, template, font) merged over global config
+                            const perPrinterCfg = { ...config, ...printerConfig, bluetooth_printer: printerConfig.bluetooth_printer };
+                            await service.printReceipt(order, restaurant, perPrinterCfg);
                             toast.success(`Printed via ${printerConfig.name || `Printer ${slotIndex + 1}`}`);
                             return;
                         } catch (e) {
@@ -570,9 +574,10 @@ Provide only the time range (e.g., "25-30 min").`;
             }
         }
 
-        // Browser print fallback (non-crashing)
+        // Browser print fallback — use first printer's config if available
         try {
-            browserPrintOrder(order, restaurant, config);
+            const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
+            browserPrintOrder(order, restaurant, fallbackCfg);
         } catch (err) {
             toast.error('Print failed — manual review needed');
             console.error('[LiveOrders] Browser print error:', err);
