@@ -362,14 +362,18 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                                 <div className="space-y-3 bg-orange-50 rounded-xl p-3">
                                     <Label className="text-sm font-semibold">Menu Category</Label>
                                     <div className="space-y-1">
-                                        <select
-                                            value={selectedCategory}
-                                            onChange={e => { setSelectedCategory(e.target.value); setCustomCategory(''); }}
-                                            className="w-full h-11 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                        >
-                                            <option value="">All Categories</option>
-                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
+                                        {categories.length === 0 ? (
+                                            <p className="text-sm text-orange-700 bg-white rounded p-2 border border-orange-200">No categories found. Check menu setup.</p>
+                                        ) : (
+                                            <select
+                                                value={selectedCategory || ''}
+                                                onChange={e => { setSelectedCategory(e.target.value); setCustomCategory(''); }}
+                                                className="w-full h-11 rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                            >
+                                                <option value="">All Categories</option>
+                                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        )}
                                     </div>
                                     {itemsForCategory.length > 0 && !customCategory && (
                                         <p className="text-xs text-gray-500">{itemsForCategory.length} items · {itemsForCategory.filter(i => i.is_popular).length} popular</p>
