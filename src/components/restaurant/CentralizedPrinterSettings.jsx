@@ -40,22 +40,166 @@ function PrinterStatusBadge({ service, label }) {
     return <Badge className="bg-gray-100 text-gray-500 gap-1"><Circle className="h-3 w-3" />{label} — Not Connected</Badge>;
 }
 
+// ── Template definitions ───────────────────────────────────────────────────
+const TEMPLATES = [
+    {
+        id: 'standard',
+        name: 'Standard',
+        desc: 'Balanced layout with all details',
+        color: 'border-blue-400 bg-blue-50',
+        activeColor: 'border-blue-500 bg-blue-50 ring-2 ring-blue-300',
+        badge: 'bg-blue-100 text-blue-700',
+        preview: [
+            { type: 'center-bold', text: 'RESTAURANT NAME' },
+            { type: 'center-sm', text: '123 Main St, London' },
+            { type: 'divider' },
+            { type: 'center-bold', text: 'ORDER #1234' },
+            { type: 'divider' },
+            { type: 'row', left: '1x Margherita', right: '£12.99' },
+            { type: 'row', left: '2x Coca Cola', right: '£5.00' },
+            { type: 'divider' },
+            { type: 'row-bold', left: 'TOTAL', right: '£17.99' },
+            { type: 'divider' },
+            { type: 'center-sm', text: 'Thank you!' },
+        ],
+    },
+    {
+        id: 'detailed',
+        name: 'Detailed',
+        desc: 'Extra info, customisations & notes',
+        color: 'border-purple-400 bg-purple-50',
+        activeColor: 'border-purple-500 bg-purple-50 ring-2 ring-purple-300',
+        badge: 'bg-purple-100 text-purple-700',
+        preview: [
+            { type: 'center-bold', text: 'RESTAURANT NAME' },
+            { type: 'center-sm', text: '123 Main St · Tel: 020 1234 5678' },
+            { type: 'divider' },
+            { type: 'left-bold', text: 'Customer: John Smith' },
+            { type: 'left-sm', text: '12 Delivery Road, London' },
+            { type: 'divider' },
+            { type: 'row', left: '1x Margherita', right: '£12.99' },
+            { type: 'indent', text: '→ Extra cheese' },
+            { type: 'row', left: '2x Coca Cola', right: '£5.00' },
+            { type: 'divider' },
+            { type: 'row', left: 'Subtotal', right: '£17.99' },
+            { type: 'row', left: 'Delivery', right: '£2.50' },
+            { type: 'row-bold', left: 'TOTAL', right: '£20.49' },
+            { type: 'left-sm', text: 'Payment: Card' },
+        ],
+    },
+    {
+        id: 'minimal',
+        name: 'Minimal',
+        desc: 'Clean, fast, no frills',
+        color: 'border-gray-400 bg-gray-50',
+        activeColor: 'border-gray-600 bg-gray-50 ring-2 ring-gray-400',
+        badge: 'bg-gray-200 text-gray-700',
+        preview: [
+            { type: 'center-bold', text: 'ORDER #1234' },
+            { type: 'divider' },
+            { type: 'row', left: '1x Margherita', right: '£12.99' },
+            { type: 'row', left: '2x Coca Cola', right: '£5.00' },
+            { type: 'divider' },
+            { type: 'row-bold', left: 'TOTAL', right: '£17.99' },
+        ],
+    },
+    {
+        id: 'itemized',
+        name: 'Itemized',
+        desc: 'Large text, item-focused for kitchen',
+        color: 'border-orange-400 bg-orange-50',
+        activeColor: 'border-orange-500 bg-orange-50 ring-2 ring-orange-300',
+        badge: 'bg-orange-100 text-orange-700',
+        preview: [
+            { type: 'center-bold-lg', text: 'ORDER #1234' },
+            { type: 'divider' },
+            { type: 'item-lg', text: '1x Margherita Pizza' },
+            { type: 'item-lg', text: '2x Coca Cola' },
+            { type: 'item-lg', text: '1x Garlic Bread' },
+            { type: 'divider' },
+            { type: 'center-sm', text: 'Kitchen Copy' },
+        ],
+    },
+    {
+        id: 'compact',
+        name: 'Compact',
+        desc: 'Minimal paper usage',
+        color: 'border-green-400 bg-green-50',
+        activeColor: 'border-green-500 bg-green-50 ring-2 ring-green-300',
+        badge: 'bg-green-100 text-green-700',
+        preview: [
+            { type: 'row-bold', left: '#1234', right: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+            { type: 'row', left: '1x Margherita', right: '£12.99' },
+            { type: 'row', left: '2x Cola', right: '£5.00' },
+            { type: 'divider' },
+            { type: 'row-bold', left: 'TOTAL', right: '£17.99' },
+        ],
+    },
+    {
+        id: 'custom',
+        name: 'Custom',
+        desc: 'Full control over every section',
+        color: 'border-pink-400 bg-pink-50',
+        activeColor: 'border-pink-500 bg-pink-50 ring-2 ring-pink-300',
+        badge: 'bg-pink-100 text-pink-700',
+        preview: [
+            { type: 'center-bold', text: '✦ RESTAURANT NAME ✦' },
+            { type: 'center-sm', text: '"Your custom header here"' },
+            { type: 'divider' },
+            { type: 'center-bold', text: 'ORDER #1234' },
+            { type: 'divider' },
+            { type: 'row', left: '1x Margherita', right: '£12.99' },
+            { type: 'row-bold', left: 'TOTAL', right: '£17.99' },
+            { type: 'divider' },
+            { type: 'center-sm', text: '"Your custom footer here"' },
+            { type: 'center-sm', text: '★ Thank you! ★' },
+        ],
+    },
+];
+
+function TemplatePreviewStrip({ tpl }) {
+    return (
+        <div className="font-mono text-[9px] leading-[1.4] space-y-0.5 select-none">
+            {tpl.preview.map((line, i) => {
+                if (line.type === 'divider')      return <div key={i} className="border-t border-dashed border-gray-300 my-0.5" />;
+                if (line.type === 'center-bold')  return <div key={i} className="text-center font-bold">{line.text}</div>;
+                if (line.type === 'center-bold-lg') return <div key={i} className="text-center font-bold text-[11px]">{line.text}</div>;
+                if (line.type === 'center-sm')    return <div key={i} className="text-center text-gray-500">{line.text}</div>;
+                if (line.type === 'left-bold')    return <div key={i} className="font-bold">{line.text}</div>;
+                if (line.type === 'left-sm')      return <div key={i} className="text-gray-500">{line.text}</div>;
+                if (line.type === 'indent')       return <div key={i} className="pl-2 text-gray-400 italic">{line.text}</div>;
+                if (line.type === 'item-lg')      return <div key={i} className="font-bold text-[11px]">{line.text}</div>;
+                if (line.type === 'row')          return <div key={i} className="flex justify-between"><span>{line.left}</span><span>{line.right}</span></div>;
+                if (line.type === 'row-bold')     return <div key={i} className="flex justify-between font-bold"><span>{line.left}</span><span>{line.right}</span></div>;
+                return null;
+            })}
+        </div>
+    );
+}
+
 // ── Per-printer receipt settings ───────────────────────────────────────────
 function PrinterReceiptSettings({ printer, onUpdate }) {
     const [expanded, setExpanded] = useState(false);
+    const selectedTemplate = printer.template || 'standard';
+    const tpl = TEMPLATES.find(t => t.id === selectedTemplate) || TEMPLATES[0];
+
     return (
         <div className="border rounded-lg overflow-hidden">
             <button
                 onClick={() => setExpanded(e => !e)}
                 className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
             >
-                <span className="flex items-center gap-2"><Zap className="h-4 w-4 text-orange-500" />Receipt & Template Settings</span>
+                <span className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-orange-500" />
+                    Receipt & Template Settings
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tpl.badge}`}>{tpl.name}</span>
+                </span>
                 {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
 
             {expanded && (
-                <div className="p-4 space-y-4 bg-white">
-                    {/* Paper & command */}
+                <div className="p-4 space-y-5 bg-white">
+                    {/* Paper & Command Set */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <Label className="text-xs">Paper Width</Label>
@@ -83,73 +227,128 @@ function PrinterReceiptSettings({ printer, onUpdate }) {
                         </div>
                     </div>
 
-                    {/* Template & font */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label className="text-xs">Receipt Template</Label>
-                            <select
-                                value={printer.template || 'standard'}
-                                onChange={e => onUpdate({ template: e.target.value })}
-                                className="w-full h-9 mt-1 px-3 rounded-md border border-input bg-transparent text-sm"
-                            >
-                                <option value="standard">Standard</option>
-                                <option value="detailed">Detailed</option>
-                                <option value="minimal">Minimal</option>
-                                <option value="itemized">Itemized</option>
-                                <option value="compact">Compact</option>
-                            </select>
+                    {/* Visual Template Picker */}
+                    <div>
+                        <Label className="text-xs mb-2 block">Receipt Template</Label>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-3">
+                            {TEMPLATES.map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => onUpdate({ template: t.id })}
+                                    className={`relative border-2 rounded-xl p-2 text-left transition-all hover:shadow-md ${
+                                        selectedTemplate === t.id ? t.activeColor : t.color
+                                    }`}
+                                >
+                                    {selectedTemplate === t.id && (
+                                        <div className="absolute top-1.5 right-1.5">
+                                            <CheckCircle2 className="h-3.5 w-3.5 text-gray-700" />
+                                        </div>
+                                    )}
+                                    {/* Mini receipt preview */}
+                                    <div className="bg-white border border-gray-200 rounded-lg p-1.5 mb-2 min-h-[70px] overflow-hidden">
+                                        <TemplatePreviewStrip tpl={t} />
+                                    </div>
+                                    <div className="text-xs font-semibold text-gray-800">{t.name}</div>
+                                    <div className="text-[10px] text-gray-500 leading-tight mt-0.5">{t.desc}</div>
+                                </button>
+                            ))}
                         </div>
-                        <div>
-                            <Label className="text-xs">Font Size</Label>
-                            <select
-                                value={printer.font_size || 'medium'}
-                                onChange={e => onUpdate({ font_size: e.target.value })}
-                                className="w-full h-9 mt-1 px-3 rounded-md border border-input bg-transparent text-sm"
-                            >
-                                <option value="small">Small</option>
-                                <option value="medium">Medium</option>
-                                <option value="large">Large</option>
-                            </select>
+                    </div>
+
+                    {/* Font Size */}
+                    <div>
+                        <Label className="text-xs mb-2 block">Font Size</Label>
+                        <div className="flex gap-2">
+                            {[
+                                { value: 'small', label: 'S', desc: 'Small' },
+                                { value: 'medium', label: 'M', desc: 'Medium' },
+                                { value: 'large', label: 'L', desc: 'Large' },
+                            ].map(f => (
+                                <button
+                                    key={f.value}
+                                    onClick={() => onUpdate({ font_size: f.value })}
+                                    className={`flex-1 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${
+                                        (printer.font_size || 'medium') === f.value
+                                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <span className={f.value === 'small' ? 'text-xs' : f.value === 'large' ? 'text-base' : 'text-sm'}>{f.label}</span>
+                                    <div className="text-[10px] font-normal text-gray-400">{f.desc}</div>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
                     {/* Header / Footer text */}
-                    <div>
-                        <Label className="text-xs">Header Text</Label>
-                        <Input
-                            value={printer.header_text || ''}
-                            onChange={e => onUpdate({ header_text: e.target.value })}
-                            placeholder="e.g. Thank you for your order!"
-                            className="mt-1 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">Footer Text</Label>
-                        <Input
-                            value={printer.footer_text || ''}
-                            onChange={e => onUpdate({ footer_text: e.target.value })}
-                            placeholder="e.g. Visit us at example.com"
-                            className="mt-1 text-sm"
-                        />
+                    <div className="grid grid-cols-1 gap-3">
+                        <div>
+                            <Label className="text-xs">Header Text</Label>
+                            <Input
+                                value={printer.header_text || ''}
+                                onChange={e => onUpdate({ header_text: e.target.value })}
+                                placeholder="e.g. Thank you for your order!"
+                                className="mt-1 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Footer Text</Label>
+                            <Input
+                                value={printer.footer_text || ''}
+                                onChange={e => onUpdate({ footer_text: e.target.value })}
+                                placeholder="e.g. Visit us at example.com"
+                                className="mt-1 text-sm"
+                            />
+                        </div>
                     </div>
 
-                    {/* Toggles */}
-                    <div className="grid sm:grid-cols-2 gap-2">
-                        {[
-                            { key: 'auto_print',            label: 'Auto Print on New Order', highlight: true },
-                            { key: 'show_logo',             label: 'Show Logo' },
-                            { key: 'show_order_number',     label: 'Show Order Number' },
-                            { key: 'show_customer_details', label: 'Show Customer Details' },
-                        ].map(({ key, label, highlight }) => (
-                            <div key={key} className={`flex items-center justify-between p-2.5 border rounded-lg ${highlight ? 'border-orange-200 bg-orange-50' : ''}`}>
-                                <p className="text-xs font-medium text-gray-700">{label}</p>
-                                <Switch
-                                    checked={printer[key] !== false && printer[key] !== undefined ? (printer[key] || false) : false}
-                                    onCheckedChange={v => onUpdate({ [key]: v })}
-                                />
-                            </div>
-                        ))}
+                    {/* Display toggles */}
+                    <div>
+                        <Label className="text-xs mb-2 block">Display Options</Label>
+                        <div className="grid sm:grid-cols-2 gap-2">
+                            {[
+                                { key: 'auto_print',            label: 'Auto Print on New Order', highlight: true },
+                                { key: 'show_logo',             label: 'Show Logo' },
+                                { key: 'show_order_number',     label: 'Show Order Number' },
+                                { key: 'show_customer_details', label: 'Show Customer Details' },
+                            ].map(({ key, label, highlight }) => (
+                                <div key={key} className={`flex items-center justify-between p-2.5 border rounded-lg ${highlight ? 'border-orange-200 bg-orange-50' : ''}`}>
+                                    <p className="text-xs font-medium text-gray-700">{label}</p>
+                                    <Switch
+                                        checked={printer[key] !== false && printer[key] !== undefined ? (printer[key] || false) : false}
+                                        onCheckedChange={v => onUpdate({ [key]: v })}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     </div>
+
+                    {/* Custom template extras */}
+                    {selectedTemplate === 'custom' && (
+                        <div className="border border-pink-200 bg-pink-50 rounded-xl p-4 space-y-3">
+                            <p className="text-xs font-semibold text-pink-700 flex items-center gap-1.5">
+                                <Zap className="h-3.5 w-3.5" />Custom Template Extras
+                            </p>
+                            <div className="grid sm:grid-cols-2 gap-2">
+                                {[
+                                    { key: 'custom_show_qr',       label: 'QR Code (order tracking)' },
+                                    { key: 'custom_show_barcode',   label: 'Barcode (order number)' },
+                                    { key: 'custom_show_social',    label: 'Social Media Handles' },
+                                    { key: 'custom_show_allergens', label: 'Allergen Warnings' },
+                                    { key: 'custom_show_wifi',      label: 'WiFi Password' },
+                                    { key: 'custom_show_loyalty',   label: 'Loyalty Points Summary' },
+                                ].map(({ key, label }) => (
+                                    <div key={key} className="flex items-center justify-between p-2.5 bg-white border border-pink-100 rounded-lg">
+                                        <p className="text-xs font-medium text-gray-700">{label}</p>
+                                        <Switch
+                                            checked={printer[key] || false}
+                                            onCheckedChange={v => onUpdate({ [key]: v })}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
