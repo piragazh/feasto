@@ -9,20 +9,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2, Copy, Share2, RefreshCw, Monitor, Smartphone, Zap, Image, Eye, CheckCircle, Library, PenLine } from 'lucide-react';
+import { Sparkles, Loader2, Copy, Share2, RefreshCw, Monitor, Smartphone, Zap, Image, Eye, CheckCircle, Library, PenLine, Tag, Star, Grid, Megaphone } from 'lucide-react';
 import { toast } from 'sonner';
 import CanvasEditor from './CanvasEditor';
+
+const AD_MODES = [
+    { value: 'category', label: 'Category Menu', icon: Grid, desc: 'Showcase all items in a category', color: 'orange' },
+    { value: 'single_item', label: 'Single Item Hero', icon: Star, desc: 'Full-screen spotlight on one dish', color: 'yellow' },
+    { value: 'promo_code', label: 'Promo Code Only', icon: Tag, desc: 'Bold discount / coupon display', color: 'green' },
+    { value: 'generic', label: 'Generic Brand Ad', icon: Megaphone, desc: 'Brand awareness, no specific items', color: 'blue' },
+];
 
 export default function AIContentGenerator({ onClose, onContentGenerated, restaurantName, restaurantId, restaurantColor = '#f97316', websiteUrl = '', existingContent, initialPrompt = '' }) {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('screen');
-    const [orientation, setOrientation] = useState('landscape'); // landscape | portrait
+    const [adMode, setAdMode] = useState('category');
+    const [orientation, setOrientation] = useState('landscape');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [customCategory, setCustomCategory] = useState(''); // free-text custom category
-    const [outputType, setOutputType] = useState('image'); // image | gif
-    const [priceType, setPriceType] = useState('online'); // online | pos
+    const [customCategory, setCustomCategory] = useState('');
+    const [selectedItemId, setSelectedItemId] = useState('');
+    const [outputType, setOutputType] = useState('image');
+    const [priceType, setPriceType] = useState('online');
     const [colorPalette, setColorPalette] = useState('default');
     const [promoOffer, setPromoOffer] = useState('');
+    const [promoCode, setPromoCode] = useState('');
+    const [promoDiscount, setPromoDiscount] = useState('');
+    const [promoExpiry, setPromoExpiry] = useState('');
+    const [genericMessage, setGenericMessage] = useState('');
     const [customPrompt, setCustomPrompt] = useState(initialPrompt);
     const [style, setStyle] = useState('cinematic');
     const [duration, setDuration] = useState(10);
@@ -41,7 +54,6 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
         if (initialPrompt) setCustomPrompt(initialPrompt);
     }, [initialPrompt]);
 
-    // Fetch menu items
     const { data: menuItems = [] } = useQuery({
         queryKey: ['menu-items-ai', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
@@ -49,16 +61,19 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
     });
 
     const categories = [...new Set(menuItems.map(i => i.category).filter(Boolean))];
+    const availableItems = menuItems.filter(i => i.is_available !== false);
 
     const itemsForCategory = selectedCategory
         ? menuItems.filter(i => i.category === selectedCategory && i.is_available !== false)
         : menuItems.filter(i => i.is_available !== false).slice(0, 20);
 
+    const selectedItem = menuItems.find(i => i.id === selectedItemId);
+
     const stylePresets = [
-        { value: 'cinematic', label: 'Cinematic Fast-Food', desc: 'Dark + brand glow, fire tones, bold type' },
-        { value: 'vibrant', label: 'Vibrant & Bold', desc: 'High contrast, colorful, eye-catching' },
-        { value: 'elegant', label: 'Elegant Premium', desc: 'Minimal, dark, sophisticated' },
-        { value: 'neon', label: 'Neon Night', desc: 'Dark background, neon accents, modern' },
+        { value: 'cinematic', label: 'Cinematic', desc: 'Dark + brand glow, bold type' },
+        { value: 'vibrant', label: 'Vibrant & Bold', desc: 'High contrast, colorful' },
+        { value: 'elegant', label: 'Elegant Premium', desc: 'Minimal, sophisticated' },
+        { value: 'neon', label: 'Neon Night', desc: 'Dark + neon accents' },
     ];
 
     const colorPalettes = [
@@ -72,105 +87,95 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
         { value: 'minimalist', label: 'Minimalist B&W', colors: ['#000000', '#FFFFFF', '#808080'] },
     ];
 
-    const priceTypeOptions = [
-        { value: 'online', label: 'Online Price', desc: 'Include website URL' },
-        { value: 'pos', label: 'POS Price', desc: 'In-store only (no website)' },
-    ];
-
     const effectiveCategory = customCategory.trim() || selectedCategory;
 
-    const buildScreenAdPrompt = () => {
-        const getPrice = (item) => {
-            if (priceType === 'pos' && item.pos_price) {
-                return `£${item.pos_price}`;
-            }
-            return `£${item.price}`;
-        };
+    const styleMap = {
+        cinematic: "cinematic fast-food advertising style like McDonald's or KFC, dark background with orange fire glow gradient, bold dramatic typography",
+        vibrant: 'vibrant colorful high-contrast promotional style, bold colors, eye-catching composition',
+        elegant: 'elegant premium dark restaurant branding, minimal layout, sophisticated typography',
+        neon: 'neon night-club restaurant style, dark background with glowing neon accents, futuristic typography'
+    };
 
-        const items = itemsForCategory.slice(0, 8);
-        const heroItems = items.filter(i => i.is_popular).slice(0, 2).length > 0
-            ? items.filter(i => i.is_popular).slice(0, 2)
-            : items.slice(0, 2);
+    const getPrice = (item) => (priceType === 'pos' && item.pos_price) ? `£${item.pos_price}` : `£${item.price}`;
 
-        // Get prices based on selected type
-        const itemList = items.map(i => `${i.name} ${getPrice(i)}`).join(', ');
-        const heroList = heroItems.map(i => `${i.name} ${getPrice(i)}${i.description ? ' - ' + i.description.slice(0, 40) : ''}`).join('; ');
+    const buildPrompt = () => {
         const orientationDesc = orientation === 'portrait'
             ? 'vertical portrait format (9:16), tall screen, mobile/totem display'
             : 'horizontal landscape format (16:9), wide LED screen, window display';
-        
         const paletteInfo = colorPalettes.find(p => p.value === colorPalette);
         const colorDesc = paletteInfo ? `Color palette: ${paletteInfo.label} (${paletteInfo.colors.join(', ')})` : '';
-        
-        const styleMap = {
-            cinematic: 'cinematic fast-food advertising style like McDonald\'s or KFC, dark background with orange fire glow gradient, bold dramatic typography',
-            vibrant: 'vibrant colorful high-contrast promotional style, bold colors, eye-catching composition',
-            elegant: 'elegant premium dark restaurant branding, minimal layout, sophisticated typography',
-            neon: 'neon night-club restaurant style, dark background with glowing neon accents, futuristic typography'
-        };
         const gifNote = outputType === 'gif' ? 'Design as a looping animated GIF frame — motion blur, glowing effects, dynamic energy implied in single frame.' : '';
+        const base = `Create a ${orientationDesc} LED promotional screen ad for "${restaurantName}". Style: ${styleMap[style]}. Brand color: ${restaurantColor}. ${colorDesc}. ${gifNote}.`;
+        const ctaLine = websiteUrl && priceType !== 'pos' ? `CTA: ORDER NOW at ${websiteUrl}` : 'CTA: ORDER NOW / WALK IN TODAY';
 
-        return `Create a ${orientationDesc} LED promotional screen ad for "${restaurantName}".
+        if (adMode === 'single_item' && selectedItem) {
+            return `${base}
+SINGLE ITEM HERO AD — This entire screen is dedicated to ONE dish only.
+Item: ${selectedItem.name}
+Price: ${getPrice(selectedItem)}
+${selectedItem.description ? `Description: ${selectedItem.description}` : ''}
+${promoOffer ? `Offer: ${promoOffer}` : ''}
+DESIGN: Fill 80% of screen with an incredible appetite-appeal close-up of "${selectedItem.name}". Massive price in bold. Punchy hook word (CRISPY / LOADED / JUICY / FIERY). ${ctaLine}. No other menu items. Readable from 5 meters.`;
+        }
+
+        if (adMode === 'promo_code') {
+            return `${base}
+PROMO CODE DISPLAY AD — The entire focus is the discount offer and code.
+Discount: ${promoDiscount || 'SPECIAL OFFER'}
+Promo Code: ${promoCode || 'ORDER NOW'}
+${promoExpiry ? `Expires: ${promoExpiry}` : ''}
+${promoOffer ? `Extra offer text: ${promoOffer}` : ''}
+DESIGN: Giant bold promo code text dominates the centre of the screen (60%+ of height). Bold discount percentage/amount. Urgency messaging (LIMITED TIME, TODAY ONLY). ${ctaLine}. Minimal other content — the code is the hero. Use bright contrast colours for maximum impact.`;
+        }
+
+        if (adMode === 'generic') {
+            return `${base}
+GENERIC BRAND AWARENESS AD — No specific menu items or prices.
+Restaurant: ${restaurantName}
+${genericMessage ? `Message: ${genericMessage}` : `Theme: quality food, great taste, come visit us`}
+${promoOffer ? `Offer: ${promoOffer}` : ''}
+DESIGN: Bold restaurant name as centrepiece. Appetising background with food imagery. Brand colours prominent. Tagline or generic hook. ${ctaLine}. Clean, professional, aspirational.`;
+        }
+
+        // Default: category mode
+        const items = itemsForCategory.slice(0, 8);
+        const heroItems = items.filter(i => i.is_popular).slice(0, 2).length > 0
+            ? items.filter(i => i.is_popular).slice(0, 2) : items.slice(0, 2);
+        const itemList = items.map(i => `${i.name} ${getPrice(i)}`).join(', ');
+        const heroList = heroItems.map(i => `${i.name} ${getPrice(i)}${i.description ? ' - ' + i.description.slice(0, 40) : ''}`).join('; ');
+
+        return `${base}
 ${effectiveCategory ? `Category focus: ${effectiveCategory}` : ''}
-Style: ${styleMap[style]}
-Brand color: ${restaurantColor}
-${colorDesc}
-${gifNote}
-
 HERO ITEMS (large, dominant): ${heroList || effectiveCategory || restaurantName}
 ALL MENU ITEMS on screen: ${itemList || effectiveCategory}
 ${promoOffer ? `PROMO: ${promoOffer} - make this DOMINANT with urgency (LIMITED TIME / TODAY ONLY)` : ''}
-${websiteUrl ? `CTA: ORDER NOW - ${websiteUrl}` : 'CTA: ORDER NOW / SKIP THE QUEUE'}
-
-DESIGN RULES:
-- Readable from 5 meters away — massive bold text (40-50pt minimum)
-- Dark background with brand color (${restaurantColor}) glow/gradient
-- Hero item takes up ${orientation === 'portrait' ? '35-40%' : '40%'} of screen with appetite-appeal close-up
-- Prices in large visible text with currency symbol (bold orange/gold)
-- Use power words: CRISPY, LOADED, JUICY, FIERY, MELTED
-- NO paragraphs — only short punchy labels and names
-- ${orientation === 'portrait' ? 'CRITICAL: Fill entire 9:16 screen. Top 35%: header + hook. Middle 35%: hero image + price. Bottom 30%: menu grid (3 cols max) + offer banner + large CTA button. NO WHITESPACE. All elements must fit without cutting off.' : 'Left 40%: hero item + price + hook. Right 60%: grid of items stacked vertically. Bottom: offer banner + CTA. Ensure all text visible.'}
-- Professional food photography lighting, 4K quality
-- ${promoOffer ? 'Promo badge/banner (10-15% of screen height) must be BOLD, impossible to miss, positioned prominently' : 'Strong visual hierarchy with clear focus'}
-- Menu items listed as simple labels, ${orientation === 'portrait' ? '3 columns in compact grid' : '2 columns'}, no descriptions
-- ${priceType === 'pos' ? 'NO website URL or online ordering references — in-store only, focus on walk-in appeal' : 'Include website URL prominently in CTA'}`;
+${ctaLine}
+DESIGN RULES: Readable from 5 meters — massive bold text. Dark background with brand color glow. Hero item 40% of screen. Prices bold. Use power words: CRISPY, LOADED, JUICY, FIERY. NO paragraphs. ${orientation === 'portrait' ? 'Fill entire 9:16. Top: header + hook. Middle: hero + price. Bottom: menu grid 3 cols + CTA.' : 'Left 40%: hero + price + hook. Right 60%: item grid. Bottom: CTA.'} ${priceType === 'pos' ? 'NO website URL.' : ''}`;
     };
 
     const handleGenerateScreenAd = async () => {
-        if (itemsForCategory.length === 0 && !customPrompt.trim()) {
-            toast.error('Please select a category or enter a custom prompt');
-            return;
-        }
+        if (adMode === 'single_item' && !selectedItem) { toast.error('Please select a menu item'); return; }
+        if (adMode === 'promo_code' && !promoCode) { toast.error('Please enter a promo code'); return; }
+        if (adMode === 'category' && itemsForCategory.length === 0 && !customPrompt.trim()) { toast.error('Please select a category or enter a prompt'); return; }
+
         setIsGenerating(true);
         setGeneratedUrl(null);
         setScreenPlan(null);
 
         try {
-            const imagePrompt = itemsForCategory.length > 0 ? buildScreenAdPrompt() : customPrompt;
+            const imagePrompt = customPrompt.trim() && adMode === 'category' ? customPrompt : buildPrompt();
 
-            // Generate the AI screen plan + image in parallel
             const [imageResult, planResult] = await Promise.all([
                 base44.integrations.Core.GenerateImage({ prompt: imagePrompt }),
-                itemsForCategory.length > 0 ? base44.integrations.Core.InvokeLLM({
+                (adMode === 'category' && itemsForCategory.length > 0) ? base44.integrations.Core.InvokeLLM({
                     prompt: `You are a digital signage content strategist. Generate a structured screen ad plan for "${restaurantName}".
-
 Category: ${selectedCategory || 'All Menu'}
 Items: ${itemsForCategory.slice(0, 10).map(i => `${i.name} £${i.price} (popular: ${i.is_popular ? 'yes' : 'no'})`).join(', ')}
 Brand color: ${restaurantColor}
 Orientation: ${orientation}
 Offer: ${promoOffer || 'none'}
 Website: ${websiteUrl || 'none'}
-
-Return a JSON screen ad plan with this exact structure:
-{
-  "header": { "category_title": "...", "hook": "..." },
-  "hero_items": [{ "name": "...", "price": "...", "punch_line": "..." }],
-  "secondary_items": [{ "name": "...", "price": "..." }],
-  "offer_section": { "text": "...", "urgency": "..." },
-  "cta": { "primary": "...", "secondary": "...", "website": "..." },
-  "style": { "primary_color": "...", "background": "...", "font_weight": "bold" },
-  "animation": { "hero_effect": "...", "text_transition": "...", "loop_seconds": 10 }
-}`,
+Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items": [{ "name": "...", "price": "...", "punch_line": "..." }], "secondary_items": [{ "name": "...", "price": "..." }], "offer_section": { "text": "...", "urgency": "..." }, "cta": { "primary": "...", "secondary": "...", "website": "..." }, "style": { "primary_color": "...", "background": "...", "font_weight": "bold" }, "animation": { "hero_effect": "...", "text_transition": "...", "loop_seconds": 10 } }`,
                     response_json_schema: {
                         type: "object",
                         properties: {
@@ -199,18 +204,18 @@ Return a JSON screen ad plan with this exact structure:
 
     const handleAddToLibrary = async () => {
         if (!generatedUrl) return;
-        const title = screenPlan?.header?.category_title || effectiveCategory || customPrompt.slice(0, 50) || `${restaurantName} Screen Ad`;
+        const title = screenPlan?.header?.category_title || promoCode || selectedItem?.name || effectiveCategory || customPrompt.slice(0, 50) || `${restaurantName} Screen Ad`;
         try {
             await base44.entities.MediaFile.create({
                 restaurant_id: restaurantId,
                 file_url: generatedUrl,
-                file_name: `${title}.${outputType}`,
+                file_name: `${title}.${outputType === 'gif' ? 'gif' : 'png'}`,
                 file_type: outputType === 'gif' ? 'image/gif' : 'image/png',
                 file_size: 0,
             });
             queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
             toast.success('Added to Media Library!');
-        } catch (error) {
+        } catch {
             toast.error('Failed to add to library');
         }
     };
@@ -223,30 +228,24 @@ Return a JSON screen ad plan with this exact structure:
             media_type: outputType === 'gif' ? 'gif' : 'image',
             duration,
             ai_generated: true,
-            ai_prompt: buildScreenAdPrompt(),
-            title: screenPlan?.header?.category_title || customPrompt.slice(0, 50) || `${restaurantName} Screen Ad`,
+            title: screenPlan?.header?.category_title || selectedItem?.name || promoCode || customPrompt.slice(0, 50) || `${restaurantName} Screen Ad`,
         });
         onClose?.();
     };
 
     const handleGenerateVariations = async () => {
-        if (itemsForCategory.length === 0 && !customPrompt.trim()) {
-            toast.error('Select a category or enter a prompt first');
-            return;
-        }
         setIsGeneratingContent(true);
         setVariations([]);
         try {
-            const base = buildScreenAdPrompt();
-            const variationPrompts = [
-                base + ', alternative composition, different angle, warm tones',
-                base + ', close-up hero shot, dramatic lighting',
-                base + ', wide grid layout, multiple items showcase',
-            ];
-            const results = await Promise.all(variationPrompts.map(p => base44.integrations.Core.GenerateImage({ prompt: p })));
+            const base = buildPrompt();
+            const results = await Promise.all([
+                base44.integrations.Core.GenerateImage({ prompt: base + ', alternative composition, different angle, warm tones' }),
+                base44.integrations.Core.GenerateImage({ prompt: base + ', close-up hero shot, dramatic lighting' }),
+                base44.integrations.Core.GenerateImage({ prompt: base + ', wide grid layout, multiple items showcase' }),
+            ]);
             setVariations(results.map((r, i) => ({ url: r.url, label: ['Alt Composition', 'Close-up Hero', 'Grid Showcase'][i] })));
             toast.success('Variations generated!');
-        } catch (error) {
+        } catch {
             toast.error('Failed to generate variations');
         } finally {
             setIsGeneratingContent(false);
@@ -264,7 +263,7 @@ Return a JSON screen ad plan with this exact structure:
             });
             setOptimizedSuggestions(response?.suggestions || []);
             toast.success('Suggestions generated!');
-        } catch (error) {
+        } catch {
             toast.error('Failed to generate suggestions');
         } finally {
             setIsOptimizing(false);
@@ -272,7 +271,7 @@ Return a JSON screen ad plan with this exact structure:
     };
 
     const handleGenerateSocialSnippets = async () => {
-        const text = screenPlan?.header?.hook || customPrompt || '';
+        const text = screenPlan?.header?.hook || customPrompt || promoOffer || '';
         if (!text.trim()) { toast.error('Generate a screen ad first or enter a prompt'); return; }
         setIsGeneratingContent(true);
         setSocialSnippets(null);
@@ -283,7 +282,7 @@ Return a JSON screen ad plan with this exact structure:
             });
             setSocialSnippets(response);
             toast.success('Social snippets generated!');
-        } catch (error) {
+        } catch {
             toast.error('Failed to generate snippets');
         } finally {
             setIsGeneratingContent(false);
@@ -291,23 +290,13 @@ Return a JSON screen ad plan with this exact structure:
     };
 
     const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success('Copied!'); };
+    const handleCanvasUse = (url) => { setGeneratedUrl(url); setShowCanvasEditor(false); toast.success('Canvas exported'); };
 
-    const handleCanvasUse = (url) => {
-        setGeneratedUrl(url);
-        setShowCanvasEditor(false);
-        toast.success('Canvas exported — ready to use or add to library');
-    };
+    const resetResult = () => { setGeneratedUrl(null); setScreenPlan(null); };
 
     return (
         <>
-        <CanvasEditor
-            open={showCanvasEditor}
-            onClose={() => setShowCanvasEditor(false)}
-            backgroundUrl={generatedUrl}
-            restaurantId={restaurantId}
-            menuItems={menuItems}
-            onUse={handleCanvasUse}
-        />
+        <CanvasEditor open={showCanvasEditor} onClose={() => setShowCanvasEditor(false)} backgroundUrl={generatedUrl} restaurantId={restaurantId} menuItems={menuItems} onUse={handleCanvasUse} />
         <div className="w-full">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-4">
@@ -318,97 +307,133 @@ Return a JSON screen ad plan with this exact structure:
                 </TabsList>
 
                 {/* ── SCREEN AD TAB ── */}
-                <TabsContent value="screen" className="mt-6 space-y-6">
-                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
-                        <p className="text-sm font-semibold text-orange-900 flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" /> Goal: Increase walk-ins & upsell high-margin items
-                        </p>
-                        <p className="text-xs text-orange-700 mt-1">Cinematic LED screen ads designed to convert from 5 meters away</p>
+                <TabsContent value="screen" className="mt-4 space-y-5">
+
+                    {/* Ad Mode Selector */}
+                    <div>
+                        <Label className="text-sm font-bold text-gray-800 mb-2 block">Ad Type</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {AD_MODES.map(mode => {
+                                const Icon = mode.icon;
+                                const active = adMode === mode.value;
+                                return (
+                                    <button
+                                        key={mode.value}
+                                        onClick={() => { setAdMode(mode.value); resetResult(); }}
+                                        className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 text-left transition-all ${active ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                                    >
+                                        <Icon className={`h-5 w-5 ${active ? 'text-orange-500' : 'text-gray-400'}`} />
+                                        <span className={`text-xs font-bold ${active ? 'text-orange-700' : 'text-gray-700'}`}>{mode.label}</span>
+                                        <span className="text-[10px] text-gray-400 leading-tight">{mode.desc}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* LEFT: Inputs */}
                         <div className="space-y-4">
+
                             {/* Orientation */}
                             <div>
                                 <Label className="text-sm font-semibold">Screen Orientation</Label>
                                 <div className="flex gap-3 mt-2">
-                                    <button
-                                        onClick={() => setOrientation('landscape')}
-                                        className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${orientation === 'landscape' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                    >
-                                        <Monitor className={`h-8 w-12 ${orientation === 'landscape' ? 'text-orange-500' : 'text-gray-400'}`} />
+                                    <button onClick={() => setOrientation('landscape')} className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${orientation === 'landscape' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <Monitor className={`h-6 w-9 ${orientation === 'landscape' ? 'text-orange-500' : 'text-gray-400'}`} />
                                         <span className="text-xs font-medium">Landscape 16:9</span>
-                                        <span className="text-[10px] text-gray-500">Window / Wall display</span>
                                     </button>
-                                    <button
-                                        onClick={() => setOrientation('portrait')}
-                                        className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${orientation === 'portrait' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                    >
-                                        <Smartphone className={`h-8 w-5 ${orientation === 'portrait' ? 'text-orange-500' : 'text-gray-400'}`} />
+                                    <button onClick={() => setOrientation('portrait')} className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${orientation === 'portrait' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <Smartphone className={`h-6 w-4 ${orientation === 'portrait' ? 'text-orange-500' : 'text-gray-400'}`} />
                                         <span className="text-xs font-medium">Portrait 9:16</span>
-                                        <span className="text-[10px] text-gray-500">Totem / tall screen</span>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Category */}
-                            <div>
-                                <Label className="text-sm font-semibold">Menu Category</Label>
-                                <Select value={selectedCategory} onValueChange={v => { setSelectedCategory(v); setCustomCategory(''); }}>
-                                    <SelectTrigger className="mt-2">
-                                        <SelectValue placeholder="All categories" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={null}>All Categories</SelectItem>
-                                        {categories.map(c => (
-                                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {itemsForCategory.length > 0 && !customCategory && (
-                                    <p className="text-xs text-gray-500 mt-1">{itemsForCategory.length} items — {itemsForCategory.filter(i => i.is_popular).length} popular</p>
-                                )}
-                                <Input
-                                    value={customCategory}
-                                    onChange={e => { setCustomCategory(e.target.value); if (e.target.value) setSelectedCategory(''); }}
-                                    placeholder="Or type a custom category (e.g. Summer Specials)"
-                                    className="mt-2 text-sm"
-                                />
-                            </div>
+                            {/* ── MODE-SPECIFIC INPUTS ── */}
 
-                            {/* Output Type */}
-                            <div>
-                                <Label className="text-sm font-semibold">Output Type</Label>
-                                <div className="flex gap-3 mt-2">
-                                    <button
-                                        onClick={() => setOutputType('image')}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${outputType === 'image' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                                    >
-                                        <Image className="h-4 w-4" /> Image
-                                    </button>
-                                    <button
-                                        onClick={() => setOutputType('gif')}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${outputType === 'gif' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                                    >
-                                        <Zap className="h-4 w-4" /> GIF Style
-                                    </button>
+                            {/* CATEGORY MODE */}
+                            {adMode === 'category' && (
+                                <div className="space-y-3 bg-orange-50 rounded-xl p-3">
+                                    <Label className="text-sm font-semibold">Menu Category</Label>
+                                    <Select value={selectedCategory} onValueChange={v => { setSelectedCategory(v); setCustomCategory(''); }}>
+                                        <SelectTrigger><SelectValue placeholder="All categories" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={null}>All Categories</SelectItem>
+                                            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    {itemsForCategory.length > 0 && !customCategory && (
+                                        <p className="text-xs text-gray-500">{itemsForCategory.length} items · {itemsForCategory.filter(i => i.is_popular).length} popular</p>
+                                    )}
+                                    <Input value={customCategory} onChange={e => { setCustomCategory(e.target.value); if (e.target.value) setSelectedCategory(''); }} placeholder="Or type custom category (e.g. Summer Specials)" className="text-sm" />
                                 </div>
-                                {outputType === 'gif' && (
-                                    <p className="text-[11px] text-amber-600 mt-1.5 bg-amber-50 rounded px-2 py-1">Generates a dynamic motion-style image saved as GIF. For true animation, upload a real GIF in Media Library.</p>
-                                )}
-                            </div>
+                            )}
 
-                            {/* Style */}
+                            {/* SINGLE ITEM MODE */}
+                            {adMode === 'single_item' && (
+                                <div className="space-y-3 bg-yellow-50 rounded-xl p-3">
+                                    <Label className="text-sm font-semibold">Choose Menu Item</Label>
+                                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                                        <SelectTrigger><SelectValue placeholder="Select an item..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {availableItems.map(item => (
+                                                <SelectItem key={item.id} value={item.id}>
+                                                    {item.name} — £{item.price}{item.is_popular ? ' ⭐' : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedItem && (
+                                        <div className="bg-white rounded-lg p-2.5 border border-yellow-200">
+                                            <p className="text-sm font-bold text-gray-900">{selectedItem.name}</p>
+                                            {selectedItem.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{selectedItem.description}</p>}
+                                            <p className="text-sm font-black text-orange-600 mt-1">{getPrice(selectedItem)}</p>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setPriceType('online')} className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-medium transition-all ${priceType === 'online' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600'}`}>Online Price</button>
+                                        <button onClick={() => setPriceType('pos')} className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-medium transition-all ${priceType === 'pos' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600'}`}>POS Price</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PROMO CODE MODE */}
+                            {adMode === 'promo_code' && (
+                                <div className="space-y-3 bg-green-50 rounded-xl p-3">
+                                    <Label className="text-sm font-semibold">Promo Code Details</Label>
+                                    <div className="space-y-2">
+                                        <Input value={promoCode} onChange={e => setPromoCode(e.target.value)} placeholder="Code e.g. SAVE20, LUNCH15" className="font-mono text-lg font-bold bg-white" />
+                                        <Input value={promoDiscount} onChange={e => setPromoDiscount(e.target.value)} placeholder="Discount e.g. 20% OFF, £5 OFF, FREE DELIVERY" className="bg-white" />
+                                        <Input value={promoExpiry} onChange={e => setPromoExpiry(e.target.value)} placeholder="Expiry e.g. Today Only, This Weekend, 31st March" className="bg-white" />
+                                        <Input value={promoOffer} onChange={e => setPromoOffer(e.target.value)} placeholder="Extra tagline e.g. On orders over £15" className="bg-white" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* GENERIC MODE */}
+                            {adMode === 'generic' && (
+                                <div className="space-y-3 bg-blue-50 rounded-xl p-3">
+                                    <Label className="text-sm font-semibold">Brand Message</Label>
+                                    <Textarea value={genericMessage} onChange={e => setGenericMessage(e.target.value)} placeholder="e.g. Fresh ingredients, made with love. Visit us today! Or leave blank for an auto-generated brand ad." rows={3} className="bg-white text-sm" />
+                                    <Input value={promoOffer} onChange={e => setPromoOffer(e.target.value)} placeholder="Optional offer e.g. Happy Hour 5-7pm" className="bg-white" />
+                                </div>
+                            )}
+
+                            {/* Shared: Promo offer for category/single */}
+                            {(adMode === 'category' || adMode === 'single_item') && (
+                                <div>
+                                    <Label className="text-sm font-semibold">Promo / Offer <span className="text-gray-400 font-normal">(optional)</span></Label>
+                                    <Input value={promoOffer} onChange={e => setPromoOffer(e.target.value)} placeholder="e.g. 15% OFF – USE CODE WEB15" className="mt-2" />
+                                </div>
+                            )}
+
+                            {/* Visual Style */}
                             <div>
                                 <Label className="text-sm font-semibold">Visual Style</Label>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                     {stylePresets.map(s => (
-                                        <button
-                                            key={s.value}
-                                            onClick={() => setStyle(s.value)}
-                                            className={`p-2.5 rounded-lg border-2 text-left transition-all ${style === s.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                        >
+                                        <button key={s.value} onClick={() => setStyle(s.value)} className={`p-2.5 rounded-lg border-2 text-left transition-all ${style === s.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                             <p className="text-xs font-semibold">{s.label}</p>
                                             <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
                                         </button>
@@ -421,70 +446,41 @@ Return a JSON screen ad plan with this exact structure:
                                 <Label className="text-sm font-semibold">Color Palette</Label>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                     {colorPalettes.map(p => (
-                                        <button
-                                            key={p.value}
-                                            onClick={() => setColorPalette(p.value)}
-                                            className={`p-2.5 rounded-lg border-2 text-left transition-all ${colorPalette === p.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                        >
+                                        <button key={p.value} onClick={() => setColorPalette(p.value)} className={`p-2.5 rounded-lg border-2 text-left transition-all ${colorPalette === p.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                             <p className="text-xs font-semibold">{p.label}</p>
-                                            <div className="flex gap-1 mt-1.5">
-                                                {p.colors.map((color, i) => (
-                                                    <div key={i} className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: color }} />
-                                                ))}
+                                            <div className="flex gap-1 mt-1">
+                                                {p.colors.map((color, i) => <div key={i} className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: color }} />)}
                                             </div>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Price Type */}
+                            {/* Output Type */}
                             <div>
-                                <Label className="text-sm font-semibold">Price Source</Label>
+                                <Label className="text-sm font-semibold">Output Format</Label>
                                 <div className="flex gap-3 mt-2">
-                                    {priceTypeOptions.map(opt => (
-                                        <button
-                                            key={opt.value}
-                                            onClick={() => setPriceType(opt.value)}
-                                            className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${priceType === opt.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                        >
-                                            <span className="text-xs font-semibold">{opt.label}</span>
-                                            <span className="text-[10px] text-gray-500">{opt.desc}</span>
-                                        </button>
-                                    ))}
+                                    <button onClick={() => setOutputType('image')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${outputType === 'image' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                                        <Image className="h-4 w-4" /> Image
+                                    </button>
+                                    <button onClick={() => setOutputType('gif')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${outputType === 'gif' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                                        <Zap className="h-4 w-4" /> GIF Style
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Offer */}
-                            <div>
-                                <Label className="text-sm font-semibold">Promo / Offer <span className="text-gray-400 font-normal">(optional)</span></Label>
-                                <Input
-                                    value={promoOffer}
-                                    onChange={e => setPromoOffer(e.target.value)}
-                                    placeholder="e.g. 15% OFF – USE CODE WEB15"
-                                    className="mt-2"
-                                />
-                            </div>
-
                             {/* Custom Prompt Override */}
-                            <div>
-                                <Label className="text-sm font-semibold">Custom Prompt Override <span className="text-gray-400 font-normal">(optional)</span></Label>
-                                <Textarea
-                                    value={customPrompt}
-                                    onChange={e => setCustomPrompt(e.target.value)}
-                                    placeholder="Leave blank to auto-generate from menu. Or write your own description..."
-                                    rows={2}
-                                    className="mt-2 text-sm"
-                                />
-                            </div>
+                            {adMode === 'category' && (
+                                <div>
+                                    <Label className="text-sm font-semibold">Custom Prompt Override <span className="text-gray-400 font-normal">(optional)</span></Label>
+                                    <Textarea value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder="Leave blank to auto-generate. Or write your own..." rows={2} className="mt-2 text-sm" />
+                                </div>
+                            )}
 
                             {/* Duration */}
                             <div>
                                 <Label className="text-sm font-semibold">Display Duration: {duration}s</Label>
-                                <input
-                                    type="range" min="5" max="30" value={duration}
-                                    onChange={e => setDuration(parseInt(e.target.value))}
-                                    className="w-full mt-2 accent-orange-500"
-                                />
+                                <input type="range" min="5" max="30" value={duration} onChange={e => setDuration(parseInt(e.target.value))} className="w-full mt-2 accent-orange-500" />
                                 <div className="flex justify-between text-[10px] text-gray-400"><span>5s</span><span>30s</span></div>
                             </div>
                         </div>
@@ -492,13 +488,11 @@ Return a JSON screen ad plan with this exact structure:
                         {/* RIGHT: Preview */}
                         <div className="space-y-4">
                             <Label className="text-sm font-semibold flex items-center gap-2"><Eye className="h-4 w-4" />Preview</Label>
-
-                            {/* Image Preview */}
-                            <div className={`bg-gray-900 rounded-xl overflow-hidden flex items-center justify-center border-2 border-gray-700 ${orientation === 'portrait' ? 'aspect-[9/16] max-h-[500px]' : 'aspect-video'}`}>
+                            <div className={`bg-gray-900 rounded-xl overflow-hidden flex items-center justify-center border-2 border-gray-700 ${orientation === 'portrait' ? 'aspect-[9/16] max-h-[480px]' : 'aspect-video'}`}>
                                 {isGenerating ? (
                                     <div className="text-center">
                                         <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-2" />
-                                        <p className="text-xs text-gray-400">Generating cinematic ad...</p>
+                                        <p className="text-xs text-gray-400">Generating ad...</p>
                                     </div>
                                 ) : generatedUrl ? (
                                     <img src={generatedUrl} alt="Generated screen ad" className="w-full h-full object-cover" />
@@ -506,12 +500,11 @@ Return a JSON screen ad plan with this exact structure:
                                     <div className="text-center px-6">
                                         <Monitor className="h-10 w-10 text-gray-600 mx-auto mb-3" />
                                         <p className="text-xs text-gray-500">Your screen ad will appear here</p>
-                                        <p className="text-[10px] text-gray-600 mt-1">{orientation === 'portrait' ? '9:16 Portrait' : '16:9 Landscape'} format</p>
+                                        <p className="text-[10px] text-gray-600 mt-1">{orientation === 'portrait' ? '9:16 Portrait' : '16:9 Landscape'}</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Screen Plan Preview */}
                             {screenPlan && (
                                 <div className="bg-gray-900 rounded-xl p-4 text-white space-y-3">
                                     <p className="text-xs font-bold text-orange-400 uppercase tracking-wider">Generated Screen Plan</p>
@@ -552,21 +545,10 @@ Return a JSON screen ad plan with this exact structure:
                                         <span className="font-bold text-white">{screenPlan.cta?.primary}</span>
                                         {screenPlan.cta?.website && <span>{screenPlan.cta.website}</span>}
                                     </div>
-                                    {screenPlan.animation && (
-                                        <div className="text-[10px] text-gray-500 space-y-0.5">
-                                            <p>🎬 {screenPlan.animation.hero_effect}</p>
-                                            <p>✨ {screenPlan.animation.text_transition}</p>
-                                            <p>🔄 Loop: {screenPlan.animation.loop_seconds}s</p>
-                                        </div>
-                                    )}
+                                    <Button variant="outline" size="sm" className="w-full" onClick={() => copyToClipboard(JSON.stringify(screenPlan, null, 2))}>
+                                        <Copy className="h-3.5 w-3.5 mr-2" />Copy Screen Plan JSON
+                                    </Button>
                                 </div>
-                            )}
-
-                            {/* Copy JSON button */}
-                            {screenPlan && (
-                                <Button variant="outline" size="sm" className="w-full" onClick={() => copyToClipboard(JSON.stringify(screenPlan, null, 2))}>
-                                    <Copy className="h-3.5 w-3.5 mr-2" />Copy Screen Plan JSON
-                                </Button>
                             )}
                         </div>
                     </div>
@@ -574,32 +556,18 @@ Return a JSON screen ad plan with this exact structure:
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-3 pt-2 border-t">
                         {!generatedUrl ? (
-                            <Button
-                                onClick={handleGenerateScreenAd}
-                                className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold"
-                                disabled={isGenerating}
-                            >
-                                {isGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating Cinematic Ad...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate Screen Ad</>}
+                            <Button onClick={handleGenerateScreenAd} className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold" disabled={isGenerating}>
+                                {isGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate Ad</>}
                             </Button>
                         ) : (
                             <>
-                                <Button onClick={() => setShowCanvasEditor(true)} className="flex-1 bg-purple-600 hover:bg-purple-700">
-                                    <PenLine className="h-4 w-4 mr-2" />Edit in Canvas
-                                </Button>
-                                <Button onClick={handleAddToLibrary} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                                    <Library className="h-4 w-4 mr-2" />Add to Library
-                                </Button>
-                                <Button onClick={handleUseContent} className="flex-1 bg-green-600 hover:bg-green-700">
-                                    <CheckCircle className="h-4 w-4 mr-2" />Use in Playlist
-                                </Button>
-                                <Button onClick={() => { setGeneratedUrl(null); setScreenPlan(null); }} variant="outline">
-                                    Regenerate
-                                </Button>
+                                <Button onClick={() => setShowCanvasEditor(true)} className="flex-1 bg-purple-600 hover:bg-purple-700"><PenLine className="h-4 w-4 mr-2" />Edit in Canvas</Button>
+                                <Button onClick={handleAddToLibrary} className="flex-1 bg-blue-600 hover:bg-blue-700"><Library className="h-4 w-4 mr-2" />Add to Library</Button>
+                                <Button onClick={handleUseContent} className="flex-1 bg-green-600 hover:bg-green-700"><CheckCircle className="h-4 w-4 mr-2" />Use in Playlist</Button>
+                                <Button onClick={resetResult} variant="outline">Regenerate</Button>
                             </>
                         )}
-                        {onClose && (
-                            <Button onClick={onClose} variant="outline">Cancel</Button>
-                        )}
+                        {onClose && <Button onClick={onClose} variant="outline">Cancel</Button>}
                     </div>
                 </TabsContent>
 
@@ -610,12 +578,11 @@ Return a JSON screen ad plan with this exact structure:
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>Category</Label>
-                            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                <SelectTrigger className="mt-2"><SelectValue placeholder="All categories" /></SelectTrigger>
+                            <Label>Ad Type</Label>
+                            <Select value={adMode} onValueChange={setAdMode}>
+                                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={null}>All</SelectItem>
-                                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    {AD_MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -646,9 +613,7 @@ Return a JSON screen ad plan with this exact structure:
                                             await base44.entities.MediaFile.create({ restaurant_id: restaurantId, file_url: v.url, file_name: `${v.label}.png`, file_type: 'image/png', file_size: 0 });
                                             queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
                                             toast.success('Added to Library!');
-                                        }}>
-                                            <Library className="h-3 w-3 mr-1" />Library
-                                        </Button>
+                                        }}><Library className="h-3 w-3 mr-1" />Library</Button>
                                         <Button size="sm" className="w-full" variant="outline" onClick={() => { setGeneratedUrl(v.url); setActiveTab('screen'); }}>Use</Button>
                                     </div>
                                 </Card>
@@ -660,7 +625,7 @@ Return a JSON screen ad plan with this exact structure:
                 {/* ── OPTIMIZE TAB ── */}
                 <TabsContent value="optimize" className="mt-6 space-y-5">
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-sm text-green-800"><strong>⚡ AI Copy Optimizer</strong> — Generate aggressive, high-conversion headlines & hooks for your screen ads</p>
+                        <p className="text-sm text-green-800"><strong>⚡ AI Copy Optimizer</strong> — Generate aggressive, high-conversion headlines & hooks</p>
                     </div>
                     <div>
                         <Label>Keywords / Items to promote</Label>
@@ -690,7 +655,7 @@ Return a JSON screen ad plan with this exact structure:
                 {/* ── SOCIAL TAB ── */}
                 <TabsContent value="social" className="mt-6 space-y-5">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-sm text-blue-800"><strong>📱 Social Media Copy</strong> — Repurpose your screen ad content for Instagram, Facebook & Twitter</p>
+                        <p className="text-sm text-blue-800"><strong>📱 Social Media Copy</strong> — Repurpose your screen ad for Instagram, Facebook & Twitter</p>
                     </div>
                     <div>
                         <Label>Content to repurpose</Label>
