@@ -151,16 +151,16 @@ function RestaurantDashboardInner() {
         refetchInterval: 60000,
     });
 
-    const { data: orderMessages = [] } = useQuery({
-        queryKey: ['order-messages', restaurant?.id],
-        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id }),
+    const { data: unreadOrderMessages = [] } = useQuery({
+        queryKey: ['unread-order-messages-count', restaurant?.id],
+        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id, is_read: false }),
         enabled: !!restaurant?.id,
         refetchInterval: 45000,
     });
 
-    const { data: restaurantMessages = [] } = useQuery({
-        queryKey: ['restaurant-messages', restaurant?.id],
-        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id }),
+    const { data: unreadRestaurantMessages = [] } = useQuery({
+        queryKey: ['restaurant-unread-messages', restaurant?.id],
+        queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id, is_read: false }),
         enabled: !!restaurant?.id,
         refetchInterval: 45000,
     });
@@ -179,7 +179,7 @@ function RestaurantDashboardInner() {
         refetchInterval: 30000,
     });
 
-    const unreadMessagesCount = [...orderMessages, ...restaurantMessages].filter(m => !m.is_read).length;
+    const unreadMessagesCount = unreadOrderMessages.length + unreadRestaurantMessages.length;
     const unresolvedOfflineReviewCount = offlineOrdersForBadge.length;
 
     useEffect(() => { 
