@@ -153,10 +153,14 @@ function RestaurantDashboardInner() {
 
     const { data: unreadOrderMessages = [] } = useQuery({
         queryKey: ['unread-order-messages-count', restaurant?.id],
-        queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id, is_read: false }),
+        queryFn: async () => {
+            const msgs = await base44.entities.Message.filter({ restaurant_id: restaurant.id, is_read: false });
+            // Only count customer-sent unread messages — restaurant's own sent messages are never "unread" for the restaurant
+            return (msgs || []).filter(m => m.sender_type === 'customer');
+        },
         enabled: !!restaurant?.id,
         refetchInterval: 20000,
-        staleTime: 0, // always refetch immediately when invalidated by RestaurantMessages
+        staleTime: 0,
     });
 
     const { data: unreadRestaurantMessages = [] } = useQuery({

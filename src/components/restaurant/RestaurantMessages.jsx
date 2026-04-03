@@ -178,6 +178,31 @@ export default function RestaurantMessages({ restaurantId }) {
 
     const unreadAdminMessages = adminMessages.filter(m => !m.is_read).length;
 
+    // Count unread customer messages across ALL orders (not just open one)
+    // We fetch a small set to show a badge and allow bulk mark-as-read
+    const { data: allUnreadOrderMessages = [] } = useQuery({
+        queryKey: ['unread-order-messages-count', restaurantId],
+        queryFn: async () => {
+            const msgs = await base44.entities.Message.filter({ restaurant_id: restaurantId, is_read: false });
+            return (msgs || []).filter(m => m.sender_type === 'customer');
+        },
+        enabled: !!restaurantId,
+        staleTime: 0,
+    });
+
+    const markAllOrderMessagesRead = useMutation({
+        mutationFn: async () => {
+            await Promise.all(allUnreadOrderMessages.map(m =>
+                base44.entities.Message.update(m.id, { is_read: true })
+            ));
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['unread-order-messages-count', restaurantId] });
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedOrder] });
+            toast.success('All order messages marked as read');
+        },
+    });
+
     const formatDate = (dateStr) => {
         if (!dateStr) return '—';
         try { return format(new Date(dateStr), 'MMM d, yyyy h:mm a'); } catch { return '—'; }
@@ -329,10 +354,32 @@ export default function RestaurantMessages({ restaurantId }) {
                 {/* Orders List */}
                 <Card className="md:col-span-1 border-2">
                     <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 py-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-gray-600" />
-                            Order Conversations
-                        </CardTitle>
+                        <div className="flex items-center justify-between gap-2">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4 text-gray-600" />
+                                Order Conversations
+                                {allUnreadOrderMessages.length > 0 && (
+                                    <Badge className="bg-blue-500 text-white text-xs animate-pulse">
+                                        {allUnreadOrderMessages.length}
+                                    </Badge>
+                                )}
+                            </CardTitle>
+                            {allUnreadOrderMessages.length > 0 && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => markAllOrderMessagesRead.mutate()}
+                                    disabled={markAllOrderMessagesRead.isPending}
+                                    className="text-xs gap-1 flex-shrink-0"
+                                >
+                                    {markAllOrderMessagesRead.isPending
+                                        ? <RefreshCw className="h-3 w-3 animate-spin" />
+                                        : <CheckCheck className="h-3 w-3" />
+                                    }
+                                    Mark all read
+                                </Button>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <ScrollArea className="h-[520px]">
