@@ -30,7 +30,7 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
     const [selectedItemId, setSelectedItemId] = useState('');
     const [outputType, setOutputType] = useState('image');
     const [priceType, setPriceType] = useState('online');
-    const [colorPalette, setColorPalette] = useState('default');
+    const [colorPalette, setColorPalette] = useState('ai');
     const [promoOffer, setPromoOffer] = useState('');
     const [promoCode, setPromoCode] = useState('');
     const [promoDiscount, setPromoDiscount] = useState('');
@@ -77,6 +77,7 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
     ];
 
     const colorPalettes = [
+        { value: 'ai', label: '✨ AI Chooses', colors: ['#a855f7', '#ec4899', '#f97316'], aiPick: true },
         { value: 'default', label: 'Brand Default', colors: [restaurantColor] },
         { value: 'warm', label: 'Warm Fire', colors: ['#FF6B35', '#F7931E', '#FDB913'] },
         { value: 'cool', label: 'Cool & Fresh', colors: ['#00A8E8', '#00C9FF', '#00F0FF'] },
@@ -103,7 +104,9 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
             ? 'vertical portrait format (9:16), tall screen, mobile/totem display'
             : 'horizontal landscape format (16:9), wide LED screen, window display';
         const paletteInfo = colorPalettes.find(p => p.value === colorPalette);
-        const colorDesc = paletteInfo ? `Color palette: ${paletteInfo.label} (${paletteInfo.colors.join(', ')})` : '';
+        const colorDesc = paletteInfo?.aiPick
+            ? `Color palette: AI should choose the most visually impactful and appetising colors that best suit the content and brand.`
+            : paletteInfo ? `Color palette: ${paletteInfo.label} (${paletteInfo.colors.join(', ')})` : '';
         const gifNote = outputType === 'gif' ? 'Design as a looping animated GIF frame — motion blur, glowing effects, dynamic energy implied in single frame.' : '';
         const base = `Create a ${orientationDesc} LED promotional screen ad for "${restaurantName}". Style: ${styleMap[style]}. Brand color: ${restaurantColor}. ${colorDesc}. ${gifNote}.`;
         const ctaLine = websiteUrl && priceType !== 'pos' ? `CTA: ORDER NOW at ${websiteUrl}` : 'CTA: ORDER NOW / WALK IN TODAY';
@@ -449,11 +452,15 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                                 <Label className="text-sm font-semibold">Color Palette</Label>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                     {colorPalettes.map(p => (
-                                        <button key={p.value} onClick={() => setColorPalette(p.value)} className={`p-2.5 rounded-lg border-2 text-left transition-all ${colorPalette === p.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <button key={p.value} onClick={() => setColorPalette(p.value)} className={`p-2.5 rounded-lg border-2 text-left transition-all ${colorPalette === p.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'} ${p.aiPick ? 'col-span-2' : ''}`}>
                                             <p className="text-xs font-semibold">{p.label}</p>
-                                            <div className="flex gap-1 mt-1">
-                                                {p.colors.map((color, i) => <div key={i} className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: color }} />)}
-                                            </div>
+                                            {p.aiPick ? (
+                                                <p className="text-[10px] text-purple-500 mt-0.5">AI picks the perfect palette for your ad</p>
+                                            ) : (
+                                                <div className="flex gap-1 mt-1">
+                                                    {p.colors.map((color, i) => <div key={i} className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: color }} />)}
+                                                </div>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
