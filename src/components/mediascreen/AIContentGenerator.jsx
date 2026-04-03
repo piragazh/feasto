@@ -74,6 +74,7 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
         { value: 'vibrant', label: 'Vibrant & Bold', desc: 'High contrast, colorful' },
         { value: 'elegant', label: 'Elegant Premium', desc: 'Minimal, sophisticated' },
         { value: 'neon', label: 'Neon Night', desc: 'Dark + neon accents' },
+        { value: 'freeform', label: '🎨 Freeform Colourful', desc: 'Expressive, no rules, vivid' },
     ];
 
     const colorPalettes = [
@@ -94,7 +95,8 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
         cinematic: "cinematic fast-food advertising style like McDonald's or KFC, dark background with orange fire glow gradient, bold dramatic typography",
         vibrant: 'vibrant colorful high-contrast promotional style, bold colors, eye-catching composition',
         elegant: 'elegant premium dark restaurant branding, minimal layout, sophisticated typography',
-        neon: 'neon night-club restaurant style, dark background with glowing neon accents, futuristic typography'
+        neon: 'neon night-club restaurant style, dark background with glowing neon accents, futuristic typography',
+        freeform: 'freeform expressive colourful illustration style — painterly brushstrokes, bold splashes of vivid unexpected colours, hand-drawn energy, playful typography with mixed sizes, confetti-like decorative elements, no rigid grid, organic shapes and colour bursts, maximalist joyful aesthetic'
     };
 
     const getPrice = (item) => (priceType === 'pos' && item.pos_price) ? `£${item.pos_price}` : `£${item.price}`;
