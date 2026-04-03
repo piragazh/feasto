@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp, User, MonitorSmartphone, BadgeCheck } from 'lucide-react';
+import PrintFallbackDialog from '@/components/restaurant/PrintFallbackDialog';
 import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -29,6 +30,7 @@ const getOrderOperationalStatus = (order) => {
 
 export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [rejectingOrder, setRejectingOrder] = useState(null);
+    const [printFallback, setPrintFallback] = useState(null); // { order, restaurant, config, errorMessage }
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [orderTypeFilter, setOrderTypeFilter] = useState('all');
@@ -574,171 +576,14 @@ Provide only the time range (e.g., "25-30 min").`;
             }
         }
 
-        // Browser print fallback — use first printer's config if available
-        try {
-            const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
-            browserPrintOrder(order, restaurant, fallbackCfg);
-        } catch (err) {
-            toast.error('Print failed — manual review needed');
-            console.error('[LiveOrders] Browser print error:', err);
-        }
-    };
-
-    const browserPrintOrder = (order, restaurant, config) => {
-        const printerWidth = config.printer_width === '58mm' ? '400px' : '560px';
-        const baseFontSize = config.font_size === 'small' ? '28px' : config.font_size === 'large' ? '38px' : '32px';
-        const headerFontSize = config.font_size === 'small' ? '42px' : config.font_size === 'large' ? '56px' : '48px';
-        const h3FontSize = config.font_size === 'small' ? '32px' : config.font_size === 'large' ? '42px' : '36px';
-        const totalFontSize = config.font_size === 'small' ? '38px' : config.font_size === 'large' ? '48px' : '42px';
-
-        const printWindow = window.open('', '', 'width=300,height=600');
-        if (!printWindow) {
-            console.warn('[LiveOrders] Print window blocked by popup blocker');
-            toast.warning('Popup blocked — cannot print. Please allow popups and retry.');
-            return;
-        }
-
-        // Wrap document write/print to catch any errors
-        if (!printWindow.document) {
-            console.warn('[LiveOrders] Print window missing document object');
-            toast.error('Cannot access print window document');
-            return;
-        }
-        const orderLabel = order.order_type === 'collection' && order.order_number 
-            ? order.order_number 
-            : `#${order.id.slice(-6)}`;
-        
-        try {
-            printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Order ${orderLabel}</title>
-                    <style>
-                        body { font-family: monospace; width: ${printerWidth}; margin: 10px; font-size: ${baseFontSize}; }
-                        h2 { text-align: center; margin: 10px 0; font-size: ${headerFontSize}; }
-                        h3 { font-size: ${h3FontSize}; }
-                        .separator { border-top: 2px dashed #000; margin: 10px 0; }
-                        .item { margin: 15px 0; padding: 8px 0; font-size: ${baseFontSize}; border-bottom: 1px solid #e5e5e5; }
-                        .total { font-weight: bold; font-size: ${totalFontSize}; margin-top: 10px; }
-                        p { font-size: ${baseFontSize}; }
-                        small { font-size: ${baseFontSize === '28px' ? '24px' : baseFontSize === '38px' ? '32px' : '28px'}; }
-                        .logo { text-align: center; margin: 10px 0; }
-                        .logo img { max-width: 80px; height: auto; }
-                        .collection-badge { 
-                            text-align: center; 
-                            background: #dbeafe; 
-                            padding: 5px; 
-                            font-weight: bold;
-                            border-radius: 4px;
-                            margin: 10px 0;
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${config.show_logo !== false && restaurant?.logo_url ? `<div class="logo"><img src="${restaurant.logo_url}" alt="Logo" /></div>` : ''}
-                    ${config.header_text ? `<p style="text-align: center; font-weight: bold;">${config.header_text}</p>` : ''}
-                    <h2>${restaurant?.name || 'KITCHEN ORDER'}</h2>
-                    ${order.order_type === 'collection' ? '<div class="collection-badge">🏪 COLLECTION ORDER</div>' : ''}
-                    <div class="separator"></div>
-                    ${order.order_source === 'kiosk' ? `
-                        <div class="collection-badge" style="background:#e0e7ff;color:#3730a3;border:2px solid #3730a3;">
-                            🖥️ KIOSK ORDER
-                        </div>
-                        ${order.payment_method === 'pay_at_counter' && order.payment_confirmed_at ? 
-                            `<div class="collection-badge" style="background:#d1fae5;color:#065f46;border:2px solid #10b981;">✓ PAYMENT CONFIRMED</div>` :
-                            order.payment_method === 'pay_at_counter' ?
-                            `<div class="collection-badge" style="background:#fef3c7;color:#92400e;border:2px solid #f59e0b;">⏳ AWAITING PAYMENT AT COUNTER</div>` :
-                            ''
-                        }
-                    ` : ''}
-                    ${config.show_order_number !== false ? `<p><strong>Order:</strong> ${orderLabel}</p>` : ''}
-                    <p><strong>Type:</strong> ${order.order_type === 'collection' ? 'COLLECTION' : order.order_type === 'takeaway' ? 'TAKEAWAY' : order.order_type === 'dine_in' ? 'DINE IN' : 'DELIVERY'}</p>
-                    <p><strong>Time:</strong> ${order.created_date ? formatUKTime(order.created_date, 'time') : '--:--'}</p>
-                    <div class="separator"></div>
-                    <h3>ITEMS:</h3>
-                    ${order.items.map(item => {
-                        let itemHtml = '<div class="item"><strong>' + item.quantity + 'x ' + item.name + '</strong>';
-                        
-                        if (item.customizations) {
-                            const lines = [];
-                            Object.entries(item.customizations).forEach(([key, val]) => {
-                                // Handle meal_customizations separately
-                                if (key.includes('meal_customizations') && typeof val === 'object') {
-                                    Object.entries(val).forEach(([mealKey, mealVal]) => {
-                                        const formattedKey = mealKey.replace(/_/g, ' ').toUpperCase();
-                                        lines.push('<div style="font-style: italic; margin-top: 4px;">' + formattedKey + '</div>');
-                                        
-                                        if (Array.isArray(mealVal)) {
-                                            mealVal.forEach(optionName => {
-                                                const qty = item.itemQuantities && item.itemQuantities[optionName] || 1;
-                                                lines.push('<div>' + qty + 'x ' + optionName + '</div>');
-                                            });
-                                        } else {
-                                            lines.push('<div>1x ' + String(mealVal) + '</div>');
-                                        }
-                                    });
-                                    return;
-                                }
-                                
-                                // Regular customizations
-                                const formattedKey = key.replace(/_/g, ' ').toUpperCase();
-                                lines.push('<div style="font-style: italic; margin-top: 4px;">' + formattedKey + '</div>');
-                                
-                                if (Array.isArray(val)) {
-                                    val.forEach(optionName => {
-                                        const qty = item.itemQuantities && item.itemQuantities[optionName] || 1;
-                                        lines.push('<div>' + qty + 'x ' + optionName + '</div>');
-                                    });
-                                } else if (typeof val === 'object' && val !== null) {
-                                    // Handle nested objects with 'selection' property
-                                    if ('selection' in val) {
-                                        lines.push('<div>1x ' + String(val.selection || '') + '</div>');
-                                    }
-                                    // Skip other complex objects
-                                } else {
-                                    lines.push('<div>1x ' + String(val) + '</div>');
-                                }
-                            });
-                            
-                            if (lines.length > 0) {
-                                itemHtml += '<br/><small style="margin-left: 15px; display: block;">' + lines.join('') + '</small>';
-                            }
-                        }
-                        
-                        itemHtml += '</div>';
-                        return itemHtml;
-                    }).join('')}
-                    <div class="separator"></div>
-                    ${config.show_customer_details !== false ? `
-                        <h3>CUSTOMER DETAILS:</h3>
-                        ${order.guest_name || order.created_by ? `<p><strong>Name:</strong> ${order.guest_name || order.created_by}</p>` : ''}
-                        <p><strong>Phone:</strong> ${order.phone}</p>
-                        ${order.order_type === 'delivery' && order.delivery_address ? `<p><strong>Address:</strong> ${order.delivery_address}</p>` : ''}
-                        ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
-                        ${order.payment_method ? `<p><strong>Payment:</strong> ${order.payment_method.replace(/_/g, ' ').toUpperCase()}</p>` : ''}
-                    ` : ''}
-                    <div class="separator"></div>
-                    <h3>PAYMENT SUMMARY:</h3>
-                    <p><strong>Subtotal:</strong> £${(order.subtotal || 0).toFixed(2)}</p>
-                    ${(order.delivery_fee || 0) > 0 ? `<p><strong>Delivery Fee:</strong> £${(order.delivery_fee).toFixed(2)}</p>` : ''}
-                    ${(order.small_order_surcharge || 0) > 0 ? `<p><strong>Small Order Surcharge:</strong> £${(order.small_order_surcharge).toFixed(2)}</p>` : ''}
-                    ${(order.discount || 0) > 0 ? `<p><strong>Discount:</strong> -£${(order.discount).toFixed(2)}</p>` : ''}
-                    ${order.coupon_code ? `<p><strong>Coupon Applied:</strong> ${order.coupon_code}</p>` : ''}
-                    <div class="separator"></div>
-                    <p class="total">TOTAL: £${(order.total || 0).toFixed(2)}</p>
-                    ${config.footer_text ? `<p style="text-align: center; margin-top: 10px;">${config.footer_text}</p>` : ''}
-                </body>
-            </html>
-        `);
-            printWindow.document.close();
-            printWindow.print();
-        } catch (err) {
-            console.error('[LiveOrders] Print document error:', err);
-            toast.error('Print formatting error — close window and retry');
-            if (printWindow && !printWindow.closed) {
-                printWindow.close();
-            }
-        }
+        // No printer available — show friendly dialog fallback
+        const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
+        setPrintFallback({
+            order,
+            restaurant,
+            config: fallbackCfg,
+            errorMessage: 'No Bluetooth printer is connected. Here is the order for manual reference.',
+        });
     };
 
 
@@ -1478,6 +1323,14 @@ Provide only the time range (e.g., "25-30 min").`;
                 onClose={() => setRejectingOrder(null)}
                 onReject={(reason) => handleReject(rejectingOrder.id, reason)}
                 orderNumber={rejectingOrder?.id.slice(-6)}
+            />
+
+            <PrintFallbackDialog
+                order={printFallback?.order}
+                restaurant={printFallback?.restaurant}
+                config={printFallback?.config}
+                errorMessage={printFallback?.errorMessage}
+                onClose={() => setPrintFallback(null)}
             />
         </div>
     );
