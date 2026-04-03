@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Search, Trash2, Image as ImageIcon, Film, LayoutGrid, List, Scissors, Edit, Eye, X } from 'lucide-react';
+import { Upload, Search, Trash2, Image as ImageIcon, Film, LayoutGrid, List, Scissors, Edit, Eye, X, Plus, Monitor } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import moment from 'moment';
 import { toast } from 'sonner';
@@ -21,6 +21,9 @@ export default function StudioMediaLibrary({ restaurantId }) {
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, file_url }
     const [editingVideo, setEditingVideo] = useState(null);
     const [previewFile, setPreviewFile] = useState(null);
+    const [addToPlaylistFile, setAddToPlaylistFile] = useState(null); // file to add to a playlist
+    const [selectedScreenId, setSelectedScreenId] = useState('');
+    const [addingToPlaylist, setAddingToPlaylist] = useState(false);
     const fileInputRef = useRef(null);
 
     const { data: mediaFiles = [] } = useQuery({
@@ -28,6 +31,45 @@ export default function StudioMediaLibrary({ restaurantId }) {
         queryFn: () => base44.entities.MediaFile.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId,
     });
+
+    const { data: screens = [] } = useQuery({
+        queryKey: ['screens', restaurantId],
+        queryFn: () => base44.entities.Screen.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
+    const { data: allContent = [] } = useQuery({
+        queryKey: ['promotional-content', restaurantId],
+        queryFn: () => base44.entities.PromotionalContent.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId,
+    });
+
+    const handleAddToPlaylist = async () => {
+        if (!selectedScreenId || !addToPlaylistFile) return;
+        const screen = screens.find(s => s.id === selectedScreenId);
+        if (!screen) return;
+        setAddingToPlaylist(true);
+        const existing = allContent.filter(c => c.screen_name === screen.screen_name);
+        const mediaType = addToPlaylistFile.file_type?.startsWith('video/') ? 'video'
+            : addToPlaylistFile.file_type === 'image/gif' ? 'gif' : 'image';
+        await base44.entities.PromotionalContent.create({
+            restaurant_id: restaurantId,
+            title: addToPlaylistFile.file_name?.replace(/\.[^/.]+$/, '') || 'Untitled',
+            screen_name: screen.screen_name,
+            media_url: addToPlaylistFile.file_url,
+            media_type: mediaType,
+            duration: 10,
+            video_loop_count: 1,
+            transition: 'fade',
+            display_order: existing.length,
+            is_active: true,
+        });
+        queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
+        toast.success(`Added to "${screen.screen_name}"`);
+        setAddingToPlaylist(false);
+        setAddToPlaylistFile(null);
+        setSelectedScreenId('');
+    };
 
     const deleteFileMutation = useMutation({
         mutationFn: (id) => base44.entities.MediaFile.delete(id),
@@ -218,15 +260,23 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                     <p className="text-white text-[10px] font-medium truncate">{file.file_name}</p>
                                 </div>
                                 <div className="absolute top-2 left-2">
-                                    <div className={`${typeColors[fileType]} text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide`}>
-                                        {fileType}
-                                    </div>
+                                   <div className={`${typeColors[fileType]} text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide`}>
+                                       {fileType}
+                                   </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+                                {/* Add to playlist — always visible on mobile */}
+                                <button
+                                   onClick={() => { setAddToPlaylistFile(file); setSelectedScreenId(screens[0]?.id || ''); }}
+                                   className="absolute bottom-1.5 right-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-full p-1.5 shadow-lg md:opacity-0 group-hover:opacity-100 transition-opacity"
+                                   title="Add to playlist"
+                                >
+                                   <Plus className="h-3 w-3" />
+                                </button>
+                                </div>
+                                );
+                                })}
+                                </div>
+                                )}
 
             {/* List view */}
             {viewMode === 'list' && filtered.length > 0 && (
@@ -263,23 +313,27 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                         <td className="px-5 py-3 text-sm text-gray-500">{formatSize(file.file_size)}</td>
                                         <td className="px-5 py-3">
                                             <div className="flex items-center justify-end gap-1">
-                                                    <Button size="sm" variant="ghost" onClick={() => setPreviewFile(file)} className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700">
-                                                        <Eye className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    {fileType === 'image' && (
-                                                        <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
-                                                            <Edit className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    )}
-                                                    {fileType === 'video' && (
-                                                        <Button size="sm" variant="ghost" onClick={() => setEditingVideo(file.file_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
-                                                            <Scissors className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    )}
-                                                    <Button size="sm" variant="ghost" onClick={() => deleteFileMutation.mutate(file.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
+                                                   <Button size="sm" variant="ghost" onClick={() => setPreviewFile(file)} className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700">
+                                                       <Eye className="h-3.5 w-3.5" />
+                                                   </Button>
+                                                   <Button size="sm" onClick={() => { setAddToPlaylistFile(file); setSelectedScreenId(screens[0]?.id || ''); }} className="h-8 px-2 bg-orange-500 hover:bg-orange-600 text-white text-xs gap-1">
+                                                       <Plus className="h-3 w-3" />
+                                                       <span className="hidden sm:inline">Playlist</span>
+                                                   </Button>
+                                                   {fileType === 'image' && (
+                                                       <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
+                                                           <Edit className="h-3.5 w-3.5" />
+                                                       </Button>
+                                                   )}
+                                                   {fileType === 'video' && (
+                                                       <Button size="sm" variant="ghost" onClick={() => setEditingVideo(file.file_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
+                                                           <Scissors className="h-3.5 w-3.5" />
+                                                       </Button>
+                                                   )}
+                                                   <Button size="sm" variant="ghost" onClick={() => deleteFileMutation.mutate(file.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
+                                                       <Trash2 className="h-3.5 w-3.5" />
+                                                   </Button>
+                                               </div>
                                         </td>
                                     </tr>
                                 );
@@ -296,11 +350,11 @@ export default function StudioMediaLibrary({ restaurantId }) {
                         <DialogTitle className="truncate">{previewFile?.file_name}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <div className="bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center" style={{ maxHeight: '60vh' }}>
+                        <div className="bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center" style={{ maxHeight: '55vh' }}>
                             {previewFile && getFileType(previewFile) === 'video' ? (
-                                <video src={previewFile.file_url} controls className="max-w-full max-h-[60vh]" />
+                                <video src={previewFile.file_url} controls className="max-w-full max-h-[55vh]" />
                             ) : previewFile ? (
-                                <img src={previewFile.file_url} alt={previewFile.file_name} className="max-w-full max-h-[60vh] object-contain" />
+                                <img src={previewFile.file_url} alt={previewFile.file_name} className="max-w-full max-h-[55vh] object-contain" />
                             ) : null}
                         </div>
                         <div className="grid grid-cols-3 gap-3 text-sm text-gray-600">
@@ -308,9 +362,74 @@ export default function StudioMediaLibrary({ restaurantId }) {
                             <div><span className="text-xs text-gray-400 block">Size</span>{formatSize(previewFile?.file_size)}</div>
                             <div><span className="text-xs text-gray-400 block">Uploaded</span>{previewFile?.created_date ? moment(previewFile.created_date).format('MMM D, YYYY') : '—'}</div>
                         </div>
-                        <Button variant="outline" className="w-full" onClick={() => setPreviewFile(null)}>
-                            <X className="h-4 w-4 mr-2" />Close
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button className="flex-1 bg-orange-500 hover:bg-orange-600" onClick={() => {
+                                setAddToPlaylistFile(previewFile);
+                                setSelectedScreenId(screens[0]?.id || '');
+                                setPreviewFile(null);
+                            }}>
+                                <Plus className="h-4 w-4 mr-2" />Add to Playlist
+                            </Button>
+                            <Button variant="outline" className="flex-1" onClick={() => setPreviewFile(null)}>
+                                <X className="h-4 w-4 mr-2" />Close
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add to Playlist Dialog */}
+            <Dialog open={!!addToPlaylistFile} onOpenChange={() => { setAddToPlaylistFile(null); setSelectedScreenId(''); }}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Add to Playlist</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-500 truncate">
+                            <span className="font-medium text-gray-800">{addToPlaylistFile?.file_name}</span>
+                        </p>
+                        {screens.length === 0 ? (
+                            <div className="text-center py-6">
+                                <Monitor className="h-10 w-10 text-gray-200 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">No screens available.</p>
+                                <p className="text-xs text-gray-400 mt-1">Go to Playlists to create a screen first.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="text-sm font-semibold text-gray-700">Select a screen:</p>
+                                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                                    {screens.map(screen => {
+                                        const count = allContent.filter(c => c.screen_name === screen.screen_name).length;
+                                        return (
+                                            <button
+                                                key={screen.id}
+                                                onClick={() => setSelectedScreenId(screen.id)}
+                                                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selectedScreenId === screen.id ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                            >
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedScreenId === screen.id ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                                                    <Monitor className={`h-4 w-4 ${selectedScreenId === screen.id ? 'text-orange-600' : 'text-gray-500'}`} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-900">{screen.screen_name}</p>
+                                                    <p className="text-xs text-gray-400">{count} item{count !== 1 ? 's' : ''}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        <div className="flex gap-2 pt-1">
+                            <Button
+                                className="flex-1 bg-orange-500 hover:bg-orange-600"
+                                disabled={!selectedScreenId || addingToPlaylist}
+                                onClick={handleAddToPlaylist}
+                            >
+                                {addingToPlaylist ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                                Add to Playlist
+                            </Button>
+                            <Button variant="outline" onClick={() => { setAddToPlaylistFile(null); setSelectedScreenId(''); }}>Cancel</Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
