@@ -356,13 +356,16 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                             {adMode === 'category' && (
                                 <div className="space-y-3 bg-orange-50 rounded-xl p-3">
                                     <Label className="text-sm font-semibold">Menu Category</Label>
-                                    <Select value={selectedCategory || '__all__'} onValueChange={v => { setSelectedCategory(v === '__all__' ? '' : v); setCustomCategory(''); }}>
-                                        <SelectTrigger><SelectValue placeholder="All categories" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__all__">All Categories</SelectItem>
-                                            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="space-y-1">
+                                        <select
+                                            value={selectedCategory}
+                                            onChange={e => { setSelectedCategory(e.target.value); setCustomCategory(''); }}
+                                            className="w-full h-11 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        >
+                                            <option value="">All Categories</option>
+                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
                                     {itemsForCategory.length > 0 && !customCategory && (
                                         <p className="text-xs text-gray-500">{itemsForCategory.length} items · {itemsForCategory.filter(i => i.is_popular).length} popular</p>
                                     )}
