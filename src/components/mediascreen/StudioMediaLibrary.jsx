@@ -4,7 +4,9 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Search, Trash2, Image as ImageIcon, Film, LayoutGrid, List, Scissors, Edit } from 'lucide-react';
+import { Upload, Search, Trash2, Image as ImageIcon, Film, LayoutGrid, List, Scissors, Edit, Eye, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import moment from 'moment';
 import { toast } from 'sonner';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import VideoEditor from './VideoEditor';
@@ -18,6 +20,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, file_url }
     const [editingVideo, setEditingVideo] = useState(null);
+    const [previewFile, setPreviewFile] = useState(null);
     const fileInputRef = useRef(null);
 
     const { data: mediaFiles = [] } = useQuery({
@@ -179,6 +182,13 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all flex flex-col justify-between p-2">
                                     <div className="flex justify-end gap-1.5">
+                                        <button
+                                            onClick={() => setPreviewFile(file)}
+                                            className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow"
+                                            title="Preview"
+                                        >
+                                            <Eye className="h-3.5 w-3.5 text-gray-700" />
+                                        </button>
                                         {fileType === 'image' && (
                                             <button
                                                 onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })}
@@ -253,20 +263,23 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                         <td className="px-5 py-3 text-sm text-gray-500">{formatSize(file.file_size)}</td>
                                         <td className="px-5 py-3">
                                             <div className="flex items-center justify-end gap-1">
-                                                {fileType === 'image' && (
-                                                    <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
-                                                        <Edit className="h-3.5 w-3.5" />
+                                                    <Button size="sm" variant="ghost" onClick={() => setPreviewFile(file)} className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700">
+                                                        <Eye className="h-3.5 w-3.5" />
                                                     </Button>
-                                                )}
-                                                {fileType === 'video' && (
-                                                    <Button size="sm" variant="ghost" onClick={() => setEditingVideo(file.file_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
-                                                        <Scissors className="h-3.5 w-3.5" />
+                                                    {fileType === 'image' && (
+                                                        <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
+                                                            <Edit className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                    {fileType === 'video' && (
+                                                        <Button size="sm" variant="ghost" onClick={() => setEditingVideo(file.file_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
+                                                            <Scissors className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                    <Button size="sm" variant="ghost" onClick={() => deleteFileMutation.mutate(file.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
+                                                        <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
-                                                )}
-                                                <Button size="sm" variant="ghost" onClick={() => deleteFileMutation.mutate(file.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
+                                                </div>
                                         </td>
                                     </tr>
                                 );
@@ -275,6 +288,32 @@ export default function StudioMediaLibrary({ restaurantId }) {
                     </table>
                 </div>
             )}
+
+            {/* Preview Dialog */}
+            <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="truncate">{previewFile?.file_name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center" style={{ maxHeight: '60vh' }}>
+                            {previewFile && getFileType(previewFile) === 'video' ? (
+                                <video src={previewFile.file_url} controls className="max-w-full max-h-[60vh]" />
+                            ) : previewFile ? (
+                                <img src={previewFile.file_url} alt={previewFile.file_name} className="max-w-full max-h-[60vh] object-contain" />
+                            ) : null}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-sm text-gray-600">
+                            <div><span className="text-xs text-gray-400 block">Type</span>{previewFile?.file_type || '—'}</div>
+                            <div><span className="text-xs text-gray-400 block">Size</span>{formatSize(previewFile?.file_size)}</div>
+                            <div><span className="text-xs text-gray-400 block">Uploaded</span>{previewFile?.created_date ? moment(previewFile.created_date).format('MMM D, YYYY') : '—'}</div>
+                        </div>
+                        <Button variant="outline" className="w-full" onClick={() => setPreviewFile(null)}>
+                            <X className="h-4 w-4 mr-2" />Close
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Editors */}
             <InlinePhotoEditor
