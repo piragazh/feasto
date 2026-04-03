@@ -382,24 +382,29 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                             {adMode === 'single_item' && (
                                 <div className="space-y-3 bg-yellow-50 rounded-xl p-3">
                                     <Label className="text-sm font-semibold">Choose Menu Item</Label>
-                                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                                        <SelectTrigger><SelectValue placeholder="Select an item..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {availableItems.map(item => (
-                                                <SelectItem key={item.id} value={item.id}>
-                                                    {item.name} — £{item.price}{item.is_popular ? ' ⭐' : ''}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {selectedItem && (
-                                        <div className="bg-white rounded-lg p-2.5 border border-yellow-200">
-                                            <p className="text-sm font-bold text-gray-900">{selectedItem.name}</p>
-                                            {selectedItem.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{selectedItem.description}</p>}
-                                            <p className="text-sm font-black text-orange-600 mt-1">{getPrice(selectedItem)}</p>
-                                        </div>
+                                    {availableItems.length === 0 ? (
+                                        <p className="text-sm text-yellow-700 bg-white rounded p-2 border border-yellow-200">No items available. Check menu setup.</p>
+                                    ) : (
+                                        <>
+                                            <Select value={selectedItemId || ''} onValueChange={setSelectedItemId}>
+                                                <SelectTrigger><SelectValue placeholder="Select an item..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    {availableItems.map(item => (
+                                                        <SelectItem key={item.id} value={item.id}>
+                                                            {item.name} — £{item.price}{item.is_popular ? ' ⭐' : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {selectedItem && (
+                                                <div className="bg-white rounded-lg p-2.5 border border-yellow-200">
+                                                    <p className="text-sm font-bold text-gray-900">{selectedItem.name}</p>
+                                                    {selectedItem.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{selectedItem.description}</p>}
+                                                    <p className="text-sm font-black text-orange-600 mt-1">{getPrice(selectedItem)}</p>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
-
                                 </div>
                             )}
 
