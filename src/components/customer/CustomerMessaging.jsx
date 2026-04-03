@@ -41,7 +41,7 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
             message: text
         }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages', orderId]);
+            queryClient.invalidateQueries({ queryKey: ['messages', orderId] });
             setNewMessage('');
             toast.success('Message sent');
         },
@@ -50,7 +50,7 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, text }) => base44.entities.Message.update(id, { message: text }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages', orderId]);
+            queryClient.invalidateQueries({ queryKey: ['messages', orderId] });
             setEditingId(null);
             setEditText('');
             toast.success('Message updated');
@@ -60,7 +60,7 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.Message.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages', orderId]);
+            queryClient.invalidateQueries({ queryKey: ['messages', orderId] });
             setDeletingId(null);
             toast.success('Message deleted');
         },
@@ -170,7 +170,7 @@ export default function CustomerMessaging({ orderId, restaurantId }) {
                                                 <>
                                                     <p className="text-sm leading-relaxed">{msg.message}</p>
                                                     <p className={`text-xs mt-1.5 ${isCustomer ? 'text-blue-100' : 'text-gray-500'}`}>
-                                                        {format(new Date(msg.created_date), 'h:mm a')}
+                                                        {msg.created_date ? format(new Date(msg.created_date), 'h:mm a') : '—'}
                                                     </p>
                                                 </>
                                             )}
