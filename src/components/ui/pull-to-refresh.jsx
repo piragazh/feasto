@@ -11,11 +11,12 @@ export function PullToRefresh({ onRefresh, children }) {
     const containerRef = useRef(null);
     const controls = useAnimation();
 
-    const threshold = 60;
-    const maxPull = 100;
+    const threshold = 90;
+    const maxPull = 130;
 
     const handleTouchStart = useCallback((e) => {
-        if (window.scrollY !== 0) return;
+        // Use a small tolerance to avoid triggering when page is almost-but-not-quite at top
+        if (window.scrollY > 5) return;
 
         // Don't start pull-to-refresh if the touch began inside a horizontally-scrollable element
         const target = e.target;
@@ -39,14 +40,17 @@ export function PullToRefresh({ onRefresh, children }) {
         const currentY = e.touches[0].clientY;
         const distance = currentY - startY.current;
 
-        if (distance > 0 && window.scrollY === 0) {
+        if (distance > 0 && window.scrollY <= 5) {
             setPullDistance((prev) => {
                 const nextDistance = Math.min(distance, maxPull);
                 return prev === nextDistance ? prev : nextDistance;
             });
-            if (distance > 8) {
+            // Only prevent default (and thus block vertical page scroll) once clearly pulling down
+            if (distance > 15) {
                 e.preventDefault();
             }
+        } else if (distance <= 0) {
+            isPulling.current = false;
         }
     }, [isRefreshing]);
 

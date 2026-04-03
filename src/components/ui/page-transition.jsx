@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
@@ -27,6 +27,11 @@ const pageVariants = {
 
 export function PageTransition({ children }) {
     const location = useLocation();
+
+    // Scroll to top on every route change
+    React.useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }, [location.pathname]);
     
     return (
         <motion.div
