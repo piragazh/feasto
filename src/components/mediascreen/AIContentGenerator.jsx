@@ -397,10 +397,7 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                                             <p className="text-sm font-black text-orange-600 mt-1">{getPrice(selectedItem)}</p>
                                         </div>
                                     )}
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setPriceType('online')} className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-medium transition-all ${priceType === 'online' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600'}`}>Online Price</button>
-                                        <button onClick={() => setPriceType('pos')} className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-medium transition-all ${priceType === 'pos' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600'}`}>POS Price</button>
-                                    </div>
+
                                 </div>
                             )}
 
@@ -427,12 +424,29 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                             )}
 
                             {/* Shared: Promo offer for category/single */}
-                            {(adMode === 'category' || adMode === 'single_item') && (
-                                <div>
-                                    <Label className="text-sm font-semibold">Promo / Offer <span className="text-gray-400 font-normal">(optional)</span></Label>
-                                    <Input value={promoOffer} onChange={e => setPromoOffer(e.target.value)} placeholder="e.g. 15% OFF – USE CODE WEB15" className="mt-2" />
-                                </div>
-                            )}
+                                {(adMode === 'category' || adMode === 'single_item') && (
+                                    <div>
+                                        <Label className="text-sm font-semibold">Promo / Offer <span className="text-gray-400 font-normal">(optional)</span></Label>
+                                        <Input value={promoOffer} onChange={e => setPromoOffer(e.target.value)} placeholder="e.g. 15% OFF – USE CODE WEB15" className="mt-2" />
+                                    </div>
+                                )}
+
+                                {/* Price Type — shared across all modes with prices */}
+                                {adMode !== 'promo_code' && (
+                                    <div>
+                                        <Label className="text-sm font-semibold">Price Display</Label>
+                                        <div className="flex gap-2 mt-2">
+                                            <button onClick={() => setPriceType('online')} className={`flex-1 py-2 rounded-lg border-2 text-xs font-medium transition-all ${priceType === 'online' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                                                🌐 Online Price
+                                                <p className="text-[10px] font-normal text-gray-400 mt-0.5">Web order CTA</p>
+                                            </button>
+                                            <button onClick={() => setPriceType('pos')} className={`flex-1 py-2 rounded-lg border-2 text-xs font-medium transition-all ${priceType === 'pos' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                                                🏪 POS Price
+                                                <p className="text-[10px] font-normal text-gray-400 mt-0.5">In-store advertising</p>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                             {/* Visual Style */}
                             <div>
