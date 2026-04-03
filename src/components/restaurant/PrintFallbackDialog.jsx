@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, X, Printer, MapPin, Phone, Clock } from 'lucide-react';
+import { AlertCircle, X, Printer, MapPin, Phone, Clock, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { formatUKTime } from '@/lib/ukDateUtils';
+import { printerManager } from '@/components/restaurant/PrinterService';
+import { toast } from 'sonner';
 
 /**
  * PrintFallbackDialog — shown when no Bluetooth printer is available.
@@ -11,7 +13,56 @@ import { formatUKTime } from '@/lib/ukDateUtils';
  * read / manually handle the order without the browser print dialog.
  */
 export default function PrintFallbackDialog({ order, restaurant, config, errorMessage, onClose }) {
+    const [reconnecting, setReconnecting] = useState(false);
+    const [reconnected, setReconnected] = useState(false);
+
     if (!order) return null;
+
+    const handleReconnectAndPrint = async () => {
+        setReconnecting(true);
+        setReconnected(false);
+        try {
+            const cfg = restaurant?.printer_config || {};
+            const centralized = cfg.centralized_printers || [];
+            const services = [printerManager.printerA, printerManager.printerB];
+
+            let printed = false;
+
+            if (centralized.length > 0) {
+                for (let i = 0; i < centralized.length; i++) {
+                    const p = centralized[i];
+                    if (p.connection_type === 'bluetooth' && p.bluetooth_printer?.id) {
+                        const service = services[i] || printerManager.printerA;
+                        await service.tryAutoConnect().catch(() => {});
+                        if (service.isConnected()) {
+                            const perCfg = { ...cfg, ...p, bluetooth_printer: p.bluetooth_printer };
+                            await service.printReceipt(order, restaurant, perCfg);
+                            printed = true;
+                            break;
+                        }
+                    }
+                }
+            } else if (cfg.bluetooth_printer?.id) {
+                await printerManager.printerA.tryAutoConnect().catch(() => {});
+                if (printerManager.printerA.isConnected()) {
+                    await printerManager.printerA.printReceipt(order, restaurant, cfg);
+                    printed = true;
+                }
+            }
+
+            if (printed) {
+                setReconnected(true);
+                toast.success('Printer reconnected and order printed!');
+                setTimeout(onClose, 1200);
+            } else {
+                toast.error('Still unable to connect to printer');
+            }
+        } catch (err) {
+            toast.error('Reconnect failed: ' + (err?.message || 'Unknown error'));
+        } finally {
+            setReconnecting(false);
+        }
+    };
 
     const orderLabel = order.order_type === 'collection' && order.order_number
         ? order.order_number
@@ -175,9 +226,22 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
                     </div>
                 </div>
 
-                {/* Close button */}
-                <div className="px-4 pb-4">
-                    <Button onClick={onClose} className="w-full">
+                {/* Actions */}
+                <div className="px-4 pb-4 flex gap-2">
+                    <Button
+                        onClick={handleReconnectAndPrint}
+                        disabled={reconnecting || reconnected}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                        {reconnected ? (
+                            <><CheckCircle2 className="h-4 w-4 mr-2" />Printed!</>
+                        ) : reconnecting ? (
+                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Reconnecting...</>
+                        ) : (
+                            <><RefreshCw className="h-4 w-4 mr-2" />Reconnect & Print</>
+                        )}
+                    </Button>
+                    <Button onClick={onClose} variant="outline" className="flex-1">
                         <X className="h-4 w-4 mr-2" />
                         Close
                     </Button>
