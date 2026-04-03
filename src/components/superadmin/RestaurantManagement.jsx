@@ -232,14 +232,25 @@ export default function RestaurantManagement() {
                                 )}
                                 
                                 <div className="flex flex-wrap gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
-                                    >
-                                        <LayoutDashboard className="h-4 w-4 mr-1" />
-                                        Dashboard
-                                    </Button>
+                                   <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => navigate(createPageUrl('RestaurantDashboard') + `?restaurantId=${restaurant.id}`)}
+                                   >
+                                       <LayoutDashboard className="h-4 w-4 mr-1" />
+                                       Dashboard
+                                   </Button>
+                                   {restaurant.media_screen_enabled && (
+                                       <Button
+                                           size="sm"
+                                           variant="outline"
+                                           onClick={() => navigate(createPageUrl('MediaScreenManagement') + `?restaurant_id=${restaurant.id}`)}
+                                           className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                                       >
+                                           <Monitor className="h-4 w-4 mr-1" />
+                                           Media Studio
+                                       </Button>
+                                   )}
                                     {restaurant.pos_enabled && Array.from({ length: restaurant.max_pos_count || 1 }, (_, i) => i + 1).map(num => (
                                         <Button
                                             key={num}
