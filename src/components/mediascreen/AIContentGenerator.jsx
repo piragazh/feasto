@@ -101,7 +101,7 @@ export default function AIContentGenerator({ onClose, onContentGenerated, restau
 
     const buildPrompt = () => {
         const orientationDesc = orientation === 'portrait'
-            ? 'vertical portrait format (9:16), tall screen, mobile/totem display'
+            ? 'STRICT vertical portrait format (9:16 aspect ratio). This is a SINGLE tall narrow image — do NOT create two columns or side-by-side panels. Content flows TOP to BOTTOM: header at top, hero item in middle, menu grid at bottom, CTA at very bottom. Width is narrow, height is very tall.'
             : 'horizontal landscape format (16:9), wide LED screen, window display';
         const paletteInfo = colorPalettes.find(p => p.value === colorPalette);
         const colorDesc = paletteInfo?.aiPick
@@ -118,7 +118,7 @@ Item: ${selectedItem.name}
 Price: ${getPrice(selectedItem)}
 ${selectedItem.description ? `Description: ${selectedItem.description}` : ''}
 ${promoOffer ? `Offer: ${promoOffer}` : ''}
-DESIGN: Fill 80% of screen with an incredible appetite-appeal close-up of "${selectedItem.name}". Massive price in bold. Punchy hook word (CRISPY / LOADED / JUICY / FIERY). ${ctaLine}. No other menu items. Readable from 5 meters.`;
+DESIGN: ${orientation === 'portrait' ? 'PORTRAIT 9:16 SINGLE tall image — NO split. Top: restaurant name + item name in bold. Middle 50%: stunning close-up food photo. Bottom: huge price, hook word, CTA.' : 'LANDSCAPE 16:9: 70% of screen is the food photo. Right side: price + name + CTA.'} Fill with incredible appetite-appeal close-up of "${selectedItem.name}". Massive price in bold. Punchy hook word (CRISPY / LOADED / JUICY / FIERY). ${ctaLine}. No other menu items. Readable from 5 meters.`;
         }
 
         if (adMode === 'promo_code') {
@@ -128,7 +128,7 @@ Discount: ${promoDiscount || 'SPECIAL OFFER'}
 Promo Code: ${promoCode || 'ORDER NOW'}
 ${promoExpiry ? `Expires: ${promoExpiry}` : ''}
 ${promoOffer ? `Extra offer text: ${promoOffer}` : ''}
-DESIGN: Giant bold promo code text dominates the centre of the screen (60%+ of height). Bold discount percentage/amount. Urgency messaging (LIMITED TIME, TODAY ONLY). ${ctaLine}. Minimal other content — the code is the hero. Use bright contrast colours for maximum impact.`;
+DESIGN: ${orientation === 'portrait' ? 'PORTRAIT 9:16 SINGLE tall image — NO split panels. Stack top to bottom: restaurant name, big discount text, giant promo code, expiry, CTA.' : 'LANDSCAPE 16:9: Centred layout.'} Giant bold promo code text dominates the centre of the screen (60%+ of height). Bold discount percentage/amount. Urgency messaging (LIMITED TIME, TODAY ONLY). ${ctaLine}. Minimal other content — the code is the hero. Use bright contrast colours for maximum impact.`;
         }
 
         if (adMode === 'generic') {
@@ -137,7 +137,7 @@ GENERIC BRAND AWARENESS AD — No specific menu items or prices.
 Restaurant: ${restaurantName}
 ${genericMessage ? `Message: ${genericMessage}` : `Theme: quality food, great taste, come visit us`}
 ${promoOffer ? `Offer: ${promoOffer}` : ''}
-DESIGN: Bold restaurant name as centrepiece. Appetising background with food imagery. Brand colours prominent. Tagline or generic hook. ${ctaLine}. Clean, professional, aspirational.`;
+DESIGN: ${orientation === 'portrait' ? 'PORTRAIT 9:16 SINGLE tall image — NO split panels. Top: logo/restaurant name bold. Middle: appetising food imagery. Bottom: tagline + CTA.' : 'LANDSCAPE 16:9: centred brand layout.'} Bold restaurant name as centrepiece. Appetising background with food imagery. Brand colours prominent. Tagline or generic hook. ${ctaLine}. Clean, professional, aspirational.`;
         }
 
         // Default: category mode
@@ -153,7 +153,7 @@ HERO ITEMS (large, dominant): ${heroList || effectiveCategory || restaurantName}
 ALL MENU ITEMS on screen: ${itemList || effectiveCategory}
 ${promoOffer ? `PROMO: ${promoOffer} - make this DOMINANT with urgency (LIMITED TIME / TODAY ONLY)` : ''}
 ${ctaLine}
-DESIGN RULES: Readable from 5 meters — massive bold text. Dark background with brand color glow. Hero item 40% of screen. Prices bold. Use power words: CRISPY, LOADED, JUICY, FIERY. NO paragraphs. ${orientation === 'portrait' ? 'Fill entire 9:16. Top: header + hook. Middle: hero + price. Bottom: menu grid 3 cols + CTA.' : 'Left 40%: hero + price + hook. Right 60%: item grid. Bottom: CTA.'} ${priceType === 'pos' ? 'NO website URL.' : ''}`;
+DESIGN RULES: Readable from 5 meters — massive bold text. Dark background with brand color glow. Hero item 40% of screen. Prices bold. Use power words: CRISPY, LOADED, JUICY, FIERY. NO paragraphs. ${orientation === 'portrait' ? 'PORTRAIT 9:16 LAYOUT — SINGLE image, NO split panels, NO side-by-side columns. Stack vertically: (1) Bold header/category name at top 15%, (2) Single large hero food photo center 35%, (3) Price + hook text 15%, (4) Secondary items grid 3-cols 20%, (5) CTA button at bottom 15%. All content within one narrow tall frame.' : 'LANDSCAPE 16:9: Left 40%: hero + price + hook. Right 60%: item grid. Bottom: CTA.'} ${priceType === 'pos' ? 'NO website URL.' : ''}`;
     };
 
     const handleGenerateScreenAd = async () => {
