@@ -47,7 +47,7 @@ export default function RestaurantMessages({ restaurantId }) {
         mutationFn: (messageId) => base44.entities.RestaurantMessage.update(messageId, { is_read: true }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-messages', restaurantId] });
-            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages', restaurantId] });
         },
     });
 
@@ -60,7 +60,7 @@ export default function RestaurantMessages({ restaurantId }) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-messages', restaurantId] });
-            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages', restaurantId] });
             toast.success('All messages marked as read');
         },
     });
@@ -69,7 +69,7 @@ export default function RestaurantMessages({ restaurantId }) {
         mutationFn: (messageId) => base44.entities.Message.update(messageId, { is_read: true }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['messages', selectedOrder] });
-            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
+            queryClient.invalidateQueries({ queryKey: ['unread-order-messages-count', restaurantId] });
         },
     });
 
@@ -148,7 +148,7 @@ export default function RestaurantMessages({ restaurantId }) {
         mutationFn: (id) => base44.entities.RestaurantMessage.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-messages', restaurantId] });
-            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages', restaurantId] });
             setDeletingPlatformMessage(null);
             toast.success('Message deleted');
         },
