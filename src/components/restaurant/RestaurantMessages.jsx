@@ -46,22 +46,21 @@ export default function RestaurantMessages({ restaurantId }) {
     const markAsRead = useMutation({
         mutationFn: (messageId) => base44.entities.RestaurantMessage.update(messageId, { is_read: true }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['admin-messages']);
-            queryClient.invalidateQueries(['restaurant-unread-messages']);
-            toast.success('Message marked as read');
+            queryClient.invalidateQueries({ queryKey: ['admin-messages', restaurantId] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
         },
     });
 
     const markAllAsRead = useMutation({
         mutationFn: async () => {
             const unreadMessages = adminMessages.filter(m => !m.is_read);
-            for (const msg of unreadMessages) {
-                await base44.entities.RestaurantMessage.update(msg.id, { is_read: true });
-            }
+            await Promise.all(unreadMessages.map(msg =>
+                base44.entities.RestaurantMessage.update(msg.id, { is_read: true })
+            ));
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['admin-messages']);
-            queryClient.invalidateQueries(['restaurant-unread-messages']);
+            queryClient.invalidateQueries({ queryKey: ['admin-messages', restaurantId] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
             toast.success('All messages marked as read');
         },
     });
@@ -69,8 +68,8 @@ export default function RestaurantMessages({ restaurantId }) {
     const markOrderMessageAsRead = useMutation({
         mutationFn: (messageId) => base44.entities.Message.update(messageId, { is_read: true }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages']);
-            queryClient.invalidateQueries(['restaurant-unread-messages']);
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedOrder] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
         },
     });
 
@@ -120,7 +119,7 @@ export default function RestaurantMessages({ restaurantId }) {
     const sendMutation = useMutation({
         mutationFn: (data) => base44.entities.Message.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages']);
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedOrder] });
             setMessageText('');
             toast.success('Message sent');
         },
@@ -129,7 +128,7 @@ export default function RestaurantMessages({ restaurantId }) {
     const updateMutation = useMutation({
         mutationFn: ({ id, text }) => base44.entities.Message.update(id, { message: text }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages']);
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedOrder] });
             setEditingId(null);
             setEditText('');
             toast.success('Message updated');
@@ -139,7 +138,7 @@ export default function RestaurantMessages({ restaurantId }) {
     const deleteMutation = useMutation({
         mutationFn: (id) => base44.entities.Message.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['messages']);
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedOrder] });
             setDeletingId(null);
             toast.success('Message deleted');
         },
@@ -148,8 +147,8 @@ export default function RestaurantMessages({ restaurantId }) {
     const deletePlatformMessageMutation = useMutation({
         mutationFn: (id) => base44.entities.RestaurantMessage.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['admin-messages']);
-            queryClient.invalidateQueries(['restaurant-unread-messages']);
+            queryClient.invalidateQueries({ queryKey: ['admin-messages', restaurantId] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-unread-messages'] });
             setDeletingPlatformMessage(null);
             toast.success('Message deleted');
         },
