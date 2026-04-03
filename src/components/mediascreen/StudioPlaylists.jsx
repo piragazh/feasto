@@ -503,7 +503,9 @@ export default function StudioPlaylists({ restaurantId }) {
             <div className={`${mobileView === 'library' ? 'flex' : 'hidden'} md:flex w-full md:w-72 bg-white border-l border-gray-200 flex-col flex-shrink-0`}>
                 <div className="px-4 py-3 border-b border-gray-100">
                     <h3 className="font-bold text-gray-900 text-sm">Media Library</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">Click to add to playlist</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                        {selectedScreen ? `Tap + to add to "${selectedScreen.screen_name}"` : 'Select a screen first, then tap + to add'}
+                    </p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-3">
                     {mediaFiles.length === 0 ? (
@@ -515,28 +517,27 @@ export default function StudioPlaylists({ restaurantId }) {
                     ) : (
                         <div className="grid grid-cols-2 gap-2">
                             {mediaFiles.map(file => (
-                                <button
-                                    key={file.id}
-                                    onClick={() => handleAddFromLibrary(file)}
-                                    className="group relative aspect-video bg-gray-100 rounded-xl overflow-hidden hover:ring-2 hover:ring-orange-500 transition-all"
-                                    title={`Add "${file.file_name}" to playlist`}
-                                >
+                                <div key={file.id} className="relative aspect-video bg-gray-100 rounded-xl overflow-hidden group">
                                     {file.file_type?.startsWith('video/') ? (
                                         <video src={file.file_url} className="w-full h-full object-cover" muted />
                                     ) : (
                                         <img src={file.file_url} alt={file.file_name} className="w-full h-full object-cover" />
                                     )}
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                        <div className="bg-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Plus className="h-4 w-4 text-gray-900" />
-                                        </div>
-                                    </div>
+                                    {/* Video badge */}
                                     {file.file_type?.startsWith('video/') && (
                                         <div className="absolute top-1.5 left-1.5 bg-black/60 rounded px-1 py-0.5">
                                             <Film className="h-2.5 w-2.5 text-white" />
                                         </div>
                                     )}
-                                </button>
+                                    {/* Add button — always visible on mobile, hover-only on desktop */}
+                                    <button
+                                        onClick={() => handleAddFromLibrary(file)}
+                                        className="absolute bottom-1.5 right-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-1.5 shadow-lg transition-all md:opacity-0 md:group-hover:opacity-100"
+                                        title={`Add "${file.file_name}" to playlist`}
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     )}
