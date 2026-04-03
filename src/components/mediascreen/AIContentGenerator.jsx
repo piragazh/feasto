@@ -356,10 +356,10 @@ Return JSON: { "header": { "category_title": "...", "hook": "..." }, "hero_items
                             {adMode === 'category' && (
                                 <div className="space-y-3 bg-orange-50 rounded-xl p-3">
                                     <Label className="text-sm font-semibold">Menu Category</Label>
-                                    <Select value={selectedCategory} onValueChange={v => { setSelectedCategory(v); setCustomCategory(''); }}>
+                                    <Select value={selectedCategory || '__all__'} onValueChange={v => { setSelectedCategory(v === '__all__' ? '' : v); setCustomCategory(''); }}>
                                         <SelectTrigger><SelectValue placeholder="All categories" /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value={null}>All Categories</SelectItem>
+                                            <SelectItem value="__all__">All Categories</SelectItem>
                                             {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
