@@ -155,14 +155,16 @@ function RestaurantDashboardInner() {
         queryKey: ['unread-order-messages-count', restaurant?.id],
         queryFn: () => base44.entities.Message.filter({ restaurant_id: restaurant.id, is_read: false }),
         enabled: !!restaurant?.id,
-        refetchInterval: 45000,
+        refetchInterval: 20000,
+        staleTime: 0, // always refetch immediately when invalidated by RestaurantMessages
     });
 
     const { data: unreadRestaurantMessages = [] } = useQuery({
         queryKey: ['restaurant-unread-messages', restaurant?.id],
         queryFn: () => base44.entities.RestaurantMessage.filter({ restaurant_id: restaurant.id, is_read: false }),
         enabled: !!restaurant?.id,
-        refetchInterval: 45000,
+        refetchInterval: 20000,
+        staleTime: 0, // always refetch immediately when invalidated by RestaurantMessages
     });
 
     const { data: offlineOrdersForBadge = [] } = useQuery({

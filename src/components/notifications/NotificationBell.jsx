@@ -38,7 +38,7 @@ export default function NotificationBell({ userEmail }) {
 
     const markAsReadMutation = useMutation({
         mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
-        onSuccess: () => queryClient.invalidateQueries(['notifications'])
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userEmail] })
     });
 
     const markAllAsReadMutation = useMutation({
@@ -46,7 +46,7 @@ export default function NotificationBell({ userEmail }) {
             const unread = notifications.filter(n => !n.is_read);
             await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
         },
-        onSuccess: () => queryClient.invalidateQueries(['notifications'])
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userEmail] })
     });
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
