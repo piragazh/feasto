@@ -903,7 +903,7 @@ export default function RestaurantSettings({ restaurantId }) {
                     <CentralizedPrinterSettings restaurantId={restaurantId} />
                 </div>
             )}
-            {false && (<div>
+            {false && (<div className="space-y-4">
                         <div className="grid md:grid-cols-2 gap-4">
                                  <div>
                                      <Label>Base Font Size</Label>
