@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { printerManager } from '@/components/restaurant/PrinterService';
+import { printWithCentralizedConfig } from '@/lib/printUtils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -98,9 +99,12 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         if (brandNew.length > 0 && prevOrderIds.current.size > 0) {
             const r = restaurantRef.current;
             const cfg = r?.printer_config || {};
-            if (cfg.auto_print && r) {
+            // Check if any printer has auto_print enabled
+            const centralized = cfg.centralized_printers || [];
+            const shouldAutoPrint = centralized.some(p => p.auto_print) || cfg.auto_print;
+            if (shouldAutoPrint && r) {
                 brandNew.forEach(order => {
-                    autoPrintOrder(order, r, cfg);
+                    autoPrintOrder(order, r);
                 });
             }
         }
@@ -129,60 +133,16 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         return allowedRoles.includes(user.role);
     };
 
-    // Auto-print using centralized printer config with channel routing
-    // All errors are caught — failure does not disrupt live order flow
-    const autoPrintOrder = async (order, restaurant, cfg) => {
+    // Auto-print using centralized printer config with channel routing.
+    // All errors are caught — failure does not disrupt live order flow.
+    const autoPrintOrder = async (order, restaurant) => {
         try {
-            const centralized = cfg.centralized_printers || [];
             const channel = getOrderChannel(order);
-            const services = [printerManager.printerA, printerManager.printerB];
-
-            if (centralized.length > 0) {
-                // Find printers assigned to handle this order channel.
-                // Kiosk orders fall back to online_order channel if no kiosk_order slot is configured.
-                const effectiveChannel = channel === 'kiosk_order' &&
-                    !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
-                        ? 'online_order'
-                        : channel;
-                const assignedPrinters = centralized.filter(p =>
-                    (p.assigned_channels || []).includes(effectiveChannel)
-                );
-                for (let i = 0; i < assignedPrinters.length; i++) {
-                    const printerConfig = assignedPrinters[i];
-                    // Find which slot index this printer is in
-                    const slotIndex = centralized.indexOf(printerConfig);
-                    const service = services[slotIndex] || printerManager.printerA;
-                    if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
-                        if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
-                        if (service.isConnected()) {
-                            // Use per-printer settings (width, template, etc.) — fall back to global cfg
-                            const perPrinterCfg = { ...cfg, ...printerConfig, bluetooth_printer: printerConfig.bluetooth_printer };
-                            service.printReceipt(order, restaurant, perPrinterCfg).catch(() => {
-                                if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                            });
-                            return;
-                        }
-                    }
-                }
-                // No bluetooth connected — browser fallback
+            await printWithCentralizedConfig(order, restaurant, channel, () => {
                 if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-            } else {
-                // Legacy fallback
-                if (cfg.bluetooth_printer?.id && printerManager.printerA.isConnected()) {
-                    printerManager.printerA.printReceipt(order, restaurant, cfg).catch(() => {
-                        if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                    });
-                } else if (cfg.printer_b_config?.bluetooth_printer?.id && printerManager.printerB.isConnected()) {
-                    printerManager.printerB.printReceipt(order, restaurant, { ...cfg, ...cfg.printer_b_config }).catch(() => {
-                        if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                    });
-                } else {
-                    if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-                }
-            }
+            });
         } catch (err) {
             console.error('[autoPrintOrder] Error:', err);
-            // Fallback to browser print
             if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
         }
     };
@@ -516,74 +476,23 @@ Provide only the time range (e.g., "25-30 min").`;
             restaurant = restaurants?.[0];
             restaurantRef.current = restaurant;
         }
+
+        const channel = getOrderChannel(order);
         const config = restaurant?.printer_config || {};
         const centralized = config.centralized_printers || [];
-        const channel = getOrderChannel(order);
-        const services = [printerManager.printerA, printerManager.printerB];
 
-        // Try centralized printers first (channel-aware)
-        if (centralized.length > 0) {
-            const effectiveChannel = channel === 'kiosk_order' &&
-                !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
-                    ? 'online_order'
-                    : channel;
-            const assignedPrinters = centralized.filter(p => (p.assigned_channels || []).includes(effectiveChannel));
-            // If none assigned to this channel, try all printers
-            const printersToTry = assignedPrinters.length > 0 ? assignedPrinters : centralized;
-            for (const printerConfig of printersToTry) {
-                const slotIndex = centralized.indexOf(printerConfig);
-                const service = services[slotIndex] || printerManager.printerA;
-                if (printerConfig.connection_type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
-                    if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
-                    if (service.isConnected()) {
-                        try {
-                            // Use per-printer settings (width, template, font) merged over global config
-                            const perPrinterCfg = { ...config, ...printerConfig, bluetooth_printer: printerConfig.bluetooth_printer };
-                            await service.printReceipt(order, restaurant, perPrinterCfg);
-                            toast.success(`Printed via ${printerConfig.name || `Printer ${slotIndex + 1}`}`);
-                            return;
-                        } catch (e) {
-                            toast.warning(`${printerConfig.name || 'Bluetooth printer'} failed, trying next...`);
-                        }
-                    }
-                }
-            }
-        } else {
-            // Legacy fallback
-            if (config.bluetooth_printer?.id) {
-                if (!printerManager.printerA.isConnected()) await printerManager.printerA.tryAutoConnect().catch(() => {});
-                if (printerManager.printerA.isConnected()) {
-                    try {
-                        await printerManager.printerA.printReceipt(order, restaurant, config);
-                        toast.success('Printed via Bluetooth Printer A');
-                        return;
-                    } catch (e) {
-                        toast.warning('Bluetooth print failed, falling back to browser print');
-                    }
-                }
-            }
-            if (config.printer_b_config?.bluetooth_printer?.id) {
-                if (!printerManager.printerB.isConnected()) await printerManager.printerB.tryAutoConnect().catch(() => {});
-                if (printerManager.printerB.isConnected()) {
-                    try {
-                        await printerManager.printerB.printReceipt(order, restaurant, { ...config, ...config.printer_b_config });
-                        toast.success('Printed via Bluetooth Printer B');
-                        return;
-                    } catch (e) {
-                        toast.warning('Bluetooth Printer B failed, falling back to browser print');
-                    }
-                }
-            }
-        }
-
-        // No printer available — show friendly dialog fallback
-        const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
-        setPrintFallback({
-            order,
-            restaurant,
-            config: fallbackCfg,
-            errorMessage: 'No Bluetooth printer is connected. Here is the order for manual reference.',
+        const printerName = await printWithCentralizedConfig(order, restaurant, channel, () => {
+            // Fallback: show order dialog when no printer available
+            const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
+            setPrintFallback({
+                order,
+                restaurant,
+                config: fallbackCfg,
+                errorMessage: 'No printer is connected or reachable. Here is the order for manual reference.',
+            });
         });
+
+        if (printerName) toast.success(`Printed via ${printerName}`);
     };
 
 
