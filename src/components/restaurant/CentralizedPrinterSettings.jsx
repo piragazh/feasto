@@ -356,9 +356,13 @@ function PrinterReceiptSettings({ printer, onUpdate }) {
     );
 }
 
+// BT services are only available for the first 2 printer slots
+const BT_SERVICES = [printerManager.printerA, printerManager.printerB];
+
 // ── Single printer card ────────────────────────────────────────────────────
 function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
-    const service = index === 0 ? printerManager.printerA : printerManager.printerB;
+    // Slots 0 and 1 → BT service A and B. Slots 2+ → no BT service (network/USB only)
+    const service = BT_SERVICES[index] || null;
     const type = printer.connection_type || 'bluetooth';
     const accentClass = index === 0 ? 'border-orange-200' : 'border-blue-200';
     const [testing, setTesting] = useState(false);
@@ -366,6 +370,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
 
     const handleTestPrint = async () => {
         if (type === 'network') return; // handled by NetworkPrinterManager's own test button
+        if (!service) { toast.error('Bluetooth is only supported on printer slots 1 and 2'); return; }
         setTesting(true);
         try {
             if (!service.isConnected()) await service.tryAutoConnect();
@@ -380,6 +385,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
     };
 
     const handleReconnect = async () => {
+        if (!service) { toast.error('Bluetooth is only supported on printer slots 1 and 2'); return; }
         if (!printer.bluetooth_printer?.id) { toast.error('No printer paired. Use "Scan for Printers" below.'); return; }
         setReconnecting(true);
         try {
@@ -408,9 +414,9 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                    {type === 'bluetooth' && <PrinterStatusBadge service={service} label={`Printer ${index + 1}`} />}
+                    {type === 'bluetooth' && service && <PrinterStatusBadge service={service} label={`Printer ${index + 1}`} />}
                     {type === 'network' && <NetworkPrinterStatusBadge ip={printer.network_ip} port={printer.network_port} />}
-                    {type === 'bluetooth' && (
+                    {type === 'bluetooth' && service && (
                         <button
                             onClick={handleReconnect}
                             disabled={reconnecting}
@@ -421,7 +427,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                             Reconnect
                         </button>
                     )}
-                    {type !== 'network' && (
+                    {type !== 'network' && service && (
                         <button
                             onClick={handleTestPrint}
                             disabled={testing}
@@ -443,35 +449,52 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
             {/* Connection type selector */}
             <div>
                 <Label className="mb-2 block text-xs text-gray-500 uppercase tracking-wide">Connection Type</Label>
+                {index >= 2 && (
+                    <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />Bluetooth is only available on printer slots 1 & 2. Use Network or USB for this slot.
+                    </p>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                     {[
                         { value: 'bluetooth', label: 'Bluetooth', icon: Bluetooth },
                         { value: 'usb',       label: 'USB',       icon: Usb       },
                         { value: 'network',   label: 'Network',   icon: Wifi      },
-                    ].map(({ value, label, icon: Icon }) => (
-                        <button
-                            key={value}
-                            onClick={() => onUpdate({ connection_type: value })}
-                            className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 text-xs font-medium transition-all ${
-                                type === value
-                                    ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                    : 'border-gray-200 hover:border-gray-300 text-gray-500'
-                            }`}
-                        >
-                            <Icon className="h-4 w-4" />
-                            {label}
-                        </button>
-                    ))}
+                    ].map(({ value, label, icon: ConnIcon }) => {
+                        const disabled = value === 'bluetooth' && index >= 2;
+                        return (
+                            <button
+                                key={value}
+                                onClick={() => !disabled && onUpdate({ connection_type: value })}
+                                disabled={disabled}
+                                className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 text-xs font-medium transition-all ${
+                                    disabled
+                                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                        : type === value
+                                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                            : 'border-gray-200 hover:border-gray-300 text-gray-500'
+                                }`}
+                            >
+                                <ConnIcon className="h-4 w-4" />
+                                {label}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            {type === 'bluetooth' && (
+            {type === 'bluetooth' && service && (
                 <BluetoothPrinterManager
                     selectedPrinter={printer.bluetooth_printer}
                     onPrinterSelect={p => onUpdate({ bluetooth_printer: p, connection_type: 'bluetooth' })}
                     restaurantId={restaurantId}
                     printerService={service}
                 />
+            )}
+            {type === 'bluetooth' && !service && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    Bluetooth is only supported on printer slots 1 and 2. Please switch to Network or USB.
+                </div>
             )}
             {type === 'usb' && (
                 <div className="space-y-3">

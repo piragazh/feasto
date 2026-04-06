@@ -175,12 +175,14 @@ function buildTestBytes(printerName, commandSet) {
 async function sendToNetworkPrinter(ip, port, data, timeoutMs = 8000) {
     const portNum = parseInt(port) || 9100;
 
-    // Use Deno TCP connect
+    // Connect with a timeout to avoid indefinite hangs
     let conn;
-    const deadline = AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : null;
-
     try {
-        conn = await Deno.connect({ hostname: ip, port: portNum, transport: 'tcp' });
+        const connectPromise = Deno.connect({ hostname: ip, port: portNum, transport: 'tcp' });
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Connection timed out after ${timeoutMs}ms`)), timeoutMs)
+        );
+        conn = await Promise.race([connectPromise, timeoutPromise]);
     } catch (e) {
         throw new Error(`Cannot connect to ${ip}:${portNum} — ${e.message}. Make sure the printer is on the same network and the IP/port are correct.`);
     }

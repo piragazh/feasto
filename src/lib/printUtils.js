@@ -26,31 +26,31 @@ function resolveChannel(channel, centralized) {
 
 /**
  * Build the per-printer config object used for both BT and network printing.
- * Merges global config → per-printer overrides so template/width/font are always correct.
+ * Merges defaults → global → per-printer, keeping only relevant receipt keys.
  */
 function buildPerPrinterConfig(globalCfg, printerConfig) {
+    // Extract only the receipt-relevant keys from globalCfg (avoid polluting with centralized_printers etc.)
+    const globalReceipt = {
+        printer_width: globalCfg.printer_width,
+        command_set: globalCfg.command_set,
+        template: globalCfg.template,
+        font_size: globalCfg.font_size,
+        show_logo: globalCfg.show_logo,
+        show_order_number: globalCfg.show_order_number,
+        show_customer_details: globalCfg.show_customer_details,
+        header_text: globalCfg.header_text,
+        footer_text: globalCfg.footer_text,
+    };
     return {
-        printer_width: '80mm',
-        command_set: 'esc_pos',
-        template: 'standard',
-        font_size: 'medium',
-        show_logo: true,
-        show_order_number: true,
-        show_customer_details: true,
-        header_text: '',
-        footer_text: '',
-        auto_print: false,
-        ...globalCfg,
-        // Per-printer settings win over global
-        printer_width: printerConfig.printer_width || globalCfg.printer_width || '80mm',
-        command_set: printerConfig.command_set || globalCfg.command_set || 'esc_pos',
-        template: printerConfig.template || globalCfg.template || 'standard',
-        font_size: printerConfig.font_size || globalCfg.font_size || 'medium',
-        show_logo: printerConfig.show_logo !== undefined ? printerConfig.show_logo : (globalCfg.show_logo !== false),
-        show_order_number: printerConfig.show_order_number !== undefined ? printerConfig.show_order_number : (globalCfg.show_order_number !== false),
-        show_customer_details: printerConfig.show_customer_details !== undefined ? printerConfig.show_customer_details : (globalCfg.show_customer_details !== false),
-        header_text: printerConfig.header_text !== undefined ? printerConfig.header_text : (globalCfg.header_text || ''),
-        footer_text: printerConfig.footer_text !== undefined ? printerConfig.footer_text : (globalCfg.footer_text || ''),
+        printer_width: printerConfig.printer_width || globalReceipt.printer_width || '80mm',
+        command_set: printerConfig.command_set || globalReceipt.command_set || 'esc_pos',
+        template: printerConfig.template || globalReceipt.template || 'standard',
+        font_size: printerConfig.font_size || globalReceipt.font_size || 'medium',
+        show_logo: printerConfig.show_logo !== undefined ? printerConfig.show_logo : (globalReceipt.show_logo !== false),
+        show_order_number: printerConfig.show_order_number !== undefined ? printerConfig.show_order_number : (globalReceipt.show_order_number !== false),
+        show_customer_details: printerConfig.show_customer_details !== undefined ? printerConfig.show_customer_details : (globalReceipt.show_customer_details !== false),
+        header_text: printerConfig.header_text !== undefined ? printerConfig.header_text : (globalReceipt.header_text || ''),
+        footer_text: printerConfig.footer_text !== undefined ? printerConfig.footer_text : (globalReceipt.footer_text || ''),
         bluetooth_printer: printerConfig.bluetooth_printer || null,
     };
 }
@@ -97,6 +97,8 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
         const toTry = assigned.length > 0 ? assigned : centralized;
 
         for (const printerConfig of toTry) {
+            // slotIndex is the position in the full centralized array (0-based),
+            // used to pick the correct BT service. Only 2 BT services exist (A and B).
             const slotIndex = centralized.indexOf(printerConfig);
             const type = printerConfig.connection_type || 'bluetooth';
 
@@ -111,7 +113,12 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                 }
             } else if (type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
                 // ── Bluetooth print via PrinterService ──
-                const service = svcs[slotIndex] || printerManager.printerA;
+                // BT services only exist for slots 0 and 1 — slots 2+ are network/USB only
+                const service = svcs[slotIndex];
+                if (!service) {
+                    console.warn(`[printUtils] No BT service for slot ${slotIndex} — only 2 BT slots supported`);
+                    continue;
+                }
                 if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
                 if (service.isConnected()) {
                     try {
