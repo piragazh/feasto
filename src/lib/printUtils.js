@@ -143,6 +143,7 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                 console.warn('[printUtils] Legacy network printer failed:', e.message);
             }
         }
+        // Try Printer A — fall through to B on failure
         if (cfg.bluetooth_printer?.id) {
             if (!printerManager.printerA.isConnected()) await printerManager.printerA.tryAutoConnect().catch(() => {});
             if (printerManager.printerA.isConnected()) {
@@ -150,15 +151,17 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                     await printerManager.printerA.printReceipt(order, restaurant, cfg);
                     return 'Bluetooth Printer';
                 } catch (e) {
-                    console.warn('[printUtils] Legacy BT printer failed:', e.message);
+                    console.warn('[printUtils] Legacy BT printer A failed, trying B:', e.message);
                 }
             }
         }
+        // Try Printer B (only if explicitly configured as printer_b)
         if (cfg.printer_b_config?.bluetooth_printer?.id) {
             if (!printerManager.printerB.isConnected()) await printerManager.printerB.tryAutoConnect().catch(() => {});
             if (printerManager.printerB.isConnected()) {
                 try {
-                    await printerManager.printerB.printReceipt(order, restaurant, { ...cfg, ...cfg.printer_b_config });
+                    const bCfg = buildPerPrinterConfig(cfg, cfg.printer_b_config);
+                    await printerManager.printerB.printReceipt(order, restaurant, bCfg);
                     return 'Bluetooth Printer B';
                 } catch (e) {
                     console.warn('[printUtils] Legacy BT printer B failed:', e.message);

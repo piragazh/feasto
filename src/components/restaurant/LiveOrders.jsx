@@ -94,7 +94,11 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     useEffect(() => {
         if (!allOrders.length) return;
         const newIds = new Set(allOrders.map(o => o.id));
-        const brandNew = allOrders.filter(o => o.status === 'pending' && !prevOrderIds.current.has(o.id));
+        // Include kiosk 'new' orders (use order_status) AND legacy 'pending' orders (use status)
+        const brandNew = allOrders.filter(o =>
+            !prevOrderIds.current.has(o.id) &&
+            (o.status === 'pending' || (o.order_source === 'kiosk' && o.order_status === 'new'))
+        );
 
         if (brandNew.length > 0 && prevOrderIds.current.size > 0) {
             const r = restaurantRef.current;
@@ -466,7 +470,14 @@ Provide only the time range (e.g., "25-30 min").`;
     };
 
     const printOrderDetails = async (orderId) => {
-        const order = allOrders.find(o => o.id === orderId);
+        // Try cache first, fall back to fresh fetch (handles stale cache after invalidation)
+        let order = allOrders.find(o => o.id === orderId);
+        if (!order) {
+            try {
+                const fresh = await base44.entities.Order.filter({ id: orderId });
+                order = fresh?.[0];
+            } catch {}
+        }
         if (!order) return;
 
         // Use cached restaurant or fetch fresh

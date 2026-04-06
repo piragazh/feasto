@@ -303,7 +303,10 @@ export class PrinterService {
         if (config.template !== 'compact') {
             await this.sendText(`${new Date(order.created_date || Date.now()).toLocaleString()}\n`);
         }
-        await this.sendText(`Type: ${order.order_type || 'Delivery'}\n`);
+        const orderTypeLabel = order.order_type
+            ? order.order_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+            : (order.order_source === 'pos' ? 'POS' : order.order_source === 'kiosk' ? 'Kiosk' : 'Delivery');
+        await this.sendText(`Type: ${orderTypeLabel}\n`);
         await this.sendText('--------------------------------\n');
 
         if (config.show_customer_details && config.template !== 'compact') {
@@ -311,6 +314,7 @@ export class PrinterService {
             await this.sendText('Customer:\n');
             await this.sendCommand(cmd.boldOff);
             await this.sendText(`${order.guest_name || order.created_by || 'N/A'}\n`);
+            if (order.phone) await this.sendText(`Tel: ${order.phone}\n`);
             if (order.delivery_address) await this.sendText(`${order.delivery_address}\n`);
             await this.sendText('--------------------------------\n');
         }

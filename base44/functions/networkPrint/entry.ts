@@ -61,16 +61,20 @@ function buildReceiptBytes(order, restaurant, config) {
     if (config.template !== 'compact') {
         add(`${new Date(order.created_date || Date.now()).toLocaleString()}\n`);
     }
-    add(`Type: ${order.order_type || 'Delivery'}\n`);
+    const orderTypeLabel = order.order_type
+        ? order.order_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        : (order.order_source === 'pos' ? 'POS' : order.order_source === 'kiosk' ? 'Kiosk' : 'Delivery');
+    add(`Type: ${orderTypeLabel}\n`);
     add('--------------------------------\n');
 
     if (config.show_customer_details !== false && config.template !== 'compact') {
         add(cmd.boldOn);
         add('Customer:\n');
         add(cmd.boldOff);
-        add(`${order.guest_name || order.created_by || 'N/A'}\n`);
-        if (order.delivery_address) add(`${order.delivery_address}\n`);
+        const customerName = order.guest_name || order.created_by || 'N/A';
+        add(`${customerName}\n`);
         if (order.phone) add(`Tel: ${order.phone}\n`);
+        if (order.delivery_address) add(`${order.delivery_address}\n`);
         add('--------------------------------\n');
     }
 
@@ -229,11 +233,14 @@ Deno.serve(async (req) => {
             };
             data = buildReceiptBytes(order, restaurant || {}, mergedConfig);
         } else if (action === 'ping') {
-            // Just attempt a TCP connection to verify reachability
+            // Attempt a TCP connection with timeout to verify reachability
             const portNum = parseInt(printer_port) || 9100;
-            let conn;
             try {
-                conn = await Deno.connect({ hostname: printer_ip, port: portNum, transport: 'tcp' });
+                const connectPromise = Deno.connect({ hostname: printer_ip, port: portNum, transport: 'tcp' });
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Connection timed out after 5000ms')), 5000)
+                );
+                const conn = await Promise.race([connectPromise, timeoutPromise]);
                 try { conn.close(); } catch {}
                 return Response.json({ success: true, message: `Printer at ${printer_ip}:${portNum} is reachable` });
             } catch (e) {
