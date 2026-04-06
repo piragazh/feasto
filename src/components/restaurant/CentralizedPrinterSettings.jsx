@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
 import { printerManager } from '@/components/restaurant/PrinterService';
+import NetworkPrinterManager, { NetworkPrinterStatusBadge } from '@/components/restaurant/NetworkPrinterManager';
 
 // ── Order type channels ────────────────────────────────────────────────────
 const ORDER_CHANNELS = [
@@ -364,6 +365,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
     const [reconnecting, setReconnecting] = useState(false);
 
     const handleTestPrint = async () => {
+        if (type === 'network') return; // handled by NetworkPrinterManager's own test button
         setTesting(true);
         try {
             if (!service.isConnected()) await service.tryAutoConnect();
@@ -407,6 +409,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     {type === 'bluetooth' && <PrinterStatusBadge service={service} label={`Printer ${index + 1}`} />}
+                    {type === 'network' && <NetworkPrinterStatusBadge ip={printer.network_ip} port={printer.network_port} />}
                     {type === 'bluetooth' && (
                         <button
                             onClick={handleReconnect}
@@ -418,15 +421,17 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                             Reconnect
                         </button>
                     )}
-                    <button
-                        onClick={handleTestPrint}
-                        disabled={testing}
-                        title="Print test page"
-                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-50 transition-colors"
-                    >
-                        {testing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-                        Test
-                    </button>
+                    {type !== 'network' && (
+                        <button
+                            onClick={handleTestPrint}
+                            disabled={testing}
+                            title="Print test page"
+                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-50 transition-colors"
+                        >
+                            {testing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
+                            Test
+                        </button>
+                    )}
                     {index > 0 && (
                         <button onClick={onRemove} className="text-gray-400 hover:text-red-500 transition-colors">
                             <Trash2 className="h-4 w-4" />
@@ -487,22 +492,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                 </div>
             )}
             {type === 'network' && (
-                <div className="space-y-3">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
-                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        Printer must be on the same WiFi/LAN. Default port is 9100.
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-2">
-                            <Label className="text-xs">IP Address</Label>
-                            <Input placeholder="192.168.1.100" value={printer.network_ip || ''} onChange={e => onUpdate({ network_ip: e.target.value })} className="mt-1 font-mono text-sm" />
-                        </div>
-                        <div>
-                            <Label className="text-xs">Port</Label>
-                            <Input placeholder="9100" value={printer.network_port || '9100'} onChange={e => onUpdate({ network_port: e.target.value })} className="mt-1 font-mono text-sm" />
-                        </div>
-                    </div>
-                </div>
+                <NetworkPrinterManager printer={printer} onUpdate={onUpdate} />
             )}
 
             {/* Order type assignments */}
