@@ -16,6 +16,7 @@ import CartDrawer from '@/components/cart/CartDrawer';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
+import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -1132,6 +1133,9 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
             {/* Content */}
             <div className="max-w-4xl mx-auto px-4 py-8">
+                {/* Temporary Closure Banner — shown prominently before menu */}
+                <TemporaryClosureBanner temporaryClosure={restaurant?.temporary_closure} />
+
                 <RestaurantSectionErrorBoundary sectionName="restaurant-top-sections">
                     <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
                         {/* Image Gallery */}
@@ -1375,8 +1379,13 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 >
                     <div className="max-w-4xl mx-auto">
                         <Button
-                            onClick={() => setCartOpen(true)}
-                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-lg flex items-center justify-between px-6"
+                            onClick={() => !restaurant?.temporary_closure?.enabled && setCartOpen(true)}
+                            disabled={!!restaurant?.temporary_closure?.enabled}
+                            className={`w-full h-14 text-white font-semibold rounded-xl text-lg flex items-center justify-between px-6 ${
+                                restaurant?.temporary_closure?.enabled
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-orange-500 hover:bg-orange-600'
+                            }`}
                         >
                             <div className="flex items-center gap-3">
                                 <div className="bg-white/20 rounded-full px-3 py-1">

@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell } from 'lucide-react';
+import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 import InfoSectionSettings from './InfoSectionSettings';
 import CentralizedPrinterSettings from './CentralizedPrinterSettings';
 import SmsNotificationSettings from './SmsNotificationSettings';
 import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
+import TemporaryClosureSettings from './TemporaryClosureSettings';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -383,7 +384,22 @@ export default function RestaurantSettings({ restaurantId }) {
                     <Bell className="h-4 w-4 mr-2" />
                     Notifications
                 </Button>
+                <Button
+                    variant={activeSection === 'closure' ? 'default' : 'outline'}
+                    onClick={() => setActiveSection('closure')}
+                    className={restaurant?.temporary_closure?.enabled ? 'border-red-400 text-red-600' : ''}
+                >
+                    <ShieldOff className="h-4 w-4 mr-2" />
+                    Order Pause
+                    {restaurant?.temporary_closure?.enabled && (
+                        <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">ON</span>
+                    )}
+                </Button>
             </div>
+
+            {activeSection === 'closure' && (
+                <TemporaryClosureSettings restaurantId={restaurantId} />
+            )}
 
             {activeSection === 'profile' && (
                 <ProfileManagement restaurantId={restaurantId} />

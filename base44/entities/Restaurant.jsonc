@@ -164,6 +164,32 @@
       "type": "boolean",
       "default": true
     },
+    "temporary_closure": {
+      "type": "object",
+      "description": "Temporarily stop accepting orders without changing opening hours",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, the restaurant is not accepting orders"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "temporary_closed",
+            "no_drivers",
+            "technical_fault",
+            "extremely_busy",
+            "custom"
+          ],
+          "description": "Reason for closure"
+        },
+        "custom_message": {
+          "type": "string",
+          "description": "Optional custom message shown to customers"
+        }
+      }
+    },
     "opening_hours": {
       "type": "object"
     },
@@ -279,7 +305,7 @@
     },
     "timezone": {
       "type": "string",
-      "description": "IANA timezone identifier (e.g., Europe/London, America/New_York). Used for local-time temporal analytics. Auto-inferred from country if not set.",
+      "description": "IANA timezone identifier (e.g., Europe/London, America/New_York).",
       "default": "UTC"
     },
     "food_hygiene_rating": {
