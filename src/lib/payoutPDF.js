@@ -140,7 +140,7 @@ export function generatePayoutPDF(payout) {
     const rows = [
         { label: 'Total Orders Received in Period', value: `${totalInPeriod} orders`, bold: false, indent: false },
         { label: '  ↳ Completed & Paid (included in payout)', value: `${payout.total_orders ?? 0} orders`, bold: false, indent: true, positive: true },
-        { label: '  ↳ Cancelled (excluded — no charge)', value: `${payout.cancelled_orders ?? 0} orders`, bold: false, indent: true },
+        { label: '  ↳ Cancelled (excluded — no charge)', value: `${payout.cancelled_orders ?? 0} orders  (${currency(payout.cancelled_orders_value)})`, bold: false, indent: true },
         { label: '  ↳ Refunded (see refund lines below)', value: `${payout.refunded_orders_count ?? 0} orders`, bold: false, indent: true },
         { label: '', value: '', bold: false, divider: true },
         { label: 'Gross Earnings (Completed Orders)', value: currency(payout.gross_earnings), bold: false, indent: false },
@@ -232,7 +232,7 @@ export function generatePayoutPDF(payout) {
     }
     // Cancelled / Refunded (info rows)
     if ((payout.cancelled_orders ?? 0) > 0) {
-        breakdownRows.push(['❌ Cancelled (not charged)', payout.cancelled_orders, 0, true]);
+        breakdownRows.push(['❌ Cancelled (not charged)', payout.cancelled_orders, payout.cancelled_orders_value ?? 0, true]);
     }
     if ((payout.refunded_orders_count ?? 0) > 0) {
         breakdownRows.push([`↩ Refunded`, payout.refunded_orders_count, -(payout.refunds_paid_by_restaurant ?? 0), false, true]);
@@ -258,7 +258,7 @@ export function generatePayoutPDF(payout) {
         setColor(doc, isCancelled ? GRAY_500 : isRefund ? RED_600 : BRAND_DARK);
         doc.setFontSize(8.5);
         doc.setFont('helvetica', isCancelled ? 'normal' : 'bold');
-        doc.text(isCancelled ? '—' : isRefund && earnings < 0 ? `-${currency(Math.abs(earnings))}` : currency(earnings), PW - MARGIN - 4, y + 4.8, { align: 'right' });
+        doc.text(isRefund && earnings < 0 ? `-${currency(Math.abs(earnings))}` : currency(earnings), PW - MARGIN - 4, y + 4.8, { align: 'right' });
         y += 7;
     });
 

@@ -38,6 +38,11 @@
       "default": 0,
       "description": "Number of cancelled orders in period (excluded from payout)"
     },
+    "cancelled_orders_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Total value of cancelled orders in period"
+    },
     "refunded_orders_count": {
       "type": "number",
       "default": 0,

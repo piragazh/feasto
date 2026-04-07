@@ -185,6 +185,7 @@ export default function PayoutManagement() {
 
             // Cancelled orders in period
             const cancelledOrders = inPeriodOnlineOrders.filter(o => o.status === 'cancelled');
+            const cancelledOrdersValue = cancelledOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
             // Refunds in this period — online completed orders only (same source filter as above)
             const refundedOrders = inPeriodOnlineOrders.filter(o => o.status === 'refunded');
@@ -237,6 +238,7 @@ export default function PayoutManagement() {
                 payout_frequency: payoutFrequency,
                 total_orders: periodOrders.length,
                 cancelled_orders: cancelledOrders.length,
+                cancelled_orders_value: cancelledOrdersValue,
                 refunded_orders_count: refundedOrders.length,
                 delivery_orders: deliveryOrders,
                 collection_orders: collectionOrders,
@@ -486,7 +488,7 @@ export default function PayoutManagement() {
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Cancelled</p>
                                                 <p className="font-semibold text-gray-600">{payout.cancelled_orders ?? 0}</p>
-                                                <p className="text-xs text-gray-400">not charged</p>
+                                                <p className="text-xs text-gray-400">£{(payout.cancelled_orders_value ?? 0).toFixed(2)}</p>
                                             </div>
                                             <div className="bg-red-50 p-2 rounded text-center">
                                                 <p className="text-xs text-red-500">Refunded</p>
