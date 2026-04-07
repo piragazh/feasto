@@ -11,7 +11,7 @@ const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 };
 
-// Context to share open state & value between Select wrapper and DrawerContent on mobile
+// Context to share open state & value between Select wrapper and sheet on mobile
 const MobileSelectCtx = createContext(null);
 
 // On mobile we wrap the whole Select so we can intercept open state
@@ -19,6 +19,7 @@ const Select = ({ children, value, defaultValue, onValueChange, open: controlled
   const [mounted, setMounted] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
   const [currentValue, setCurrentValue] = useState(value ?? defaultValue ?? '');
+  const [labelMap, setLabelMap] = useState({});
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { if (value !== undefined) setCurrentValue(value); }, [value]);
@@ -36,6 +37,10 @@ const Select = ({ children, value, defaultValue, onValueChange, open: controlled
     onOpenChange?.(o);
   }, [controlledOpen, onOpenChange]);
 
+  const registerLabel = useCallback((val, label) => {
+    setLabelMap(prev => prev[val] === label ? prev : { ...prev, [val]: label });
+  }, []);
+
   if (!mobile) {
     return (
       <SelectPrimitive.Root
@@ -52,23 +57,26 @@ const Select = ({ children, value, defaultValue, onValueChange, open: controlled
   }
 
   return (
-    <MobileSelectCtx.Provider value={{ isOpen, handleOpenChange, currentValue, handleValueChange }}>
-      <SelectPrimitive.Root
-        value={value ?? currentValue}
-        defaultValue={defaultValue}
-        onValueChange={handleValueChange}
-        open={false}  // prevent Radix from opening its own popover on mobile
-        onOpenChange={() => {}}
-        {...props}
-      >
-        {children}
-      </SelectPrimitive.Root>
+    <MobileSelectCtx.Provider value={{ isOpen, handleOpenChange, currentValue, handleValueChange, labelMap, registerLabel }}>
+      {children}
     </MobileSelectCtx.Provider>
   );
 };
 
 const SelectGroup = SelectPrimitive.Group
-const SelectValue = SelectPrimitive.Value
+
+const SelectValue = ({ placeholder, children, ...props }) => {
+  const mobileCtx = useContext(MobileSelectCtx);
+  if (mobileCtx) {
+    const label = mobileCtx.currentValue ? (mobileCtx.labelMap[mobileCtx.currentValue] ?? mobileCtx.currentValue) : null;
+    return (
+      <span className="line-clamp-1 text-sm">
+        {label || <span className="text-muted-foreground">{placeholder || ''}</span>}
+      </span>
+    );
+  }
+  return <SelectPrimitive.Value placeholder={placeholder} {...props}>{children}</SelectPrimitive.Value>;
+};
 
 const SelectTrigger = forwardRef(({ className, children, ...props }, ref) => {
   const mobileCtx = useContext(MobileSelectCtx);
@@ -128,23 +136,30 @@ const SelectScrollDownButton = forwardRef(({ className, ...props }, ref) => (
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
-// MobileSelectItems extracts SelectItem children from SelectContent for use in the Drawer
-const MobileSelectItems = ({ children, onSelect }) => {
+// MobileSelectItems renders SelectItem children as tappable buttons in the bottom sheet
+const MobileSelectItems = ({ children, onSelect, currentValue }) => {
   return React.Children.map(children, (child) => {
     if (!child) return null;
-    if (child.type === SelectPrimitive.Item || (child.props && child.props.value !== undefined)) {
+    // Handle groups recursively
+    if (child.props?.children && !child.props?.value) {
+      return <MobileSelectItems onSelect={onSelect} currentValue={currentValue}>{child.props.children}</MobileSelectItems>;
+    }
+    if (child.props?.value !== undefined) {
+      const isSelected = child.props.value === currentValue;
       return (
         <button
           type="button"
-          onClick={() => onSelect(child.props.value)}
-          className="flex w-full items-center justify-between px-4 py-3.5 text-base text-left hover:bg-accent active:bg-accent rounded-md min-h-[48px]"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onSelect(child.props.value); }}
+          className="flex w-full items-center justify-between px-4 py-3.5 text-base text-left active:bg-accent rounded-md min-h-[48px]"
+          style={{ background: isSelected ? 'hsl(var(--accent))' : 'transparent' }}
         >
           <span>{child.props.children}</span>
+          {isSelected && <Check className="h-4 w-4 shrink-0" />}
         </button>
       );
     }
-    // SelectLabel, SelectSeparator etc — render as-is
-    return child;
+    return null;
   });
 };
 
@@ -170,7 +185,10 @@ const SelectContent = forwardRef(({ className, children, position = "popper", ti
           <div style={{ width: 40, height: 4, background: '#d1d5db', borderRadius: 9999, margin: '12px auto 4px' }} />
           {title && <div style={{ padding: '8px 16px', fontWeight: 600, fontSize: 15 }}>{title}</div>}
           <div style={{ overflowY: 'auto', padding: '4px 8px 24px' }}>
-            <MobileSelectItems onSelect={(val) => { mobileCtx.handleValueChange(val); mobileCtx.handleOpenChange(false); }}>
+            <MobileSelectItems
+              onSelect={(val) => { mobileCtx.handleValueChange(val); mobileCtx.handleOpenChange(false); }}
+              currentValue={mobileCtx.currentValue}
+            >
               {children}
             </MobileSelectItems>
           </div>
@@ -213,22 +231,40 @@ const SelectLabel = forwardRef(({ className, ...props }, ref) => (
 ))
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
-const SelectItem = forwardRef(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-3 md:py-1.5 pl-2 pr-8 text-base md:text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      className
-    )}
-    {...props}>
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
-      </SelectPrimitive.ItemIndicator>
-    </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-  </SelectPrimitive.Item>
-))
+const SelectItem = forwardRef(({ className, children, value, ...props }, ref) => {
+  const mobileCtx = useContext(MobileSelectCtx);
+
+  // Register label for display in SelectValue on mobile
+  useEffect(() => {
+    if (mobileCtx && value !== undefined) {
+      const label = typeof children === 'string' ? children : null;
+      if (label) mobileCtx.registerLabel(value, label);
+    }
+  }, [mobileCtx, value, children]);
+
+  if (mobileCtx) {
+    // Rendered inside MobileSelectItems as a button — return null here to avoid duplication
+    return null;
+  }
+
+  return (
+    <SelectPrimitive.Item
+      ref={ref}
+      value={value}
+      className={cn(
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-3 md:py-1.5 pl-2 pr-8 text-base md:text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className
+      )}
+      {...props}>
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="h-4 w-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+})
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
 const SelectSeparator = forwardRef(({ className, ...props }, ref) => (
