@@ -484,26 +484,32 @@ export default function PayoutManagement() {
                                             <div className="bg-blue-50 p-2 rounded text-center">
                                                 <p className="text-xs text-blue-600">Orders</p>
                                                 <p className="font-bold text-blue-800">{payout.total_orders ?? 0}</p>
+                                                <p className="text-xs font-medium text-blue-700">£{payout.gross_earnings?.toFixed(2)}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Cancelled</p>
                                                 <p className="font-semibold text-gray-600">{payout.cancelled_orders ?? 0}</p>
+                                                <p className="text-xs text-gray-400">£0.00</p>
                                             </div>
                                             <div className="bg-red-50 p-2 rounded text-center">
                                                 <p className="text-xs text-red-500">Refunded</p>
                                                 <p className="font-semibold text-red-600">{payout.refunded_orders_count ?? 0}</p>
+                                                <p className="text-xs font-medium text-red-500">-£{((payout.refunds_paid_by_restaurant ?? 0) + (payout.refunds_paid_by_platform ?? 0)).toFixed(2)}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Delivery</p>
                                                 <p className="font-semibold">{payout.delivery_orders ?? 0}</p>
+                                                <p className="text-xs text-gray-500">£{(payout.delivery_earnings ?? 0).toFixed(2)}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Collection</p>
                                                 <p className="font-semibold">{payout.collection_orders ?? 0}</p>
+                                                <p className="text-xs text-gray-500">£{(payout.collection_earnings ?? 0).toFixed(2)}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Dine-In</p>
                                                 <p className="font-semibold">{payout.dine_in_orders ?? 0}</p>
+                                                <p className="text-xs text-gray-500">£{Math.max(0, (payout.gross_earnings ?? 0) - (payout.delivery_earnings ?? 0) - (payout.collection_earnings ?? 0)).toFixed(2)}</p>
                                             </div>
                                         </div>
 
