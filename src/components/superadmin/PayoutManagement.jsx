@@ -101,11 +101,16 @@ export default function PayoutManagement() {
                 return orderDate >= periodStart && orderDate <= periodEnd && !excludedStatuses.has(order.status);
             });
 
-            // Calculate totals — split cash vs card vs pay_at_counter
+            // Calculate totals — split cash vs card vs pay_at_counter, and by order type
             let grossEarnings = 0;
             let cashPaymentAmount = 0;   // cash collected by restaurant directly
             let payAtCounterAmount = 0;  // paid at counter (also collected by restaurant)
             let cardPaymentAmount = 0;   // card/apple_pay/google_pay processed by platform
+            let deliveryOrders = 0;
+            let collectionOrders = 0;
+            let dineInOrders = 0;
+            let deliveryEarnings = 0;
+            let collectionEarnings = 0;
 
             periodOrders.forEach(order => {
                 const orderTotal = order.total || 0;
@@ -118,6 +123,18 @@ export default function PayoutManagement() {
                 } else {
                     // card, apple_pay, google_pay — platform collected
                     cardPaymentAmount += orderTotal;
+                }
+
+                // Order type breakdown
+                const orderType = order.order_type || 'delivery';
+                if (orderType === 'delivery') {
+                    deliveryOrders++;
+                    deliveryEarnings += orderTotal;
+                } else if (orderType === 'collection' || orderType === 'takeaway') {
+                    collectionOrders++;
+                    collectionEarnings += orderTotal;
+                } else if (orderType === 'dine_in') {
+                    dineInOrders++;
                 }
             });
 
@@ -174,10 +191,17 @@ export default function PayoutManagement() {
                 period_end: periodEnd.toISOString(),
                 payout_frequency: payoutFrequency,
                 total_orders: periodOrders.length,
+                delivery_orders: deliveryOrders,
+                collection_orders: collectionOrders,
+                dine_in_orders: dineInOrders,
                 gross_earnings: grossEarnings,
+                delivery_earnings: deliveryEarnings,
+                collection_earnings: collectionEarnings,
                 cash_payment_amount: cashPaymentAmount + payAtCounterAmount,
                 card_payment_amount: cardPaymentAmount,
                 platform_commission: platformCommission,
+                commission_rate: restaurant.commission_rate || 15,
+                commission_type: restaurant.commission_type || 'percentage',
                 refunds_paid_by_platform: refundsPaidByPlatform,
                 refunds_paid_by_restaurant: refundsPaidByRestaurant,
                 net_payout: finalNetPayout,

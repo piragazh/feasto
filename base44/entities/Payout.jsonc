@@ -1,0 +1,141 @@
+{
+  "name": "Payout",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant receiving payout"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Payout period start date"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Payout period end date"
+    },
+    "payout_frequency": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "monthly",
+        "custom"
+      ],
+      "description": "Payout frequency type"
+    },
+    "total_orders": {
+      "type": "number",
+      "description": "Number of orders in period"
+    },
+    "delivery_orders": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of delivery orders"
+    },
+    "collection_orders": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of collection/takeaway orders"
+    },
+    "dine_in_orders": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of dine-in orders"
+    },
+    "gross_earnings": {
+      "type": "number",
+      "description": "Total order value before commission"
+    },
+    "delivery_earnings": {
+      "type": "number",
+      "default": 0,
+      "description": "Gross earnings from delivery orders"
+    },
+    "collection_earnings": {
+      "type": "number",
+      "default": 0,
+      "description": "Gross earnings from collection orders"
+    },
+    "cash_payment_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Total cash payment orders"
+    },
+    "card_payment_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Total card payment orders"
+    },
+    "platform_commission": {
+      "type": "number",
+      "description": "Total commission taken by platform"
+    },
+    "commission_rate": {
+      "type": "number",
+      "description": "Commission rate applied"
+    },
+    "commission_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed"
+      ],
+      "default": "percentage"
+    },
+    "refunds_paid_by_platform": {
+      "type": "number",
+      "default": 0,
+      "description": "Refunds covered by platform"
+    },
+    "refunds_paid_by_restaurant": {
+      "type": "number",
+      "default": 0,
+      "description": "Refunds deducted from restaurant"
+    },
+    "net_payout": {
+      "type": "number",
+      "description": "Amount to be paid to restaurant"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "paid",
+        "failed",
+        "voided"
+      ],
+      "default": "pending"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When payout was completed"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Bank transfer, etc"
+    },
+    "transaction_reference": {
+      "type": "string",
+      "description": "Bank transaction reference"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "period_start",
+    "period_end",
+    "gross_earnings",
+    "platform_commission",
+    "net_payout"
+  ]
+}

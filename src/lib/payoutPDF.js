@@ -141,11 +141,11 @@ export function generatePayoutPDF(payout) {
         { label: 'Gross Earnings (Food Sales)', value: currency(payout.gross_earnings), bold: false, indent: false },
         { label: '  ↳ Paid by Card / Online', value: currency(payout.card_payment_amount), bold: false, indent: true },
         { label: '  ↳ Paid by Cash', value: currency(payout.cash_payment_amount), bold: false, indent: true },
-        { label: 'Platform Commission', value: `−${currency(payout.platform_commission)}`, bold: false, indent: false, negative: true },
+        { label: 'Platform Commission', value: `-${currency(payout.platform_commission)}`, bold: false, indent: false, negative: true },
     ];
 
     if (payout.refunds_paid_by_restaurant > 0) {
-        rows.push({ label: 'Refunds Deducted (Restaurant)', value: `−${currency(payout.refunds_paid_by_restaurant)}`, bold: false, negative: true });
+        rows.push({ label: 'Refunds Deducted (Restaurant)', value: `-${currency(payout.refunds_paid_by_restaurant)}`, bold: false, negative: true });
     }
     if (payout.refunds_paid_by_platform > 0) {
         rows.push({ label: 'Refunds Covered by Platform', value: `+${currency(payout.refunds_paid_by_platform)}`, bold: false, positive: true });
@@ -179,6 +179,60 @@ export function generatePayoutPDF(payout) {
     doc.text(currency(payout.net_payout), PW - MARGIN - 4, y + 7.5, { align: 'right' });
 
     y += 18;
+
+    /* ─── ORDER TYPE BREAKDOWN ─── */
+    const hasOrderBreakdown = (payout.delivery_orders > 0) || (payout.collection_orders > 0) || (payout.dine_in_orders > 0);
+    if (hasOrderBreakdown) {
+        setColor(doc, BRAND_DARK);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Order Breakdown', MARGIN, y);
+        setColor(doc, BRAND_ORANGE, 'fill');
+        doc.rect(MARGIN, y + 1.5, 28, 0.8, 'F');
+        y += 8;
+
+        // Table header
+        setColor(doc, BRAND_DARK, 'fill');
+        doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
+        setColor(doc, WHITE);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Order Type', MARGIN + 4, y + 4.8);
+        doc.text('Orders', MARGIN + CONTENT_W * 0.45, y + 4.8, { align: 'right' });
+        doc.text('Earnings', PW - MARGIN - 4, y + 4.8, { align: 'right' });
+        y += 7;
+
+        const breakdownRows = [];
+        if (payout.delivery_orders > 0) {
+            breakdownRows.push(['Delivery', payout.delivery_orders, payout.delivery_earnings ?? 0]);
+        }
+        if (payout.collection_orders > 0) {
+            breakdownRows.push(['Collection / Takeaway', payout.collection_orders, payout.collection_earnings ?? 0]);
+        }
+        if (payout.dine_in_orders > 0) {
+            const dineInEarnings = (payout.gross_earnings ?? 0) - (payout.delivery_earnings ?? 0) - (payout.collection_earnings ?? 0);
+            breakdownRows.push(['Dine-In', payout.dine_in_orders, Math.max(0, dineInEarnings)]);
+        }
+
+        breakdownRows.forEach(([label, count, earnings], idx) => {
+            const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+            setColor(doc, bg, 'fill');
+            setColor(doc, GRAY_200, 'draw');
+            doc.setLineWidth(0.2);
+            doc.rect(MARGIN, y, CONTENT_W, 7, 'FD');
+            setColor(doc, GRAY_700);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text(label, MARGIN + 4, y + 4.8);
+            doc.text(`${count} orders`, MARGIN + CONTENT_W * 0.45, y + 4.8, { align: 'right' });
+            setColor(doc, BRAND_DARK);
+            doc.setFont('helvetica', 'bold');
+            doc.text(currency(earnings), PW - MARGIN - 4, y + 4.8, { align: 'right' });
+            y += 7;
+        });
+
+        y += 8;
+    }
 
     /* ─── COMMISSION BREAKDOWN ─── */
     const commRate = payout.commission_rate ? `${payout.commission_rate}%` : 'N/A';
