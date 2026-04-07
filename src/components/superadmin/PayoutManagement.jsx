@@ -205,7 +205,12 @@ export default function PayoutManagement() {
                 ? platformCommission * (cashPaymentAmount / grossEarnings)
                 : 0;
 
-            let netPayout = cardPaymentAmount - platformCommission - refundsPaidByRestaurant;
+            // Net payout formula:
+            // Card payments held by platform
+            // MINUS commission on ALL gross (card + cash)
+            // MINUS refunds the restaurant is responsible for
+            // MINUS refunds the PLATFORM covered (MealDrop paid these — must claw back from payout)
+            let netPayout = cardPaymentAmount - platformCommission - refundsPaidByRestaurant - refundsPaidByPlatform;
             const finalNetPayout = Math.max(0, netPayout);
 
             // Audit log in browser console for verification
@@ -221,14 +226,18 @@ export default function PayoutManagement() {
             console.log(`[Payout Audit]   ↳ Refunded online orders: ${refundedOrders.length}`);
             console.log(`[Payout Audit] Gross: £${grossEarnings.toFixed(2)} | Card: £${cardPaymentAmount.toFixed(2)} | Cash: £${cashPaymentAmount.toFixed(2)}`);
             console.log(`[Payout Audit] Commission (${commissionRate}%): £${platformCommission.toFixed(2)} | Cash commission debt: £${cashCommissionDebt.toFixed(2)}`);
-            console.log(`[Payout Audit] Net payout: £${finalNetPayout.toFixed(2)}`);
+            console.log(`[Payout Audit] Refunds by restaurant: -£${refundsPaidByRestaurant.toFixed(2)} | Refunds by platform (clawed back): -£${refundsPaidByPlatform.toFixed(2)}`);
+            console.log(`[Payout Audit] Net payout: £${finalNetPayout.toFixed(2)} (raw: £${netPayout.toFixed(2)})`);
             console.log(`[Payout Audit] ==========================================`);
 
-            const overdraftNote = netPayout < 0
-                ? `⚠️ Commission exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Payout floored to £0.`
-                : '';
-
-            const finalNotes = overdraftNote || undefined;
+            const notes = [];
+            if (netPayout < 0) {
+                notes.push(`⚠️ Commission + refunds exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Payout floored to £0.`);
+            }
+            if (cashCommissionDebt > 0) {
+                notes.push(`ℹ️ Cash commission debt: £${cashCommissionDebt.toFixed(2)} (commission on £${cashPaymentAmount.toFixed(2)} cash orders at ${commissionRate}%). Invoice restaurant separately.`);
+            }
+            const finalNotes = notes.length > 0 ? notes.join(' | ') : undefined;
 
             return base44.entities.Payout.create({
                 restaurant_id: restaurantId,
@@ -537,12 +546,12 @@ export default function PayoutManagement() {
                                          </div>
 
                                         {(payout.refunds_paid_by_restaurant > 0 || payout.refunds_paid_by_platform > 0) && (
-                                            <div className="flex gap-3 text-xs mb-3">
+                                            <div className="flex gap-3 text-xs mb-3 flex-wrap">
                                                 {payout.refunds_paid_by_restaurant > 0 && (
-                                                    <span className="bg-red-50 text-red-700 px-2 py-1 rounded">Refunds deducted: -£{payout.refunds_paid_by_restaurant.toFixed(2)}</span>
+                                                    <span className="bg-red-50 text-red-700 px-2 py-1 rounded">Restaurant refunds deducted: -£{payout.refunds_paid_by_restaurant.toFixed(2)}</span>
                                                 )}
                                                 {payout.refunds_paid_by_platform > 0 && (
-                                                    <span className="bg-green-50 text-green-700 px-2 py-1 rounded">Platform covered: £{payout.refunds_paid_by_platform.toFixed(2)}</span>
+                                                    <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded">Platform refunds clawed back: -£{payout.refunds_paid_by_platform.toFixed(2)}</span>
                                                 )}
                                             </div>
                                         )}
