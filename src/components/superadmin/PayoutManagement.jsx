@@ -223,14 +223,11 @@ export default function PayoutManagement() {
             console.log(`[Payout Audit] Net payout: £${finalNetPayout.toFixed(2)}`);
             console.log(`[Payout Audit] ==========================================`);
 
-            const commissionDebtNote = cashCommissionDebt > 0.01
-                ? `ℹ️ Cash order commission debt: £${cashCommissionDebt.toFixed(2)} (commission on £${cashPaymentAmount.toFixed(2)} cash orders collected directly by restaurant).`
-                : '';
             const overdraftNote = netPayout < 0
                 ? `⚠️ Commission exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Payout floored to £0.`
                 : '';
 
-            const finalNotes = [commissionDebtNote, overdraftNote].filter(Boolean).join('\n') || undefined;
+            const finalNotes = overdraftNote || undefined;
 
             return base44.entities.Payout.create({
                 restaurant_id: restaurantId,
@@ -489,12 +486,12 @@ export default function PayoutManagement() {
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Cancelled</p>
                                                 <p className="font-semibold text-gray-600">{payout.cancelled_orders ?? 0}</p>
-                                                <p className="text-xs text-gray-400">£0.00</p>
+                                                <p className="text-xs text-gray-400">not charged</p>
                                             </div>
                                             <div className="bg-red-50 p-2 rounded text-center">
                                                 <p className="text-xs text-red-500">Refunded</p>
                                                 <p className="font-semibold text-red-600">{payout.refunded_orders_count ?? 0}</p>
-                                                <p className="text-xs font-medium text-red-500">-£{((payout.refunds_paid_by_restaurant ?? 0) + (payout.refunds_paid_by_platform ?? 0)).toFixed(2)}</p>
+                                                <p className="text-xs font-medium text-red-500">{(payout.refunds_paid_by_restaurant ?? 0) + (payout.refunds_paid_by_platform ?? 0) > 0 ? `-£${((payout.refunds_paid_by_restaurant ?? 0) + (payout.refunds_paid_by_platform ?? 0)).toFixed(2)}` : '—'}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Delivery</p>

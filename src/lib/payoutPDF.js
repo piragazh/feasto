@@ -157,7 +157,6 @@ export function generatePayoutPDF(payout) {
         rows.push({ label: 'Refunds Covered by MealDrop', value: currency(payout.refunds_paid_by_platform), bold: false, positive: true, prefix: '+' });
     }
     rows.push({ label: '', value: '', bold: false, divider: true });
-    rows.push({ label: 'Calculation: Card Payments − Commission − Refunds', value: `${currency(payout.card_payment_amount)} − ${currency(payout.platform_commission)}${payout.refunds_paid_by_restaurant > 0 ? ` − ${currency(payout.refunds_paid_by_restaurant)}` : ''}`, bold: false, indent: true, note: true });
 
     rows.forEach((row, idx) => {
         // Divider row
