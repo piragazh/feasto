@@ -1,96 +1,285 @@
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
+// Brand colours
+const BRAND_ORANGE = [249, 115, 22];   // #f97316
+const BRAND_DARK   = [17, 24, 39];     // #111827
+const GRAY_700     = [55, 65, 81];
+const GRAY_500     = [107, 114, 128];
+const GRAY_200     = [229, 231, 235];
+const WHITE        = [255, 255, 255];
+const GREEN_600    = [22, 163, 74];
+const RED_600      = [220, 38, 38];
+const AMBER_600    = [217, 119, 6];
+
+function setColor(doc, rgb, type = 'text') {
+    if (type === 'fill') doc.setFillColor(...rgb);
+    else if (type === 'draw') doc.setDrawColor(...rgb);
+    else doc.setTextColor(...rgb);
+}
+
+function currency(val) {
+    return `£${(val ?? 0).toFixed(2)}`;
+}
+
+function statusColor(status) {
+    if (status === 'paid') return GREEN_600;
+    if (status === 'voided') return RED_600;
+    return AMBER_600;
+}
+
 /**
- * Shared payout PDF generator used by PayoutManagement, PayoutHistory and RestaurantPayoutHistory.
+ * Shared professional payout PDF generator.
  */
 export function generatePayoutPDF(payout) {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const PW = doc.internal.pageSize.getWidth();   // 210
+    const PH = doc.internal.pageSize.getHeight();  // 297
+    const MARGIN = 18;
+    const CONTENT_W = PW - MARGIN * 2;
 
-    // Header
-    doc.setFontSize(22);
-    doc.text('PAYOUT STATEMENT', pageWidth / 2, 20, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, pageWidth / 2, 28, { align: 'center' });
+    /* ─── HEADER BAND ─── */
+    setColor(doc, BRAND_DARK, 'fill');
+    doc.rect(0, 0, PW, 38, 'F');
 
-    // Restaurant Details
+    // Brand name
+    setColor(doc, BRAND_ORANGE);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MealDrop', MARGIN, 17);
+
+    // Tagline
+    setColor(doc, [180, 190, 200]);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Financial Services · Payout Statement', MARGIN, 24);
+
+    // Document title right-aligned
+    setColor(doc, WHITE);
     doc.setFontSize(14);
-    doc.text('Restaurant Details', 20, 45);
-    doc.setFontSize(10);
-    doc.text(`Name: ${payout.restaurant_name}`, 20, 55);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYOUT STATEMENT', PW - MARGIN, 16, { align: 'right' });
+    setColor(doc, [180, 190, 200]);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy, HH:mm')}`, PW - MARGIN, 23, { align: 'right' });
+    doc.text(`Ref: PAY-${(payout.id ?? 'N/A').toUpperCase().slice(-8)}`, PW - MARGIN, 29, { align: 'right' });
 
-    // Period
-    doc.setFontSize(14);
-    doc.text('Payout Period', 20, 70);
-    doc.setFontSize(10);
-    doc.text(`From: ${format(new Date(payout.period_start), 'MMM dd, yyyy')}`, 20, 80);
-    doc.text(`To: ${format(new Date(payout.period_end), 'MMM dd, yyyy')}`, 20, 87);
-    doc.text(`Frequency: ${payout.payout_frequency || 'N/A'}`, 20, 94);
+    /* ─── ORANGE ACCENT STRIPE ─── */
+    setColor(doc, BRAND_ORANGE, 'fill');
+    doc.rect(0, 38, PW, 2.5, 'F');
 
-    // Financial Summary
-    doc.setFontSize(14);
-    doc.text('Financial Summary', 20, 110);
+    let y = 52;
 
-    let y = 120;
-    doc.setFontSize(10);
-    doc.text(`Total Orders: ${payout.total_orders ?? 0}`, 20, y);
+    /* ─── INFO CARDS ROW ─── */
+    const cardW = (CONTENT_W - 6) / 3;
+    const cards = [
+        { label: 'Restaurant', value: payout.restaurant_name ?? 'N/A' },
+        { label: 'Period', value: `${format(new Date(payout.period_start), 'dd MMM yyyy')}\n${format(new Date(payout.period_end), 'dd MMM yyyy')}` },
+        { label: 'Frequency', value: (payout.payout_frequency ?? 'N/A').charAt(0).toUpperCase() + (payout.payout_frequency ?? 'N/A').slice(1) },
+    ];
+
+    cards.forEach((card, i) => {
+        const cx = MARGIN + i * (cardW + 3);
+        // Card background
+        setColor(doc, [248, 250, 252], 'fill');
+        setColor(doc, GRAY_200, 'draw');
+        doc.setLineWidth(0.3);
+        doc.roundedRect(cx, y, cardW, 20, 2, 2, 'FD');
+
+        // Label
+        setColor(doc, GRAY_500);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(card.label.toUpperCase(), cx + 4, y + 6);
+
+        // Value
+        setColor(doc, BRAND_DARK);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        const lines = card.value.split('\n');
+        lines.forEach((line, li) => doc.text(line, cx + 4, y + 12 + li * 5));
+    });
+
+    y += 27;
+
+    /* ─── STATUS BADGE ─── */
+    const status = (payout.status ?? 'pending').toUpperCase();
+    const sBadgeW = 34;
+    setColor(doc, statusColor(payout.status), 'fill');
+    doc.roundedRect(PW - MARGIN - sBadgeW, y - 9, sBadgeW, 8, 2, 2, 'F');
+    setColor(doc, WHITE);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(status, PW - MARGIN - sBadgeW / 2, y - 3.5, { align: 'center' });
+
+    /* ─── SECTION: FINANCIAL SUMMARY ─── */
+    // Section heading
+    setColor(doc, BRAND_DARK);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Financial Summary', MARGIN, y);
+    setColor(doc, BRAND_ORANGE, 'fill');
+    doc.rect(MARGIN, y + 1.5, 28, 0.8, 'F');
+
+    y += 8;
+
+    // Table header row
+    setColor(doc, BRAND_DARK, 'fill');
+    doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
+    setColor(doc, WHITE);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Description', MARGIN + 4, y + 4.8);
+    doc.text('Amount', PW - MARGIN - 4, y + 4.8, { align: 'right' });
+
     y += 7;
-    doc.text(`Gross Earnings: £${(payout.gross_earnings ?? 0).toFixed(2)}`, 20, y);
-    y += 7;
-    doc.text(`Cash Payments: £${(payout.cash_payment_amount ?? 0).toFixed(2)}`, 20, y);
-    y += 7;
-    doc.text(`Card Payments: £${(payout.card_payment_amount ?? 0).toFixed(2)}`, 20, y);
-    y += 7;
-    doc.text(`Platform Commission: -£${(payout.platform_commission ?? 0).toFixed(2)}`, 20, y);
+
+    // Row data
+    const rows = [
+        { label: 'Total Orders Processed', value: `${payout.total_orders ?? 0} orders`, bold: false, indent: false },
+        { label: 'Gross Earnings (Food Sales)', value: currency(payout.gross_earnings), bold: false, indent: false },
+        { label: '  ↳ Paid by Card / Online', value: currency(payout.card_payment_amount), bold: false, indent: true },
+        { label: '  ↳ Paid by Cash', value: currency(payout.cash_payment_amount), bold: false, indent: true },
+        { label: 'Platform Commission', value: `−${currency(payout.platform_commission)}`, bold: false, indent: false, negative: true },
+    ];
 
     if (payout.refunds_paid_by_restaurant > 0) {
-        y += 7;
-        doc.text(`Refunds Deducted: -£${payout.refunds_paid_by_restaurant.toFixed(2)}`, 20, y);
+        rows.push({ label: 'Refunds Deducted (Restaurant)', value: `−${currency(payout.refunds_paid_by_restaurant)}`, bold: false, negative: true });
     }
     if (payout.refunds_paid_by_platform > 0) {
+        rows.push({ label: 'Refunds Covered by Platform', value: `+${currency(payout.refunds_paid_by_platform)}`, bold: false, positive: true });
+    }
+
+    rows.forEach((row, idx) => {
+        const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+        setColor(doc, bg, 'fill');
+        setColor(doc, GRAY_200, 'draw');
+        doc.setLineWidth(0.2);
+        doc.rect(MARGIN, y, CONTENT_W, 7, 'FD');
+
+        const textColor = row.negative ? RED_600 : row.positive ? GREEN_600 : row.indent ? GRAY_500 : GRAY_700;
+        setColor(doc, textColor);
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
+        doc.text(row.label, MARGIN + 4, y + 4.8);
+        doc.text(row.value, PW - MARGIN - 4, y + 4.8, { align: 'right' });
         y += 7;
-        doc.text(`Platform-Covered Refunds: £${payout.refunds_paid_by_platform.toFixed(2)}`, 20, y);
-    }
+    });
 
-    // Net Payout
-    y += 15;
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    doc.text(`NET PAYOUT: £${(payout.net_payout ?? 0).toFixed(2)}`, 20, y);
-    doc.setFont(undefined, 'normal');
+    /* ─── NET PAYOUT HIGHLIGHT ROW ─── */
+    setColor(doc, BRAND_DARK, 'fill');
+    doc.rect(MARGIN, y, CONTENT_W, 11, 'F');
+    setColor(doc, WHITE);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NET PAYOUT', MARGIN + 4, y + 7.5);
+    setColor(doc, BRAND_ORANGE);
+    doc.setFontSize(13);
+    doc.text(currency(payout.net_payout), PW - MARGIN - 4, y + 7.5, { align: 'right' });
 
-    // Payment Status
-    y += 15;
-    doc.setFontSize(14);
-    doc.text('Payment Status', 20, y);
-    y += 10;
-    doc.setFontSize(10);
-    doc.text(`Status: ${(payout.status ?? '').toUpperCase()}`, 20, y);
+    y += 18;
 
-    if (payout.status === 'paid' && payout.paid_date) {
-        y += 7;
-        doc.text(`Paid On: ${format(new Date(payout.paid_date), 'MMM dd, yyyy')}`, 20, y);
-        if (payout.payment_method) {
-            y += 7;
-            doc.text(`Payment Method: ${payout.payment_method}`, 20, y);
-        }
-    }
-
-    if (payout.notes) {
-        y += 10;
-        doc.setFontSize(14);
-        doc.text('Notes', 20, y);
-        y += 10;
-        doc.setFontSize(10);
-        const splitNotes = doc.splitTextToSize(payout.notes, 170);
-        doc.text(splitNotes, 20, y);
-    }
-
-    // Footer
+    /* ─── COMMISSION BREAKDOWN ─── */
+    const commRate = payout.commission_rate ? `${payout.commission_rate}%` : 'N/A';
+    setColor(doc, [239, 246, 255], 'fill');
+    setColor(doc, [147, 197, 253], 'draw');
+    doc.setLineWidth(0.3);
+    doc.roundedRect(MARGIN, y, CONTENT_W, 13, 2, 2, 'FD');
+    setColor(doc, [37, 99, 235]);
     doc.setFontSize(8);
-    doc.text('This is an automatically generated payout statement.', pageWidth / 2, 280, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('Commission Rate Applied:', MARGIN + 4, y + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(commRate, MARGIN + 50, y + 5.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Commission Type:', MARGIN + 4, y + 10.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text((payout.commission_type ?? 'percentage').charAt(0).toUpperCase() + (payout.commission_type ?? 'percentage').slice(1), MARGIN + 38, y + 10.5);
 
-    const filename = `payout-${(payout.restaurant_name ?? 'unknown').replace(/\s+/g, '-')}-${format(new Date(payout.period_start), 'yyyy-MM-dd')}.pdf`;
+    y += 20;
+
+    /* ─── PAYMENT DETAILS ─── */
+    if (payout.status === 'paid' && payout.paid_date) {
+        setColor(doc, BRAND_DARK);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Payment Details', MARGIN, y);
+        setColor(doc, BRAND_ORANGE, 'fill');
+        doc.rect(MARGIN, y + 1.5, 30, 0.8, 'F');
+        y += 9;
+
+        const payDetails = [
+            ['Payment Date', format(new Date(payout.paid_date), 'dd MMM yyyy')],
+            ['Payment Method', payout.payment_method ?? 'N/A'],
+            ...(payout.transaction_reference ? [['Transaction Reference', payout.transaction_reference]] : []),
+        ];
+
+        payDetails.forEach(([label, value], idx) => {
+            const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+            setColor(doc, bg, 'fill');
+            setColor(doc, GRAY_200, 'draw');
+            doc.setLineWidth(0.2);
+            doc.rect(MARGIN, y, CONTENT_W, 7, 'FD');
+            setColor(doc, GRAY_500);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text(label, MARGIN + 4, y + 4.8);
+            setColor(doc, BRAND_DARK);
+            doc.setFont('helvetica', 'bold');
+            doc.text(value, PW - MARGIN - 4, y + 4.8, { align: 'right' });
+            y += 7;
+        });
+
+        y += 6;
+    }
+
+    /* ─── NOTES / DISCREPANCY WARNINGS ─── */
+    if (payout.notes) {
+        const isWarning = payout.notes.startsWith('⚠️');
+        const noteColor = isWarning ? [254, 243, 199] : [241, 245, 249];
+        const noteBorderColor = isWarning ? AMBER_600 : [148, 163, 184];
+        const noteTextColor = isWarning ? [146, 64, 14] : GRAY_700;
+
+        setColor(doc, noteColor, 'fill');
+        setColor(doc, noteBorderColor, 'draw');
+        doc.setLineWidth(0.4);
+
+        const splitNotes = doc.splitTextToSize(payout.notes, CONTENT_W - 12);
+        const noteH = splitNotes.length * 5 + 10;
+        doc.roundedRect(MARGIN, y, CONTENT_W, noteH, 2, 2, 'FD');
+
+        // Left accent bar
+        setColor(doc, noteBorderColor, 'fill');
+        doc.rect(MARGIN, y, 3, noteH, 'F');
+
+        setColor(doc, noteTextColor);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', isWarning ? 'bold' : 'normal');
+        doc.text(splitNotes, MARGIN + 7, y + 7);
+
+        y += noteH + 6;
+    }
+
+    /* ─── FOOTER ─── */
+    // Horizontal rule
+    setColor(doc, GRAY_200, 'draw');
+    doc.setLineWidth(0.4);
+    doc.line(MARGIN, PH - 20, PW - MARGIN, PH - 20);
+
+    setColor(doc, GRAY_500);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('MealDrop Financial Services  ·  This is a system-generated payout statement. Please retain for your records.', PW / 2, PH - 14, { align: 'center' });
+    doc.text(`© ${new Date().getFullYear()} MealDrop. All rights reserved.`, PW / 2, PH - 9, { align: 'center' });
+
+    // Page number
+    setColor(doc, GRAY_500);
+    doc.setFontSize(7);
+    doc.text('Page 1 of 1', PW - MARGIN, PH - 9, { align: 'right' });
+
+    /* ─── SAVE ─── */
+    const safeRestaurant = (payout.restaurant_name ?? 'unknown').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, '');
+    const filename = `MealDrop-Payout-${safeRestaurant}-${format(new Date(payout.period_start), 'yyyy-MM-dd')}.pdf`;
     doc.save(filename);
 }
