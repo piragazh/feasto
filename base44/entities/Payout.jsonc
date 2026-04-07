@@ -31,7 +31,17 @@
     },
     "total_orders": {
       "type": "number",
-      "description": "Number of orders in period"
+      "description": "Number of completed orders included in payout"
+    },
+    "cancelled_orders": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of cancelled orders in period (excluded from payout)"
+    },
+    "refunded_orders_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of refunded orders in period"
     },
     "delivery_orders": {
       "type": "number",

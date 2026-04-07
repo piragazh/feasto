@@ -176,13 +176,18 @@ export default function PayoutManagement() {
                 platformCommission = grossEarnings * (commissionRate / 100);
             }
 
-            // Refunds in this period — online completed orders only (same source filter as above)
-            const refundedOrders = allRestaurantOrders.filter(order => {
+            // All in-period online orders for stats (any status, online source only)
+            const inPeriodOnlineOrders = allRestaurantOrders.filter(order => {
                 const orderDate = new Date(order.created_date);
-                return orderDate >= periodStart && orderDate <= periodEnd 
-                    && order.status === 'refunded'
+                return orderDate >= periodStart && orderDate <= periodEnd
                     && !excludedSources.has(order.order_source);
             });
+
+            // Cancelled orders in period
+            const cancelledOrders = inPeriodOnlineOrders.filter(o => o.status === 'cancelled');
+
+            // Refunds in this period — online completed orders only (same source filter as above)
+            const refundedOrders = inPeriodOnlineOrders.filter(o => o.status === 'refunded');
 
             const refundsPaidByRestaurant = refundedOrders
                 .filter(o => o.refund_paid_by === 'restaurant')
@@ -211,7 +216,7 @@ export default function PayoutManagement() {
             const inPeriodAll = allRestaurantOrders.filter(o => new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd);
             console.log(`[Payout Audit] In-period ALL orders (any status/source): ${inPeriodAll.length}`);
             console.log(`[Payout Audit]   ↳ Excluded POS/kiosk/third_party: ${inPeriodAll.filter(o => excludedSources.has(o.order_source)).length}`);
-            console.log(`[Payout Audit]   ↳ Excluded not-completed (confirmed/preparing/etc): ${inPeriodAll.filter(o => !completedStatuses.has(o.status) && o.status !== 'refunded' && !excludedSources.has(o.order_source)).length}`);
+            console.log(`[Payout Audit]   ↳ Cancelled online orders: ${cancelledOrders.length}`);
             console.log(`[Payout Audit]   ↳ Refunded online orders: ${refundedOrders.length}`);
             console.log(`[Payout Audit] Gross: £${grossEarnings.toFixed(2)} | Card: £${cardPaymentAmount.toFixed(2)} | Cash: £${cashPaymentAmount.toFixed(2)}`);
             console.log(`[Payout Audit] Commission (${commissionRate}%): £${platformCommission.toFixed(2)} | Cash commission debt: £${cashCommissionDebt.toFixed(2)}`);
@@ -234,6 +239,8 @@ export default function PayoutManagement() {
                 period_end: periodEnd.toISOString(),
                 payout_frequency: payoutFrequency,
                 total_orders: periodOrders.length,
+                cancelled_orders: cancelledOrders.length,
+                refunded_orders_count: refundedOrders.length,
                 delivery_orders: deliveryOrders,
                 collection_orders: collectionOrders,
                 dine_in_orders: dineInOrders,
@@ -472,36 +479,65 @@ export default function PayoutManagement() {
                                             </Badge>
                                         </div>
 
+                                        {/* Order Counts Row */}
+                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                                            <div className="bg-blue-50 p-2 rounded text-center">
+                                                <p className="text-xs text-blue-600">Orders</p>
+                                                <p className="font-bold text-blue-800">{payout.total_orders ?? 0}</p>
+                                            </div>
+                                            <div className="bg-gray-50 p-2 rounded text-center">
+                                                <p className="text-xs text-gray-500">Cancelled</p>
+                                                <p className="font-semibold text-gray-600">{payout.cancelled_orders ?? 0}</p>
+                                            </div>
+                                            <div className="bg-red-50 p-2 rounded text-center">
+                                                <p className="text-xs text-red-500">Refunded</p>
+                                                <p className="font-semibold text-red-600">{payout.refunded_orders_count ?? 0}</p>
+                                            </div>
+                                            <div className="bg-gray-50 p-2 rounded text-center">
+                                                <p className="text-xs text-gray-500">Delivery</p>
+                                                <p className="font-semibold">{payout.delivery_orders ?? 0}</p>
+                                            </div>
+                                            <div className="bg-gray-50 p-2 rounded text-center">
+                                                <p className="text-xs text-gray-500">Collection</p>
+                                                <p className="font-semibold">{payout.collection_orders ?? 0}</p>
+                                            </div>
+                                            <div className="bg-gray-50 p-2 rounded text-center">
+                                                <p className="text-xs text-gray-500">Dine-In</p>
+                                                <p className="font-semibold">{payout.dine_in_orders ?? 0}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Financial Row */}
                                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                                              <div className="bg-gray-50 p-2 rounded">
-                                                 <p className="text-xs text-gray-600">Gross</p>
+                                                 <p className="text-xs text-gray-600">Gross Earnings</p>
                                                  <p className="font-semibold">£{payout.gross_earnings?.toFixed(2)}</p>
                                              </div>
                                              <div className="bg-gray-50 p-2 rounded">
-                                                 <p className="text-xs text-gray-600">Cash</p>
+                                                 <p className="text-xs text-gray-600">Cash (by restaurant)</p>
                                                  <p className="font-semibold">£{payout.cash_payment_amount?.toFixed(2)}</p>
                                              </div>
                                              <div className="bg-gray-50 p-2 rounded">
-                                                 <p className="text-xs text-gray-600">Card</p>
+                                                 <p className="text-xs text-gray-600">Card (held by platform)</p>
                                                  <p className="font-semibold">£{payout.card_payment_amount?.toFixed(2)}</p>
                                              </div>
-                                             <div className="bg-gray-50 p-2 rounded">
-                                                 <p className="text-xs text-gray-600">Commission</p>
+                                             <div className="bg-orange-50 p-2 rounded">
+                                                 <p className="text-xs text-orange-600">Commission ({payout.commission_rate ?? 0}%)</p>
                                                  <p className="font-semibold text-orange-600">-£{payout.platform_commission?.toFixed(2)}</p>
                                              </div>
                                              <div className="bg-green-50 p-2 rounded border border-green-200">
-                                                 <p className="text-xs text-green-700">Payout</p>
+                                                 <p className="text-xs text-green-700">Net Payout</p>
                                                  <p className="font-bold text-green-700">£{payout.net_payout?.toFixed(2)}</p>
                                              </div>
                                          </div>
 
                                         {(payout.refunds_paid_by_restaurant > 0 || payout.refunds_paid_by_platform > 0) && (
-                                            <div className="text-xs text-gray-600 mb-3 space-y-1">
+                                            <div className="flex gap-3 text-xs mb-3">
                                                 {payout.refunds_paid_by_restaurant > 0 && (
-                                                    <p>Refunds deducted: £{payout.refunds_paid_by_restaurant.toFixed(2)}</p>
+                                                    <span className="bg-red-50 text-red-700 px-2 py-1 rounded">Refunds deducted: -£{payout.refunds_paid_by_restaurant.toFixed(2)}</span>
                                                 )}
                                                 {payout.refunds_paid_by_platform > 0 && (
-                                                    <p>Platform-covered refunds: £{payout.refunds_paid_by_platform.toFixed(2)}</p>
+                                                    <span className="bg-green-50 text-green-700 px-2 py-1 rounded">Platform covered: £{payout.refunds_paid_by_platform.toFixed(2)}</span>
                                                 )}
                                             </div>
                                         )}

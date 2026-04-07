@@ -136,34 +136,50 @@ export function generatePayoutPDF(payout) {
     y += 7;
 
     // Row data
+    const totalInPeriod = (payout.total_orders ?? 0) + (payout.cancelled_orders ?? 0) + (payout.refunded_orders_count ?? 0);
     const rows = [
-        { label: 'Total Orders Processed', value: `${payout.total_orders ?? 0} orders`, bold: false, indent: false },
-        { label: 'Gross Earnings (Food Sales)', value: currency(payout.gross_earnings), bold: false, indent: false },
-        { label: '  ↳ Paid by Card / Online', value: currency(payout.card_payment_amount), bold: false, indent: true },
-        { label: '  ↳ Paid by Cash', value: currency(payout.cash_payment_amount), bold: false, indent: true },
-        { label: 'Platform Commission', value: `-${currency(payout.platform_commission)}`, bold: false, indent: false, negative: true },
+        { label: 'Total Orders Received in Period', value: `${totalInPeriod} orders`, bold: false, indent: false },
+        { label: '  ↳ Completed & Paid (included in payout)', value: `${payout.total_orders ?? 0} orders`, bold: false, indent: true, positive: true },
+        { label: '  ↳ Cancelled (excluded — no charge)', value: `${payout.cancelled_orders ?? 0} orders`, bold: false, indent: true },
+        { label: '  ↳ Refunded (see refund lines below)', value: `${payout.refunded_orders_count ?? 0} orders`, bold: false, indent: true },
+        { label: '', value: '', bold: false, divider: true },
+        { label: 'Gross Earnings (Completed Orders)', value: currency(payout.gross_earnings), bold: false, indent: false },
+        { label: '  ↳ Card / Online Payments (held by MealDrop)', value: currency(payout.card_payment_amount), bold: false, indent: true },
+        { label: '  ↳ Cash Payments (collected by restaurant)', value: currency(payout.cash_payment_amount), bold: false, indent: true },
+        { label: '', value: '', bold: false, divider: true },
+        { label: `Platform Commission (${payout.commission_rate ?? 0}% of gross)`, value: `-${currency(payout.platform_commission)}`, bold: false, indent: false, negative: true },
     ];
 
     if (payout.refunds_paid_by_restaurant > 0) {
-        rows.push({ label: 'Refunds Deducted (Restaurant)', value: `-${currency(payout.refunds_paid_by_restaurant)}`, bold: false, negative: true });
+        rows.push({ label: `Refunds Deducted (${payout.refunded_orders_count ?? 0} order(s) — paid by restaurant)`, value: `-${currency(payout.refunds_paid_by_restaurant)}`, bold: false, negative: true });
     }
     if (payout.refunds_paid_by_platform > 0) {
-        rows.push({ label: 'Refunds Covered by Platform', value: `+${currency(payout.refunds_paid_by_platform)}`, bold: false, positive: true });
+        rows.push({ label: 'Refunds Covered by MealDrop', value: currency(payout.refunds_paid_by_platform), bold: false, positive: true, prefix: '+' });
     }
+    rows.push({ label: '', value: '', bold: false, divider: true });
+    rows.push({ label: 'Calculation: Card Payments − Commission − Refunds', value: `${currency(payout.card_payment_amount)} − ${currency(payout.platform_commission)}${payout.refunds_paid_by_restaurant > 0 ? ` − ${currency(payout.refunds_paid_by_restaurant)}` : ''}`, bold: false, indent: true, note: true });
 
     rows.forEach((row, idx) => {
+        // Divider row
+        if (row.divider) {
+            setColor(doc, GRAY_200, 'draw');
+            doc.setLineWidth(0.3);
+            doc.line(MARGIN, y + 2, PW - MARGIN, y + 2);
+            y += 5;
+            return;
+        }
         const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
         setColor(doc, bg, 'fill');
         setColor(doc, GRAY_200, 'draw');
         doc.setLineWidth(0.2);
         doc.rect(MARGIN, y, CONTENT_W, 7, 'FD');
 
-        const textColor = row.negative ? RED_600 : row.positive ? GREEN_600 : row.indent ? GRAY_500 : GRAY_700;
+        const textColor = row.negative ? RED_600 : row.positive ? GREEN_600 : row.note ? [100, 100, 100] : row.indent ? GRAY_500 : GRAY_700;
         setColor(doc, textColor);
-        doc.setFontSize(8.5);
+        doc.setFontSize(row.note ? 7.5 : 8.5);
         doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
-        doc.text(row.label, MARGIN + 4, y + 4.8);
-        doc.text(row.value, PW - MARGIN - 4, y + 4.8, { align: 'right' });
+        if (row.label) doc.text(row.label, MARGIN + 4, y + 4.8);
+        if (row.value) doc.text(row.value, PW - MARGIN - 4, y + 4.8, { align: 'right' });
         y += 7;
     });
 
@@ -181,58 +197,84 @@ export function generatePayoutPDF(payout) {
     y += 18;
 
     /* ─── ORDER TYPE BREAKDOWN ─── */
-    const hasOrderBreakdown = (payout.delivery_orders > 0) || (payout.collection_orders > 0) || (payout.dine_in_orders > 0);
-    if (hasOrderBreakdown) {
-        setColor(doc, BRAND_DARK);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Order Breakdown', MARGIN, y);
-        setColor(doc, BRAND_ORANGE, 'fill');
-        doc.rect(MARGIN, y + 1.5, 28, 0.8, 'F');
-        y += 8;
+    setColor(doc, BRAND_DARK);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Type Breakdown', MARGIN, y);
+    setColor(doc, BRAND_ORANGE, 'fill');
+    doc.rect(MARGIN, y + 1.5, 38, 0.8, 'F');
+    y += 8;
 
-        // Table header
-        setColor(doc, BRAND_DARK, 'fill');
-        doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
-        setColor(doc, WHITE);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Order Type', MARGIN + 4, y + 4.8);
-        doc.text('Orders', MARGIN + CONTENT_W * 0.45, y + 4.8, { align: 'right' });
-        doc.text('Earnings', PW - MARGIN - 4, y + 4.8, { align: 'right' });
-        y += 7;
+    // Table header
+    setColor(doc, BRAND_DARK, 'fill');
+    doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
+    setColor(doc, WHITE);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Type', MARGIN + 4, y + 4.8);
+    doc.text('Count', MARGIN + CONTENT_W * 0.38, y + 4.8, { align: 'right' });
+    doc.text('Payment', MARGIN + CONTENT_W * 0.62, y + 4.8, { align: 'right' });
+    doc.text('Earnings', PW - MARGIN - 4, y + 4.8, { align: 'right' });
+    y += 7;
 
-        const breakdownRows = [];
-        if (payout.delivery_orders > 0) {
-            breakdownRows.push(['Delivery', payout.delivery_orders, payout.delivery_earnings ?? 0]);
-        }
-        if (payout.collection_orders > 0) {
-            breakdownRows.push(['Collection / Takeaway', payout.collection_orders, payout.collection_earnings ?? 0]);
-        }
-        if (payout.dine_in_orders > 0) {
-            const dineInEarnings = (payout.gross_earnings ?? 0) - (payout.delivery_earnings ?? 0) - (payout.collection_earnings ?? 0);
-            breakdownRows.push(['Dine-In', payout.dine_in_orders, Math.max(0, dineInEarnings)]);
-        }
-
-        breakdownRows.forEach(([label, count, earnings], idx) => {
-            const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
-            setColor(doc, bg, 'fill');
-            setColor(doc, GRAY_200, 'draw');
-            doc.setLineWidth(0.2);
-            doc.rect(MARGIN, y, CONTENT_W, 7, 'FD');
-            setColor(doc, GRAY_700);
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'normal');
-            doc.text(label, MARGIN + 4, y + 4.8);
-            doc.text(`${count} orders`, MARGIN + CONTENT_W * 0.45, y + 4.8, { align: 'right' });
-            setColor(doc, BRAND_DARK);
-            doc.setFont('helvetica', 'bold');
-            doc.text(currency(earnings), PW - MARGIN - 4, y + 4.8, { align: 'right' });
-            y += 7;
-        });
-
-        y += 8;
+    const breakdownRows = [];
+    if (payout.delivery_orders > 0) {
+        breakdownRows.push(['🚚 Delivery', payout.delivery_orders, payout.delivery_earnings ?? 0]);
     }
+    if (payout.collection_orders > 0) {
+        breakdownRows.push(['🥡 Collection / Takeaway', payout.collection_orders, payout.collection_earnings ?? 0]);
+    }
+    if (payout.dine_in_orders > 0) {
+        const dineInEarnings = (payout.gross_earnings ?? 0) - (payout.delivery_earnings ?? 0) - (payout.collection_earnings ?? 0);
+        breakdownRows.push(['🍽 Dine-In', payout.dine_in_orders, Math.max(0, dineInEarnings)]);
+    }
+    if (breakdownRows.length === 0) {
+        breakdownRows.push(['Online Orders', payout.total_orders ?? 0, payout.gross_earnings ?? 0]);
+    }
+    // Cancelled / Refunded (info rows)
+    if ((payout.cancelled_orders ?? 0) > 0) {
+        breakdownRows.push(['❌ Cancelled (not charged)', payout.cancelled_orders, 0, true]);
+    }
+    if ((payout.refunded_orders_count ?? 0) > 0) {
+        breakdownRows.push([`↩ Refunded`, payout.refunded_orders_count, -(payout.refunds_paid_by_restaurant ?? 0), false, true]);
+    }
+
+    breakdownRows.forEach(([label, count, earnings, isCancelled, isRefund], idx) => {
+        const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+        setColor(doc, bg, 'fill');
+        setColor(doc, GRAY_200, 'draw');
+        doc.setLineWidth(0.2);
+        doc.rect(MARGIN, y, CONTENT_W, 7, 'FD');
+        setColor(doc, isCancelled ? GRAY_500 : isRefund ? RED_600 : GRAY_700);
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(label, MARGIN + 4, y + 4.8);
+        doc.text(`${count}`, MARGIN + CONTENT_W * 0.38, y + 4.8, { align: 'right' });
+        // Payment split column (card/cash) for normal rows
+        if (!isCancelled && !isRefund) {
+            setColor(doc, GRAY_500);
+            doc.setFontSize(7.5);
+            doc.text('Card + Cash', MARGIN + CONTENT_W * 0.62, y + 4.8, { align: 'right' });
+        }
+        setColor(doc, isCancelled ? GRAY_500 : isRefund ? RED_600 : BRAND_DARK);
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', isCancelled ? 'normal' : 'bold');
+        doc.text(isCancelled ? '—' : isRefund && earnings < 0 ? `-${currency(Math.abs(earnings))}` : currency(earnings), PW - MARGIN - 4, y + 4.8, { align: 'right' });
+        y += 7;
+    });
+
+    // Totals row
+    setColor(doc, [240, 245, 255], 'fill');
+    setColor(doc, [147, 197, 253], 'draw');
+    doc.setLineWidth(0.3);
+    doc.rect(MARGIN, y, CONTENT_W, 8, 'FD');
+    setColor(doc, BRAND_DARK);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL COMPLETED', MARGIN + 4, y + 5.3);
+    doc.text(`${payout.total_orders ?? 0}`, MARGIN + CONTENT_W * 0.38, y + 5.3, { align: 'right' });
+    doc.text(currency(payout.gross_earnings), PW - MARGIN - 4, y + 5.3, { align: 'right' });
+    y += 15;
 
     /* ─── COMMISSION BREAKDOWN ─── */
     const commRate = payout.commission_rate ? `${payout.commission_rate}%` : 'N/A';
