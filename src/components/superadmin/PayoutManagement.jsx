@@ -94,16 +94,20 @@ export default function PayoutManagement() {
             // Use a high limit to avoid pagination truncation on busy restaurants
             const allRestaurantOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 5000);
             
-            // Excluded statuses: cancelled, refunded, pending, and in-progress refund states
-            const excludedStatuses = new Set(['cancelled', 'refunded', 'pending', 'refund_requested', 'refund_under_platform_review']);
-            // Excluded sources: POS and kiosk orders are NOT included in online payouts
-            const excludedSources = new Set(['pos', 'kiosk']);
+            // ONLY count fully completed orders — this matches what the restaurant sees in their order history.
+            // Counting in-progress orders (confirmed/preparing/out_for_delivery) would inflate the payout count.
+            const completedStatuses = new Set(['delivered', 'collected']);
+            // Excluded sources: POS, kiosk, and third_party orders are NOT included in online platform payouts.
+            // Also exclude null/undefined order_source only if order_source is explicitly pos/kiosk/third_party.
+            // Orders with no order_source (legacy online orders) default to online.
+            const excludedSources = new Set(['pos', 'kiosk', 'third_party']);
 
             const periodOrders = allRestaurantOrders.filter(order => {
                 const orderDate = new Date(order.created_date);
+                const isCompleted = completedStatuses.has(order.status);
                 const isOnlineOrder = !excludedSources.has(order.order_source);
                 return orderDate >= periodStart && orderDate <= periodEnd 
-                    && !excludedStatuses.has(order.status) 
+                    && isCompleted
                     && isOnlineOrder;
             });
 
@@ -155,13 +159,22 @@ export default function PayoutManagement() {
                 platformCommission = grossEarnings * (rate / 100);
             }
 
-            // Refunds in this period — online orders only (same source filter as above)
+            // Refunds in this period — online completed orders only (same source filter as above)
             const refundedOrders = allRestaurantOrders.filter(order => {
                 const orderDate = new Date(order.created_date);
                 return orderDate >= periodStart && orderDate <= periodEnd 
                     && order.status === 'refunded'
                     && !excludedSources.has(order.order_source);
             });
+
+            // Log breakdown for audit trail (visible in browser console when generating)
+            console.log(`[Payout Audit] Restaurant: ${restaurant.name}`);
+            console.log(`[Payout Audit] Period: ${periodStart.toISOString()} → ${periodEnd.toISOString()}`);
+            console.log(`[Payout Audit] Total orders for restaurant fetched: ${allRestaurantOrders.length}`);
+            console.log(`[Payout Audit] Completed online orders in period: ${periodOrders.length}`);
+            console.log(`[Payout Audit] Excluded (POS/kiosk/third_party):`, allRestaurantOrders.filter(o => excludedSources.has(o.order_source) && new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd).length);
+            console.log(`[Payout Audit] Excluded (not yet completed - confirmed/preparing/etc):`, allRestaurantOrders.filter(o => !completedStatuses.has(o.status) && o.status !== 'refunded' && !excludedSources.has(o.order_source) && new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd).length);
+            console.log(`[Payout Audit] Refunded orders in period: ${refundedOrders.length}`);
 
             const refundsPaidByRestaurant = refundedOrders
                 .filter(o => o.refund_paid_by === 'restaurant')
