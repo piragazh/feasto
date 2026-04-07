@@ -111,28 +111,45 @@ export default function PayoutManagement() {
                     && isOnlineOrder;
             });
 
-            // Calculate totals — split cash vs card vs pay_at_counter, and by order type
+            // Calculate totals — split cash vs card, and by order type
             let grossEarnings = 0;
-            let cashPaymentAmount = 0;   // cash collected by restaurant directly
-            let payAtCounterAmount = 0;  // paid at counter (also collected by restaurant)
-            let cardPaymentAmount = 0;   // card/apple_pay/google_pay processed by platform
+            let cashPaymentAmount = 0;   // cash / pay_at_counter collected directly by restaurant
+            let cardPaymentAmount = 0;   // card/apple_pay/google_pay confirmed by platform
             let deliveryOrders = 0;
             let collectionOrders = 0;
             let dineInOrders = 0;
             let deliveryEarnings = 0;
             let collectionEarnings = 0;
+            let dineInEarnings = 0;
+
+            // Payment methods the platform collects money for (card-based)
+            const cardMethods = new Set(['card', 'apple_pay', 'google_pay']);
+            // Payment statuses that confirm the platform actually received the card payment
+            const confirmedPaymentStatuses = new Set(['payment_confirmed', 'paid_card']);
 
             periodOrders.forEach(order => {
                 const orderTotal = order.total || 0;
                 grossEarnings += orderTotal;
-                
-                if (order.payment_method === 'cash') {
+
+                const method = order.payment_method;
+                const payStatus = order.payment_status;
+
+                if (method === 'cash' || method === 'pay_at_counter') {
+                    // Cash / pay-at-counter: restaurant collects directly, never held by platform
                     cashPaymentAmount += orderTotal;
-                } else if (order.payment_method === 'pay_at_counter') {
-                    payAtCounterAmount += orderTotal;
+                } else if (cardMethods.has(method)) {
+                    // Card-based: only count as platform-held if payment was confirmed
+                    // (guards against delivered orders with failed/pending payment edge cases)
+                    if (confirmedPaymentStatuses.has(payStatus) || !payStatus) {
+                        // No payStatus = legacy order, assume confirmed
+                        cardPaymentAmount += orderTotal;
+                    } else {
+                        // Failed/pending card payment on a delivered order — treat as cash debt
+                        cashPaymentAmount += orderTotal;
+                    }
                 } else {
-                    // card, apple_pay, google_pay — platform collected
-                    cardPaymentAmount += orderTotal;
+                    // Unknown method — conservative: treat as cash (platform didn't hold it)
+                    cashPaymentAmount += orderTotal;
                 }
 
                 // Order type breakdown
@@ -145,18 +162,17 @@ export default function PayoutManagement() {
                     collectionEarnings += orderTotal;
                 } else if (orderType === 'dine_in') {
                     dineInOrders++;
+                    dineInEarnings += orderTotal;
                 }
             });
 
-            // Commission is charged on ALL sales (gross)
-            // Cash/counter commission creates a debt the restaurant owes the platform
-            // but the platform only PAYS OUT what it actually holds (card payments)
+            // Commission is charged on GROSS earnings (all completed online orders)
             let platformCommission = 0;
+            const commissionRate = restaurant.commission_rate || 15;
             if (restaurant.commission_type === 'fixed') {
                 platformCommission = restaurant.fixed_commission_amount || 0;
             } else {
-                const rate = restaurant.commission_rate || 15;
-                platformCommission = grossEarnings * (rate / 100);
+                platformCommission = grossEarnings * (commissionRate / 100);
             }
 
             // Refunds in this period — online completed orders only (same source filter as above)
@@ -167,15 +183,6 @@ export default function PayoutManagement() {
                     && !excludedSources.has(order.order_source);
             });
 
-            // Log breakdown for audit trail (visible in browser console when generating)
-            console.log(`[Payout Audit] Restaurant: ${restaurant.name}`);
-            console.log(`[Payout Audit] Period: ${periodStart.toISOString()} → ${periodEnd.toISOString()}`);
-            console.log(`[Payout Audit] Total orders for restaurant fetched: ${allRestaurantOrders.length}`);
-            console.log(`[Payout Audit] Completed online orders in period: ${periodOrders.length}`);
-            console.log(`[Payout Audit] Excluded (POS/kiosk/third_party):`, allRestaurantOrders.filter(o => excludedSources.has(o.order_source) && new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd).length);
-            console.log(`[Payout Audit] Excluded (not yet completed - confirmed/preparing/etc):`, allRestaurantOrders.filter(o => !completedStatuses.has(o.status) && o.status !== 'refunded' && !excludedSources.has(o.order_source) && new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd).length);
-            console.log(`[Payout Audit] Refunded orders in period: ${refundedOrders.length}`);
-
             const refundsPaidByRestaurant = refundedOrders
                 .filter(o => o.refund_paid_by === 'restaurant')
                 .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
@@ -184,26 +191,42 @@ export default function PayoutManagement() {
                 .filter(o => o.refund_paid_by === 'platform')
                 .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
 
-            // Net payout = what platform holds (card payments) minus its commission minus restaurant-borne refunds
-            // Cash commission debt is noted but not deducted here (platform never held that cash)
-            const cashCommissionDebt = (cashPaymentAmount + payAtCounterAmount) * ((restaurant.commission_rate || 15) / 100);
+            // Net payout = card payments held by platform, minus commission on gross, minus restaurant-borne refunds
+            // Commission on cash orders creates a debt owed to the platform (restaurant collected that cash directly)
+            const cashCommission = cashPaymentAmount * (commissionRate / 100);
+            const cardCommission = cardPaymentAmount * (commissionRate / 100);
+            // For fixed commission, split proportionally between cash and card
+            const cashCommissionDebt = restaurant.commission_type === 'fixed'
+                ? (grossEarnings > 0 ? platformCommission * (cashPaymentAmount / grossEarnings) : 0)
+                : cashCommission;
+
             let netPayout = cardPaymentAmount - platformCommission - refundsPaidByRestaurant;
-            // If commission exceeds card amount, floor to 0 (restaurant owes platform — flag in notes)
             const finalNetPayout = Math.max(0, netPayout);
-            const commissionDebtNote = netPayout < 0 
-                ? `⚠️ Commission exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Restaurant owes platform for cash order commissions.`
+
+            // Audit log in browser console for verification
+            console.log(`[Payout Audit] ==========================================`);
+            console.log(`[Payout Audit] Restaurant: ${restaurant.name}`);
+            console.log(`[Payout Audit] Period: ${periodStart.toLocaleDateString()} → ${periodEnd.toLocaleDateString()}`);
+            console.log(`[Payout Audit] All orders fetched for restaurant: ${allRestaurantOrders.length}`);
+            console.log(`[Payout Audit] In-period online COMPLETED orders (delivered/collected): ${periodOrders.length}`);
+            const inPeriodAll = allRestaurantOrders.filter(o => new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd);
+            console.log(`[Payout Audit] In-period ALL orders (any status/source): ${inPeriodAll.length}`);
+            console.log(`[Payout Audit]   ↳ Excluded POS/kiosk/third_party: ${inPeriodAll.filter(o => excludedSources.has(o.order_source)).length}`);
+            console.log(`[Payout Audit]   ↳ Excluded not-completed (confirmed/preparing/etc): ${inPeriodAll.filter(o => !completedStatuses.has(o.status) && o.status !== 'refunded' && !excludedSources.has(o.order_source)).length}`);
+            console.log(`[Payout Audit]   ↳ Refunded online orders: ${refundedOrders.length}`);
+            console.log(`[Payout Audit] Gross: £${grossEarnings.toFixed(2)} | Card: £${cardPaymentAmount.toFixed(2)} | Cash: £${cashPaymentAmount.toFixed(2)}`);
+            console.log(`[Payout Audit] Commission (${commissionRate}%): £${platformCommission.toFixed(2)} | Cash commission debt: £${cashCommissionDebt.toFixed(2)}`);
+            console.log(`[Payout Audit] Net payout: £${finalNetPayout.toFixed(2)}`);
+            console.log(`[Payout Audit] ==========================================`);
+
+            const commissionDebtNote = cashCommissionDebt > 0.01
+                ? `ℹ️ Cash order commission debt: £${cashCommissionDebt.toFixed(2)} (commission on £${cashPaymentAmount.toFixed(2)} cash orders collected directly by restaurant).`
+                : '';
+            const overdraftNote = netPayout < 0
+                ? `⚠️ Commission exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Payout floored to £0.`
                 : '';
 
-            // Issue #15 — cross-check restaurant_earnings field on orders vs computed gross
-            const storedEarningsTotal = periodOrders.reduce((sum, o) => sum + (o.restaurant_earnings || 0), 0);
-            const earningsDrift = Math.abs(storedEarningsTotal - grossEarnings);
-            // Only warn if orders actually have the field set AND there's a meaningful discrepancy (>£1)
-            const hasStoredEarnings = periodOrders.some(o => o.restaurant_earnings != null);
-            const earningsDiscrepancyNote = (hasStoredEarnings && earningsDrift > 1)
-                ? `⚠️ Earnings discrepancy: stored restaurant_earnings (£${storedEarningsTotal.toFixed(2)}) differs from computed gross (£${grossEarnings.toFixed(2)}) by £${earningsDrift.toFixed(2)}. Manual review recommended.`
-                : '';
-
-            const finalNotes = [commissionDebtNote, earningsDiscrepancyNote].filter(Boolean).join('\n') || undefined;
+            const finalNotes = [commissionDebtNote, overdraftNote].filter(Boolean).join('\n') || undefined;
 
             return base44.entities.Payout.create({
                 restaurant_id: restaurantId,
@@ -218,10 +241,10 @@ export default function PayoutManagement() {
                 gross_earnings: grossEarnings,
                 delivery_earnings: deliveryEarnings,
                 collection_earnings: collectionEarnings,
-                cash_payment_amount: cashPaymentAmount + payAtCounterAmount,
+                cash_payment_amount: cashPaymentAmount,
                 card_payment_amount: cardPaymentAmount,
                 platform_commission: platformCommission,
-                commission_rate: restaurant.commission_rate || 15,
+                commission_rate: commissionRate,
                 commission_type: restaurant.commission_type || 'percentage',
                 refunds_paid_by_platform: refundsPaidByPlatform,
                 refunds_paid_by_restaurant: refundsPaidByRestaurant,
