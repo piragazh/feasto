@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PopularItems({ restaurantId, onItemClick }) {
@@ -83,8 +83,11 @@ export default function PopularItems({ restaurantId, onItemClick }) {
         <div className="mb-10">
             {/* Header */}
             <div className="flex items-center justify-between mb-4 px-0">
-                <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
-                    Popular with other people
+                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                    </div>
+                    Popular Items
                 </h2>
                 <div className="flex gap-1.5">
                     <button
