@@ -38,6 +38,7 @@ const Select = ({ children, value, defaultValue, onValueChange, open: controlled
   }, [controlledOpen, onOpenChange]);
 
   const registerLabel = useCallback((val, label) => {
+    if (!val || !label) return;
     setLabelMap(prev => prev[val] === label ? prev : { ...prev, [val]: label });
   }, []);
 
@@ -136,12 +137,27 @@ const SelectScrollDownButton = forwardRef(({ className, ...props }, ref) => (
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
+// Extracts a flat label map {value -> label} from the children tree
+const extractLabelMap = (children) => {
+  const map = {};
+  React.Children.forEach(children, (child) => {
+    if (!child) return;
+    if (child.props?.value !== undefined) {
+      const label = typeof child.props.children === 'string' ? child.props.children : null;
+      if (label) map[child.props.value] = label;
+    } else if (child.props?.children) {
+      Object.assign(map, extractLabelMap(child.props.children));
+    }
+  });
+  return map;
+};
+
 // MobileSelectItems renders SelectItem children as tappable buttons in the bottom sheet
 const MobileSelectItems = ({ children, onSelect, currentValue }) => {
   return React.Children.map(children, (child) => {
     if (!child) return null;
     // Handle groups recursively
-    if (child.props?.children && !child.props?.value) {
+    if (child.props?.children && child.props?.value === undefined) {
       return <MobileSelectItems onSelect={onSelect} currentValue={currentValue}>{child.props.children}</MobileSelectItems>;
     }
     if (child.props?.value !== undefined) {
@@ -165,6 +181,13 @@ const MobileSelectItems = ({ children, onSelect, currentValue }) => {
 
 const SelectContent = forwardRef(({ className, children, position = "popper", title, ...props }, ref) => {
   const mobileCtx = useContext(MobileSelectCtx);
+
+  // Always call hook at top level (rules of hooks)
+  useEffect(() => {
+    if (!mobileCtx) return;
+    const map = extractLabelMap(children);
+    Object.entries(map).forEach(([val, label]) => mobileCtx.registerLabel(val, label));
+  }, [children, mobileCtx]);
 
   if (mobileCtx) {
     if (!mobileCtx.isOpen) return null;
@@ -234,16 +257,7 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = forwardRef(({ className, children, value, ...props }, ref) => {
   const mobileCtx = useContext(MobileSelectCtx);
 
-  // Register label for display in SelectValue on mobile
-  useEffect(() => {
-    if (mobileCtx && value !== undefined) {
-      const label = typeof children === 'string' ? children : null;
-      if (label) mobileCtx.registerLabel(value, label);
-    }
-  }, [mobileCtx, value, children]);
-
   if (mobileCtx) {
-    // Rendered inside MobileSelectItems as a button — return null here to avoid duplication
     return null;
   }
 
