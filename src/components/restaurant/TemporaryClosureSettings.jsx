@@ -109,7 +109,7 @@ export default function TemporaryClosureSettings({ restaurantId }) {
 
     if (isLoading) return <div className="text-center py-8 text-gray-500">Loading...</div>;
 
-    const isCurrentlyClosed = restaurant?.temporary_closure?.enabled;
+    const isCurrentlyClosed = enabled;
 
     return (
         <Card className={isCurrentlyClosed ? 'border-red-300 shadow-md' : ''}>

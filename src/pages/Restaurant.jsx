@@ -387,6 +387,11 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     }, [promotions]);
 
     const handleItemClick = (item) => {
+        // Block adding items if restaurant has temporarily paused orders
+        if (restaurant?.temporary_closure?.enabled) {
+            toast.error('This restaurant is not currently accepting orders');
+            return;
+        }
         // If item has customizations, open modal; otherwise add directly
         if (item.customization_options?.length > 0) {
             setSelectedItem(item);
