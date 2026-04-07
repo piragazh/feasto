@@ -153,7 +153,7 @@ const SelectContent = forwardRef(({ className, children, position = "popper", ti
 
   if (mobileCtx) {
     return (
-      <Drawer open={mobileCtx.isOpen} onOpenChange={mobileCtx.handleOpenChange}>
+      <Drawer open={mobileCtx.isOpen} onOpenChange={mobileCtx.handleOpenChange} modal={false}>
         <DrawerContent>
           {title && (
             <DrawerHeader>
