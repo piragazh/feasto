@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Download, Calendar } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import jsPDF from 'jspdf';
+import { generatePayoutPDF } from '@/lib/payoutPDF';
 
 export default function RestaurantPayoutHistory({ restaurantId }) {
     const [statusFilter, setStatusFilter] = useState('all');
@@ -44,65 +44,7 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
         return variants[status] || 'bg-gray-100 text-gray-800';
     };
 
-    const downloadPayoutStatement = (payout) => {
-        const doc = new jsPDF();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const pageWidth = doc.internal.pageSize.getWidth();
-        let yPos = 20;
-
-        // Header
-        doc.setFontSize(20);
-        doc.text('Payout Statement', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 15;
-
-        // Payout details
-        doc.setFontSize(11);
-        doc.text(`Period: ${new Date(payout.period_start).toLocaleDateString()} to ${new Date(payout.period_end).toLocaleDateString()}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Status: ${payout.status.toUpperCase()}`, 20, yPos);
-        yPos += 12;
-
-        // Summary table
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text('Earnings Breakdown', 20, yPos);
-        yPos += 8;
-
-        const summaryData = [
-            ['Total Orders', `${payout.total_orders || 0}`],
-            ['Gross Earnings', `£${(payout.gross_earnings || 0).toFixed(2)}`],
-            ['Cash Payments', `£${(payout.cash_payment_amount || 0).toFixed(2)}`],
-            ['Card Payments', `£${(payout.card_payment_amount || 0).toFixed(2)}`],
-            ['Platform Commission', `-£${(payout.platform_commission || 0).toFixed(2)}`],
-        ];
-
-        doc.setTextColor(0);
-        summaryData.forEach(([label, value]) => {
-            doc.text(label, 20, yPos);
-            doc.text(value, pageWidth - 40, yPos, { align: 'right' });
-            yPos += 7;
-        });
-
-        // Net payout
-        yPos += 3;
-        doc.setFontSize(12);
-        doc.setTextColor(34, 197, 94);
-        doc.text('Net Payout', 20, yPos);
-        doc.text(`£${(payout.net_payout || 0).toFixed(2)}`, pageWidth - 40, yPos, { align: 'right' });
-
-        if (payout.paid_date) {
-            yPos += 15;
-            doc.setTextColor(0);
-            doc.setFontSize(10);
-            doc.text(`Paid on: ${new Date(payout.paid_date).toLocaleDateString()}`, 20, yPos);
-            if (payout.payment_method) {
-                yPos += 7;
-                doc.text(`Payment Method: ${payout.payment_method}`, 20, yPos);
-            }
-        }
-
-        doc.save(`payout_${new Date(payout.period_start).toISOString().split('T')[0]}.pdf`);
-    };
+    const downloadPayoutStatement = (payout) => generatePayoutPDF(payout);
 
     if (isLoading) {
         return (

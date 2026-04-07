@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign, Download, Filter, CheckCircle, Clock, TrendingUp, AlertCircle, FileText, BarChart3 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, eachMonthOfInterval, eachYearOfInterval } from 'date-fns';
-import jsPDF from 'jspdf';
+import { format } from 'date-fns';
+import { generatePayoutPDF } from '@/lib/payoutPDF';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function PayoutHistory() {
@@ -26,7 +26,20 @@ export default function PayoutHistory() {
 
     const { data: allPayouts = [], isLoading } = useQuery({
         queryKey: ['all-payouts'],
-        queryFn: () => base44.entities.Payout.list('-created_date', 500),
+        queryFn: async () => {
+            // Fetch all payouts without a hard cap using pagination
+            const PAGE = 200;
+            let all = [];
+            let skip = 0;
+            while (true) {
+                const page = await base44.entities.Payout.list('-created_date', PAGE, skip);
+                if (!page || page.length === 0) break;
+                all = all.concat(page);
+                if (page.length < PAGE) break;
+                skip += PAGE;
+            }
+            return all;
+        },
         refetchInterval: 30000,
     });
 
@@ -47,94 +60,7 @@ export default function PayoutHistory() {
         return true;
     });
 
-    const generatePayoutPDF = (payout) => {
-        const doc = new jsPDF();
-        
-        // Header
-        doc.setFontSize(22);
-        doc.text('PAYOUT STATEMENT', 105, 20, { align: 'center' });
-        
-        doc.setFontSize(10);
-        doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 105, 28, { align: 'center' });
-        
-        // Restaurant Details
-        doc.setFontSize(14);
-        doc.text('Restaurant Details', 20, 45);
-        doc.setFontSize(10);
-        doc.text(`Name: ${payout.restaurant_name}`, 20, 55);
-        
-        // Period
-        doc.setFontSize(14);
-        doc.text('Payout Period', 20, 70);
-        doc.setFontSize(10);
-        doc.text(`From: ${format(new Date(payout.period_start), 'MMM dd, yyyy')}`, 20, 80);
-        doc.text(`To: ${format(new Date(payout.period_end), 'MMM dd, yyyy')}`, 20, 87);
-        doc.text(`Frequency: ${payout.payout_frequency || 'N/A'}`, 20, 94);
-        
-        // Financial Summary
-        doc.setFontSize(14);
-        doc.text('Financial Summary', 20, 110);
-        
-        let y = 120;
-        doc.setFontSize(10);
-        doc.text(`Total Orders: ${payout.total_orders}`, 20, y);
-        y += 7;
-        doc.text(`Gross Earnings: £${payout.gross_earnings?.toFixed(2)}`, 20, y);
-        y += 7;
-        doc.text(`Platform Commission: -£${payout.platform_commission?.toFixed(2)}`, 20, y);
-        
-        if (payout.refunds_paid_by_restaurant > 0) {
-            y += 7;
-            doc.text(`Refunds Deducted: -£${payout.refunds_paid_by_restaurant.toFixed(2)}`, 20, y);
-        }
-        
-        if (payout.refunds_paid_by_platform > 0) {
-            y += 7;
-            doc.text(`Platform-Covered Refunds: £${payout.refunds_paid_by_platform.toFixed(2)}`, 20, y);
-        }
-        
-        // Net Payout
-        y += 15;
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.text(`NET PAYOUT: £${payout.net_payout?.toFixed(2)}`, 20, y);
-        doc.setFont(undefined, 'normal');
-        
-        // Payment Status
-        y += 15;
-        doc.setFontSize(14);
-        doc.text('Payment Status', 20, y);
-        y += 10;
-        doc.setFontSize(10);
-        doc.text(`Status: ${payout.status.toUpperCase()}`, 20, y);
-        
-        if (payout.status === 'paid' && payout.paid_date) {
-            y += 7;
-            doc.text(`Paid On: ${format(new Date(payout.paid_date), 'MMM dd, yyyy')}`, 20, y);
-            if (payout.payment_method) {
-                y += 7;
-                doc.text(`Payment Method: ${payout.payment_method}`, 20, y);
-            }
-        }
-        
-        if (payout.notes) {
-            y += 10;
-            doc.setFontSize(14);
-            doc.text('Notes', 20, y);
-            y += 10;
-            doc.setFontSize(10);
-            const splitNotes = doc.splitTextToSize(payout.notes, 170);
-            doc.text(splitNotes, 20, y);
-        }
-        
-        // Footer
-        doc.setFontSize(8);
-        doc.text('This is an automatically generated payout statement.', 105, 280, { align: 'center' });
-        
-        // Save
-        const filename = `payout-${payout.restaurant_name.replace(/\s+/g, '-')}-${format(new Date(payout.period_start), 'yyyy-MM-dd')}.pdf`;
-        doc.save(filename);
-    };
+
 
     const statusConfig = {
         pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
