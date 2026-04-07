@@ -4,7 +4,7 @@ import React, { forwardRef, useState, useEffect, useContext, createContext, useC
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+import { createPortal } from "react-dom"
 
 const isMobile = () => {
   if (typeof window === 'undefined') return false;
@@ -152,21 +152,31 @@ const SelectContent = forwardRef(({ className, children, position = "popper", ti
   const mobileCtx = useContext(MobileSelectCtx);
 
   if (mobileCtx) {
-    return (
-      <Drawer open={mobileCtx.isOpen} onOpenChange={mobileCtx.handleOpenChange} modal={false}>
-        <DrawerContent>
-          {title && (
-            <DrawerHeader>
-              <DrawerTitle>{title}</DrawerTitle>
-            </DrawerHeader>
-          )}
-          <div className="px-2 pb-6 overflow-y-auto max-h-[60vh]">
+    if (!mobileCtx.isOpen) return null;
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 99999 }}>
+        {/* Backdrop */}
+        <div
+          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }}
+          onPointerDown={(e) => { e.stopPropagation(); mobileCtx.handleOpenChange(false); }}
+        />
+        {/* Sheet */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'white', borderRadius: '12px 12px 0 0',
+          maxHeight: '70vh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.15)'
+        }}>
+          <div style={{ width: 40, height: 4, background: '#d1d5db', borderRadius: 9999, margin: '12px auto 4px' }} />
+          {title && <div style={{ padding: '8px 16px', fontWeight: 600, fontSize: 15 }}>{title}</div>}
+          <div style={{ overflowY: 'auto', padding: '4px 8px 24px' }}>
             <MobileSelectItems onSelect={(val) => { mobileCtx.handleValueChange(val); mobileCtx.handleOpenChange(false); }}>
               {children}
             </MobileSelectItems>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </div>
+      </div>,
+      document.body
     );
   }
 
