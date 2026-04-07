@@ -90,15 +90,21 @@ export default function PayoutManagement() {
                 throw new Error(`A payout already exists for this restaurant covering ${new Date(duplicate.period_start).toLocaleDateString()} – ${new Date(duplicate.period_end).toLocaleDateString()}. Void it first or choose a different period.`);
             }
             
-            // Fetch orders for this restaurant in the period (server-filtered by restaurant_id)
-            const allRestaurantOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId });
+            // Fetch ALL online orders for this specific restaurant (server-filtered by restaurant_id)
+            // Use a high limit to avoid pagination truncation on busy restaurants
+            const allRestaurantOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 5000);
             
             // Excluded statuses: cancelled, refunded, pending, and in-progress refund states
             const excludedStatuses = new Set(['cancelled', 'refunded', 'pending', 'refund_requested', 'refund_under_platform_review']);
+            // Excluded sources: POS and kiosk orders are NOT included in online payouts
+            const excludedSources = new Set(['pos', 'kiosk']);
 
             const periodOrders = allRestaurantOrders.filter(order => {
                 const orderDate = new Date(order.created_date);
-                return orderDate >= periodStart && orderDate <= periodEnd && !excludedStatuses.has(order.status);
+                const isOnlineOrder = !excludedSources.has(order.order_source);
+                return orderDate >= periodStart && orderDate <= periodEnd 
+                    && !excludedStatuses.has(order.status) 
+                    && isOnlineOrder;
             });
 
             // Calculate totals — split cash vs card vs pay_at_counter, and by order type
@@ -149,10 +155,12 @@ export default function PayoutManagement() {
                 platformCommission = grossEarnings * (rate / 100);
             }
 
-            // Refunds in this period (separate fetch since they're excluded from period orders above)
+            // Refunds in this period — online orders only (same source filter as above)
             const refundedOrders = allRestaurantOrders.filter(order => {
                 const orderDate = new Date(order.created_date);
-                return orderDate >= periodStart && orderDate <= periodEnd && order.status === 'refunded';
+                return orderDate >= periodStart && orderDate <= periodEnd 
+                    && order.status === 'refunded'
+                    && !excludedSources.has(order.order_source);
             });
 
             const refundsPaidByRestaurant = refundedOrders
