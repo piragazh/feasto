@@ -167,6 +167,7 @@ export default function PayoutManagement() {
             });
 
             // Commission is charged on GROSS earnings (all completed online orders)
+            // and then deducted from the card payments held by the platform
             let platformCommission = 0;
             const commissionRate = restaurant.commission_rate || 15;
             if (restaurant.commission_type === 'fixed') {
@@ -192,13 +193,11 @@ export default function PayoutManagement() {
                 .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
 
             // Net payout = card payments held by platform, minus commission on gross, minus restaurant-borne refunds
-            // Commission on cash orders creates a debt owed to the platform (restaurant collected that cash directly)
-            const cashCommission = cashPaymentAmount * (commissionRate / 100);
-            const cardCommission = cardPaymentAmount * (commissionRate / 100);
-            // For fixed commission, split proportionally between cash and card
-            const cashCommissionDebt = restaurant.commission_type === 'fixed'
-                ? (grossEarnings > 0 ? platformCommission * (cashPaymentAmount / grossEarnings) : 0)
-                : cashCommission;
+            // Commission is on GROSS (all orders). The portion attributable to cash orders is a debt 
+            // owed by the restaurant to the platform (they collected that cash directly).
+            const cashCommissionDebt = grossEarnings > 0
+                ? platformCommission * (cashPaymentAmount / grossEarnings)
+                : 0;
 
             let netPayout = cardPaymentAmount - platformCommission - refundsPaidByRestaurant;
             const finalNetPayout = Math.max(0, netPayout);
