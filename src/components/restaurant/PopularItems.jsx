@@ -143,7 +143,7 @@ function PopularItemCard({ item, onClick }) {
                 )}
                 {/* Teal + button overlay */}
                 <div className="absolute bottom-2.5 right-2.5 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-100 group-hover:scale-110 transition-transform duration-200">
-                    <Plus className="h-5 w-5 text-teal-500 stroke-[2.5]" />
+                    <Plus className="h-5 w-5 text-orange-500 stroke-[2.5]" />
                 </div>
                 {/* Popular badge if marked */}
                 {item.is_popular && (
