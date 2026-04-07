@@ -330,8 +330,12 @@ export function generatePayoutPDF(payout) {
     }
 
     /* ─── NOTES / DISCREPANCY WARNINGS ─── */
-    if (payout.notes) {
-        const isWarning = payout.notes.startsWith('⚠️');
+    // Filter out cash commission debt notes — internal only, not for restaurant PDF
+    const pdfNotes = payout.notes
+        ? payout.notes.split(' | ').filter(n => !n.startsWith('ℹ️')).join(' | ').trim() || null
+        : null;
+    if (pdfNotes) {
+        const isWarning = pdfNotes.startsWith('⚠️');
         const noteColor = isWarning ? [254, 243, 199] : [241, 245, 249];
         const noteBorderColor = isWarning ? AMBER_600 : [148, 163, 184];
         const noteTextColor = isWarning ? [146, 64, 14] : GRAY_700;
@@ -340,7 +344,7 @@ export function generatePayoutPDF(payout) {
         setColor(doc, noteBorderColor, 'draw');
         doc.setLineWidth(0.4);
 
-        const splitNotes = doc.splitTextToSize(payout.notes, CONTENT_W - 12);
+        const splitNotes = doc.splitTextToSize(pdfNotes, CONTENT_W - 12);
         const noteH = splitNotes.length * 5 + 10;
         doc.roundedRect(MARGIN, y, CONTENT_W, noteH, 2, 2, 'FD');
 
