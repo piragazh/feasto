@@ -14,13 +14,11 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
     const [statusFilter, setStatusFilter] = useState('all');
     const [searchDate, setSearchDate] = useState('');
 
-    // Fetch payouts for this restaurant
+    // Fetch payouts for this restaurant (server-filtered)
     const { data: payouts, isLoading, error } = useQuery({
         queryKey: ['restaurant-payouts', restaurantId],
-        queryFn: async () => {
-            const allPayouts = await base44.entities.Payout.list();
-            return (allPayouts || []).filter(p => p.restaurant_id === restaurantId);
-        }
+        queryFn: () => base44.entities.Payout.filter({ restaurant_id: restaurantId }, '-period_start'),
+        enabled: !!restaurantId,
     });
 
     // Filter payouts

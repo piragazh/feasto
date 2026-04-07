@@ -31,8 +31,8 @@ export default function PayoutHistory() {
     });
 
     const filteredPayouts = allPayouts.filter(payout => {
-        if (selectedRestaurant && payout.restaurant_id !== selectedRestaurant) return false;
-        if (selectedStatus && payout.status !== selectedStatus) return false;
+        if (selectedRestaurant && selectedRestaurant !== '' && payout.restaurant_id !== selectedRestaurant) return false;
+        if (selectedStatus && selectedStatus !== '' && payout.status !== selectedStatus) return false;
         
         if (startDate) {
             const payoutStart = new Date(payout.period_start);
@@ -231,7 +231,7 @@ export default function PayoutHistory() {
         const groupedData = {};
         
         filteredPayouts.forEach(payout => {
-            const date = parseISO(payout.period_start);
+            const date = new Date(payout.period_start);
             const key = summaryPeriod === 'monthly' 
                 ? format(date, 'MMM yyyy')
                 : format(date, 'yyyy');
@@ -239,6 +239,7 @@ export default function PayoutHistory() {
             if (!groupedData[key]) {
                 groupedData[key] = {
                     period: key,
+                    _sortDate: date.getTime(), // raw ms for reliable sorting
                     totalPayouts: 0,
                     paidAmount: 0,
                     pendingAmount: 0,
@@ -260,11 +261,7 @@ export default function PayoutHistory() {
             }
         });
 
-        return Object.values(groupedData).sort((a, b) => {
-            const dateA = summaryPeriod === 'monthly' ? parseISO(`01 ${a.period}`) : parseISO(`${a.period}-01-01`);
-            const dateB = summaryPeriod === 'monthly' ? parseISO(`01 ${b.period}`) : parseISO(`${b.period}-01-01`);
-            return dateA - dateB;
-        });
+        return Object.values(groupedData).sort((a, b) => a._sortDate - b._sortDate);
     }, [filteredPayouts, summaryPeriod]);
 
     // Status breakdown for pie chart

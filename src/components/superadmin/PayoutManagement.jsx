@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, Download } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, Download, Trash2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -49,76 +49,81 @@ export default function PayoutManagement() {
             let periodStart, periodEnd;
             
             if (startDate && endDate) {
-                // Custom date range
                 periodStart = new Date(startDate);
+                periodStart.setHours(0, 0, 0, 0);
                 periodEnd = new Date(endDate);
                 periodEnd.setHours(23, 59, 59, 999);
             } else if (payoutFrequency === 'daily') {
-                // Yesterday
+                // Yesterday (full day)
                 periodStart = new Date(now);
                 periodStart.setDate(periodStart.getDate() - 1);
                 periodStart.setHours(0, 0, 0, 0);
                 periodEnd = new Date(periodStart);
                 periodEnd.setHours(23, 59, 59, 999);
             } else if (payoutFrequency === 'weekly') {
-                // Last 7 days
+                // Last full 7 completed days (not including today)
                 periodEnd = new Date(now);
+                periodEnd.setDate(periodEnd.getDate() - 1);
                 periodEnd.setHours(23, 59, 59, 999);
                 periodStart = new Date(periodEnd);
-                periodStart.setDate(periodStart.getDate() - 7);
+                periodStart.setDate(periodStart.getDate() - 6);
                 periodStart.setHours(0, 0, 0, 0);
             } else {
-                // Monthly (default)
+                // Monthly (last full calendar month)
                 periodStart = startOfMonth(subMonths(now, 1));
                 periodEnd = endOfMonth(subMonths(now, 1));
             }
 
             // Get restaurant details
             const restaurant = restaurants.find(r => r.id === restaurantId);
-            
-            // Get all orders in period
-            const orders = await base44.entities.Order.list();
-            console.log('Total orders fetched:', orders?.length);
-            console.log('Period:', periodStart, 'to', periodEnd);
-            console.log('Restaurant ID:', restaurantId);
-            
-            const periodOrders = orders.filter(order => {
-                const orderDate = new Date(order.created_date);
-                const matchesRestaurant = order.restaurant_id === restaurantId;
-                const matchesDate = orderDate >= periodStart && orderDate <= periodEnd;
-                // Include all orders except cancelled and refunded ones
-                const excludedStatuses = ['cancelled', 'refunded', 'pending'];
-                const matchesStatus = !excludedStatuses.includes(order.status);
-                
-                if (matchesRestaurant) {
-                    console.log('Order:', order.id, 'Date:', orderDate, 'Status:', order.status, 
-                               'Matches date:', matchesDate, 'Matches status:', matchesStatus);
-                }
-                
-                return matchesRestaurant && matchesDate && matchesStatus;
-            });
-            
-            console.log('Filtered period orders:', periodOrders.length);
+            if (!restaurant) throw new Error('Restaurant not found');
 
-            // Calculate totals from period orders
+            // ✅ DUPLICATE GUARD: check if a payout already exists for this restaurant + overlapping period
+            const existingPayouts = await base44.entities.Payout.filter({ restaurant_id: restaurantId });
+            const duplicate = existingPayouts.find(p => {
+                const existStart = new Date(p.period_start);
+                const existEnd = new Date(p.period_end);
+                // Overlap check: new period overlaps existing if not (new ends before existing starts OR new starts after existing ends)
+                return !(periodEnd < existStart || periodStart > existEnd);
+            });
+            if (duplicate) {
+                throw new Error(`A payout already exists for this restaurant covering ${new Date(duplicate.period_start).toLocaleDateString()} – ${new Date(duplicate.period_end).toLocaleDateString()}. Void it first or choose a different period.`);
+            }
+            
+            // Fetch orders for this restaurant in the period (server-filtered by restaurant_id)
+            const allRestaurantOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId });
+            
+            // Excluded statuses: cancelled, refunded, pending, and in-progress refund states
+            const excludedStatuses = new Set(['cancelled', 'refunded', 'pending', 'refund_requested', 'refund_under_platform_review']);
+
+            const periodOrders = allRestaurantOrders.filter(order => {
+                const orderDate = new Date(order.created_date);
+                return orderDate >= periodStart && orderDate <= periodEnd && !excludedStatuses.has(order.status);
+            });
+
+            // Calculate totals — split cash vs card vs pay_at_counter
             let grossEarnings = 0;
-            let cashPaymentAmount = 0;
-            let cardPaymentAmount = 0;
+            let cashPaymentAmount = 0;   // cash collected by restaurant directly
+            let payAtCounterAmount = 0;  // paid at counter (also collected by restaurant)
+            let cardPaymentAmount = 0;   // card/apple_pay/google_pay processed by platform
 
             periodOrders.forEach(order => {
                 const orderTotal = order.total || 0;
                 grossEarnings += orderTotal;
                 
-                // Split by payment method
                 if (order.payment_method === 'cash') {
                     cashPaymentAmount += orderTotal;
+                } else if (order.payment_method === 'pay_at_counter') {
+                    payAtCounterAmount += orderTotal;
                 } else {
-                    // card, apple_pay, google_pay
+                    // card, apple_pay, google_pay — platform collected
                     cardPaymentAmount += orderTotal;
                 }
             });
 
-            // Commission calculated on total sales (card + cash)
+            // Commission is charged on ALL sales (gross)
+            // Cash/counter commission creates a debt the restaurant owes the platform
+            // but the platform only PAYS OUT what it actually holds (card payments)
             let platformCommission = 0;
             if (restaurant.commission_type === 'fixed') {
                 platformCommission = restaurant.fixed_commission_amount || 0;
@@ -127,31 +132,30 @@ export default function PayoutManagement() {
                 platformCommission = grossEarnings * (rate / 100);
             }
 
-            // Payout = card amount - commission
-            let netPayout = cardPaymentAmount - platformCommission;
-
-            const refundedOrders = orders.filter(order => {
+            // Refunds in this period (separate fetch since they're excluded from period orders above)
+            const refundedOrders = allRestaurantOrders.filter(order => {
                 const orderDate = new Date(order.created_date);
-                return order.restaurant_id === restaurantId && 
-                       orderDate >= periodStart && 
-                       orderDate <= periodEnd &&
-                       order.status === 'refunded';
+                return orderDate >= periodStart && orderDate <= periodEnd && order.status === 'refunded';
             });
 
             const refundsPaidByRestaurant = refundedOrders
                 .filter(o => o.refund_paid_by === 'restaurant')
-                .reduce((sum, order) => sum + (order.refund_amount || 0), 0);
+                .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
 
             const refundsPaidByPlatform = refundedOrders
                 .filter(o => o.refund_paid_by === 'platform')
-                .reduce((sum, order) => sum + (order.refund_amount || 0), 0);
+                .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
 
-            netPayout -= refundsPaidByRestaurant;
-
-            // Each payout period stands alone - no deduction of previous payouts
+            // Net payout = what platform holds (card payments) minus its commission minus restaurant-borne refunds
+            // Cash commission debt is noted but not deducted here (platform never held that cash)
+            const cashCommissionDebt = (cashPaymentAmount + payAtCounterAmount) * ((restaurant.commission_rate || 15) / 100);
+            let netPayout = cardPaymentAmount - platformCommission - refundsPaidByRestaurant;
+            // If commission exceeds card amount, floor to 0 (restaurant owes platform — flag in notes)
             const finalNetPayout = Math.max(0, netPayout);
+            const commissionDebtNote = netPayout < 0 
+                ? `⚠️ Commission exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Restaurant owes platform for cash order commissions.`
+                : '';
 
-            // Create payout record
             return base44.entities.Payout.create({
                 restaurant_id: restaurantId,
                 restaurant_name: restaurant.name,
@@ -160,13 +164,14 @@ export default function PayoutManagement() {
                 payout_frequency: payoutFrequency,
                 total_orders: periodOrders.length,
                 gross_earnings: grossEarnings,
-                cash_payment_amount: cashPaymentAmount,
+                cash_payment_amount: cashPaymentAmount + payAtCounterAmount,
                 card_payment_amount: cardPaymentAmount,
                 platform_commission: platformCommission,
                 refunds_paid_by_platform: refundsPaidByPlatform,
                 refunds_paid_by_restaurant: refundsPaidByRestaurant,
                 net_payout: finalNetPayout,
-                status: 'pending'
+                status: 'pending',
+                notes: commissionDebtNote || undefined,
             });
         },
         onSuccess: () => {
@@ -174,8 +179,8 @@ export default function PayoutManagement() {
             toast.success('Payout generated successfully');
             setGeneratingFor(null);
         },
-        onError: () => {
-            toast.error('Failed to generate payout');
+        onError: (err) => {
+            toast.error(err?.message || 'Failed to generate payout');
             setGeneratingFor(null);
         }
     });
@@ -268,6 +273,15 @@ export default function PayoutManagement() {
         const filename = `payout-${payout.restaurant_name.replace(/\s+/g, '-')}-${format(new Date(payout.period_start), 'yyyy-MM-dd')}.pdf`;
         doc.save(filename);
     };
+
+    const voidPayoutMutation = useMutation({
+        mutationFn: (payoutId) => base44.entities.Payout.delete(payoutId),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['payouts']);
+            toast.success('Payout voided and deleted');
+        },
+        onError: () => toast.error('Failed to void payout'),
+    });
 
     const markPaidMutation = useMutation({
         mutationFn: ({ payoutId }) => 
@@ -505,14 +519,29 @@ export default function PayoutManagement() {
 
                                         <div className="flex items-center gap-2">
                                             {payout.status === 'pending' && (
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => setPayoutDialog(payout)}
-                                                    className="bg-green-600 hover:bg-green-700"
-                                                >
-                                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                                    Mark as Paid
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => setPayoutDialog(payout)}
+                                                        className="bg-green-600 hover:bg-green-700"
+                                                    >
+                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                        Mark as Paid
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="text-red-600 border-red-200 hover:bg-red-50"
+                                                        onClick={() => {
+                                                            if (window.confirm(`Void and delete this payout for ${payout.restaurant_name}? This cannot be undone.`)) {
+                                                                voidPayoutMutation.mutate(payout.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Void
+                                                    </Button>
+                                                </>
                                             )}
 
                                             <Button
