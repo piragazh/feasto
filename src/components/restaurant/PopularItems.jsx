@@ -1,10 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
-import MenuItemCard from './MenuItemCard';
+import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 
 export default function PopularItems({ restaurantId, onItemClick }) {
     const scrollRef = React.useRef(null);
@@ -14,29 +12,15 @@ export default function PopularItems({ restaurantId, onItemClick }) {
     const updateButtons = React.useCallback(() => {
         const el = scrollRef.current;
         if (!el) return;
-        setCanScrollPrev(el.scrollLeft > 0);
+        setCanScrollPrev(el.scrollLeft > 4);
         setCanScrollNext(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
     }, []);
 
-    const scrollPrev = React.useCallback(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const cardWidth = el.firstElementChild?.offsetWidth || el.clientWidth;
-        el.scrollBy({ left: -cardWidth, behavior: 'smooth' });
-    }, []);
-
-    const scrollNext = React.useCallback(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const cardWidth = el.firstElementChild?.offsetWidth || el.clientWidth;
-        el.scrollBy({ left: cardWidth, behavior: 'smooth' });
-    }, []);
-
     React.useEffect(() => {
-        updateButtons();
         const el = scrollRef.current;
         if (!el) return;
-        el.addEventListener('scroll', updateButtons);
+        updateButtons();
+        el.addEventListener('scroll', updateButtons, { passive: true });
         window.addEventListener('resize', updateButtons);
         return () => {
             el.removeEventListener('scroll', updateButtons);
@@ -44,9 +28,16 @@ export default function PopularItems({ restaurantId, onItemClick }) {
         };
     }, [updateButtons]);
 
+    const scroll = React.useCallback((dir) => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const cardWidth = el.firstElementChild?.offsetWidth || 200;
+        el.scrollBy({ left: dir * (cardWidth + 12), behavior: 'smooth' });
+    }, []);
+
     const { data: orders = [] } = useQuery({
         queryKey: ['restaurant-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ 
+        queryFn: () => base44.entities.Order.filter({
             restaurant_id: restaurantId,
             status: 'delivered'
         }, '-created_date', 100),
@@ -59,40 +50,27 @@ export default function PopularItems({ restaurantId, onItemClick }) {
         enabled: !!restaurantId,
     });
 
-    // Calculate item popularity based on order data
-    const itemPopularity = React.useMemo(() => {
+    const popularItems = React.useMemo(() => {
         const counts = {};
         orders.forEach(order => {
             order.items?.forEach(item => {
-                const itemId = item.menu_item_id;
-                counts[itemId] = (counts[itemId] || 0) + item.quantity;
+                counts[item.menu_item_id] = (counts[item.menu_item_id] || 0) + item.quantity;
             });
         });
-        return counts;
-    }, [orders]);
-
-    // Get top 6 popular items
-    const popularItems = React.useMemo(() => {
         return menuItems
-            .map(item => ({
-                ...item,
-                orderCount: itemPopularity[item.id] || 0
-            }))
-            .filter(item => item.orderCount > 0)
+            .map(item => ({ ...item, orderCount: counts[item.id] || 0 }))
+            .filter(item => item.orderCount > 0 && item.is_available !== false)
             .sort((a, b) => b.orderCount - a.orderCount)
-            .slice(0, 6);
-    }, [menuItems, itemPopularity]);
+            .slice(0, 8);
+    }, [menuItems, orders]);
 
     if (isLoading) {
         return (
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <TrendingUp className="h-6 w-6 text-orange-500" />
-                    Popular Items
-                </h2>
-                <div className="space-y-4">
+            <div className="mb-10">
+                <Skeleton className="h-7 w-52 mb-4 rounded-lg" />
+                <div className="flex gap-3">
                     {[1, 2, 3].map(i => (
-                        <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+                        <Skeleton key={i} className="flex-shrink-0 w-44 h-56 rounded-xl" />
                     ))}
                 </div>
             </div>
@@ -101,68 +79,90 @@ export default function PopularItems({ restaurantId, onItemClick }) {
 
     if (popularItems.length === 0) return null;
 
-    const showCarousel = popularItems.length > 3;
-    const displayItems = showCarousel ? popularItems : popularItems.slice(0, 3);
+    return (
+        <div className="mb-10">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4 px-0">
+                <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
+                    Popular with other people
+                </h2>
+                <div className="flex gap-1.5">
+                    <button
+                        onClick={() => scroll(-1)}
+                        disabled={!canScrollPrev}
+                        className="w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm disabled:opacity-30 hover:border-gray-400 transition-colors"
+                        aria-label="Scroll left"
+                    >
+                        <ChevronLeft className="h-4 w-4 text-gray-600" />
+                    </button>
+                    <button
+                        onClick={() => scroll(1)}
+                        disabled={!canScrollNext}
+                        className="w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm disabled:opacity-30 hover:border-gray-400 transition-colors"
+                        aria-label="Scroll right"
+                    >
+                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Carousel */}
+            <div
+                ref={scrollRef}
+                className="flex gap-3 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory -mx-4 px-4"
+            >
+                {popularItems.map((item) => (
+                    <PopularItemCard key={item.id} item={item} onClick={() => onItemClick(item)} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function PopularItemCard({ item, onClick }) {
+    const calories = item.nutrition?.calories;
 
     return (
-        <div className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <TrendingUp className="h-5 w-5 text-white" />
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex-shrink-0 w-44 snap-start text-left group focus:outline-none"
+        >
+            {/* Image container */}
+            <div className="relative w-44 h-36 rounded-xl overflow-hidden bg-gray-100 mb-2">
+                {item.image_url ? (
+                    <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                        <span className="text-4xl">🍽️</span>
                     </div>
-                    Popular Items
-                </h2>
-                {showCarousel && (
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={scrollPrev}
-                            disabled={!canScrollPrev}
-                            className="h-10 w-10 rounded-full border-2 hover:bg-orange-50 hover:border-orange-300 disabled:opacity-30"
-                        >
-                            <ChevronLeft className="h-5 w-5" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={scrollNext}
-                            disabled={!canScrollNext}
-                            className="h-10 w-10 rounded-full border-2 hover:bg-orange-50 hover:border-orange-300 disabled:opacity-30"
-                        >
-                            <ChevronRight className="h-5 w-5" />
-                        </Button>
+                )}
+                {/* Teal + button overlay */}
+                <div className="absolute bottom-2.5 right-2.5 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-100 group-hover:scale-110 transition-transform duration-200">
+                    <Plus className="h-5 w-5 text-teal-500 stroke-[2.5]" />
+                </div>
+                {/* Popular badge if marked */}
+                {item.is_popular && (
+                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                        Popular
                     </div>
                 )}
             </div>
 
-            {showCarousel ? (
-                <div
-                    ref={scrollRef}
-                    className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 snap-x snap-mandatory"
-                >
-                    {popularItems.map((item, index) => (
-                        <div key={item.id} className="relative flex-[0_0_85%] min-w-0 snap-start sm:flex-[0_0_calc(50%-8px)] md:flex-[0_0_calc(33.333%-11px)]">
-                            <div className="absolute -left-3 top-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
-                                {index + 1}
-                            </div>
-                            <MenuItemCard item={item} onAddToCart={onItemClick} />
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="space-y-5">
-                    {displayItems.map((item, index) => (
-                        <div key={item.id} className="relative">
-                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 bg-gradient-to-br from-orange-500 to-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shadow-xl">
-                                {index + 1}
-                            </div>
-                            <MenuItemCard item={item} onAddToCart={onItemClick} />
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+            {/* Text */}
+            <div className="px-0.5">
+                <p className="text-sm font-bold text-gray-900 leading-snug line-clamp-2 mb-1">
+                    {item.name}
+                </p>
+                {calories && (
+                    <p className="text-xs text-gray-500 mb-0.5">{calories} kcal</p>
+                )}
+                <p className="text-sm font-semibold text-gray-900">£{(item.price || 0).toFixed(2)}</p>
+            </div>
+        </button>
     );
 }
