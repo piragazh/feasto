@@ -15,7 +15,7 @@ import {
     Menu, TrendingUp, Truck, UserCheck, RotateCcw,
     GitBranch, PenLine, MapPin, Link2, Cpu, Smartphone,
     MessageCircle, UsersRound, Palette, Star, Sparkles,
-    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff
+    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff, ShieldOff
 } from 'lucide-react';
 
 import LiveOrders from '@/components/restaurant/LiveOrders';
@@ -48,6 +48,7 @@ import POSConfigurations from '@/components/restaurant/POSConfigurations';
 import StaffManagement from '@/components/restaurant/StaffManagement';
 import KioskSettings from '@/components/kiosk/KioskSettings';
 import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrinterSettings';
+import TemporaryClosureSettings from '@/components/restaurant/TemporaryClosureSettings';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
 import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
@@ -122,6 +123,7 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'kiosk', label: 'Kiosk', icon: Smartphone },
             { id: 'sms', label: 'SMS Notifications', icon: MessageCircle },
             { id: 'staff', label: 'Staff', icon: UserCheck },
+            { id: 'temporary-closure', label: 'Temporary Closure', icon: ShieldOff },
         ]
     },
 ];
@@ -464,6 +466,7 @@ function RestaurantDashboardInner() {
                     <TabsContent value="kiosk"><KioskSettings restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="sms"><SmsNotificationSettings restaurantId={restaurant.id} currentSettings={restaurant.sms_notification_settings} /></TabsContent>
                     <TabsContent value="staff"><StaffManagement restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="temporary-closure"><TemporaryClosureSettings restaurantId={restaurant.id} /></TabsContent>
                 </Tabs>
             );
         }
