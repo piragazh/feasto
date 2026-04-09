@@ -15,7 +15,7 @@ import {
     Menu, TrendingUp, Truck, UserCheck, RotateCcw,
     GitBranch, PenLine, MapPin, Link2, Cpu, Smartphone,
     MessageCircle, UsersRound, Palette, Star, Sparkles,
-    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff, ShieldOff
+    ChefHat, X, PanelLeftClose, PanelLeft, Package, PoundSterling, Printer, WifiOff, ShieldOff, FolderOpen
 } from 'lucide-react';
 
 import LiveOrders from '@/components/restaurant/LiveOrders';
@@ -49,6 +49,7 @@ import StaffManagement from '@/components/restaurant/StaffManagement';
 import KioskSettings from '@/components/kiosk/KioskSettings';
 import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrinterSettings';
 import TemporaryClosureSettings from '@/components/restaurant/TemporaryClosureSettings';
+import SharedFilesViewer from '@/components/restaurant/SharedFilesViewer';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSettings';
 import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
@@ -109,6 +110,12 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'offline-orders', label: 'Offline Orders', icon: WifiOff, badge: unresolvedOfflineReviewCount },
             { id: 'batching', label: 'Order Batching', icon: GitBranch },
             { id: 'modifications', label: 'Modifications', icon: PenLine },
+        ]
+    },
+    {
+        id: 'resources', label: 'Resources', icon: FolderOpen,
+        items: [
+            { id: 'shared-files', label: 'Downloads', icon: FolderOpen },
         ]
     },
     {
@@ -448,6 +455,9 @@ function RestaurantDashboardInner() {
                     <TabsContent value="modifications"><OrderModification restaurantId={restaurant.id} /></TabsContent>
                 </Tabs>
             );
+        }
+        if (activeSection === 'resources') {
+            return <SharedFilesViewer />;
         }
         if (activeSection === 'settings') {
             return (

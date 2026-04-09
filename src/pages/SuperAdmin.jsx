@@ -24,6 +24,7 @@ const PromotionOversight = React.lazy(() => import('@/components/superadmin/Prom
 const LoyaltyProgramSettings = React.lazy(() => import('@/components/superadmin/LoyaltyProgramSettings'));
 const TierBenefitsManagement = React.lazy(() => import('@/components/superadmin/TierBenefitsManagement'));
 const PublicFilesManagement = React.lazy(() => import('@/components/superadmin/PublicFilesManagement'));
+const SharedFilesManagement = React.lazy(() => import('@/components/superadmin/SharedFilesManagement'));
 const GlobalScreenHealthMonitor = React.lazy(() => import('@/components/superadmin/GlobalScreenHealthMonitor'));
 const SmsLogViewer = React.lazy(() => import('@/components/superadmin/SmsLogViewer'));
 const BulkPriceAdjustment = React.lazy(() => import('@/components/superadmin/BulkPriceAdjustment'));
@@ -37,7 +38,7 @@ const OfflineRiskDigest = React.lazy(() => import('@/components/superadmin/Offli
 const WeeklyOpsHealthDashboard = React.lazy(() => import('@/components/superadmin/WeeklyOpsHealthDashboard'));
 const FailureMonitoringDashboard = React.lazy(() => import('@/components/superadmin/FailureMonitoringDashboard'));
 const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmin/KioskMonitoringDashboard'));
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap } from 'lucide-react';
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
 
@@ -163,7 +164,8 @@ function SuperAdminInner() {
                 { id: 'promotions', label: 'Promotions', icon: Tag },
                 { id: 'loyalty', label: 'Loyalty Program', icon: Award },
                 { id: 'tier-benefits', label: 'Tier Benefits', icon: Gift },
-                { id: 'files', label: 'Files', icon: Upload },
+                { id: 'files', label: 'Public Files', icon: Upload },
+                { id: 'shared-files', label: 'Shared w/ Restaurants', icon: FolderOpen },
             ]
         }
     ];
@@ -238,6 +240,7 @@ function SuperAdminInner() {
                     {activeTab === 'loyalty' && <LoyaltyProgramSettings />}
                     {activeTab === 'tier-benefits' && <TierBenefitsManagement />}
                     {activeTab === 'files' && <PublicFilesManagement />}
+                    {activeTab === 'shared-files' && <SharedFilesManagement />}
                     {activeTab === 'screens' && <GlobalScreenHealthMonitor />}
                     {activeTab === 'offline-reviews' && <OfflineReviewPortfolio />}
                     {activeTab === 'operator-analytics' && <OperatorAnalytics />}

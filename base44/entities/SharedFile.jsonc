@@ -1,0 +1,58 @@
+{
+  "name": "SharedFile",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Display name of the file"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the file"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded file"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original file name"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "File size in bytes"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "MIME type of the file"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "general",
+        "apk",
+        "guide",
+        "policy",
+        "marketing",
+        "other"
+      ],
+      "default": "general",
+      "description": "Category for organizing files"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this file is visible to restaurants"
+    },
+    "download_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times this file has been downloaded"
+    }
+  },
+  "required": [
+    "title",
+    "file_url",
+    "file_name"
+  ]
+}
