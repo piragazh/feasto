@@ -8,7 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Popup, useMap, Marker } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix default leaflet marker icon
+const restaurantIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+});
 import { MapPin, Trash2, Edit, Plus, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
@@ -469,6 +479,11 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                         attribution='&copy; OpenStreetMap'
                                     />
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
+                                    {restaurantLocation && (
+                                        <Marker position={[restaurantLocation.lat, restaurantLocation.lng]} icon={restaurantIcon}>
+                                            <Popup>📍 Your Restaurant</Popup>
+                                        </Marker>
+                                    )}
                                     
                                     {/* Show all existing zones for reference */}
                                     {zones.map((zone, idx) => {
