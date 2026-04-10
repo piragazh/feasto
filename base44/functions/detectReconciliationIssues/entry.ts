@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
                 issue_type: 'unpaid_order',
                 severity: 'warning',
                 status: 'open',
+                payment_transaction_id: '',
                 order_id: order.id,
                 restaurant_id: order.restaurant_id,
                 provider: 'stripe',
