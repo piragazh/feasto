@@ -256,7 +256,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             ref={mapRef}
                             zoomControl={true}
                         >
-                            <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution='&copy; <a href="https://carto.com/">CARTO</a>' />
+                            <TileLayer url="https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}" attribution='&copy; Google Maps' maxZoom={20} />
                             
                             {zones.map((zone) => {
                                 if (!zone.is_active || !zone.coordinates) return null;
@@ -475,8 +475,9 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     zoomControl={true}
                                 >
                                     <TileLayer
-                                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                                        url="https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}"
+                                        attribution='&copy; Google Maps'
+                                        maxZoom={20}
                                     />
                                     <GeomanControl onDrawn={handleDrawn} editingZone={editingZone} mapKey={mapKey} />
                                     {restaurantLocation && (
