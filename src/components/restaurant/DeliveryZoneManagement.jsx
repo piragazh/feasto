@@ -12,6 +12,8 @@ import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import { MapPin, Trash2, Edit, Plus, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import '@geoman-io/leaflet-geoman-free';
 
 function GeomanControl({ onDrawn, editingZone, mapKey }) {
     const map = useMap();
