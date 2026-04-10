@@ -258,6 +258,12 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         >
                             <TileLayer url="https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}" attribution='&copy; Google Maps' maxZoom={20} />
                             
+                            {restaurantLocation && (
+                                <Marker position={[restaurantLocation.lat, restaurantLocation.lng]} icon={restaurantIcon}>
+                                    <Popup>📍 Your Restaurant</Popup>
+                                </Marker>
+                            )}
+
                             {zones.map((zone) => {
                                 if (!zone.is_active || !zone.coordinates) return null;
                                 const displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
