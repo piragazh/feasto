@@ -425,7 +425,7 @@ export default function Layout({ children, currentPageName }) {
     return (
         <LayoutErrorBoundary>
         <DarkModeProvider>
-        <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0" style={{ paddingBottom: currentPageName === 'RestaurantDashboard' ? '0' : 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
+        <div className={`w-full min-h-screen bg-gray-50 dark:bg-gray-900 ${currentPageName !== 'RestaurantDashboard' ? 'pb-20 md:pb-0' : ''}`} style={{ paddingBottom: currentPageName === 'RestaurantDashboard' ? '0' : 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
             {/* Google Tag Manager Noscript */}
             {window.__gtmId && window.__gtmId !== 'undefined' && (
                 <noscript 
