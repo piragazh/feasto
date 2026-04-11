@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
  * Haversine distance between two lat/lng points — returns miles
  */
 function haversineDistance(point1, point2) {
-    const R = 3958.8; // Earth radius in miles
+    const R = 3958.8;
     const dLat = (point2.lat - point1.lat) * Math.PI / 180;
     const dLng = (point2.lng - point1.lng) * Math.PI / 180;
     const lat1 = point1.lat * Math.PI / 180;
@@ -19,7 +19,7 @@ function haversineDistance(point1, point2) {
  */
 function extractPostcodeDistrict(address) {
     if (!address) return null;
-    // Try to match a full postcode first and take its outward code (district)
+    // Match full postcode first, extract outward code (district)
     const fullMatch = address.match(/\b([A-Z]{1,2}\d{1,2}[A-Z]?)\s*\d[A-Z]{2}\b/i);
     if (fullMatch) return fullMatch[1].toUpperCase();
     // Fallback: match a bare district token
@@ -56,8 +56,41 @@ function isPointInPolygon(point, polygon) {
 }
 
 /**
- * Find the matching delivery zone for a customer location + address
- * Supports: polygon (map-drawn), postcode (district list), radius (miles from center)
+ * Internal: find matching zone from a pre-fetched list — avoids double API call
+ */
+function matchZone(zones, customerLocation, customerAddress) {
+    // Oldest-first for consistent overlap handling
+    const sorted = [...zones].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+
+    for (const zone of sorted) {
+        // Determine type — fall back to field presence for legacy zones without zone_type
+        const type = zone.zone_type ||
+            (zone.postcodes?.length > 0 ? 'postcode' :
+            zone.radius_miles ? 'radius' : 'polygon');
+
+        if (type === 'postcode') {
+            if (isPostcodeInZone(customerAddress, zone.postcodes)) return zone;
+
+        } else if (type === 'radius') {
+            const center = zone.radius_center;
+            if (center?.lat && center?.lng && customerLocation?.lat && customerLocation?.lng) {
+                if (haversineDistance(center, customerLocation) <= zone.radius_miles) return zone;
+            }
+
+        } else {
+            // polygon (default)
+            if (zone.coordinates?.length >= 3 && customerLocation) {
+                if (isPointInPolygon(customerLocation, zone.coordinates)) return zone;
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Find the matching delivery zone for a customer location + address.
+ * Exported for external use — fetches zones internally.
  */
 export async function findDeliveryZone(restaurantId, customerLocation, customerAddress) {
     try {
@@ -65,37 +98,8 @@ export async function findDeliveryZone(restaurantId, customerLocation, customerA
             restaurant_id: restaurantId,
             is_active: true
         });
-
         if (!zones || zones.length === 0) return null;
-
-        // Oldest-first for consistent overlap handling
-        const sortedZones = [...zones].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-
-        for (const zone of sortedZones) {
-            // Determine zone type — fall back to field presence for legacy zones
-            const type = zone.zone_type ||
-                (zone.postcodes?.length > 0 ? 'postcode' :
-                zone.radius_miles ? 'radius' : 'polygon');
-
-            if (type === 'postcode') {
-                if (isPostcodeInZone(customerAddress, zone.postcodes)) return zone;
-
-            } else if (type === 'radius') {
-                const center = zone.radius_center;
-                if (center?.lat && center?.lng && customerLocation?.lat && customerLocation?.lng) {
-                    const dist = haversineDistance(center, customerLocation);
-                    if (dist <= zone.radius_miles) return zone;
-                }
-
-            } else {
-                // Default: polygon
-                if (zone.coordinates?.length >= 3 && customerLocation) {
-                    if (isPointInPolygon(customerLocation, zone.coordinates)) return zone;
-                }
-            }
-        }
-
-        return null;
+        return matchZone(zones, customerLocation, customerAddress);
     } catch (error) {
         console.error('[DeliveryZoneCalculator] findDeliveryZone error:', error);
         return null;
@@ -104,8 +108,11 @@ export async function findDeliveryZone(restaurantId, customerLocation, customerA
 
 /**
  * Calculate delivery fee and ETA for a customer location.
- * Returns null if no zones are configured (allows restaurant's standard fee to apply).
- * Returns { available: false } if zones exist but customer is outside all of them.
+ * Returns null  → no zones configured, standard/tiered restaurant fee applies.
+ * Returns { available: false } → zones exist but customer is outside all of them.
+ * Returns { available: true, ... } → matched zone details.
+ *
+ * Single DB fetch — no duplicate API calls.
  */
 export async function calculateDeliveryDetails(restaurantId, customerLocation, customerAddress) {
     let allZones = [];
@@ -118,10 +125,10 @@ export async function calculateDeliveryDetails(restaurantId, customerLocation, c
         allZones = [];
     }
 
-    // No zones configured → null means standard/tiered restaurant fee applies
     if (!allZones || allZones.length === 0) return null;
 
-    const zone = await findDeliveryZone(restaurantId, customerLocation, customerAddress);
+    // Reuse pre-fetched zones — no second API call
+    const zone = matchZone(allZones, customerLocation, customerAddress);
 
     if (!zone) {
         return {

@@ -113,7 +113,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
     const [drawnCoordinates, setDrawnCoordinates] = useState(null);
     const [mapKey, setMapKey] = useState(0);
     const queryClient = useQueryClient();
-    const mapRef = useRef(null);
+    // mapRef removed — ref is not a valid react-leaflet MapContainer prop
 
     const [formData, setFormData] = useState({
         name: '',
@@ -293,7 +293,6 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             center={[centerLocation.lat, centerLocation.lng]}
                             zoom={12}
                             style={{ height: '100%', width: '100%' }}
-                            ref={mapRef}
                             zoomControl={true}
                         >
                             <TileLayer url="https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}" attribution='&copy; Google Maps' maxZoom={20} />
@@ -399,7 +398,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                 <DollarSign className="h-4 w-4 text-gray-500" />
                                                 <div>
                                                     <p className="text-xs text-gray-500">Delivery Fee</p>
-                                                    <p className="font-semibold">£{zone.delivery_fee.toFixed(2)}</p>
+                                                    <p className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -414,7 +413,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                     <MapPin className="h-4 w-4 text-gray-500" />
                                                     <div>
                                                         <p className="text-xs text-gray-500">Min Order</p>
-                                                        <p className="font-semibold">£{zone.min_order_value.toFixed(2)}</p>
+                                                        <p className="font-semibold">£{parseFloat(zone.min_order_value || 0).toFixed(2)}</p>
                                                     </div>
                                                 </div>
                                             )}
