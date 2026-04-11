@@ -528,7 +528,7 @@ export default function Checkout() {
 
         const runZoneCheck = async () => {
             try {
-                const zoneInfo = await calculateDeliveryDetails(restaurantId, deliveryCoordinates);
+                const zoneInfo = await calculateDeliveryDetails(restaurantId, deliveryCoordinates, formData.delivery_address);
                 if (!cancelled) setDeliveryZoneInfo(zoneInfo);
             } catch (error) {
                 console.error('Zone check failed:', error);

@@ -1,0 +1,90 @@
+{
+  "name": "DeliveryZone",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this zone belongs to"
+    },
+    "name": {
+      "type": "string",
+      "description": "Zone name (e.g., Central, North, South)"
+    },
+    "zone_type": {
+      "type": "string",
+      "enum": [
+        "polygon",
+        "postcode",
+        "radius"
+      ],
+      "default": "polygon",
+      "description": "How the zone is defined: drawn polygon, postcode list, or radius from restaurant"
+    },
+    "coordinates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Polygon coordinates defining the zone boundary (used when zone_type is polygon)"
+    },
+    "postcodes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of UK postcode districts (e.g., RM6, RM8, E1) for this zone (used when zone_type is postcode)"
+    },
+    "radius_miles": {
+      "type": "number",
+      "description": "Radius in miles for a circular delivery zone (used when zone_type is radius)"
+    },
+    "radius_center": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        }
+      },
+      "description": "Center point for radius zone. Defaults to restaurant location if not set."
+    },
+    "delivery_fee": {
+      "type": "number",
+      "description": "Delivery fee for this zone in pounds"
+    },
+    "estimated_delivery_time": {
+      "type": "string",
+      "description": "Estimated delivery time (e.g., 30-45 min)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this zone is currently active"
+    },
+    "min_order_value": {
+      "type": "number",
+      "description": "Minimum order value for delivery to this zone"
+    },
+    "color": {
+      "type": "string",
+      "description": "Color for map visualization",
+      "default": "#FF6B35"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "delivery_fee",
+    "estimated_delivery_time"
+  ]
+}

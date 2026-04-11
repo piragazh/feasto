@@ -120,7 +120,10 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
         delivery_fee: '',
         estimated_delivery_time: '',
         min_order_value: '',
-        color: '#FF6B35'
+        color: '#FF6B35',
+        zone_type: 'polygon',
+        postcodes_input: '',
+        radius_miles: ''
     });
 
     const { data: rawZones = [] } = useQuery({
@@ -170,7 +173,10 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             delivery_fee: '',
             estimated_delivery_time: '',
             min_order_value: '',
-            color: '#FF6B35'
+            color: '#FF6B35',
+            zone_type: 'polygon',
+            postcodes_input: '',
+            radius_miles: ''
         });
         setDrawnCoordinates(null);
         setEditingZone(null);
@@ -179,15 +185,19 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
     };
 
     const handleEdit = (zone) => {
+        const zoneType = zone.zone_type || (zone.postcodes?.length > 0 ? 'postcode' : zone.radius_miles ? 'radius' : 'polygon');
         setEditingZone(zone);
         setFormData({
             name: zone.name,
             delivery_fee: zone.delivery_fee,
             estimated_delivery_time: zone.estimated_delivery_time,
             min_order_value: zone.min_order_value || '',
-            color: zone.color || '#FF6B35'
+            color: zone.color || '#FF6B35',
+            zone_type: zoneType,
+            postcodes_input: (zone.postcodes || []).join(', '),
+            radius_miles: zone.radius_miles || ''
         });
-        setDrawnCoordinates(zone.coordinates);
+        setDrawnCoordinates(zoneType === 'polygon' ? zone.coordinates : null);
         setMapKey(prev => prev + 1);
         setShowDialog(true);
     };
@@ -198,21 +208,51 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             return;
         }
 
-        if (!drawnCoordinates) {
-            toast.error('Please draw a delivery zone on the map');
-            return;
-        }
-
         const zoneData = {
             restaurant_id: restaurantId,
             name: formData.name,
-            coordinates: drawnCoordinates,
+            zone_type: formData.zone_type,
             delivery_fee: parseFloat(formData.delivery_fee),
             estimated_delivery_time: formData.estimated_delivery_time,
             min_order_value: formData.min_order_value ? parseFloat(formData.min_order_value) : null,
             color: formData.color,
-            is_active: true
+            is_active: true,
+            coordinates: null,
+            postcodes: null,
+            radius_miles: null,
+            radius_center: null
         };
+
+        if (formData.zone_type === 'polygon') {
+            if (!drawnCoordinates || drawnCoordinates.length < 3) {
+                toast.error('Please draw a delivery zone on the map');
+                return;
+            }
+            zoneData.coordinates = drawnCoordinates;
+        } else if (formData.zone_type === 'postcode') {
+            const postcodes = formData.postcodes_input
+                .split(/[,\n]+/)
+                .map(p => p.trim().toUpperCase())
+                .filter(Boolean);
+            if (postcodes.length === 0) {
+                toast.error('Please enter at least one postcode district');
+                return;
+            }
+            zoneData.postcodes = postcodes;
+        } else if (formData.zone_type === 'radius') {
+            const miles = parseFloat(formData.radius_miles);
+            if (!miles || miles <= 0) {
+                toast.error('Please enter a valid radius in miles');
+                return;
+            }
+            zoneData.radius_miles = miles;
+            if (restaurantLocation) {
+                zoneData.radius_center = { lat: restaurantLocation.lat, lng: restaurantLocation.lng };
+            } else {
+                toast.error('Restaurant location is required for radius zones. Please set the restaurant address first.');
+                return;
+            }
+        }
 
         if (editingZone) {
             updateZoneMutation.mutate({ id: editingZone.id, data: zoneData });
@@ -318,7 +358,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             <CardContent className="pt-6">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
+                                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                                             <div
                                                 className="w-6 h-6 rounded border-2"
                                                 style={{ backgroundColor: zone.color }}
@@ -333,7 +373,20 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                             <Badge variant={zone.is_active ? 'default' : 'secondary'}>
                                                 {zone.is_active ? 'Active' : 'Inactive'}
                                             </Badge>
+                                            {(zone.zone_type === 'postcode' || zone.postcodes?.length > 0) && (
+                                                <Badge variant="outline" className="text-blue-700 border-blue-300">📮 Postcode</Badge>
+                                            )}
+                                            {(zone.zone_type === 'radius' || zone.radius_miles) && (
+                                                <Badge variant="outline" className="text-purple-700 border-purple-300">📍 {zone.radius_miles} mi radius</Badge>
+                                            )}
                                         </div>
+                                        {zone.postcodes?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mb-2">
+                                                {zone.postcodes.map((pc, i) => (
+                                                    <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono">{pc}</span>
+                                                ))}
+                                            </div>
+                                        )}
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                                             <div className="flex items-center gap-2">
                                                 <DollarSign className="h-4 w-4 text-gray-500" />
@@ -449,6 +502,29 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             </div>
                         </div>
 
+                        {/* Zone Type Selector */}
+                        <div>
+                            <Label className="mb-2 block">Zone Type *</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[{ value: 'polygon', label: '🗺️ Draw on Map' }, { value: 'postcode', label: '📮 Postcode Areas' }, { value: 'radius', label: '📍 Radius' }].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, zone_type: opt.value })}
+                                        className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                                            formData.zone_type === opt.value
+                                                ? 'bg-orange-500 text-white border-orange-500'
+                                                : 'bg-white text-gray-700 border-gray-300 hover:border-orange-300'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Polygon Map Drawing */}
+                        {formData.zone_type === 'polygon' && (
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <Label>Draw Delivery Zone on Map *</Label>
@@ -491,12 +567,9 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                             <Popup>📍 Your Restaurant</Popup>
                                         </Marker>
                                     )}
-                                    
-                                    {/* Show all existing zones for reference */}
-                                    {zones.map((zone, idx) => {
+                                    {zones.map((zone) => {
                                         if (!zone.coordinates || (editingZone && zone.id === editingZone.id)) return null;
                                         const displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
-
                                         return (
                                             <Polygon
                                                 key={`${zone.id}-edit`}
@@ -513,15 +586,11 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                 <Popup>
                                                     <div className="text-xs p-2 min-w-[180px]">
                                                         <p className="font-semibold text-sm">{zone.name}</p>
-                                                        <p className="text-gray-700 text-xs mt-1">Fee: <span className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</span></p>
-                                                        <p className="text-gray-700 text-xs">ETA: <span className="font-semibold">{zone.estimated_delivery_time}</span></p>
                                                     </div>
                                                 </Popup>
                                             </Polygon>
                                         );
                                     })}
-                                    
-                                    {/* Current zone being drawn */}
                                     {drawnCoordinates && (
                                         <Polygon
                                             positions={drawnCoordinates.map(c => [c.lat, c.lng])}
@@ -536,6 +605,66 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 </MapContainer>
                             </div>
                         </div>
+                        )}
+
+                        {/* Postcode Input */}
+                        {formData.zone_type === 'postcode' && (
+                        <div>
+                            <Label htmlFor="postcodes_input">Postcode Districts *</Label>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-2">
+                                <p className="text-sm text-blue-800">
+                                    📮 Enter UK postcode districts separated by commas (e.g., <strong>RM6, RM8, RM10, E1</strong>). These are the first part of a postcode before the space.
+                                </p>
+                            </div>
+                            <textarea
+                                id="postcodes_input"
+                                rows={4}
+                                className="w-full border rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                placeholder="RM6, RM8, RM10, E1, E2"
+                                value={formData.postcodes_input}
+                                onChange={(e) => setFormData({ ...formData, postcodes_input: e.target.value })}
+                            />
+                            {formData.postcodes_input && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {formData.postcodes_input.split(/[,\n]+/).map(p => p.trim().toUpperCase()).filter(Boolean).map((pc, i) => (
+                                        <span key={i} className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs font-mono font-medium">{pc}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        )}
+
+                        {/* Radius Input */}
+                        {formData.zone_type === 'radius' && (
+                        <div>
+                            <Label htmlFor="radius_miles">Delivery Radius (miles) *</Label>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-2">
+                                <p className="text-sm text-blue-800">
+                                    📍 Enter the maximum delivery radius in miles from your restaurant location. Customers within this distance will be able to order.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Input
+                                    id="radius_miles"
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="50"
+                                    placeholder="e.g., 3"
+                                    value={formData.radius_miles}
+                                    onChange={(e) => setFormData({ ...formData, radius_miles: e.target.value })}
+                                    className="max-w-[200px]"
+                                />
+                                <span className="text-gray-600 font-medium">miles from restaurant</span>
+                            </div>
+                            {!restaurantLocation && (
+                                <p className="text-sm text-red-600 mt-2">⚠️ Restaurant location must be set for radius zones to work. Please update your restaurant address with coordinates.</p>
+                            )}
+                            {restaurantLocation && formData.radius_miles && (
+                                <p className="text-sm text-green-700 mt-2">✓ Centred on restaurant at ({restaurantLocation.lat.toFixed(4)}, {restaurantLocation.lng.toFixed(4)})</p>
+                            )}
+                        </div>
+                        )}
                     </div>
 
                     <DialogFooter>
