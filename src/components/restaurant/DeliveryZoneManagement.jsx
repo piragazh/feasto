@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Polygon, Popup, useMap, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Circle, Popup, useMap, Marker } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix default leaflet marker icon
@@ -305,28 +305,35 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                             )}
 
                             {zones.map((zone) => {
-                                if (!zone.is_active || !zone.coordinates) return null;
-                                const displayCoords = zone.coordinates.map(c => [c.lat, c.lng]);
-
+                                if (!zone.is_active) return null;
+                                const type = zone.zone_type || (zone.postcodes?.length > 0 ? 'postcode' : zone.radius_miles ? 'radius' : 'polygon');
+                                const popupContent = (
+                                    <div className="p-2 min-w-[180px]">
+                                        <h3 className="font-semibold text-sm">{zone.name}</h3>
+                                        <p className="text-xs text-gray-600 mt-1">Fee: <span className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</span></p>
+                                        <p className="text-xs text-gray-600">ETA: <span className="font-semibold">{zone.estimated_delivery_time}</span></p>
+                                    </div>
+                                );
+                                if (type === 'radius' && zone.radius_center?.lat && zone.radius_miles) {
+                                    return (
+                                        <Circle
+                                            key={`${zone.id}-main`}
+                                            center={[zone.radius_center.lat, zone.radius_center.lng]}
+                                            radius={zone.radius_miles * 1609.34}
+                                            pathOptions={{ color: zone.color || '#FF6B35', fillColor: zone.color || '#FF6B35', fillOpacity: 0.2, weight: 2 }}
+                                        ><Popup>{popupContent}</Popup></Circle>
+                                    );
+                                }
+                                if (type === 'postcode') {
+                                    return null; // Postcode zones can't be shown on map without geocoding each district
+                                }
+                                if (!zone.coordinates || zone.coordinates.length < 3) return null;
                                 return (
                                     <Polygon
                                         key={`${zone.id}-main`}
-                                        positions={displayCoords}
-                                        pathOptions={{
-                                            color: zone.color || '#FF6B35',
-                                            fillColor: zone.color || '#FF6B35',
-                                            fillOpacity: 0.2,
-                                            weight: 2
-                                        }}
-                                    >
-                                        <Popup>
-                                            <div className="p-2 min-w-[180px]">
-                                                <h3 className="font-semibold text-sm">{zone.name}</h3>
-                                                <p className="text-xs text-gray-600 mt-1">Fee: <span className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</span></p>
-                                                <p className="text-xs text-gray-600">ETA: <span className="font-semibold">{zone.estimated_delivery_time}</span></p>
-                                            </div>
-                                        </Popup>
-                                    </Polygon>
+                                        positions={zone.coordinates.map(c => [c.lat, c.lng])}
+                                        pathOptions={{ color: zone.color || '#FF6B35', fillColor: zone.color || '#FF6B35', fillOpacity: 0.2, weight: 2 }}
+                                    ><Popup>{popupContent}</Popup></Polygon>
                                 );
                             })}
                         </MapContainer>
