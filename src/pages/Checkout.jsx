@@ -869,12 +869,8 @@ export default function Checkout() {
                 return;
             }
             
-            // CRITICAL: If zone check completed but no availability info, still block
-            if (zoneCheckComplete && !deliveryZoneInfo) {
-                console.log('BLOCKED: Delivery availability unknown after check');
-                toast.error('Unable to verify delivery to your location. Please try again.');
-                return;
-            }
+            // NOTE: deliveryZoneInfo === null means no zones configured — standard restaurant fee applies, allow through.
+            // Only block if zones exist but customer is explicitly outside all of them (available === false).
         }
 
         // ---- VALIDATION: UK Phone Number Format ----
