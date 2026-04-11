@@ -123,7 +123,9 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
         color: '#FF6B35',
         zone_type: 'polygon',
         postcodes_input: '',
-        radius_miles: ''
+        radius_miles: '',
+        manual_lat: '',
+        manual_lng: ''
     });
 
     const { data: rawZones = [] } = useQuery({
@@ -176,7 +178,9 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             color: '#FF6B35',
             zone_type: 'polygon',
             postcodes_input: '',
-            radius_miles: ''
+            radius_miles: '',
+            manual_lat: '',
+            manual_lng: ''
         });
         setDrawnCoordinates(null);
         setEditingZone(null);
@@ -195,7 +199,9 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             color: zone.color || '#FF6B35',
             zone_type: zoneType,
             postcodes_input: (zone.postcodes || []).join(', '),
-            radius_miles: zone.radius_miles || ''
+            radius_miles: zone.radius_miles || '',
+            manual_lat: zone.radius_center?.lat || '',
+            manual_lng: zone.radius_center?.lng || ''
         });
         setDrawnCoordinates(zoneType === 'polygon' ? zone.coordinates : null);
         setMapKey(prev => prev + 1);
@@ -247,34 +253,36 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             }
             zoneData.radius_miles = miles;
             if (restaurantLocation) {
+                // Use GPS coords from restaurant record
                 zoneData.radius_center = { lat: restaurantLocation.lat, lng: restaurantLocation.lng };
+            } else if (formData.manual_lat && formData.manual_lng) {
+                // User entered coordinates manually
+                const lat = parseFloat(formData.manual_lat);
+                const lng = parseFloat(formData.manual_lng);
+                if (isNaN(lat) || isNaN(lng)) {
+                    toast.error('Invalid coordinates. Please enter valid latitude and longitude.');
+                    return;
+                }
+                zoneData.radius_center = { lat, lng };
             } else if (restaurantAddress) {
-                // Geocode the restaurant address using Nominatim
+                // Try geocoding via Nominatim
                 const toastId = toast.loading('Locating restaurant address...');
                 let geocoded = null;
                 try {
-                    // Try with GB restriction first
-                    const res1 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&countrycodes=GB&limit=1`, { headers: { 'Accept-Language': 'en' } });
-                    const r1 = await res1.json();
-                    if (r1?.[0]) {
-                        geocoded = { lat: parseFloat(r1[0].lat), lng: parseFloat(r1[0].lon) };
-                    } else {
-                        // Fallback: try without country restriction
-                        const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&limit=1`, { headers: { 'Accept-Language': 'en' } });
-                        const r2 = await res2.json();
-                        if (r2?.[0]) {
-                            geocoded = { lat: parseFloat(r2[0].lat), lng: parseFloat(r2[0].lon) };
-                        }
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&limit=1`);
+                    const results = await res.json();
+                    if (results?.[0]) {
+                        geocoded = { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
                     }
                 } catch (e) { console.error('Geocoding failed:', e); }
                 toast.dismiss(toastId);
                 if (!geocoded) {
-                    toast.error('Could not locate restaurant address. Please enter your full postcode in the address (e.g. "123 High St, London, E1 6RF") or add GPS coordinates in restaurant settings.');
+                    toast.error('Could not geocode address automatically. Please enter your restaurant coordinates manually in the fields below.');
                     return;
                 }
                 zoneData.radius_center = geocoded;
             } else {
-                toast.error('Restaurant address is required for radius zones. Please set it in restaurant settings first.');
+                toast.error('Please enter your restaurant coordinates manually.');
                 return;
             }
         }
@@ -688,14 +696,37 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 />
                                 <span className="text-gray-600 font-medium">miles from restaurant</span>
                             </div>
-                            {!restaurantLocation && !restaurantAddress && (
-                                <p className="text-sm text-red-600 mt-2">⚠️ Restaurant address must be set for radius zones to work. Please update your restaurant address in settings first.</p>
-                            )}
-                            {!restaurantLocation && restaurantAddress && (
-                                <p className="text-sm text-amber-600 mt-2">ℹ️ No GPS coordinates set — your restaurant address will be geocoded automatically when you save.</p>
-                            )}
-                            {restaurantLocation && formData.radius_miles && (
-                                <p className="text-sm text-green-700 mt-2">✓ Centred on restaurant at ({restaurantLocation.lat.toFixed(4)}, {restaurantLocation.lng.toFixed(4)})</p>
+                            {restaurantLocation ? (
+                                <p className="text-sm text-green-700 mt-2">✓ Using restaurant GPS: ({restaurantLocation.lat.toFixed(4)}, {restaurantLocation.lng.toFixed(4)})</p>
+                            ) : (
+                                <div className="mt-3 space-y-2">
+                                    <p className="text-sm text-amber-700 font-medium">⚠️ No GPS coordinates found for your restaurant. Enter them manually:</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <Label htmlFor="manual_lat" className="text-xs">Latitude</Label>
+                                            <Input
+                                                id="manual_lat"
+                                                type="number"
+                                                step="any"
+                                                placeholder="e.g. 51.5074"
+                                                value={formData.manual_lat}
+                                                onChange={(e) => setFormData({ ...formData, manual_lat: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="manual_lng" className="text-xs">Longitude</Label>
+                                            <Input
+                                                id="manual_lng"
+                                                type="number"
+                                                step="any"
+                                                placeholder="e.g. -0.1278"
+                                                value={formData.manual_lng}
+                                                onChange={(e) => setFormData({ ...formData, manual_lng: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500">Find your coordinates at <a href="https://www.latlong.net" target="_blank" rel="noreferrer" className="text-blue-600 underline">latlong.net</a> or Google Maps (right-click your location)</p>
+                                </div>
                             )}
                         </div>
                         )}
