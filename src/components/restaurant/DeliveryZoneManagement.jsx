@@ -250,18 +250,26 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                 zoneData.radius_center = { lat: restaurantLocation.lat, lng: restaurantLocation.lng };
             } else if (restaurantAddress) {
                 // Geocode the restaurant address using Nominatim
-                toast.loading('Locating restaurant address...');
+                const toastId = toast.loading('Locating restaurant address...');
                 let geocoded = null;
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&countrycodes=GB&limit=1`);
-                    const results = await res.json();
-                    if (results?.[0]) {
-                        geocoded = { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+                    // Try with GB restriction first
+                    const res1 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&countrycodes=GB&limit=1`, { headers: { 'Accept-Language': 'en' } });
+                    const r1 = await res1.json();
+                    if (r1?.[0]) {
+                        geocoded = { lat: parseFloat(r1[0].lat), lng: parseFloat(r1[0].lon) };
+                    } else {
+                        // Fallback: try without country restriction
+                        const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&limit=1`, { headers: { 'Accept-Language': 'en' } });
+                        const r2 = await res2.json();
+                        if (r2?.[0]) {
+                            geocoded = { lat: parseFloat(r2[0].lat), lng: parseFloat(r2[0].lon) };
+                        }
                     }
-                } catch (e) { /* ignore */ }
-                toast.dismiss();
+                } catch (e) { console.error('Geocoding failed:', e); }
+                toast.dismiss(toastId);
                 if (!geocoded) {
-                    toast.error('Could not locate restaurant address. Please add GPS coordinates in restaurant settings.');
+                    toast.error('Could not locate restaurant address. Please enter your full postcode in the address (e.g. "123 High St, London, E1 6RF") or add GPS coordinates in restaurant settings.');
                     return;
                 }
                 zoneData.radius_center = geocoded;
