@@ -107,7 +107,7 @@ function GeomanControl({ onDrawn, editingZone, mapKey }) {
     return null;
 }
 
-export default function DeliveryZoneManagement({ restaurantId, restaurantLocation }) {
+export default function DeliveryZoneManagement({ restaurantId, restaurantLocation, restaurantAddress }) {
     const [showDialog, setShowDialog] = useState(false);
     const [editingZone, setEditingZone] = useState(null);
     const [drawnCoordinates, setDrawnCoordinates] = useState(null);
@@ -202,7 +202,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
         setShowDialog(true);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!formData.name || !formData.delivery_fee || !formData.estimated_delivery_time) {
             toast.error('Please fill in all required fields');
             return;
@@ -248,8 +248,25 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             zoneData.radius_miles = miles;
             if (restaurantLocation) {
                 zoneData.radius_center = { lat: restaurantLocation.lat, lng: restaurantLocation.lng };
+            } else if (restaurantAddress) {
+                // Geocode the restaurant address using Nominatim
+                toast.loading('Locating restaurant address...');
+                let geocoded = null;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(restaurantAddress)}&countrycodes=GB&limit=1`);
+                    const results = await res.json();
+                    if (results?.[0]) {
+                        geocoded = { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+                    }
+                } catch (e) { /* ignore */ }
+                toast.dismiss();
+                if (!geocoded) {
+                    toast.error('Could not locate restaurant address. Please add GPS coordinates in restaurant settings.');
+                    return;
+                }
+                zoneData.radius_center = geocoded;
             } else {
-                toast.error('Restaurant location is required for radius zones. Please set the restaurant address first.');
+                toast.error('Restaurant address is required for radius zones. Please set it in restaurant settings first.');
                 return;
             }
         }
@@ -663,8 +680,11 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 />
                                 <span className="text-gray-600 font-medium">miles from restaurant</span>
                             </div>
-                            {!restaurantLocation && (
-                                <p className="text-sm text-red-600 mt-2">⚠️ Restaurant location must be set for radius zones to work. Please update your restaurant address with coordinates.</p>
+                            {!restaurantLocation && !restaurantAddress && (
+                                <p className="text-sm text-red-600 mt-2">⚠️ Restaurant address must be set for radius zones to work. Please update your restaurant address in settings first.</p>
+                            )}
+                            {!restaurantLocation && restaurantAddress && (
+                                <p className="text-sm text-amber-600 mt-2">ℹ️ No GPS coordinates set — your restaurant address will be geocoded automatically when you save.</p>
                             )}
                             {restaurantLocation && formData.radius_miles && (
                                 <p className="text-sm text-green-700 mt-2">✓ Centred on restaurant at ({restaurantLocation.lat.toFixed(4)}, {restaurantLocation.lng.toFixed(4)})</p>

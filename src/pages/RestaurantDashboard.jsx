@@ -468,6 +468,7 @@ function RestaurantDashboardInner() {
                         <DeliveryZoneManagement
                             restaurantId={restaurant.id}
                             restaurantLocation={restaurant.latitude && restaurant.longitude ? { lat: restaurant.latitude, lng: restaurant.longitude } : null}
+                            restaurantAddress={restaurant.address || ''}
                         />
                     </TabsContent>
                     <TabsContent value="integrations"><ThirdPartyIntegrations restaurantId={restaurant.id} /></TabsContent>
