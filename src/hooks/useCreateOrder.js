@@ -103,9 +103,9 @@ export function useCreateOrder({
                 : '';
 
             const fullAddress = orderType === 'delivery'
-                ? (isExistingAddress
-                    ? deliveryAddressString
-                    : `${formData.door_number ? formData.door_number + ', ' : ''}${deliveryAddressString}`)
+                ? (formData.door_number && !deliveryAddressString.startsWith(formData.door_number.trim())
+                    ? `${formData.door_number.trim()}, ${deliveryAddressString}`
+                    : deliveryAddressString)
                 : '';
 
             const orderNumber = orderType === 'collection'
