@@ -246,8 +246,15 @@ Deno.serve(async (req) => {
             } catch (e) {
                 return Response.json({ success: false, message: `Cannot reach ${printer_ip}:${portNum} — ${e.message}` });
             }
+        } else if (action === 'print_raw_base64') {
+            // Used by the local print agent to relay raw ESC/POS bytes
+            const { data_base64 } = body;
+            if (!data_base64) return Response.json({ error: 'data_base64 required' }, { status: 400 });
+            const binaryStr = atob(data_base64);
+            data = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) data[i] = binaryStr.charCodeAt(i);
         } else {
-            return Response.json({ error: 'action must be one of: test, print_receipt, ping' }, { status: 400 });
+            return Response.json({ error: 'action must be one of: test, print_receipt, ping, print_raw_base64' }, { status: 400 });
         }
 
         await sendToNetworkPrinter(printer_ip, printer_port, data);

@@ -1,0 +1,77 @@
+{
+  "name": "PrintJob",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this job belongs to"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "done",
+        "failed"
+      ],
+      "default": "pending",
+      "description": "Current status of the print job"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "print_receipt",
+        "test"
+      ],
+      "default": "print_receipt"
+    },
+    "printer_ip": {
+      "type": "string",
+      "description": "Target printer IP on the local network"
+    },
+    "printer_port": {
+      "type": "string",
+      "default": "9100"
+    },
+    "command_set": {
+      "type": "string",
+      "default": "esc_pos"
+    },
+    "printer_width": {
+      "type": "string",
+      "default": "80mm"
+    },
+    "template": {
+      "type": "string",
+      "default": "standard"
+    },
+    "order_data": {
+      "type": "object",
+      "description": "Full order object for receipt printing"
+    },
+    "restaurant_data": {
+      "type": "object",
+      "description": "Restaurant info for receipt header"
+    },
+    "config": {
+      "type": "object",
+      "description": "Printer config overrides"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error details if job failed"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "ID of the local agent that claimed this job"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "action"
+  ]
+}

@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
 import { printerManager } from '@/components/restaurant/PrinterService';
 import NetworkPrinterManager, { NetworkPrinterStatusBadge } from '@/components/restaurant/NetworkPrinterManager';
+import LocalPrintAgentPanel from '@/components/restaurant/LocalPrintAgentPanel';
 
 // ── Order type channels ────────────────────────────────────────────────────
 const ORDER_CHANNELS = [
@@ -718,10 +719,37 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
         assignedPrinters: printers.filter(p => (p.assigned_channels || []).includes(ch.id)).map(p => p.name || 'Unnamed'),
     }));
 
+    const [activeTab, setActiveTab] = useState('printers');
+
     if (isLoading) return <div className="text-center py-10 text-gray-400">Loading printer settings...</div>;
 
     return (
         <div className="space-y-6">
+            {/* Tab switcher */}
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                {[
+                    { id: 'printers', label: '🖨️ Printers' },
+                    { id: 'agent', label: '⚡ Local Print Agent' },
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            activeTab === tab.id
+                                ? 'bg-white shadow text-gray-900'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {activeTab === 'agent' && (
+                <LocalPrintAgentPanel restaurantId={restaurantId} printers={printers} />
+            )}
+
+            {activeTab === 'printers' && (
             {/* ── Bluetooth persistence notice ─── */}
             <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
                 <WifiOff className="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-600" />
@@ -804,6 +832,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     </Button>
                 </CardContent>
             </Card>
+            )}
         </div>
     );
 }
