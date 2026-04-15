@@ -749,7 +749,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                 <LocalPrintAgentPanel restaurantId={restaurantId} printers={printers} />
             )}
 
-            {activeTab === 'printers' && (
+            {activeTab === 'printers' && (<>
             {/* ── Bluetooth persistence notice ─── */}
             <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
                 <WifiOff className="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-600" />
@@ -832,7 +832,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     </Button>
                 </CardContent>
             </Card>
-            )}
+            </>)}
         </div>
     );
 }
