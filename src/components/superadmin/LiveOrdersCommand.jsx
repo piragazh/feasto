@@ -11,6 +11,7 @@ import {
     Truck, X, Eye, ChevronDown, ChevronUp, AlertCircle, Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatUKTime } from '@/lib/ukDateUtils';
 
 // ── Status config ──────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -78,7 +79,7 @@ function OrderDetailDialog({ order, restaurantName, open, onClose }) {
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                             <p className="text-xs text-gray-400 mb-0.5">Placed At</p>
-                            <p className="font-semibold text-gray-800">{order.created_date ? format(new Date(order.created_date), 'dd MMM, HH:mm') : '—'}</p>
+                            <p className="font-semibold text-gray-800">{order.created_date ? formatUKTime(order.created_date, 'datetime') : '—'}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                             <p className="text-xs text-gray-400 mb-0.5">Total Items</p>
@@ -229,7 +230,7 @@ function OrderRow({ order, restaurantName, onView }) {
             <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1">
                 <div>
                     <p className="font-bold text-gray-900">{order.order_number || `#${order.id?.slice(-6).toUpperCase()}`}</p>
-                    <p className="text-xs text-gray-400">{order.created_date ? format(new Date(order.created_date), 'HH:mm') : ''}</p>
+                    <p className="text-xs text-gray-400">{order.created_date ? formatUKTime(order.created_date, 'time') : ''}</p>
                 </div>
                 <div className="hidden sm:block">
                     <p className="text-gray-600 truncate">{restaurantName || order.restaurant_name}</p>
