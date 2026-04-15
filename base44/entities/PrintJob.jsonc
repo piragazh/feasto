@@ -59,7 +59,7 @@
     },
     "error_message": {
       "type": "string",
-      "description": "Error details if job failed"
+      "description": "Error details if job failed or retried"
     },
     "agent_id": {
       "type": "string",
@@ -68,6 +68,16 @@
     "completed_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of retry attempts so far"
+    },
+    "next_retry_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Earliest time this job can be retried (backoff)"
     }
   },
   "required": [

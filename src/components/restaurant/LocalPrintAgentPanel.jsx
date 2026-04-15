@@ -5,11 +5,69 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     RefreshCw, CheckCircle2, AlertCircle, Clock,
-    Wifi, Trash2, Circle, Play, Square, Zap, Download
+    Wifi, Trash2, Circle, Play, Square, Zap, Download, Usb
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-function JobStatusBadge({ status }) {
+// ── WebUSB helper ──────────────────────────────────────────────────────────
+const usbAvailable = () => typeof navigator !== 'undefined' && !!navigator.usb;
+
+async function connectUsbPrinter(vendorId, productId) {
+    if (!usbAvailable()) throw new Error('WebUSB not supported in this browser');
+    const filters = [];
+    if (vendorId) filters.push({ vendorId: parseInt(vendorId, 16) });
+    const device = await navigator.usb.requestDevice({ filters });
+    await device.open();
+    if (device.configuration === null) await device.selectConfiguration(1);
+    await device.claimInterface(0);
+    return device;
+}
+
+async function sendToUsbPrinter(device, data) {
+    // Find bulk OUT endpoint
+    const iface = device.configuration.interfaces[0];
+    const altIface = iface.alternates[0];
+    const endpoint = altIface.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
+    if (!endpoint) throw new Error('No bulk OUT endpoint found on USB printer');
+
+    const chunkSize = 16384;
+    for (let offset = 0; offset < data.byteLength; offset += chunkSize) {
+        const chunk = data.slice(offset, offset + chunkSize);
+        await device.transferOut(endpoint.endpointNumber, chunk);
+    }
+}
+
+// Build minimal ESC/POS test page bytes
+function buildTestBytes(printerName) {
+    const enc = new TextEncoder();
+    const ESC = 0x1b, GS = 0x1d;
+    const init = new Uint8Array([ESC, 0x40]);
+    const bold = new Uint8Array([ESC, 0x45, 1]);
+    const boldOff = new Uint8Array([ESC, 0x45, 0]);
+    const center = new Uint8Array([ESC, 0x61, 1]);
+    const left = new Uint8Array([ESC, 0x61, 0]);
+    const cut = new Uint8Array([GS, 0x56, 0x41, 0x03]);
+    const lf = new Uint8Array([0x0a]);
+    const title = enc.encode(`${printerName || 'USB Printer'}\n`);
+    const line = enc.encode('================================\n');
+    const msg = enc.encode('USB Connection OK\n');
+    const ts = enc.encode(`${new Date().toLocaleString()}\n`);
+
+    const parts = [init, center, bold, title, boldOff, line, msg, ts, line, left, lf, lf, lf, cut];
+    const total = parts.reduce((n, p) => n + p.byteLength, 0);
+    const out = new Uint8Array(total);
+    let pos = 0;
+    for (const p of parts) { out.set(p, pos); pos += p.byteLength; }
+    return out;
+}
+
+// ── Job status badge ───────────────────────────────────────────────────────
+function JobStatusBadge({ job }) {
+    const { status, retry_count, next_retry_at } = job;
+    if (status === 'pending' && retry_count > 0) {
+        const eta = next_retry_at ? new Date(next_retry_at).toLocaleTimeString() : '...';
+        return <Badge className="bg-amber-100 text-amber-700 gap-1"><RefreshCw className="h-3 w-3" />Retry #{retry_count} @ {eta}</Badge>;
+    }
     if (status === 'pending')    return <Badge className="bg-amber-100 text-amber-700 gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
     if (status === 'processing') return <Badge className="bg-blue-100 text-blue-700 gap-1"><RefreshCw className="h-3 w-3 animate-spin" />Processing</Badge>;
     if (status === 'done')       return <Badge className="bg-green-100 text-green-700 gap-1"><CheckCircle2 className="h-3 w-3" />Done</Badge>;
@@ -26,14 +84,21 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     const [agentRunning, setAgentRunning] = useState(false);
     const [stats, setStats] = useState({ done: 0, failed: 0, polls: 0 });
     const [agentLog, setAgentLog] = useState([]);
+    // USB state
+    const [usbDevice, setUsbDevice] = useState(null);
+    const [connectingUsb, setConnectingUsb] = useState(false);
+    const usbDeviceRef = useRef(null);
+
     const agentRunningRef = useRef(false);
     const pollTimerRef = useRef(null);
     const logRef = useRef(null);
 
     const networkPrinters = printers.filter(p => p.connection_type === 'network' && p.network_ip);
-    // Keep a ref so pollOnce always sees the latest printers without needing to re-create the interval
+    const usbPrinters = printers.filter(p => p.connection_type === 'usb');
     const networkPrintersRef = useRef(networkPrinters);
     useEffect(() => { networkPrintersRef.current = networkPrinters; }, [networkPrinters]);
+
+    const hasActivePrinters = networkPrinters.length > 0 || usbDevice !== null;
 
     const addLog = useCallback((msg, type = 'info') => {
         const entry = { msg, type, time: new Date().toLocaleTimeString() };
@@ -41,6 +106,58 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         setTimeout(() => {
             if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
         }, 50);
+    }, []);
+
+    // ── USB: Connect device ────────────────────────────────────────────────
+    const handleUsbConnect = async (printer) => {
+        setConnectingUsb(true);
+        try {
+            const device = await connectUsbPrinter(printer?.usb_vendor_id, printer?.usb_product_id);
+            usbDeviceRef.current = device;
+            setUsbDevice(device);
+            addLog(`USB printer connected: ${device.productName || 'Unknown'}`, 'ok');
+            toast.success(`USB printer connected: ${device.productName || 'USB Device'}`);
+        } catch (e) {
+            if (e.name !== 'NotFoundError') { // user cancelled — not an error
+                addLog(`USB connect failed: ${e.message}`, 'err');
+                toast.error(`USB connect failed: ${e.message}`);
+            }
+        } finally {
+            setConnectingUsb(false);
+        }
+    };
+
+    const handleUsbDisconnect = async () => {
+        const device = usbDeviceRef.current;
+        if (device) {
+            try { await device.close(); } catch (_) {}
+            usbDeviceRef.current = null;
+            setUsbDevice(null);
+            addLog('USB printer disconnected', 'info');
+        }
+    };
+
+    const handleUsbTestPrint = async () => {
+        const device = usbDeviceRef.current;
+        if (!device) { toast.error('No USB printer connected'); return; }
+        try {
+            const printer = usbPrinters[0];
+            const data = buildTestBytes(printer?.name || 'USB Printer');
+            await sendToUsbPrinter(device, data.buffer);
+            toast.success('USB test page sent!');
+            addLog('USB test page printed', 'ok');
+        } catch (e) {
+            toast.error(`USB test failed: ${e.message}`);
+            addLog(`USB test failed: ${e.message}`, 'err');
+        }
+    };
+
+    // Cleanup USB on unmount
+    useEffect(() => {
+        return () => {
+            const device = usbDeviceRef.current;
+            if (device) { device.close().catch(() => {}); }
+        };
     }, []);
 
     // ── Fetch job list for display ─────────────────────────────────────────
@@ -83,36 +200,67 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         addLog(`Picked up job ${job.id.slice(-6)} (${job.action})`, 'info');
 
         try {
-            // Use ref so we always have fresh printer list (avoids stale closure)
             const currentPrinters = networkPrintersRef.current;
-            const printer = currentPrinters.find(p => p.network_ip === job.printer_ip) || currentPrinters[0];
-            if (!printer) throw new Error('No network printer configured');
 
-            const ip = job.printer_ip || printer.network_ip;
-            const port = job.printer_port || printer.network_port || '9100';
+            // ── Try USB first if job has no IP and a USB device is connected ──
+            const usbDev = usbDeviceRef.current;
+            if (!job.printer_ip && usbDev) {
+                // Build receipt via backend then send raw bytes over USB
+                const printRes = await base44.functions.invoke('networkPrint', {
+                    action: 'build_raw',  // returns base64 bytes without sending
+                    printer_name: 'USB Printer',
+                    command_set: job.command_set || 'esc_pos',
+                    printer_width: job.printer_width || '80mm',
+                    order: job.order_data,
+                    restaurant: job.restaurant_data,
+                    config: {
+                        printer_width: job.printer_width || '80mm',
+                        command_set: job.command_set || 'esc_pos',
+                        template: job.template || 'standard',
+                        show_customer_details: true,
+                        show_order_number: true,
+                        header_text: '',
+                        footer_text: '',
+                        ...(job.config || {}),
+                    },
+                });
 
-            // Send to printer via backend (backend handles TCP)
-            const printRes = await base44.functions.invoke('networkPrint', {
-                action: job.action === 'test' ? 'test' : 'print_receipt',
-                printer_ip: ip,
-                printer_port: port,
-                printer_name: printer.name || 'Printer',
-                command_set: job.command_set || printer.command_set || 'esc_pos',
-                order: job.order_data,
-                restaurant: job.restaurant_data,
-                config: {
-                    printer_width: job.printer_width || printer.printer_width || '80mm',
+                if (printRes.data?.raw_base64) {
+                    const bytes = Uint8Array.from(atob(printRes.data.raw_base64), c => c.charCodeAt(0));
+                    await sendToUsbPrinter(usbDev, bytes.buffer);
+                } else {
+                    throw new Error('Backend did not return raw bytes for USB printing');
+                }
+            } else {
+                // Network path
+                const printer = currentPrinters.find(p => p.network_ip === job.printer_ip) || currentPrinters[0];
+                if (!printer) throw new Error('No network printer configured');
+
+                const ip = job.printer_ip || printer.network_ip;
+                const port = job.printer_port || printer.network_port || '9100';
+
+                const printRes = await base44.functions.invoke('networkPrint', {
+                    action: job.action === 'test' ? 'test' : 'print_receipt',
+                    printer_ip: ip,
+                    printer_port: port,
+                    printer_name: printer.name || 'Printer',
                     command_set: job.command_set || printer.command_set || 'esc_pos',
-                    template: job.template || printer.template || 'standard',
-                    show_customer_details: printer.show_customer_details !== false,
-                    show_order_number: printer.show_order_number !== false,
-                    header_text: printer.header_text || '',
-                    footer_text: printer.footer_text || '',
-                    ...(job.config || {}),
-                },
-            });
+                    order: job.order_data,
+                    restaurant: job.restaurant_data,
+                    config: {
+                        printer_width: job.printer_width || printer.printer_width || '80mm',
+                        command_set: job.command_set || printer.command_set || 'esc_pos',
+                        template: job.template || printer.template || 'standard',
+                        show_customer_details: printer.show_customer_details !== false,
+                        show_order_number: printer.show_order_number !== false,
+                        header_text: printer.header_text || '',
+                        footer_text: printer.footer_text || '',
+                        ...(job.config || {}),
+                    },
+                });
 
-            if (!printRes.data?.success) throw new Error(printRes.data?.error || 'Print failed');
+                if (!printRes.data?.success) throw new Error(printRes.data?.error || 'Print failed');
+            }
 
             await base44.functions.invoke('managePrintQueue', {
                 action: 'complete',
@@ -121,18 +269,27 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             });
 
             setStats(s => ({ ...s, done: s.done + 1 }));
-            addLog(`✓ Printed job ${job.id.slice(-6)} → ${ip}`, 'ok');
+            addLog(`✓ Printed job ${job.id.slice(-6)}`, 'ok');
             fetchJobs();
 
         } catch (e) {
-            await base44.functions.invoke('managePrintQueue', {
+            // Report failure — backend will apply exponential backoff retry
+            const failRes = await base44.functions.invoke('managePrintQueue', {
                 action: 'fail',
                 job_id: job.id,
                 agent_id: AGENT_ID,
                 error_message: e.message,
-            }).catch(() => {});
-            setStats(s => ({ ...s, failed: s.failed + 1 }));
-            addLog(`✗ Job ${job.id.slice(-6)} failed: ${e.message}`, 'err');
+            }).catch(() => ({ data: {} }));
+
+            const willRetry = failRes.data?.retried;
+            const retryCount = failRes.data?.retry_count || 0;
+            setStats(s => ({ ...s, failed: willRetry ? s.failed : s.failed + 1 }));
+            addLog(
+                willRetry
+                    ? `↺ Job ${job.id.slice(-6)} failed (attempt ${retryCount}), will retry: ${e.message}`
+                    : `✗ Job ${job.id.slice(-6)} permanently failed: ${e.message}`,
+                'err'
+            );
             fetchJobs();
         }
     // networkPrinters intentionally excluded — accessed via networkPrintersRef to avoid stale closure
@@ -142,15 +299,15 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     // ── Start / stop agent ─────────────────────────────────────────────────
     const startAgent = useCallback(() => {
         if (agentRunningRef.current) return;
-        if (networkPrinters.length === 0) {
-            toast.error('Configure at least one Network printer first');
+        if (networkPrinters.length === 0 && !usbDeviceRef.current) {
+            toast.error('Configure a Network printer or connect a USB printer first');
             return;
         }
         agentRunningRef.current = true;
         setAgentRunning(true);
         addLog(`Agent started (${AGENT_ID})`, 'ok');
         pollTimerRef.current = setInterval(pollOnce, 3000);
-        pollOnce(); // immediate first poll
+        pollOnce();
     }, [networkPrinters, pollOnce, addLog]);
 
     const stopAgent = useCallback(() => {
@@ -160,7 +317,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         addLog('Agent stopped', 'info');
     }, [addLog]);
 
-    // ── Auto-start when network printers become available ─────────────────
+    // ── Auto-start when printers become available ─────────────────────────
     const hasAutoStarted = useRef(false);
     useEffect(() => {
         if (networkPrinters.length > 0 && !hasAutoStarted.current && !agentRunningRef.current) {
@@ -168,13 +325,12 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             startAgent();
         }
         return () => {
-            // Reset on unmount so auto-start works again if component remounts (e.g. tab switch)
             hasAutoStarted.current = false;
             agentRunningRef.current = false;
             clearInterval(pollTimerRef.current);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [networkPrinters.length]); // trigger when printer count changes (0→N or N→0)
+    }, [networkPrinters.length]);
 
     // ── Job list refresh ───────────────────────────────────────────────────
     useEffect(() => {
@@ -221,9 +377,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     const handleDownload = () => {
         const appBaseUrl = window.location.origin;
         const functionBaseUrl = appBaseUrl.includes('localhost') ? 'http://localhost:3001' : appBaseUrl;
-        const printersJson = JSON.stringify(networkPrinters);
-
-        const html = generateAgentHtml({ restaurantId, functionBaseUrl, printers: networkPrinters, printersJson });
+        const html = generateAgentHtml({ restaurantId, functionBaseUrl, printers: networkPrinters });
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -236,6 +390,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 
     const pendingCount = jobs.filter(j => j.status === 'pending').length;
     const processingCount = jobs.filter(j => j.status === 'processing').length;
+    const retryingCount = jobs.filter(j => j.status === 'pending' && (j.retry_count || 0) > 0).length;
 
     return (
         <div className="space-y-4">
@@ -256,7 +411,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             {agentRunning ? (
                                 <Badge className="bg-green-100 text-green-700 gap-1">
                                     <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse inline-block" />
@@ -283,11 +438,12 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-3">
                         {[
-                            { label: 'Printed', value: stats.done, color: 'text-green-600' },
-                            { label: 'Failed', value: stats.failed, color: 'text-red-600' },
-                            { label: 'Polls', value: stats.polls, color: 'text-blue-600' },
+                            { label: 'Printed',  value: stats.done,   color: 'text-green-600' },
+                            { label: 'Failed',   value: stats.failed, color: 'text-red-600'   },
+                            { label: 'Retrying', value: retryingCount, color: 'text-amber-600' },
+                            { label: 'Polls',    value: stats.polls,  color: 'text-blue-600'  },
                         ].map(s => (
                             <div key={s.label} className="text-center bg-white rounded-lg p-3 border">
                                 <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
@@ -296,16 +452,69 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                         ))}
                     </div>
 
-                    {networkPrinters.length === 0 && (
+                    {!hasActivePrinters && (
                         <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 text-xs text-amber-800">
                             <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                            <span>No Network printers configured. Add a printer with connection type "Network" and save settings first.</span>
+                            <span>No printers available. Add a Network printer or connect a USB printer below.</span>
                         </div>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Configured printers */}
+            {/* USB Printer Section */}
+            {usbAvailable() && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                            <Usb className="h-4 w-4 text-gray-400" />
+                            USB Printer (WebUSB)
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                            Connect a USB thermal printer directly from this browser tab. Requires Chrome/Edge on desktop.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {usbDevice ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-medium text-green-800">{usbDevice.productName || 'USB Printer'} — Connected</p>
+                                        <p className="text-xs text-green-600">VID: {usbDevice.vendorId?.toString(16).padStart(4, '0')} · PID: {usbDevice.productId?.toString(16).padStart(4, '0')}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={handleUsbTestPrint} className="gap-1.5">
+                                        🧪 USB Test Print
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={handleUsbDisconnect} className="gap-1.5 text-red-600 hover:text-red-700">
+                                        Disconnect
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-xs text-gray-500">
+                                    Click below to select a USB printer. Make sure the printer is plugged in and turned on.
+                                    {usbPrinters.length > 0 && ` ${usbPrinters.length} USB printer(s) configured in settings.`}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUsbConnect(usbPrinters[0])}
+                                    disabled={connectingUsb}
+                                    className="gap-1.5"
+                                >
+                                    <Usb className="h-3.5 w-3.5" />
+                                    {connectingUsb ? 'Connecting...' : 'Connect USB Printer'}
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Network Printers */}
             {networkPrinters.length > 0 && (
                 <Card>
                     <CardHeader className="pb-2">
@@ -340,7 +549,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                         >
                             {agentLog.map((entry, i) => (
                                 <p key={i} className={
-                                    entry.type === 'ok' ? 'text-green-400' :
+                                    entry.type === 'ok'  ? 'text-green-400' :
                                     entry.type === 'err' ? 'text-red-400' :
                                     'text-blue-300'
                                 }>
@@ -395,13 +604,17 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                                             )}
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            {job.printer_ip}:{job.printer_port || '9100'} · {new Date(job.created_date).toLocaleTimeString()}
+                                            {job.printer_ip ? `${job.printer_ip}:${job.printer_port || '9100'}` : 'USB'}
+                                            {' · '}{new Date(job.created_date).toLocaleTimeString()}
+                                            {(job.retry_count || 0) > 0 && (
+                                                <span className="ml-1 text-amber-600">· {job.retry_count} retries</span>
+                                            )}
                                         </p>
                                         {job.error_message && (
                                             <p className="text-xs text-red-600 mt-0.5">{job.error_message}</p>
                                         )}
                                     </div>
-                                    <JobStatusBadge status={job.status} />
+                                    <JobStatusBadge job={job} />
                                 </div>
                             ))}
                         </div>
@@ -461,6 +674,7 @@ function generateAgentHtml({ restaurantId, functionBaseUrl, printers }) {
   <div class="row">
     <div class="stat"><div class="num" id="stat-done">0</div><div class="lbl">Printed</div></div>
     <div class="stat"><div class="num" id="stat-fail">0</div><div class="lbl">Failed</div></div>
+    <div class="stat"><div class="num" id="stat-retry">0</div><div class="lbl">Retrying</div></div>
     <div class="stat"><div class="num" id="stat-poll">0</div><div class="lbl">Polls</div></div>
   </div>
 </div>
@@ -470,12 +684,12 @@ const RESTAURANT_ID=${JSON.stringify(restaurantId)};
 const FUNCTION_BASE=${JSON.stringify(functionBaseUrl)};
 const AGENT_ID='pc-agent-'+Math.random().toString(36).slice(2,10);
 const PRINTERS=${printersJson};
-let polling=false,pollTimer=null,statDone=0,statFail=0,statPoll=0;
+let polling=false,pollTimer=null,statDone=0,statFail=0,statRetry=0,statPoll=0;
 function log(msg,type=''){const d=document.getElementById('log');const p=document.createElement('p');p.className=type;p.textContent='['+new Date().toLocaleTimeString()+'] '+msg;d.appendChild(p);d.scrollTop=d.scrollHeight;if(d.children.length>200)d.removeChild(d.firstChild);}
-function upd(){document.getElementById('stat-done').textContent=statDone;document.getElementById('stat-fail').textContent=statFail;document.getElementById('stat-poll').textContent=statPoll;}
+function upd(){document.getElementById('stat-done').textContent=statDone;document.getElementById('stat-fail').textContent=statFail;document.getElementById('stat-retry').textContent=statRetry;document.getElementById('stat-poll').textContent=statPoll;}
 async function api(payload){const r=await fetch(FUNCTION_BASE+'/api/functions/managePrintQueue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function printViaBackend(job){const printer=PRINTERS.find(p=>p.network_ip===job.printer_ip)||PRINTERS[0];if(!printer)throw new Error('No printer');const r=await fetch(FUNCTION_BASE+'/api/functions/networkPrint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:job.action==='test'?'test':'print_receipt',printer_ip:job.printer_ip||printer.network_ip,printer_port:job.printer_port||printer.network_port||'9100',printer_name:printer.name||'Printer',command_set:job.command_set||printer.command_set||'esc_pos',order:job.order_data,restaurant:job.restaurant_data,config:{printer_width:job.printer_width||printer.printer_width||'80mm',command_set:job.command_set||printer.command_set||'esc_pos',template:job.template||printer.template||'standard',show_customer_details:true,header_text:printer.header_text||'',footer_text:printer.footer_text||'',...(job.config||{})}})});const d=await r.json();if(!d.success)throw new Error(d.error||'Print failed');}
-async function pollOnce(){if(!polling)return;statPoll++;upd();try{const res=await api({action:'poll',restaurant_id:RESTAURANT_ID,agent_id:AGENT_ID});const job=res.job;if(!job)return;log('Job '+job.id.slice(-6)+' ('+job.action+')','info');try{await printViaBackend(job);await api({action:'complete',job_id:job.id,agent_id:AGENT_ID});statDone++;log('✓ Printed','ok');}catch(e){await api({action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>{});statFail++;log('✗ '+e.message,'err');}upd();}catch(e){log('Poll error: '+e.message,'err');}}
+async function pollOnce(){if(!polling)return;statPoll++;upd();try{const res=await api({action:'poll',restaurant_id:RESTAURANT_ID,agent_id:AGENT_ID});const job=res.job;if(!job)return;log('Job '+job.id.slice(-6)+' ('+job.action+')','info');try{await printViaBackend(job);await api({action:'complete',job_id:job.id,agent_id:AGENT_ID});statDone++;log('✓ Printed','ok');}catch(e){const fr=await api({action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>({}));if(fr.retried){statRetry++;log('↺ Retry '+fr.retry_count+': '+e.message,'err');}else{statFail++;log('✗ '+e.message,'err');}}}catch(e){log('Poll error: '+e.message,'err');}upd();}
 function startAgent(){if(polling)return;polling=true;document.getElementById('status-badge').textContent='🟢 Running';document.getElementById('status-badge').className='badge badge-green';document.getElementById('btn-start').disabled=true;document.getElementById('btn-stop').disabled=false;log('Agent started','ok');pollTimer=setInterval(pollOnce,3000);pollOnce();}
 function stopAgent(){polling=false;clearInterval(pollTimer);document.getElementById('status-badge').textContent='⏸ Stopped';document.getElementById('status-badge').className='badge badge-gray';document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;log('Stopped');}
 window.onload=()=>{log('Ready. Click Start.','info');startAgent();};
