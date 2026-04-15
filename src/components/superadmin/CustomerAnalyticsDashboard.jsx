@@ -1,55 +1,84 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-    BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+    BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import {
     Users, TrendingUp, ShoppingBag, DollarSign,
-    Crown, UserCheck, UserX, Repeat
+    Crown, UserCheck, Repeat, Star, ArrowUp, ArrowDown, Package
 } from 'lucide-react';
-import { format, subMonths, startOfMonth, parseISO, isAfter, isBefore } from 'date-fns';
+import { format, subMonths, startOfMonth, isBefore } from 'date-fns';
 
-const COLORS = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
+const PALETTE = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
 
-// ── Stat card ──────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, icon: Icon, color = 'orange' }) {
-    const colorMap = {
-        orange: 'bg-orange-50 text-orange-600',
-        blue: 'bg-blue-50 text-blue-600',
-        green: 'bg-green-50 text-green-600',
-        purple: 'bg-purple-50 text-purple-600',
-    };
+const SEGMENT_CONFIG = {
+    Inactive: { color: '#94a3b8', bg: 'bg-slate-100', text: 'text-slate-600' },
+    New:      { color: '#3b82f6', bg: 'bg-blue-100',  text: 'text-blue-700'  },
+    Casual:   { color: '#f59e0b', bg: 'bg-amber-100', text: 'text-amber-700' },
+    Regular:  { color: '#10b981', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+    VIP:      { color: '#f97316', bg: 'bg-orange-100', text: 'text-orange-700' },
+};
+
+function segmentFor(orders) {
+    if (orders === 0) return 'Inactive';
+    if (orders === 1) return 'New';
+    if (orders <= 3)  return 'Casual';
+    if (orders <= 8)  return 'Regular';
+    return 'VIP';
+}
+
+// ── KPI Card ───────────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, icon: Icon, accent = '#f97316', trend }) {
     return (
-        <Card>
-            <CardContent className="p-5 flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
-                    <Icon className="h-6 w-6" />
-                </div>
-                <div>
-                    <p className="text-2xl font-bold text-gray-900">{value}</p>
-                    <p className="text-sm font-medium text-gray-700">{label}</p>
-                    {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        <Card className="relative overflow-hidden border-0 shadow-sm">
+            <div className="absolute inset-0 opacity-5 rounded-xl" style={{ background: accent }} />
+            <CardContent className="p-5 relative">
+                <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">{label}</p>
+                        <p className="text-3xl font-bold text-slate-900 leading-none">{value}</p>
+                        {sub && <p className="text-xs text-slate-400 mt-1.5">{sub}</p>}
+                        {trend !== undefined && (
+                            <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {trend >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                                {Math.abs(trend)}% vs last month
+                            </div>
+                        )}
+                    </div>
+                    <div className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ml-3" style={{ background: accent + '18' }}>
+                        <Icon className="h-5 w-5" style={{ color: accent }} />
+                    </div>
                 </div>
             </CardContent>
         </Card>
     );
 }
 
-// ── Segment badge ──────────────────────────────────────────────────────────
-function segmentLabel(orders) {
-    if (orders === 0) return { label: 'Inactive', color: 'bg-gray-100 text-gray-500' };
-    if (orders === 1) return { label: 'New', color: 'bg-blue-100 text-blue-600' };
-    if (orders <= 3) return { label: 'Casual', color: 'bg-yellow-100 text-yellow-700' };
-    if (orders <= 8) return { label: 'Regular', color: 'bg-green-100 text-green-700' };
-    return { label: 'VIP', color: 'bg-orange-100 text-orange-700' };
+// ── Custom tooltip ─────────────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label, prefix = '', suffix = '' }) {
+    if (!active || !payload?.length) return null;
+    return (
+        <div className="bg-white border border-slate-200 rounded-lg shadow-lg px-3 py-2 text-xs">
+            <p className="font-semibold text-slate-700 mb-1">{label}</p>
+            {payload.map((p, i) => (
+                <div key={i} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.fill }} />
+                    <span className="text-slate-500">{p.name}:</span>
+                    <span className="font-bold text-slate-800">{prefix}{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}{suffix}</span>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function CustomerAnalyticsDashboard() {
+    const [activeSegment, setActiveSegment] = useState(null);
+
     const { data: customers = [], isLoading: loadingCustomers } = useQuery({
         queryKey: ['analytics-customers'],
         queryFn: () => base44.entities.Customer.list('-created_date', 500),
@@ -70,40 +99,51 @@ export default function CustomerAnalyticsDashboard() {
 
     const isLoading = loadingCustomers || loadingOrders;
 
-    // ── Derived metrics ────────────────────────────────────────────────────
     const metrics = useMemo(() => {
         if (!customers.length) return null;
+
+        // Spend lookup by phone / email
+        const spendByPhone = {};
+        const spendByEmail = {};
+        const orderCountByPhone = {};
+        const orderCountByEmail = {};
+        const revenueByMonth = {};
+
+        for (const o of orders) {
+            if (o.customer_phone) {
+                spendByPhone[o.customer_phone] = (spendByPhone[o.customer_phone] || 0) + (o.total || 0);
+                orderCountByPhone[o.customer_phone] = (orderCountByPhone[o.customer_phone] || 0) + 1;
+            }
+            if (o.customer_email) {
+                spendByEmail[o.customer_email] = (spendByEmail[o.customer_email] || 0) + (o.total || 0);
+                orderCountByEmail[o.customer_email] = (orderCountByEmail[o.customer_email] || 0) + 1;
+            }
+            // Monthly revenue
+            if (o.created_date) {
+                const mk = format(new Date(o.created_date), 'MMM yy');
+                revenueByMonth[mk] = (revenueByMonth[mk] || 0) + (o.total || 0);
+            }
+        }
+
+        const ltvValues = customers.map(c =>
+            Math.max(spendByPhone[c.phone_number] || 0, spendByEmail[c.email] || 0)
+        );
+        const totalLTV = ltvValues.reduce((s, v) => s + v, 0);
+        const avgLTV = customers.length ? totalLTV / customers.length : 0;
 
         const totalOrders = customers.reduce((s, c) => s + (c.total_orders || 0), 0);
         const avgOrderFreq = customers.length ? (totalOrders / customers.length).toFixed(1) : 0;
 
-        // LTV = total order value from orders data per customer email/phone
-        const spendByPhone = {};
-        const spendByEmail = {};
-        for (const o of orders) {
-            if (o.customer_phone) spendByPhone[o.customer_phone] = (spendByPhone[o.customer_phone] || 0) + (o.total || 0);
-            if (o.customer_email) spendByEmail[o.customer_email] = (spendByEmail[o.customer_email] || 0) + (o.total || 0);
-        }
-        const ltvValues = customers.map(c => {
-            const v = (spendByPhone[c.phone_number] || 0) + (spendByEmail[c.email] || 0);
-            return Math.max(spendByPhone[c.phone_number] || 0, spendByEmail[c.email] || 0, v / 2);
-        });
-        const totalLTV = ltvValues.reduce((s, v) => s + v, 0);
-        const avgLTV = customers.length ? totalLTV / customers.length : 0;
-
         // Segments
         const segments = { Inactive: 0, New: 0, Casual: 0, Regular: 0, VIP: 0 };
-        for (const c of customers) {
-            const { label } = segmentLabel(c.total_orders || 0);
-            segments[label]++;
-        }
+        for (const c of customers) segments[segmentFor(c.total_orders || 0)]++;
         const segmentData = Object.entries(segments).map(([name, value]) => ({ name, value }));
 
-        // Acquisition by month (last 6 months)
+        // Acquisition + revenue trend (last 6 months)
         const now = new Date();
-        const acquisitionData = Array.from({ length: 6 }, (_, i) => {
+        const trendData = Array.from({ length: 6 }, (_, i) => {
             const month = subMonths(now, 5 - i);
-            const label = format(month, 'MMM yy');
+            const mk = format(month, 'MMM yy');
             const start = startOfMonth(month);
             const end = startOfMonth(subMonths(month, -1));
             const count = customers.filter(c => {
@@ -111,42 +151,40 @@ export default function CustomerAnalyticsDashboard() {
                 const d = new Date(c.created_date);
                 return !isBefore(d, start) && isBefore(d, end);
             }).length;
-            return { month: label, customers: count };
+            return { month: mk, customers: count, revenue: Math.round(revenueByMonth[mk] || 0) };
         });
 
         // Order frequency distribution
-        const freqBuckets = { '0': 0, '1': 0, '2-3': 0, '4-8': 0, '9+': 0 };
+        const freqBuckets = { '0': 0, '1': 0, '2–3': 0, '4–8': 0, '9+': 0 };
         for (const c of customers) {
             const n = c.total_orders || 0;
             if (n === 0) freqBuckets['0']++;
             else if (n === 1) freqBuckets['1']++;
-            else if (n <= 3) freqBuckets['2-3']++;
-            else if (n <= 8) freqBuckets['4-8']++;
+            else if (n <= 3) freqBuckets['2–3']++;
+            else if (n <= 8) freqBuckets['4–8']++;
             else freqBuckets['9+']++;
         }
         const freqData = Object.entries(freqBuckets).map(([label, count]) => ({ label, count }));
 
-        // Popular items across orders (from order items)
+        // Popular items
         const itemCount = {};
         for (const o of orders) {
             for (const item of (o.items || [])) {
-                if (item.name) {
-                    itemCount[item.name] = (itemCount[item.name] || 0) + (item.quantity || 1);
-                }
+                if (item.name) itemCount[item.name] = (itemCount[item.name] || 0) + (item.quantity || 1);
             }
         }
         const popularItems = Object.entries(itemCount)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 8)
-            .map(([name, count]) => ({ name: name.length > 18 ? name.slice(0, 18) + '…' : name, count }));
+            .slice(0, 10)
+            .map(([name, count]) => ({ name: name.length > 22 ? name.slice(0, 22) + '…' : name, count }));
 
-        // Per-restaurant breakdown
+        // Per-restaurant
         const restaurantMap = {};
         for (const r of restaurants) restaurantMap[r.id] = r.name;
         const perRestaurant = {};
         for (const c of customers) {
             const rName = restaurantMap[c.restaurant_id] || 'Unknown';
-            if (!perRestaurant[rName]) perRestaurant[rName] = { customers: 0, orders: 0 };
+            if (!perRestaurant[rName]) perRestaurant[rName] = { customers: 0, orders: 0, spend: 0 };
             perRestaurant[rName].customers++;
             perRestaurant[rName].orders += (c.total_orders || 0);
         }
@@ -155,19 +193,25 @@ export default function CustomerAnalyticsDashboard() {
             .slice(0, 8)
             .map(([name, d]) => ({ name: name.length > 14 ? name.slice(0, 14) + '…' : name, ...d }));
 
-        // LTV segments (top 10)
+        // Top LTV
         const topLTV = customers
-            .map((c, i) => ({ name: c.full_name, ltv: ltvValues[i] }))
+            .map((c, i) => ({ name: c.full_name || c.email || c.phone_number || 'Unknown', ltv: ltvValues[i], orders: c.total_orders || 0, segment: segmentFor(c.total_orders || 0) }))
+            .filter(c => c.ltv > 0)
             .sort((a, b) => b.ltv - a.ltv)
             .slice(0, 10);
+
+        // Retention: customers with >1 order
+        const retained = customers.filter(c => (c.total_orders || 0) > 1).length;
+        const retentionRate = customers.length ? ((retained / customers.length) * 100).toFixed(1) : 0;
 
         return {
             totalCustomers: customers.length,
             avgOrderFreq,
             avgLTV: avgLTV.toFixed(2),
             totalLTV: totalLTV.toFixed(0),
+            retentionRate,
             segmentData,
-            acquisitionData,
+            trendData,
             freqData,
             popularItems,
             restaurantData,
@@ -177,10 +221,10 @@ export default function CustomerAnalyticsDashboard() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center py-24 text-gray-400">
+            <div className="flex items-center justify-center py-32">
                 <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-sm">Loading analytics...</p>
+                    <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-sm text-slate-400 font-medium">Building analytics…</p>
                 </div>
             </div>
         );
@@ -188,68 +232,185 @@ export default function CustomerAnalyticsDashboard() {
 
     if (!metrics) {
         return (
-            <div className="text-center py-24 text-gray-400">
-                <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>No customer data available yet.</p>
+            <div className="text-center py-32">
+                <div className="h-16 w-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-slate-300" />
+                </div>
+                <p className="text-slate-500 font-medium">No customer data available yet.</p>
+                <p className="text-sm text-slate-400 mt-1">Data will appear once customers start placing orders.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-6">
             {/* Header */}
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">Customer Analytics</h2>
-                <p className="text-sm text-gray-500 mt-1">Insights across all restaurants · Last 500 customers & orders</p>
+            <div className="flex items-end justify-between flex-wrap gap-3">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Customer Analytics</h2>
+                    <p className="text-sm text-slate-500 mt-1">Platform-wide insights · based on latest 500 customers & orders</p>
+                </div>
+                <Badge variant="outline" className="text-xs font-medium px-3 py-1 border-slate-200 text-slate-500">
+                    {metrics.totalCustomers.toLocaleString()} customers tracked
+                </Badge>
             </div>
 
             {/* KPI row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Customers" value={metrics.totalCustomers.toLocaleString()} icon={Users} color="blue" sub="across all restaurants" />
-                <StatCard label="Avg Order Frequency" value={metrics.avgOrderFreq} icon={Repeat} color="orange" sub="orders per customer" />
-                <StatCard label="Avg Lifetime Value" value={`£${metrics.avgLTV}`} icon={DollarSign} color="green" sub="per customer" />
-                <StatCard label="Total Platform LTV" value={`£${Number(metrics.totalLTV).toLocaleString()}`} icon={TrendingUp} color="purple" sub="estimated" />
+            <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+                <KpiCard label="Total Customers" value={metrics.totalCustomers.toLocaleString()} icon={Users} accent="#3b82f6" sub="across all restaurants" />
+                <KpiCard label="Retention Rate" value={`${metrics.retentionRate}%`} icon={Repeat} accent="#10b981" sub="customers with 2+ orders" />
+                <KpiCard label="Avg Order Frequency" value={metrics.avgOrderFreq} icon={ShoppingBag} accent="#f97316" sub="orders per customer" />
+                <KpiCard label="Avg Lifetime Value" value={`£${metrics.avgLTV}`} icon={DollarSign} accent="#8b5cf6" sub="per customer" />
+                <KpiCard label="Platform LTV" value={`£${Number(metrics.totalLTV).toLocaleString()}`} icon={TrendingUp} accent="#f59e0b" sub="total estimated" />
             </div>
 
-            {/* Row 1: Acquisition + Frequency */}
+            {/* Trend row: Acquisition + Revenue */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
+                <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
+                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                             <UserCheck className="h-4 w-4 text-blue-500" />
-                            Customer Acquisition (Last 6 Months)
+                            New Customer Acquisition
                         </CardTitle>
+                        <CardDescription className="text-xs">Last 6 months</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={metrics.acquisitionData} barSize={28}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                                <Tooltip formatter={(v) => [v, 'New Customers']} />
-                                <Bar dataKey="customers" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                            </BarChart>
+                            <AreaChart data={metrics.trendData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+                                <defs>
+                                    <linearGradient id="acqGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
+                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <Tooltip content={<ChartTooltip />} />
+                                <Area dataKey="customers" name="New Customers" stroke="#3b82f6" strokeWidth={2} fill="url(#acqGrad)" dot={{ r: 3, fill: '#3b82f6' }} />
+                            </AreaChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <ShoppingBag className="h-4 w-4 text-orange-500" />
-                            Order Frequency Distribution
+                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-emerald-500" />
+                            Revenue Trend
                         </CardTitle>
+                        <CardDescription className="text-xs">Last 6 months (from sampled orders)</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={metrics.freqData} barSize={32}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                                <XAxis dataKey="label" tick={{ fontSize: 11 }} label={{ value: 'Orders', position: 'insideBottom', offset: -2, fontSize: 10 }} />
-                                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                                <Tooltip formatter={(v) => [v, 'Customers']} />
-                                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                            <AreaChart data={metrics.trendData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+                                <defs>
+                                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.2} />
+                                        <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `£${v}`} />
+                                <Tooltip content={<ChartTooltip prefix="£" />} />
+                                <Area dataKey="revenue" name="Revenue" stroke="#10b981" strokeWidth={2} fill="url(#revGrad)" dot={{ r: 3, fill: '#10b981' }} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Segments + Frequency */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Segments */}
+                <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <Users className="h-4 w-4 text-purple-500" />
+                            Customer Segments
+                        </CardTitle>
+                        <CardDescription className="text-xs">Classified by order count</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-4">
+                            <div className="w-40 h-40 flex-shrink-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={metrics.segmentData}
+                                            cx="50%" cy="50%"
+                                            innerRadius={44} outerRadius={68}
+                                            dataKey="value"
+                                            paddingAngle={3}
+                                            onClick={(d) => setActiveSegment(activeSegment === d.name ? null : d.name)}
+                                        >
+                                            {metrics.segmentData.map((seg) => (
+                                                <Cell
+                                                    key={seg.name}
+                                                    fill={SEGMENT_CONFIG[seg.name]?.color || '#94a3b8'}
+                                                    opacity={activeSegment && activeSegment !== seg.name ? 0.35 : 1}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(v, name) => [v, name]} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                {metrics.segmentData.map((seg) => {
+                                    const cfg = SEGMENT_CONFIG[seg.name] || {};
+                                    const pct = metrics.totalCustomers ? ((seg.value / metrics.totalCustomers) * 100).toFixed(0) : 0;
+                                    return (
+                                        <button
+                                            key={seg.name}
+                                            onClick={() => setActiveSegment(activeSegment === seg.name ? null : seg.name)}
+                                            className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-all ${
+                                                activeSegment === seg.name ? `${cfg.bg} ring-1 ring-inset` : 'hover:bg-slate-50'
+                                            }`}
+                                            style={activeSegment === seg.name ? { ringColor: cfg.color } : {}}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
+                                                <span className={`font-medium ${cfg.text || 'text-slate-600'}`}>{seg.name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-slate-400">{pct}%</span>
+                                                <span className="font-bold text-slate-800 text-sm">{seg.value.toLocaleString()}</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Frequency */}
+                <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <ShoppingBag className="h-4 w-4 text-orange-500" />
+                            Order Frequency Distribution
+                        </CardTitle>
+                        <CardDescription className="text-xs">How often customers order</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={metrics.freqData} margin={{ top: 4, right: 4, bottom: 12, left: -10 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis
+                                    dataKey="label"
+                                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                                    axisLine={false} tickLine={false}
+                                    label={{ value: 'Orders placed', position: 'insideBottom', offset: -8, fontSize: 10, fill: '#94a3b8' }}
+                                />
+                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <Tooltip content={<ChartTooltip />} />
+                                <Bar dataKey="count" name="Customers" radius={[5, 5, 0, 0]}>
                                     {metrics.freqData.map((_, i) => (
-                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -258,128 +419,113 @@ export default function CustomerAnalyticsDashboard() {
                 </Card>
             </div>
 
-            {/* Row 2: Segments + Popular Items */}
+            {/* Popular items + Restaurant breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
+                <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Users className="h-4 w-4 text-purple-500" />
-                            Customer Segments
+                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <Package className="h-4 w-4 text-orange-500" />
+                            Most Ordered Items
                         </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center gap-6">
-                        <ResponsiveContainer width="50%" height={200}>
-                            <PieChart>
-                                <Pie
-                                    data={metrics.segmentData}
-                                    cx="50%" cy="50%"
-                                    innerRadius={50} outerRadius={80}
-                                    dataKey="value"
-                                    paddingAngle={3}
-                                >
-                                    {metrics.segmentData.map((_, i) => (
-                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(v, name) => [v, name]} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="flex-1 space-y-2">
-                            {metrics.segmentData.map((seg, i) => (
-                                <div key={seg.name} className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                                        <span className="text-gray-600">{seg.name}</span>
-                                    </div>
-                                    <span className="font-semibold text-gray-800">{seg.value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Crown className="h-4 w-4 text-yellow-500" />
-                            Most Ordered Items (Platform-wide)
-                        </CardTitle>
+                        <CardDescription className="text-xs">Platform-wide from sampled orders</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {metrics.popularItems.length === 0 ? (
-                            <p className="text-sm text-gray-400 py-8 text-center">No item data from recent orders.</p>
+                            <p className="text-sm text-slate-400 py-10 text-center">No item data from recent orders.</p>
                         ) : (
-                            <ResponsiveContainer width="100%" height={200}>
-                                <BarChart data={metrics.popularItems} layout="vertical" barSize={14}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                                    <XAxis type="number" tick={{ fontSize: 10 }} />
-                                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-                                    <Tooltip formatter={(v) => [v, 'Qty Ordered']} />
-                                    <Bar dataKey="count" fill="#f97316" radius={[0, 4, 4, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <div className="space-y-2">
+                                {metrics.popularItems.map((item, i) => {
+                                    const maxCount = metrics.popularItems[0]?.count || 1;
+                                    const pct = (item.count / maxCount) * 100;
+                                    return (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <span className="text-xs text-slate-400 w-4 text-right flex-shrink-0 font-mono">{i + 1}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-xs font-medium text-slate-700 truncate">{item.name}</span>
+                                                    <span className="text-xs font-bold text-slate-900 ml-2 flex-shrink-0">{item.count.toLocaleString()}</span>
+                                                </div>
+                                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all"
+                                                        style={{ width: `${pct}%`, background: PALETTE[i % PALETTE.length] }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </CardContent>
                 </Card>
-            </div>
 
-            {/* Row 3: Per-restaurant + Top LTV */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
+                <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Customers by Restaurant</CardTitle>
+                        <CardTitle className="text-sm font-semibold text-slate-700">Customers by Restaurant</CardTitle>
+                        <CardDescription className="text-xs">Top 8 restaurants</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={metrics.restaurantData} barSize={20}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                                <Tooltip />
-                                <Legend wrapperStyle={{ fontSize: 11 }} />
-                                <Bar dataKey="customers" fill="#3b82f6" radius={[3, 3, 0, 0]} name="Customers" />
-                                <Bar dataKey="orders" fill="#10b981" radius={[3, 3, 0, 0]} name="Orders" />
+                        <ResponsiveContainer width="100%" height={260}>
+                            <BarChart data={metrics.restaurantData} margin={{ top: 4, right: 4, bottom: 20, left: -10 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" />
+                                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <Tooltip content={<ChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                                <Bar dataKey="customers" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Customers" maxBarSize={24} />
+                                <Bar dataKey="orders" fill="#10b981" radius={[4, 4, 0, 0]} name="Orders" maxBarSize={24} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
+            </div>
 
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Crown className="h-4 w-4 text-orange-500" />
-                            Top 10 Customers by Lifetime Value
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
+            {/* Top LTV customers */}
+            <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <Crown className="h-4 w-4 text-amber-500" />
+                        Top 10 Customers by Lifetime Value
+                    </CardTitle>
+                    <CardDescription className="text-xs">Highest spenders across the platform</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {metrics.topLTV.length === 0 ? (
+                        <p className="text-sm text-slate-400 text-center py-6">No spend data available yet.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {metrics.topLTV.map((c, i) => {
                                 const pct = metrics.topLTV[0]?.ltv ? (c.ltv / metrics.topLTV[0].ltv) * 100 : 0;
+                                const cfg = SEGMENT_CONFIG[c.segment] || {};
                                 return (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <span className="text-xs text-gray-400 w-4 text-right flex-shrink-0">{i + 1}</span>
+                                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                                        <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-500">
+                                            {i + 1}
+                                        </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-0.5">
-                                                <span className="text-xs font-medium text-gray-700 truncate">{c.name}</span>
-                                                <span className="text-xs font-bold text-gray-900 ml-2 flex-shrink-0">£{c.ltv.toFixed(0)}</span>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs font-semibold text-slate-800 truncate">{c.name}</span>
+                                                <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${cfg.bg} ${cfg.text}`}>{c.segment}</span>
+                                                    <span className="text-xs font-bold text-slate-900">£{c.ltv.toFixed(0)}</span>
+                                                </div>
                                             </div>
-                                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-orange-400 rounded-full"
-                                                    style={{ width: `${pct}%` }}
+                                                    className="h-full rounded-full"
+                                                    style={{ width: `${pct}%`, background: i === 0 ? '#f59e0b' : '#f97316' }}
                                                 />
                                             </div>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">{c.orders} order{c.orders !== 1 ? 's' : ''}</p>
                                         </div>
                                     </div>
                                 );
                             })}
-                            {metrics.topLTV.length === 0 && (
-                                <p className="text-sm text-gray-400 text-center py-4">No spend data available.</p>
-                            )}
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }
