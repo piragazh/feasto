@@ -262,11 +262,18 @@ export default function LiveOrdersCommand() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
 
-    // Today's date range
+    // Today's date range — midnight in UK timezone (handles BST/GMT automatically)
     const todayStart = useMemo(() => {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        return d;
+        const now = new Date();
+        // Get YYYY-MM-DD in UK timezone
+        const ukDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+        // Parse that date as a UTC instant representing London midnight
+        // by finding what UTC time corresponds to 00:00:00 in London on that date
+        const localMidnight = new Date(`${ukDate}T00:00:00Z`); // naive UTC midnight
+        // Adjust: find the UTC time when London shows 00:00:00
+        const londonAtMidnight = new Date(localMidnight.toLocaleString('en-US', { timeZone: 'Europe/London' }));
+        const diff = localMidnight - londonAtMidnight; // offset in ms
+        return new Date(localMidnight.getTime() + diff);
     }, []);
 
     const { data: orders = [], isLoading, dataUpdatedAt, refetch } = useQuery({
