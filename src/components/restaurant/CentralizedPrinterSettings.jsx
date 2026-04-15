@@ -19,6 +19,7 @@ import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterMan
 import { printerManager } from '@/components/restaurant/PrinterService';
 import NetworkPrinterManager, { NetworkPrinterStatusBadge } from '@/components/restaurant/NetworkPrinterManager';
 import LocalPrintAgentPanel from '@/components/restaurant/LocalPrintAgentPanel';
+import PrinterDiagnosticTool from '@/components/restaurant/PrinterDiagnosticTool';
 
 // ── Order type channels ────────────────────────────────────────────────────
 const ORDER_CHANNELS = [
@@ -730,6 +731,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                 {[
                     { id: 'printers', label: '🖨️ Printers' },
                     { id: 'agent', label: '⚡ Local Print Agent' },
+                    { id: 'diagnostics', label: '🔬 Diagnostics' },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -747,6 +749,10 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
 
             {activeTab === 'agent' && (
                 <LocalPrintAgentPanel restaurantId={restaurantId} printers={printers} />
+            )}
+
+            {activeTab === 'diagnostics' && (
+                <PrinterDiagnosticTool printers={printers} />
             )}
 
             {activeTab === 'printers' && (<>
