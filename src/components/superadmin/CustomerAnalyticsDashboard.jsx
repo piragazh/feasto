@@ -97,67 +97,109 @@ export default function CustomerAnalyticsDashboard() {
         staleTime: 60_000,
     });
 
-    const isLoading = loadingCustomers || loadingOrders;
+    const isLoading = loadingOrders;
 
     const metrics = useMemo(() => {
-        if (!customers.length) return null;
+        if (!orders.length) return null;
 
-        // Spend lookup by phone / email
-        const spendByPhone = {};
-        const spendByEmail = {};
-        const orderCountByPhone = {};
-        const orderCountByEmail = {};
-        const revenueByMonth = {};
+        const restaurantMap = {};
+        for (const r of restaurants) restaurantMap[r.id] = r.name;
+
+        // ── Derive unique customers from orders ────────────────────────────
+        // If CRM customers exist, use them; otherwise build from order data
+        const customerMap = {}; // keyed by phone, fallback email
 
         for (const o of orders) {
-            if (o.customer_phone) {
-                spendByPhone[o.customer_phone] = (spendByPhone[o.customer_phone] || 0) + (o.total || 0);
-                orderCountByPhone[o.customer_phone] = (orderCountByPhone[o.customer_phone] || 0) + 1;
+            const key = o.customer_phone || o.customer_email || o.guest_email;
+            if (!key) continue;
+            if (!customerMap[key]) {
+                customerMap[key] = {
+                    key,
+                    name: o.guest_name || o.customer_email || o.customer_phone || 'Unknown',
+                    phone: o.customer_phone || '',
+                    email: o.customer_email || o.guest_email || '',
+                    restaurant_id: o.restaurant_id,
+                    total_orders: 0,
+                    total_spent: 0,
+                    first_order_date: o.created_date,
+                    last_order_date: o.created_date,
+                };
             }
-            if (o.customer_email) {
-                spendByEmail[o.customer_email] = (spendByEmail[o.customer_email] || 0) + (o.total || 0);
-                orderCountByEmail[o.customer_email] = (orderCountByEmail[o.customer_email] || 0) + 1;
+            const c = customerMap[key];
+            c.total_orders++;
+            c.total_spent += (o.total || 0);
+            if (o.created_date && (!c.last_order_date || o.created_date > c.last_order_date)) {
+                c.last_order_date = o.created_date;
             }
-            // Monthly revenue
+            if (o.created_date && (!c.first_order_date || o.created_date < c.first_order_date)) {
+                c.first_order_date = o.created_date;
+            }
+        }
+
+        // Merge with CRM customers if available (CRM records take precedence for name)
+        for (const c of customers) {
+            const key = c.phone_number || c.email;
+            if (!key) continue;
+            if (customerMap[key]) {
+                customerMap[key].name = c.full_name || customerMap[key].name;
+            } else {
+                customerMap[key] = {
+                    key,
+                    name: c.full_name || c.email || c.phone_number || 'Unknown',
+                    phone: c.phone_number || '',
+                    email: c.email || '',
+                    restaurant_id: c.restaurant_id,
+                    total_orders: c.total_orders || 0,
+                    total_spent: 0,
+                    first_order_date: c.created_date,
+                    last_order_date: c.last_order_date,
+                };
+            }
+        }
+
+        const derivedCustomers = Object.values(customerMap);
+
+        // ── Revenue + monthly stats ────────────────────────────────────────
+        const revenueByMonth = {};
+        const newCustomersByMonth = {};
+        for (const c of derivedCustomers) {
+            if (c.first_order_date) {
+                const mk = format(new Date(c.first_order_date), 'MMM yy');
+                newCustomersByMonth[mk] = (newCustomersByMonth[mk] || 0) + 1;
+            }
+        }
+        for (const o of orders) {
             if (o.created_date) {
                 const mk = format(new Date(o.created_date), 'MMM yy');
                 revenueByMonth[mk] = (revenueByMonth[mk] || 0) + (o.total || 0);
             }
         }
 
-        const ltvValues = customers.map(c =>
-            Math.max(spendByPhone[c.phone_number] || 0, spendByEmail[c.email] || 0)
-        );
-        const totalLTV = ltvValues.reduce((s, v) => s + v, 0);
-        const avgLTV = customers.length ? totalLTV / customers.length : 0;
+        // ── Aggregates ─────────────────────────────────────────────────────
+        const totalLTV = derivedCustomers.reduce((s, c) => s + c.total_spent, 0);
+        const avgLTV = derivedCustomers.length ? totalLTV / derivedCustomers.length : 0;
+        const totalOrderCount = derivedCustomers.reduce((s, c) => s + c.total_orders, 0);
+        const avgOrderFreq = derivedCustomers.length ? (totalOrderCount / derivedCustomers.length).toFixed(1) : 0;
+        const retained = derivedCustomers.filter(c => c.total_orders > 1).length;
+        const retentionRate = derivedCustomers.length ? ((retained / derivedCustomers.length) * 100).toFixed(1) : 0;
 
-        const totalOrders = customers.reduce((s, c) => s + (c.total_orders || 0), 0);
-        const avgOrderFreq = customers.length ? (totalOrders / customers.length).toFixed(1) : 0;
-
-        // Segments
+        // ── Segments ───────────────────────────────────────────────────────
         const segments = { Inactive: 0, New: 0, Casual: 0, Regular: 0, VIP: 0 };
-        for (const c of customers) segments[segmentFor(c.total_orders || 0)]++;
+        for (const c of derivedCustomers) segments[segmentFor(c.total_orders)]++;
         const segmentData = Object.entries(segments).map(([name, value]) => ({ name, value }));
 
-        // Acquisition + revenue trend (last 6 months)
+        // ── Trend (last 6 months) ──────────────────────────────────────────
         const now = new Date();
         const trendData = Array.from({ length: 6 }, (_, i) => {
             const month = subMonths(now, 5 - i);
             const mk = format(month, 'MMM yy');
-            const start = startOfMonth(month);
-            const end = startOfMonth(subMonths(month, -1));
-            const count = customers.filter(c => {
-                if (!c.created_date) return false;
-                const d = new Date(c.created_date);
-                return !isBefore(d, start) && isBefore(d, end);
-            }).length;
-            return { month: mk, customers: count, revenue: Math.round(revenueByMonth[mk] || 0) };
+            return { month: mk, customers: newCustomersByMonth[mk] || 0, revenue: Math.round(revenueByMonth[mk] || 0) };
         });
 
-        // Order frequency distribution
+        // ── Frequency distribution ─────────────────────────────────────────
         const freqBuckets = { '0': 0, '1': 0, '2–3': 0, '4–8': 0, '9+': 0 };
-        for (const c of customers) {
-            const n = c.total_orders || 0;
+        for (const c of derivedCustomers) {
+            const n = c.total_orders;
             if (n === 0) freqBuckets['0']++;
             else if (n === 1) freqBuckets['1']++;
             else if (n <= 3) freqBuckets['2–3']++;
@@ -166,7 +208,7 @@ export default function CustomerAnalyticsDashboard() {
         }
         const freqData = Object.entries(freqBuckets).map(([label, count]) => ({ label, count }));
 
-        // Popular items
+        // ── Popular items ──────────────────────────────────────────────────
         const itemCount = {};
         for (const o of orders) {
             for (const item of (o.items || [])) {
@@ -178,34 +220,28 @@ export default function CustomerAnalyticsDashboard() {
             .slice(0, 10)
             .map(([name, count]) => ({ name: name.length > 22 ? name.slice(0, 22) + '…' : name, count }));
 
-        // Per-restaurant
-        const restaurantMap = {};
-        for (const r of restaurants) restaurantMap[r.id] = r.name;
+        // ── Per-restaurant ─────────────────────────────────────────────────
         const perRestaurant = {};
-        for (const c of customers) {
+        for (const c of derivedCustomers) {
             const rName = restaurantMap[c.restaurant_id] || 'Unknown';
-            if (!perRestaurant[rName]) perRestaurant[rName] = { customers: 0, orders: 0, spend: 0 };
+            if (!perRestaurant[rName]) perRestaurant[rName] = { customers: 0, orders: 0 };
             perRestaurant[rName].customers++;
-            perRestaurant[rName].orders += (c.total_orders || 0);
+            perRestaurant[rName].orders += c.total_orders;
         }
         const restaurantData = Object.entries(perRestaurant)
             .sort((a, b) => b[1].customers - a[1].customers)
             .slice(0, 8)
             .map(([name, d]) => ({ name: name.length > 14 ? name.slice(0, 14) + '…' : name, ...d }));
 
-        // Top LTV
-        const topLTV = customers
-            .map((c, i) => ({ name: c.full_name || c.email || c.phone_number || 'Unknown', ltv: ltvValues[i], orders: c.total_orders || 0, segment: segmentFor(c.total_orders || 0) }))
-            .filter(c => c.ltv > 0)
-            .sort((a, b) => b.ltv - a.ltv)
-            .slice(0, 10);
-
-        // Retention: customers with >1 order
-        const retained = customers.filter(c => (c.total_orders || 0) > 1).length;
-        const retentionRate = customers.length ? ((retained / customers.length) * 100).toFixed(1) : 0;
+        // ── Top LTV ────────────────────────────────────────────────────────
+        const topLTV = derivedCustomers
+            .filter(c => c.total_spent > 0)
+            .sort((a, b) => b.total_spent - a.total_spent)
+            .slice(0, 10)
+            .map(c => ({ name: c.name, ltv: c.total_spent, orders: c.total_orders, segment: segmentFor(c.total_orders) }));
 
         return {
-            totalCustomers: customers.length,
+            totalCustomers: derivedCustomers.length,
             avgOrderFreq,
             avgLTV: avgLTV.toFixed(2),
             totalLTV: totalLTV.toFixed(0),
@@ -216,10 +252,11 @@ export default function CustomerAnalyticsDashboard() {
             popularItems,
             restaurantData,
             topLTV,
+            isDerived: customers.length === 0,
         };
     }, [customers, orders, restaurants]);
 
-    if (isLoading) {
+    if (isLoading && !orders.length) {
         return (
             <div className="flex items-center justify-center py-32">
                 <div className="text-center">
@@ -248,11 +285,18 @@ export default function CustomerAnalyticsDashboard() {
             <div className="flex items-end justify-between flex-wrap gap-3">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Customer Analytics</h2>
-                    <p className="text-sm text-slate-500 mt-1">Platform-wide insights · based on latest 500 customers & orders</p>
+                    <p className="text-sm text-slate-500 mt-1">Platform-wide insights · customers derived from order history</p>
                 </div>
-                <Badge variant="outline" className="text-xs font-medium px-3 py-1 border-slate-200 text-slate-500">
-                    {metrics.totalCustomers.toLocaleString()} customers tracked
-                </Badge>
+                <div className="flex items-center gap-2 flex-wrap">
+                    {metrics.isDerived && (
+                        <Badge className="text-xs font-medium px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200">
+                            Derived from orders
+                        </Badge>
+                    )}
+                    <Badge variant="outline" className="text-xs font-medium px-3 py-1 border-slate-200 text-slate-500">
+                        {metrics.totalCustomers.toLocaleString()} customers tracked
+                    </Badge>
+                </div>
             </div>
 
             {/* KPI row */}
