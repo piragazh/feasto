@@ -38,6 +38,7 @@ const OfflineRiskDigest = React.lazy(() => import('@/components/superadmin/Offli
 const WeeklyOpsHealthDashboard = React.lazy(() => import('@/components/superadmin/WeeklyOpsHealthDashboard'));
 const FailureMonitoringDashboard = React.lazy(() => import('@/components/superadmin/FailureMonitoringDashboard'));
 const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmin/KioskMonitoringDashboard'));
+const CustomerCRM = React.lazy(() => import('@/components/superadmin/CustomerCRM'));
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
@@ -115,6 +116,7 @@ function SuperAdminInner() {
                 { id: 'ops-health', label: 'Ops Health', icon: Heart },
                 { id: 'risk-digest', label: 'Risk Digest', icon: AlertCircle },
                 { id: 'orders', label: 'Order History', icon: Store },
+                { id: 'customers', label: 'Customers CRM', icon: Users },
                 { id: 'restaurants', label: 'Restaurants', icon: Store },
                 { id: 'messages', label: 'Messages', icon: MessageSquare },
             ]
@@ -222,6 +224,7 @@ function SuperAdminInner() {
                     {activeTab === 'ops-health' && <WeeklyOpsHealthDashboard />}
                     {activeTab === 'risk-digest' && <OfflineRiskDigest />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
+                    {activeTab === 'customers' && <CustomerCRM />}
                     {activeTab === 'restaurants' && <RestaurantManagement />}
                     {activeTab === 'messages' && <MessagingCenter />}
                     {activeTab === 'commission' && <CommissionManagement />}
