@@ -41,7 +41,8 @@ const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmi
 const CustomerCRM = React.lazy(() => import('@/components/superadmin/CustomerCRM'));
 const CustomerAnalyticsDashboard = React.lazy(() => import('@/components/superadmin/CustomerAnalyticsDashboard'));
 const LiveOrdersCommand = React.lazy(() => import('@/components/superadmin/LiveOrdersCommand'));
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen } from 'lucide-react';
+const DeliveryHeatmap = React.lazy(() => import('@/components/superadmin/DeliveryHeatmap'));
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen, MapPin } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
 
@@ -118,6 +119,7 @@ function SuperAdminInner() {
                 { id: 'ops-health', label: 'Ops Health', icon: Heart },
                 { id: 'risk-digest', label: 'Risk Digest', icon: AlertCircle },
                 { id: 'live-orders', label: 'Live Orders', icon: Activity },
+                { id: 'delivery-heatmap', label: 'Delivery Heatmap', icon: MapPin },
                 { id: 'orders', label: 'Order History', icon: Store },
                 { id: 'customers', label: 'Customers CRM', icon: Users },
                 { id: 'customer-analytics', label: 'Customer Analytics', icon: LayoutDashboard },
@@ -228,6 +230,7 @@ function SuperAdminInner() {
                     {activeTab === 'ops-health' && <WeeklyOpsHealthDashboard />}
                     {activeTab === 'risk-digest' && <OfflineRiskDigest />}
                     {activeTab === 'live-orders' && <LiveOrdersCommand />}
+                    {activeTab === 'delivery-heatmap' && <DeliveryHeatmap />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
                     {activeTab === 'customers' && <CustomerCRM />}
                     {activeTab === 'customer-analytics' && <CustomerAnalyticsDashboard />}
