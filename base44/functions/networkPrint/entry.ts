@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // ESC/POS command builder helpers
 const ESC = 0x1B;
@@ -257,9 +257,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'action must be one of: test, print_receipt, ping, print_raw_base64' }, { status: 400 });
         }
 
-        await sendToNetworkPrinter(printer_ip, printer_port, data);
+        // Normalise port — ensure it is always a valid string with a fallback
+        const resolvedPort = printer_port || '9100';
+        await sendToNetworkPrinter(printer_ip, resolvedPort, data);
 
-        return Response.json({ success: true, message: `Print job sent to ${printer_ip}:${printer_port || 9100}` });
+        return Response.json({ success: true, message: `Print job sent to ${printer_ip}:${resolvedPort}` });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });

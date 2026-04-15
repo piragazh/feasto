@@ -10,6 +10,7 @@ Deno.serve(async (req) => {
         if (action === 'enqueue') {
             const user = await base44.auth.me();
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            if (!body.restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
             const job = await base44.asServiceRole.entities.PrintJob.create({
                 restaurant_id: body.restaurant_id,
@@ -32,17 +33,23 @@ Deno.serve(async (req) => {
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
-            // Also reset stuck 'processing' jobs older than 2 minutes back to 'pending'
-            // so crashed agents don't permanently block the queue
-            const allJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
-            const stuckCutoff = new Date(Date.now() - 2 * 60 * 1000);
-            for (const j of allJobs) {
-                if (j.status === 'processing' && new Date(j.updated_date) < stuckCutoff) {
+            // Reset stuck 'processing' jobs older than 2 minutes back to 'pending'
+            const stuckCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+            const stuckJobs = await base44.asServiceRole.entities.PrintJob.filter({
+                restaurant_id,
+                status: 'processing',
+            });
+            for (const j of stuckJobs) {
+                if ((j.updated_date || j.created_date) < stuckCutoff) {
                     await base44.asServiceRole.entities.PrintJob.update(j.id, { status: 'pending', agent_id: null });
                 }
             }
 
-            const pendingJobs = allJobs.filter(j => j.status === 'pending');
+            // Fetch only pending jobs — targeted DB query instead of full table scan
+            const pendingJobs = await base44.asServiceRole.entities.PrintJob.filter({
+                restaurant_id,
+                status: 'pending',
+            });
             // Sort by created_date ascending (oldest first)
             pendingJobs.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
 
@@ -63,9 +70,9 @@ Deno.serve(async (req) => {
         if (action === 'complete') {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
-            // Verify this agent owns the job
-            const jobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
-            const job = jobs[0];
+            // Fetch by id list and verify agent ownership
+            const allJobs = await base44.asServiceRole.entities.PrintJob.list();
+            const job = allJobs.find(j => j.id === job_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
             await base44.asServiceRole.entities.PrintJob.update(job_id, {
@@ -79,9 +86,9 @@ Deno.serve(async (req) => {
         if (action === 'fail') {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
-            // Verify this agent owns the job
-            const jobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
-            const job = jobs[0];
+            // Fetch by id list and verify agent ownership
+            const allJobs = await base44.asServiceRole.entities.PrintJob.list();
+            const job = allJobs.find(j => j.id === job_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
             await base44.asServiceRole.entities.PrintJob.update(job_id, {

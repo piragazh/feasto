@@ -135,7 +135,9 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             addLog(`✗ Job ${job.id.slice(-6)} failed: ${e.message}`, 'err');
             fetchJobs();
         }
-    }, [restaurantId, networkPrinters, addLog, fetchJobs]);
+    // networkPrinters intentionally excluded — accessed via networkPrintersRef to avoid stale closure
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [restaurantId, addLog, fetchJobs]);
 
     // ── Start / stop agent ─────────────────────────────────────────────────
     const startAgent = useCallback(() => {
@@ -159,7 +161,6 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     }, [addLog]);
 
     // ── Auto-start when network printers become available ─────────────────
-    // Use a ref to track whether we've auto-started so we only do it once
     const hasAutoStarted = useRef(false);
     useEffect(() => {
         if (networkPrinters.length > 0 && !hasAutoStarted.current && !agentRunningRef.current) {
@@ -167,11 +168,13 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             startAgent();
         }
         return () => {
+            // Reset on unmount so auto-start works again if component remounts (e.g. tab switch)
+            hasAutoStarted.current = false;
             agentRunningRef.current = false;
             clearInterval(pollTimerRef.current);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [networkPrinters.length > 0]); // trigger when printers first become available
+    }, [networkPrinters.length]); // trigger when printer count changes (0→N or N→0)
 
     // ── Job list refresh ───────────────────────────────────────────────────
     useEffect(() => {

@@ -60,10 +60,13 @@ function buildPerPrinterConfig(globalCfg, printerConfig) {
  */
 async function printNetworkReceipt(order, restaurant, printerConfig, globalCfg) {
     const cfg = buildPerPrinterConfig(globalCfg, printerConfig);
+    const ip = printerConfig.network_ip;
+    const port = String(printerConfig.network_port || '9100');
+    if (!ip) throw new Error('Printer IP not configured');
     const res = await base44.functions.invoke('networkPrint', {
         action: 'print_receipt',
-        printer_ip: printerConfig.network_ip,
-        printer_port: printerConfig.network_port || '9100',
+        printer_ip: ip,
+        printer_port: port,
         order,
         restaurant,
         config: cfg,
