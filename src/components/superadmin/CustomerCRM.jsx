@@ -186,15 +186,23 @@ function CustomerCard({ customer, restaurant, onEdit }) {
                             <p className="text-sm font-bold text-gray-800">{customer.total_orders || 0}</p>
                             <p className="text-[10px] text-gray-400">orders</p>
                         </div>
+                        {customer.total_spent > 0 && (
+                            <div className="text-right hidden sm:block">
+                                <p className="text-sm font-bold text-green-600">£{(customer.total_spent || 0).toFixed(2)}</p>
+                                <p className="text-[10px] text-gray-400">spent</p>
+                            </div>
+                        )}
                         {customer.last_order_date && (
                             <div className="text-right hidden sm:block">
                                 <p className="text-xs text-gray-500">{format(new Date(customer.last_order_date), 'dd MMM yy')}</p>
                                 <p className="text-[10px] text-gray-400">last order</p>
                             </div>
                         )}
+                        {!customer._derived && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(customer)}>
                             <Edit2 className="h-3.5 w-3.5 text-gray-400" />
                         </Button>
+                        )}
                         <Button
                             variant="ghost" size="icon"
                             className="h-8 w-8"
@@ -236,10 +244,51 @@ export default function CustomerCRM() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editing, setEditing] = useState(null); // null = new
 
-    const { data: customers = [], isLoading } = useQuery({
+    const { data: crmCustomers = [], isLoading: crmLoading } = useQuery({
         queryKey: ['admin-customers'],
         queryFn: () => base44.entities.Customer.list('-created_date', 500),
     });
+
+    // If no CRM customers exist, derive them from Order data
+    const { data: derivedCustomers = [], isLoading: ordersLoading } = useQuery({
+        queryKey: ['admin-customers-from-orders'],
+        queryFn: async () => {
+            const orders = await base44.entities.Order.list('-created_date', 2000);
+            const map = {};
+            for (const o of orders) {
+                const phone = o.customer_phone || o.phone;
+                const email = o.customer_email || o.guest_email;
+                const name = o.guest_name || email?.split('@')[0] || phone || 'Unknown';
+                const key = phone || email;
+                if (!key) continue;
+                if (!map[key]) {
+                    map[key] = {
+                        id: `derived-${key}`,
+                        full_name: name,
+                        phone_number: phone || '',
+                        email: email || '',
+                        restaurant_id: o.restaurant_id,
+                        total_orders: 0,
+                        total_spent: 0,
+                        last_order_date: null,
+                        _derived: true,
+                    };
+                }
+                map[key].total_orders += 1;
+                map[key].total_spent = (map[key].total_spent || 0) + (o.total || 0);
+                if (!map[key].last_order_date || new Date(o.created_date) > new Date(map[key].last_order_date)) {
+                    map[key].last_order_date = o.created_date;
+                    map[key].full_name = o.guest_name || map[key].full_name;
+                    map[key].restaurant_id = o.restaurant_id;
+                }
+            }
+            return Object.values(map).sort((a, b) => (b.total_orders || 0) - (a.total_orders || 0));
+        },
+        enabled: crmCustomers.length === 0 && !crmLoading,
+    });
+
+    const customers = crmCustomers.length > 0 ? crmCustomers : derivedCustomers;
+    const isLoading = crmLoading || (crmCustomers.length === 0 && ordersLoading);
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['admin-restaurants-list'],
@@ -341,6 +390,12 @@ export default function CustomerCRM() {
             </div>
 
             {/* Stats row */}
+            {crmCustomers.length === 0 && derivedCustomers.length > 0 && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 flex items-center gap-2">
+                    <span>ℹ️</span>
+                    <span>Showing customers derived from order history. Add customers manually or they will appear here automatically as orders come in.</span>
+                </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
                 {[
                     { label: 'Total Customers', value: customers.length, color: 'text-blue-600' },
