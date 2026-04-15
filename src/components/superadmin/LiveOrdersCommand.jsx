@@ -1,17 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     Search, RefreshCw, Store, ShoppingBag, Clock, CheckCircle2,
-    Truck, X, Eye, ChevronDown, ChevronUp, AlertCircle, Filter
+    Truck, X, Eye, ChevronDown, ChevronUp, AlertCircle, Filter,
+    XCircle, MessageSquare, Send, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatUKTime } from '@/lib/ukDateUtils';
+import { toast } from 'sonner';
 
 // ── Status config ──────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -47,9 +50,79 @@ const TYPE_COLOR = {
 };
 
 // ── Full order detail dialog ───────────────────────────────────────────────
-function OrderDetailDialog({ order, restaurantName, open, onClose }) {
+function OrderDetailDialog({ order, restaurantName, restaurant, open, onClose, onOrderUpdated }) {
+    const [showNotifyForm, setShowNotifyForm] = useState(false);
+    const [notifyMessage, setNotifyMessage] = useState('');
+    const [cancelling, setCancelling] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [confirmCancel, setConfirmCancel] = useState(false);
+
+    // Reset state when dialog opens/closes
+    useEffect(() => {
+        if (!open) {
+            setShowNotifyForm(false);
+            setNotifyMessage('');
+            setConfirmCancel(false);
+        }
+    }, [open]);
+
     if (!order) return null;
     const totalItems = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+    const isActive = ACTIVE_STATUSES.includes(order.status);
+
+    const handleCancelOrder = async () => {
+        setCancelling(true);
+        try {
+            await base44.entities.Order.update(order.id, {
+                status: 'cancelled',
+                order_status: 'cancelled',
+                rejection_reason: 'Cancelled by platform admin',
+                status_history: [
+                    ...(order.status_history || []),
+                    { status: 'cancelled', timestamp: new Date().toISOString(), note: 'Cancelled by Super Admin' }
+                ]
+            });
+            toast.success('Order cancelled successfully');
+            onOrderUpdated?.();
+            onClose();
+        } catch (e) {
+            toast.error('Failed to cancel: ' + (e.message || 'Unknown error'));
+        } finally {
+            setCancelling(false);
+            setConfirmCancel(false);
+        }
+    };
+
+    const handleNotifyRestaurant = async () => {
+        if (!notifyMessage.trim()) { toast.error('Please enter a message'); return; }
+        const alertPhone = restaurant?.alert_phone;
+        if (!alertPhone) { toast.error('Restaurant has no alert phone number configured'); return; }
+        setSending(true);
+        try {
+            const orderRef = order.order_number || `#${order.id?.slice(-6).toUpperCase()}`;
+            const fullMessage = `⚠️ URGENT from MealDrop Admin\n\nRe: Order ${orderRef}\n\n${notifyMessage.trim()}`;
+
+            const preferWhatsApp = restaurant?.order_alert_channel === 'whatsapp' || restaurant?.whatsapp_alerts_enabled;
+            if (preferWhatsApp) {
+                await base44.functions.invoke('sendWhatsAppOrder', {
+                    to: alertPhone,
+                    message: fullMessage,
+                });
+            } else {
+                await base44.functions.invoke('sendSMS', {
+                    to: alertPhone,
+                    message: fullMessage,
+                });
+            }
+            toast.success(`Notification sent to restaurant via ${preferWhatsApp ? 'WhatsApp' : 'SMS'}`);
+            setShowNotifyForm(false);
+            setNotifyMessage('');
+        } catch (e) {
+            toast.error('Failed to send: ' + (e.message || 'Unknown error'));
+        } finally {
+            setSending(false);
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -63,6 +136,78 @@ function OrderDetailDialog({ order, restaurantName, open, onClose }) {
                 </DialogHeader>
 
                 <div className="space-y-5 pt-2">
+                    {/* Urgent Actions */}
+                    {isActive && (
+                        <div className="border-2 border-orange-200 bg-orange-50/50 rounded-xl p-4 space-y-3">
+                            <p className="text-xs font-bold text-orange-700 uppercase tracking-wide flex items-center gap-1.5">
+                                <AlertCircle className="h-3.5 w-3.5" /> Admin Actions
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                                {!confirmCancel ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-red-300 text-red-700 hover:bg-red-50 gap-1.5"
+                                        onClick={() => setConfirmCancel(true)}
+                                    >
+                                        <XCircle className="h-3.5 w-3.5" /> Cancel Order
+                                    </Button>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                        <span className="text-xs text-red-700 font-medium">Are you sure?</span>
+                                        <Button
+                                            size="sm"
+                                            className="h-7 bg-red-600 hover:bg-red-700 text-white text-xs gap-1"
+                                            onClick={handleCancelOrder}
+                                            disabled={cancelling}
+                                        >
+                                            {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                                            Yes, Cancel
+                                        </Button>
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setConfirmCancel(false)}>
+                                            No
+                                        </Button>
+                                    </div>
+                                )}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-blue-300 text-blue-700 hover:bg-blue-50 gap-1.5"
+                                    onClick={() => setShowNotifyForm(f => !f)}
+                                >
+                                    <MessageSquare className="h-3.5 w-3.5" /> Notify Restaurant
+                                </Button>
+                            </div>
+
+                            {showNotifyForm && (
+                                <div className="space-y-2 pt-1">
+                                    <Textarea
+                                        value={notifyMessage}
+                                        onChange={e => setNotifyMessage(e.target.value)}
+                                        placeholder="Type urgent message to the restaurant..."
+                                        className="min-h-[80px] text-sm resize-none"
+                                        maxLength={500}
+                                    />
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-gray-400">
+                                            Will be sent via {restaurant?.order_alert_channel === 'whatsapp' || restaurant?.whatsapp_alerts_enabled ? 'WhatsApp' : 'SMS'}
+                                            {restaurant?.alert_phone ? ` to ${restaurant.alert_phone}` : ' — ⚠️ No phone configured!'}
+                                        </p>
+                                        <Button
+                                            size="sm"
+                                            className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                                            onClick={handleNotifyRestaurant}
+                                            disabled={sending || !notifyMessage.trim()}
+                                        >
+                                            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                            Send
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Meta */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                         <div className="bg-gray-50 rounded-lg p-3">
@@ -491,8 +636,10 @@ export default function LiveOrdersCommand() {
             <OrderDetailDialog
                 order={selectedOrder}
                 restaurantName={selectedOrder ? (restaurantMap[selectedOrder.restaurant_id]?.name || selectedOrder.restaurant_name) : ''}
+                restaurant={selectedOrder ? restaurantMap[selectedOrder.restaurant_id] : null}
                 open={!!selectedOrder}
                 onClose={() => setSelectedOrder(null)}
+                onOrderUpdated={() => refetch()}
             />
         </div>
     );
