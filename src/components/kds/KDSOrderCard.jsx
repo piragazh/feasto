@@ -142,7 +142,7 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
                                             {Object.entries(item.customizations).map(([key, val]) => (
                                                 <p key={key} className="text-gray-400 text-xs">
                                                     <span className="text-gray-500">{key}:</span>{' '}
-                                                    {Array.isArray(val) ? val.join(', ') : val}
+                                                    {Array.isArray(val) ? val.join(', ') : (val && typeof val === 'object' ? Object.values(val).join(', ') : String(val ?? ''))}
                                                 </p>
                                             ))}
                                         </div>
