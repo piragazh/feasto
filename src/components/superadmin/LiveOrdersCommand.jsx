@@ -106,24 +106,58 @@ function OrderDetailDialog({ order, restaurantName, open, onClose }) {
                     <div className="border rounded-lg overflow-hidden">
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide p-3 bg-gray-50 border-b">Items</p>
                         <div className="divide-y">
-                            {(order.items || []).map((item, i) => (
-                                <div key={i} className="flex items-start justify-between p-3 text-sm">
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-800">
-                                            {item.quantity > 1 && <span className="text-orange-600 font-bold mr-1">{item.quantity}×</span>}
-                                            {item.name}
-                                        </p>
-                                        {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                            <p className="text-xs text-gray-400 mt-0.5">
-                                                {Object.entries(item.customizations).map(([k, v]) =>
-                                                    `${k}: ${Array.isArray(v) ? v.join(', ') : v}`
-                                                ).join(' · ')}
+                            {(order.items || []).map((item, i) => {
+                                // Meal deal items stored in itemQuantities: { "Item Name": qty, ... }
+                                const mealDealItems = item.itemQuantities && typeof item.itemQuantities === 'object'
+                                    ? Object.entries(item.itemQuantities).filter(([, qty]) => qty > 0)
+                                    : [];
+
+                                // Regular customizations: { "Option Name": "value" | ["val1","val2"] }
+                                const customEntries = item.customizations && typeof item.customizations === 'object'
+                                    ? Object.entries(item.customizations).filter(([, v]) =>
+                                        v !== null && v !== undefined && v !== '' &&
+                                        !(Array.isArray(v) && v.length === 0)
+                                      )
+                                    : [];
+
+                                return (
+                                    <div key={i} className="p-3 text-sm">
+                                        <div className="flex items-start justify-between">
+                                            <p className="font-medium text-gray-800">
+                                                {item.quantity > 1 && <span className="text-orange-600 font-bold mr-1">{item.quantity}×</span>}
+                                                {item.name}
+                                                {item.is_meal_deal && <span className="ml-1.5 text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-semibold">Meal Deal</span>}
                                             </p>
+                                            <p className="font-semibold text-gray-800 ml-3 flex-shrink-0">£{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</p>
+                                        </div>
+
+                                        {/* Meal deal chosen items */}
+                                        {mealDealItems.length > 0 && (
+                                            <div className="mt-1.5 ml-2 space-y-0.5">
+                                                {mealDealItems.map(([name, qty]) => (
+                                                    <p key={name} className="text-xs text-gray-500 flex items-center gap-1">
+                                                        <span className="text-orange-400">›</span>
+                                                        {qty > 1 && <span className="font-semibold">{qty}×</span>}
+                                                        {name}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Regular customizations */}
+                                        {customEntries.length > 0 && (
+                                            <div className="mt-1 ml-2 space-y-0.5">
+                                                {customEntries.map(([k, v]) => (
+                                                    <p key={k} className="text-xs text-gray-400">
+                                                        <span className="font-medium text-gray-500">{k}:</span>{' '}
+                                                        {Array.isArray(v) ? v.join(', ') : String(v)}
+                                                    </p>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
-                                    <p className="font-semibold text-gray-800 ml-3">£{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</p>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
