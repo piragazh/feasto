@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     RefreshCw, CheckCircle2, AlertCircle, Clock,
-    Wifi, Trash2, Circle, Play, Square, Zap, Download, Usb
+    Wifi, Trash2, Circle, Play, Square, Zap, Download, Usb, RotateCcw, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -339,6 +339,26 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         return () => clearInterval(interval);
     }, [fetchJobs]);
 
+    const handleManualRetry = async (jobId) => {
+        try {
+            await base44.functions.invoke('managePrintQueue', { action: 'manual_retry', job_id: jobId });
+            toast.success('Job re-queued for printing');
+            fetchJobs();
+        } catch (e) {
+            toast.error('Retry failed: ' + e.message);
+        }
+    };
+
+    const handleCancelJob = async (jobId) => {
+        try {
+            await base44.functions.invoke('managePrintQueue', { action: 'cancel', job_id: jobId });
+            toast.success('Job cancelled');
+            fetchJobs();
+        } catch (e) {
+            toast.error('Cancel failed: ' + e.message);
+        }
+    };
+
     const handleCleanup = async () => {
         setCleaning(true);
         try {
@@ -614,7 +634,31 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                                             <p className="text-xs text-red-600 mt-0.5">{job.error_message}</p>
                                         )}
                                     </div>
-                                    <JobStatusBadge job={job} />
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <JobStatusBadge job={job} />
+                                        {job.status === 'failed' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleManualRetry(job.id)}
+                                                className="h-7 px-2 text-xs text-green-700 border-green-300 hover:bg-green-50 gap-1"
+                                                title="Retry this job"
+                                            >
+                                                <RotateCcw className="h-3 w-3" />Retry
+                                            </Button>
+                                        )}
+                                        {(job.status === 'pending' || job.status === 'processing') && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleCancelJob(job.id)}
+                                                className="h-7 px-2 text-xs text-red-600 border-red-300 hover:bg-red-50 gap-1"
+                                                title="Cancel this job"
+                                            >
+                                                <X className="h-3 w-3" />Cancel
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>

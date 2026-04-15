@@ -136,6 +136,47 @@ Deno.serve(async (req) => {
             return Response.json({ success: true, retried: true, retry_count: retryCount, next_retry_at: nextRetryAt });
         }
 
+        // ── MANUAL_RETRY: Dashboard user manually retries a failed job
+        if (action === 'manual_retry') {
+            const user = await base44.auth.me();
+            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
+
+            const allJobs = await base44.asServiceRole.entities.PrintJob.list();
+            const job = allJobs.find(j => j.id === job_id);
+            if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
+            if (job.status !== 'failed') return Response.json({ error: 'Only failed jobs can be manually retried' }, { status: 400 });
+
+            await base44.asServiceRole.entities.PrintJob.update(job_id, {
+                status: 'pending',
+                agent_id: null,
+                retry_count: 0,
+                next_retry_at: null,
+                error_message: `Manually retried by ${user.email} at ${new Date().toLocaleString()}`,
+            });
+            return Response.json({ success: true });
+        }
+
+        // ── CANCEL: Dashboard user cancels a pending or processing job
+        if (action === 'cancel') {
+            const user = await base44.auth.me();
+            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
+
+            const allJobs = await base44.asServiceRole.entities.PrintJob.list();
+            const job = allJobs.find(j => j.id === job_id);
+            if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
+            if (!['pending', 'processing'].includes(job.status)) return Response.json({ error: 'Only pending or processing jobs can be cancelled' }, { status: 400 });
+
+            await base44.asServiceRole.entities.PrintJob.update(job_id, {
+                status: 'failed',
+                agent_id: null,
+                error_message: `Cancelled by ${user.email} at ${new Date().toLocaleString()}`,
+                completed_at: new Date().toISOString(),
+            });
+            return Response.json({ success: true });
+        }
+
         // ── LIST: Dashboard fetches recent jobs for display
         if (action === 'list') {
             const user = await base44.auth.me();
