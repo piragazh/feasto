@@ -32,29 +32,42 @@ Deno.serve(async (req) => {
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
-            const jobs = await base44.asServiceRole.entities.PrintJob.filter({
-                restaurant_id,
-                status: 'pending',
-            });
+            // Also reset stuck 'processing' jobs older than 2 minutes back to 'pending'
+            // so crashed agents don't permanently block the queue
+            const allJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
+            const stuckCutoff = new Date(Date.now() - 2 * 60 * 1000);
+            for (const j of allJobs) {
+                if (j.status === 'processing' && new Date(j.updated_date) < stuckCutoff) {
+                    await base44.asServiceRole.entities.PrintJob.update(j.id, { status: 'pending', agent_id: null });
+                }
+            }
 
+            const pendingJobs = allJobs.filter(j => j.status === 'pending');
             // Sort by created_date ascending (oldest first)
-            jobs.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+            pendingJobs.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
 
-            const pendingJob = jobs[0];
+            const pendingJob = pendingJobs[0];
             if (!pendingJob) return Response.json({ job: null });
 
             // Mark as processing so no other agent picks it up
-            await base44.asServiceRole.entities.PrintJob.update(pendingJob.id, {
+            const updatedJob = await base44.asServiceRole.entities.PrintJob.update(pendingJob.id, {
                 status: 'processing',
                 agent_id,
             });
 
-            return Response.json({ job: pendingJob });
+            // Return the updated job (with status: 'processing') not the stale snapshot
+            return Response.json({ job: { ...pendingJob, status: 'processing', agent_id, ...updatedJob } });
         }
 
         // ── COMPLETE: Local agent reports success
         if (action === 'complete') {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
+            if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
+            // Verify this agent owns the job
+            const jobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
+            const job = jobs[0];
+            if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
+            if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
             await base44.asServiceRole.entities.PrintJob.update(job_id, {
                 status: 'done',
                 completed_at: new Date().toISOString(),
@@ -65,6 +78,12 @@ Deno.serve(async (req) => {
         // ── FAIL: Local agent reports failure
         if (action === 'fail') {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
+            if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
+            // Verify this agent owns the job
+            const jobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
+            const job = jobs[0];
+            if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
+            if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
             await base44.asServiceRole.entities.PrintJob.update(job_id, {
                 status: 'failed',
                 error_message: error_message || 'Unknown error',

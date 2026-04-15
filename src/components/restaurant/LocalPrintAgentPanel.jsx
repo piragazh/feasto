@@ -31,6 +31,9 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     const logRef = useRef(null);
 
     const networkPrinters = printers.filter(p => p.connection_type === 'network' && p.network_ip);
+    // Keep a ref so pollOnce always sees the latest printers without needing to re-create the interval
+    const networkPrintersRef = useRef(networkPrinters);
+    useEffect(() => { networkPrintersRef.current = networkPrinters; }, [networkPrinters]);
 
     const addLog = useCallback((msg, type = 'info') => {
         const entry = { msg, type, time: new Date().toLocaleTimeString() };
@@ -80,8 +83,9 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         addLog(`Picked up job ${job.id.slice(-6)} (${job.action})`, 'info');
 
         try {
-            // Find the right printer
-            const printer = networkPrinters.find(p => p.network_ip === job.printer_ip) || networkPrinters[0];
+            // Use ref so we always have fresh printer list (avoids stale closure)
+            const currentPrinters = networkPrintersRef.current;
+            const printer = currentPrinters.find(p => p.network_ip === job.printer_ip) || currentPrinters[0];
             if (!printer) throw new Error('No network printer configured');
 
             const ip = job.printer_ip || printer.network_ip;
@@ -154,9 +158,12 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         addLog('Agent stopped', 'info');
     }, [addLog]);
 
-    // ── Auto-start when network printers exist ─────────────────────────────
+    // ── Auto-start when network printers become available ─────────────────
+    // Use a ref to track whether we've auto-started so we only do it once
+    const hasAutoStarted = useRef(false);
     useEffect(() => {
-        if (networkPrinters.length > 0) {
+        if (networkPrinters.length > 0 && !hasAutoStarted.current && !agentRunningRef.current) {
+            hasAutoStarted.current = true;
             startAgent();
         }
         return () => {
@@ -164,7 +171,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             clearInterval(pollTimerRef.current);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // only on mount
+    }, [networkPrinters.length > 0]); // trigger when printers first become available
 
     // ── Job list refresh ───────────────────────────────────────────────────
     useEffect(() => {
