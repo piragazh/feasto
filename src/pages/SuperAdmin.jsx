@@ -40,6 +40,7 @@ const FailureMonitoringDashboard = React.lazy(() => import('@/components/superad
 const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmin/KioskMonitoringDashboard'));
 const CustomerCRM = React.lazy(() => import('@/components/superadmin/CustomerCRM'));
 const CustomerAnalyticsDashboard = React.lazy(() => import('@/components/superadmin/CustomerAnalyticsDashboard'));
+const LiveOrdersCommand = React.lazy(() => import('@/components/superadmin/LiveOrdersCommand'));
 import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
@@ -116,6 +117,7 @@ function SuperAdminInner() {
                 { id: 'overview', label: 'Dashboard', icon: Activity },
                 { id: 'ops-health', label: 'Ops Health', icon: Heart },
                 { id: 'risk-digest', label: 'Risk Digest', icon: AlertCircle },
+                { id: 'live-orders', label: 'Live Orders', icon: Activity },
                 { id: 'orders', label: 'Order History', icon: Store },
                 { id: 'customers', label: 'Customers CRM', icon: Users },
                 { id: 'customer-analytics', label: 'Customer Analytics', icon: LayoutDashboard },
@@ -225,6 +227,7 @@ function SuperAdminInner() {
                     {activeTab === 'overview' && <SystemOverview />}
                     {activeTab === 'ops-health' && <WeeklyOpsHealthDashboard />}
                     {activeTab === 'risk-digest' && <OfflineRiskDigest />}
+                    {activeTab === 'live-orders' && <LiveOrdersCommand />}
                     {activeTab === 'orders' && <OrderHistoryManagement />}
                     {activeTab === 'customers' && <CustomerCRM />}
                     {activeTab === 'customer-analytics' && <CustomerAnalyticsDashboard />}
