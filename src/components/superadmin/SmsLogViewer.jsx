@@ -6,28 +6,36 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, CheckCircle, XCircle, Activity, Download } from 'lucide-react';
+import { MessageSquare, CheckCircle, XCircle, Activity, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+
+const PAGE_SIZE = 50;
 
 export default function SmsLogViewer() {
     const [restaurantFilter, setRestaurantFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [page, setPage] = useState(0);
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['all-restaurants-sms'],
         queryFn: () => base44.entities.Restaurant.list(),
     });
 
+    // Build filter query
+    const filterQuery = {};
+    if (restaurantFilter !== 'all') filterQuery.restaurant_id = restaurantFilter;
+    if (statusFilter !== 'all') filterQuery.status = statusFilter;
+
     const { data: logs = [], isLoading } = useQuery({
-        queryKey: ['sms-logs', restaurantFilter, statusFilter, dateFrom, dateTo],
-        queryFn: () => base44.entities.SmsLog.list('-created_date', 500),
+        queryKey: ['sms-logs', restaurantFilter, statusFilter, dateFrom, dateTo, page],
+        queryFn: () => base44.entities.SmsLog.filter(filterQuery, '-created_date', PAGE_SIZE, page * PAGE_SIZE),
+        keepPreviousData: true,
     });
 
+    // Client-side date filtering (since date range isn't supported server-side easily)
     const filtered = logs.filter(log => {
-        if (restaurantFilter !== 'all' && log.restaurant_id !== restaurantFilter) return false;
-        if (statusFilter !== 'all' && log.status !== statusFilter) return false;
         if (dateFrom && new Date(log.created_date) < new Date(dateFrom)) return false;
         if (dateTo) {
             const to = new Date(dateTo);
@@ -37,17 +45,12 @@ export default function SmsLogViewer() {
         return true;
     });
 
-    // Per-restaurant summary
-    const restaurantSummary = restaurants.map(r => {
-        const rLogs = filtered.filter(l => l.restaurant_id === r.id);
-        return {
-            id: r.id,
-            name: r.name,
-            total: rLogs.length,
-            sent: rLogs.filter(l => l.status === 'sent').length,
-            failed: rLogs.filter(l => l.status === 'failed').length,
-        };
-    }).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+    const hasNextPage = logs.length === PAGE_SIZE;
+
+    const handleFilterChange = (setter) => (value) => {
+        setter(value);
+        setPage(0);
+    };
 
     const handleExportCSV = () => {
         const rows = [
@@ -94,14 +97,14 @@ export default function SmsLogViewer() {
             <Card>
                 <CardContent className="pt-4">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <Select value={restaurantFilter} onValueChange={setRestaurantFilter}>
+                        <Select value={restaurantFilter} onValueChange={handleFilterChange(setRestaurantFilter)}>
                             <SelectTrigger><SelectValue placeholder="All Restaurants" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Restaurants</SelectItem>
                                 {restaurants.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <Select value={statusFilter} onValueChange={handleFilterChange(setStatusFilter)}>
                             <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Statuses</SelectItem>
@@ -110,40 +113,46 @@ export default function SmsLogViewer() {
                                 <SelectItem value="simulated">Simulated</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="From" />
-                        <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} placeholder="To" />
+                        <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0); }} />
+                        <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0); }} />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Per-restaurant summary */}
-            {restaurantSummary.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {restaurantSummary.map(r => (
-                        <Card key={r.id} className="cursor-pointer hover:border-orange-400 transition-colors" onClick={() => setRestaurantFilter(r.id)}>
-                            <CardContent className="pt-4">
-                                <p className="font-semibold text-gray-900 truncate">{r.name}</p>
-                                <div className="flex gap-4 mt-2 text-sm">
-                                    <span className="text-gray-600">{r.total} total</span>
-                                    <span className="text-green-600">{r.sent} sent</span>
-                                    {r.failed > 0 && <span className="text-red-600">{r.failed} failed</span>}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
-
             {/* Log table */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <MessageSquare className="h-5 w-5" />
-                        {filtered.length} messages
-                        {restaurantFilter !== 'all' && (
-                            <button onClick={() => setRestaurantFilter('all')} className="text-xs text-orange-600 underline ml-2">Clear filter</button>
-                        )}
-                    </CardTitle>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                        <CardTitle className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5" />
+                            {filtered.length} messages (page {page + 1})
+                            {restaurantFilter !== 'all' && (
+                                <button onClick={() => { setRestaurantFilter('all'); setPage(0); }} className="text-xs text-orange-600 underline ml-2">Clear filter</button>
+                            )}
+                        </CardTitle>
+                        {/* Pagination controls */}
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page === 0}
+                                onClick={() => setPage(p => p - 1)}
+                                className="h-8 px-3"
+                            >
+                                <ChevronLeft className="h-4 w-4" /> Prev
+                            </Button>
+                            <span className="text-sm text-gray-500 px-1">Page {page + 1}</span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!hasNextPage || isLoading}
+                                onClick={() => setPage(p => p + 1)}
+                                className="h-8 px-3"
+                            >
+                                Next <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -191,6 +200,18 @@ export default function SmsLogViewer() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+                    {/* Bottom pagination */}
+                    {filtered.length > 0 && (
+                        <div className="flex justify-center items-center gap-3 mt-4 pt-4 border-t">
+                            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+                                <ChevronLeft className="h-4 w-4" /> Previous
+                            </Button>
+                            <span className="text-sm text-gray-500">Page {page + 1}</span>
+                            <Button variant="outline" size="sm" disabled={!hasNextPage || isLoading} onClick={() => setPage(p => p + 1)}>
+                                Next <ChevronRight className="h-4 w-4" />
+                            </Button>
                         </div>
                     )}
                 </CardContent>
