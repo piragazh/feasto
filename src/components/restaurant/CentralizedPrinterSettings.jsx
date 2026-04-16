@@ -517,7 +517,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                 </div>
             )}
             {type === 'network' && (
-                <NetworkPrinterManager printer={printer} onUpdate={onUpdate} />
+                <NetworkPrinterManager printer={printer} onUpdate={onUpdate} restaurantId={restaurantId} />
             )}
 
             {/* Order type assignments */}
