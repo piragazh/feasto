@@ -9,6 +9,44 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// ── Local relay script (Node.js) — bridging browser → LAN printer TCP ──────
+const RELAY_SCRIPT_CONTENT = `// MealDrop Local Print Relay
+// Run with: node relay-server.js
+// Listens on http://localhost:6789 — forwards ESC/POS bytes to your printer over TCP
+
+const http = require('http');
+const net  = require('net');
+const PORT = 6789;
+
+http.createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (req.method !== 'POST') { res.writeHead(405); res.end(JSON.stringify({error:'POST only'})); return; }
+
+  let body = '';
+  req.on('data', d => body += d);
+  req.on('end', () => {
+    let parsed;
+    try { parsed = JSON.parse(body); } catch(e) { res.writeHead(400); res.end(JSON.stringify({error:'Bad JSON'})); return; }
+    const { ip, port, data_base64 } = parsed;
+    if (!ip || !data_base64) { res.writeHead(400); res.end(JSON.stringify({error:'ip and data_base64 required'})); return; }
+    const buf = Buffer.from(data_base64, 'base64');
+    const sock = new net.Socket();
+    sock.setTimeout(8000);
+    sock.connect(parseInt(port)||9100, ip, () => {
+      sock.write(buf, () => { sock.destroy(); res.writeHead(200); res.end(JSON.stringify({success:true,bytes:buf.length})); });
+    });
+    sock.on('error', err => { res.writeHead(500); res.end(JSON.stringify({error:err.message})); });
+    sock.on('timeout', () => { sock.destroy(); res.writeHead(500); res.end(JSON.stringify({error:'TCP connection timed out'})); });
+  });
+}).listen(PORT, '127.0.0.1', () => {
+  console.log('MealDrop Print Relay running on http://localhost:' + PORT);
+  console.log('Keep this terminal open while printing.');
+});
+`;
+
 // ── WebUSB helper ──────────────────────────────────────────────────────────
 const usbAvailable = () => typeof navigator !== 'undefined' && !!navigator.usb;
 
@@ -76,6 +114,7 @@ function JobStatusBadge({ job }) {
 }
 
 const AGENT_ID = 'dashboard-agent-' + Math.random().toString(36).slice(2, 10);
+const LOCAL_RELAY = 'http://localhost:6789';
 
 export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     const [jobs, setJobs] = useState([]);
@@ -84,6 +123,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     const [agentRunning, setAgentRunning] = useState(false);
     const [stats, setStats] = useState({ done: 0, failed: 0, polls: 0 });
     const [agentLog, setAgentLog] = useState([]);
+    const [relayStatus, setRelayStatus] = useState('unknown'); // unknown | ok | err
     // USB state
     const [usbDevice, setUsbDevice] = useState(null);
     const [connectingUsb, setConnectingUsb] = useState(false);
@@ -99,6 +139,22 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     useEffect(() => { networkPrintersRef.current = networkPrinters; }, [networkPrinters]);
 
     const hasActivePrinters = networkPrinters.length > 0 || usbDevice !== null;
+
+    // Check if local relay is running
+    const checkRelay = useCallback(async () => {
+        try {
+            await fetch(LOCAL_RELAY, { method: 'OPTIONS', signal: AbortSignal.timeout(2000) });
+            setRelayStatus('ok');
+        } catch {
+            setRelayStatus('err');
+        }
+    }, []);
+
+    useEffect(() => {
+        checkRelay();
+        const t = setInterval(checkRelay, 15000);
+        return () => clearInterval(t);
+    }, [checkRelay]);
 
     const addLog = useCallback((msg, type = 'info') => {
         const entry = { msg, type, time: new Date().toLocaleTimeString() };
@@ -232,19 +288,21 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                     throw new Error('Backend did not return raw bytes for USB printing');
                 }
             } else {
-                // Network path
+                // Network path: build_raw (cloud generates ESC/POS bytes) → relay (localhost:6789 sends TCP to printer)
                 const printer = currentPrinters.find(p => p.network_ip === job.printer_ip) || currentPrinters[0];
                 if (!printer) throw new Error('No network printer configured');
 
                 const ip = job.printer_ip || printer.network_ip;
                 const port = job.printer_port || printer.network_port || '9100';
 
-                const printRes = await base44.functions.invoke('networkPrint', {
-                    action: job.action === 'test' ? 'test' : 'print_receipt',
+                // Step 1: ask cloud to build bytes (no TCP from cloud)
+                const buildRes = await base44.functions.invoke('networkPrint', {
+                    action: 'build_raw',
                     printer_ip: ip,
                     printer_port: port,
                     printer_name: printer.name || 'Printer',
                     command_set: job.command_set || printer.command_set || 'esc_pos',
+                    test_mode: job.action === 'test',
                     order: job.order_data,
                     restaurant: job.restaurant_data,
                     config: {
@@ -259,7 +317,20 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                     },
                 });
 
-                if (!printRes.data?.success) throw new Error(printRes.data?.error || 'Print failed');
+                if (!buildRes.data?.raw_base64) throw new Error(buildRes.data?.error || 'Cloud did not return print bytes');
+
+                // Step 2: send bytes to printer via local relay (handles TCP on the LAN)
+                const relayRes = await fetch(LOCAL_RELAY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip, port, data_base64: buildRes.data.raw_base64 }),
+                });
+                if (!relayRes.ok) {
+                    const txt = await relayRes.text().catch(() => '');
+                    throw new Error(`Local relay error (${relayRes.status}): ${txt.slice(0, 100)}. Is relay-server.js running?`);
+                }
+                const relayData = await relayRes.json();
+                if (!relayData.success) throw new Error(relayData.error || 'Relay print failed');
             }
 
             await base44.functions.invoke('managePrintQueue', {
@@ -393,6 +464,18 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         }
     };
 
+    // ── Download relay-server.js ────────────────────────────────────────────
+    const handleDownloadRelay = () => {
+        const blob = new Blob([RELAY_SCRIPT_CONTENT], { type: 'text/javascript' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'relay-server.js';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('relay-server.js downloaded — run: node relay-server.js');
+    };
+
     // ── Download fallback (for PC/browser use) ─────────────────────────────
     const handleDownload = () => {
         // Build the exact function base URL the SDK uses, embedded at download time
@@ -474,6 +557,21 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                                 <p className="text-xs text-gray-400">{s.label}</p>
                             </div>
                         ))}
+                    </div>
+
+                    {/* Local relay status */}
+                    <div className={`mt-3 p-2.5 rounded-lg flex gap-2 text-xs items-start border ${
+                        relayStatus === 'ok'  ? 'bg-green-50 border-green-200 text-green-800' :
+                        relayStatus === 'err' ? 'bg-red-50 border-red-200 text-red-700' :
+                        'bg-gray-50 border-gray-200 text-gray-500'
+                    }`}>
+                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                        {relayStatus === 'ok'
+                            ? <span><strong>Local relay running</strong> — this browser will send print jobs directly to your LAN printer.</span>
+                            : relayStatus === 'err'
+                            ? <span><strong>Local relay not detected.</strong> Browsers cannot TCP-connect to LAN printers directly. Run <code className="bg-red-100 px-1 rounded font-mono">node relay-server.js</code> (download it below) on this PC first, then the agent will work.</span>
+                            : <span>Checking local relay on localhost:6789…</span>
+                        }
                     </div>
 
                     {!hasActivePrinters && (
@@ -671,15 +769,24 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             </Card>
 
             {/* PC fallback download */}
-            <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500">
-                <Download className="h-4 w-4 flex-shrink-0" />
-                <span>
-                    Using a <strong>PC/desktop browser</strong> instead of the tablet app?{' '}
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-gray-700">
+                    <Download className="h-4 w-4" />
+                    Standalone PC Agent (for computers without the tablet app)
+                </div>
+                <p className="leading-relaxed text-gray-500">
+                    Browsers cannot send raw TCP data to LAN printers. A tiny Node.js relay bridges the gap.
+                    Download both files, run <code className="bg-gray-100 px-1 rounded font-mono">node relay-server.js</code>, then open the agent HTML in Chrome.
+                </p>
+                <div className="flex gap-2 flex-wrap pt-1">
+                    <button onClick={handleDownloadRelay} className="underline text-blue-600 font-medium">
+                        📥 1. Download relay-server.js
+                    </button>
+                    <span className="text-gray-300">|</span>
                     <button onClick={handleDownload} className="underline text-orange-600 font-medium">
-                        Download the standalone agent file
-                    </button>{' '}
-                    and open it in Chrome.
-                </span>
+                        📥 2. Download agent HTML
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -688,8 +795,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 // ── Standalone HTML agent (PC fallback only) ────────────────────────────────
 function generateAgentHtml({ restaurantId, functionBaseUrl, printers }) {
     const printersJson = JSON.stringify(printers);
-    // The standalone agent calls functions via the platform's /functions/ route
-    // functionBaseUrl is embedded at download time (file:// has no origin)
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -700,24 +806,41 @@ function generateAgentHtml({ restaurantId, functionBaseUrl, printers }) {
   h1{font-size:1.2rem;margin:0 0 4px}.subtitle{color:#64748b;font-size:.85rem;margin:0 0 20px}
   .card{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:12px}
   .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:600}
-  .badge-green{background:#dcfce7;color:#166534}.badge-gray{background:#f1f5f9;color:#475569}
+  .badge-green{background:#dcfce7;color:#166534}.badge-gray{background:#f1f5f9;color:#475569}.badge-red{background:#fee2e2;color:#991b1b}
   .log{background:#0f172a;color:#94a3b8;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;max-height:200px;overflow-y:auto}
   .log p{margin:2px 0}.log .ok{color:#4ade80}.log .err{color:#f87171}.log .info{color:#60a5fa}
   .row{display:flex;justify-content:space-between;align-items:center}
   .stat{text-align:center;flex:1}.stat .num{font-size:1.5rem;font-weight:700}.stat .lbl{font-size:.7rem;color:#64748b}
-  button{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:.85rem}
+  button{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:.85rem;margin:2px}
   .btn-primary{background:#f97316;color:white}.btn-outline{background:white;border:1px solid #e2e8f0;color:#475569}
   button:disabled{opacity:.5;cursor:not-allowed}
+  .setup{background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px;margin-bottom:12px;font-size:.82rem;color:#92400e}
+  .setup ol{margin:8px 0 0 16px;line-height:2}
+  .setup code{background:#fef3c7;padding:1px 5px;border-radius:4px;font-family:monospace;font-size:.85em}
+  .relay-ok{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+  .relay-err{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
 </style>
 </head>
 <body>
 <h1>🖨️ MealDrop Print Agent (PC)</h1>
-<p class="subtitle">Keep this tab open · It will auto-print new orders</p>
+<p class="subtitle">Keep this tab open · It polls the cloud and prints new orders via your local printer</p>
+
+<div class="setup" id="setup-box">
+  <strong>⚙️ One-time setup required</strong>
+  <ol>
+    <li>Install <a href="https://nodejs.org" target="_blank">Node.js</a> if not already installed.</li>
+    <li>Save the relay script: click <button class="btn-outline" style="padding:2px 8px;font-size:.8rem" onclick="downloadRelay()">📥 Download relay-server.js</button></li>
+    <li>Open a terminal in the same folder and run: <code>node relay-server.js</code></li>
+    <li>Keep that terminal open, then click <strong>Start Agent</strong> below.</li>
+  </ol>
+  <div id="relay-status" class="badge badge-gray" style="margin-top:8px">⟳ Checking relay...</div>
+</div>
+
 <div class="card">
   <div class="row" style="margin-bottom:12px">
     <span id="status-badge" class="badge badge-gray">⏸ Stopped</span>
-    <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="btn-start" onclick="startAgent()">▶ Start</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-primary" id="btn-start" onclick="startAgent()">▶ Start Agent</button>
       <button class="btn-outline" id="btn-stop" onclick="stopAgent()" disabled>⏹ Stop</button>
     </div>
   </div>
@@ -734,20 +857,120 @@ const RESTAURANT_ID=${JSON.stringify(restaurantId)};
 const FUNCTION_BASE=${JSON.stringify(functionBaseUrl)};
 const AGENT_ID='pc-agent-'+Math.random().toString(36).slice(2,10);
 const PRINTERS=${printersJson};
+const RELAY='http://localhost:6789';
 let polling=false,pollTimer=null,statDone=0,statFail=0,statRetry=0,statPoll=0;
+
 function log(msg,type=''){const d=document.getElementById('log');const p=document.createElement('p');p.className=type;p.textContent='['+new Date().toLocaleTimeString()+'] '+msg;d.appendChild(p);d.scrollTop=d.scrollHeight;if(d.children.length>200)d.removeChild(d.firstChild);}
 function upd(){document.getElementById('stat-done').textContent=statDone;document.getElementById('stat-fail').textContent=statFail;document.getElementById('stat-retry').textContent=statRetry;document.getElementById('stat-poll').textContent=statPoll;}
-async function api(fnName, payload){
+
+// Check relay health
+async function checkRelay(){
+  const el=document.getElementById('relay-status');
+  try{
+    const r=await fetch(RELAY,{method:'OPTIONS'});
+    el.textContent='✅ Relay running on localhost:6789';
+    el.className='badge relay-ok';
+    return true;
+  }catch(e){
+    el.textContent='❌ Relay not detected — run: node relay-server.js';
+    el.className='badge relay-err';
+    return false;
+  }
+}
+
+// Call cloud function
+async function api(fnName,payload){
   const url=FUNCTION_BASE+'/'+fnName;
   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'include'});
-  if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(txt?' - '+txt.slice(0,120):''));}
+  if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error('Cloud HTTP '+r.status+(txt?' - '+txt.slice(0,120):''));}
   return r.json();
 }
-async function printViaBackend(job){const printer=PRINTERS.find(p=>p.network_ip===job.printer_ip)||PRINTERS[0];if(!printer)throw new Error('No printer configured');const d=await api('networkPrint',{action:job.action==='test'?'test':'print_receipt',printer_ip:job.printer_ip||printer.network_ip,printer_port:job.printer_port||printer.network_port||'9100',printer_name:printer.name||'Printer',command_set:job.command_set||printer.command_set||'esc_pos',order:job.order_data,restaurant:job.restaurant_data,config:{printer_width:job.printer_width||printer.printer_width||'80mm',command_set:job.command_set||printer.command_set||'esc_pos',template:job.template||printer.template||'standard',show_customer_details:true,header_text:printer.header_text||'',footer_text:printer.footer_text||'',...(job.config||{})}});if(!d.success)throw new Error(d.error||'Print failed');}
-async function pollOnce(){if(!polling)return;statPoll++;upd();try{const res=await api('managePrintQueue',{action:'poll',restaurant_id:RESTAURANT_ID,agent_id:AGENT_ID});const job=res.job;if(!job)return;log('Job '+job.id.slice(-6)+' ('+job.action+')','info');try{await printViaBackend(job);await api('managePrintQueue',{action:'complete',job_id:job.id,agent_id:AGENT_ID});statDone++;log('✓ Printed','ok');}catch(e){const fr=await api('managePrintQueue',{action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>({}));if(fr.retried){statRetry++;log('↺ Retry '+fr.retry_count+': '+e.message,'err');}else{statFail++;log('✗ '+e.message,'err');}}}catch(e){log('Poll error: '+e.message,'err');}upd();}
-function startAgent(){if(polling)return;polling=true;document.getElementById('status-badge').textContent='🟢 Running';document.getElementById('status-badge').className='badge badge-green';document.getElementById('btn-start').disabled=true;document.getElementById('btn-stop').disabled=false;log('Agent started','ok');pollTimer=setInterval(pollOnce,3000);pollOnce();}
-function stopAgent(){polling=false;clearInterval(pollTimer);document.getElementById('status-badge').textContent='⏸ Stopped';document.getElementById('status-badge').className='badge badge-gray';document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;log('Stopped');}
-window.onload=()=>{log('Ready. Click Start.','info');startAgent();};
+
+// Send bytes to local relay → printer TCP
+async function relayPrint(ip,port,data_base64){
+  const r=await fetch(RELAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip,port:port||'9100',data_base64})});
+  if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error('Relay HTTP '+r.status+(txt?' - '+txt.slice(0,80):''));}
+  const d=await r.json();
+  if(!d.success)throw new Error(d.error||'Relay print failed');
+}
+
+async function printJob(job){
+  const printer=PRINTERS.find(p=>p.network_ip===job.printer_ip)||PRINTERS[0];
+  if(!printer)throw new Error('No printer configured');
+  const ip=job.printer_ip||printer.network_ip;
+  const port=job.printer_port||printer.network_port||'9100';
+  // Step 1: ask cloud to build ESC/POS bytes (no TCP from cloud)
+  const buildRes=await api('networkPrint',{
+    action:'build_raw',
+    printer_ip:ip,
+    printer_port:port,
+    printer_name:printer.name||'Printer',
+    command_set:job.command_set||printer.command_set||'esc_pos',
+    test_mode:job.action==='test',
+    order:job.order_data,
+    restaurant:job.restaurant_data,
+    config:{printer_width:job.printer_width||printer.printer_width||'80mm',command_set:job.command_set||printer.command_set||'esc_pos',template:job.template||printer.template||'standard',show_customer_details:true,header_text:printer.header_text||'',footer_text:printer.footer_text||'',...(job.config||{})}
+  });
+  if(!buildRes.raw_base64)throw new Error('Cloud did not return raw bytes');
+  // Step 2: relay bytes to printer via local TCP relay
+  await relayPrint(ip,port,buildRes.raw_base64);
+}
+
+async function pollOnce(){
+  if(!polling)return;
+  statPoll++;upd();
+  try{
+    const res=await api('managePrintQueue',{action:'poll',restaurant_id:RESTAURANT_ID,agent_id:AGENT_ID});
+    const job=res.job;
+    if(!job)return;
+    log('Job '+job.id.slice(-6)+' ('+job.action+')','info');
+    try{
+      await printJob(job);
+      await api('managePrintQueue',{action:'complete',job_id:job.id,agent_id:AGENT_ID});
+      statDone++;log('✓ Printed','ok');
+    }catch(e){
+      const fr=await api('managePrintQueue',{action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>({}));
+      if(fr.retried){statRetry++;log('↺ Retry '+fr.retry_count+': '+e.message,'err');}
+      else{statFail++;log('✗ '+e.message,'err');}
+    }
+  }catch(e){log('Poll error: '+e.message,'err');}
+  upd();
+}
+
+function startAgent(){
+  if(polling)return;
+  polling=true;
+  document.getElementById('status-badge').textContent='🟢 Running';
+  document.getElementById('status-badge').className='badge badge-green';
+  document.getElementById('btn-start').disabled=true;
+  document.getElementById('btn-stop').disabled=false;
+  log('Agent started ('+AGENT_ID+')','ok');
+  pollTimer=setInterval(pollOnce,3000);
+  pollOnce();
+}
+
+function stopAgent(){
+  polling=false;
+  clearInterval(pollTimer);
+  document.getElementById('status-badge').textContent='⏸ Stopped';
+  document.getElementById('status-badge').className='badge badge-gray';
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-stop').disabled=true;
+  log('Stopped');
+}
+
+function downloadRelay(){
+  const blob=new Blob([${JSON.stringify(RELAY_SCRIPT_CONTENT)}],{type:'text/javascript'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='relay-server.js';a.click();
+}
+
+window.onload=async()=>{
+  log('Checking local relay...','info');
+  const ok=await checkRelay();
+  setInterval(checkRelay,15000);
+  if(ok){log('Relay ready — starting agent','ok');startAgent();}
+  else{log('Start relay-server.js first, then click Start Agent','err');}
+};
 </script>
 </body>
 </html>`;

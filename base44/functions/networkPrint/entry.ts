@@ -232,6 +232,22 @@ Deno.serve(async (req) => {
                 ...(config || {}),
             };
             data = buildReceiptBytes(order, restaurant || {}, mergedConfig);
+        } else if (action === 'build_raw') {
+            // Return raw ESC/POS bytes as base64 — for local agents that handle TCP themselves
+            let rawData;
+            if (body.test_mode || !order) {
+                rawData = buildTestBytes(printer_name || 'Network Printer', command_set || 'esc_pos');
+            } else {
+                const mergedConfig = {
+                    printer_width: '80mm', command_set: 'esc_pos', template: 'standard',
+                    show_logo: true, show_order_number: true, show_customer_details: true,
+                    header_text: '', footer_text: '', ...(config || {}),
+                };
+                rawData = buildReceiptBytes(order, restaurant || {}, mergedConfig);
+            }
+            const base64 = btoa(String.fromCharCode(...rawData));
+            return Response.json({ success: true, raw_base64: base64 });
+
         } else if (action === 'ping') {
             // Attempt a TCP connection with timeout to verify reachability
             const portNum = parseInt(printer_port) || 9100;
