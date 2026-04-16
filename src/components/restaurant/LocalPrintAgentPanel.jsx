@@ -395,12 +395,13 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 
     // ── Download fallback (for PC/browser use) ─────────────────────────────
     const handleDownload = () => {
-        // Derive the real API base — works on platform domains and custom domains
-        // Must be set at download time because the file runs locally (file://) with no origin
+        // Build the exact function base URL the SDK uses, embedded at download time
+        // so the standalone file (opened as file://) always hits the right endpoint.
         const hostname = window.location.hostname;
         const appId = import.meta.env.VITE_BASE44_APP_ID;
-        const functionBaseUrl = `https://${hostname}`;
-        const html = generateAgentHtml({ restaurantId, functionBaseUrl, appId, printers: networkPrinters });
+        // Match the SDK's function invocation path: /api/v2/apps/{appId}/functions/{name}
+        const functionBaseUrl = `https://${hostname}/api/v2/apps/${appId}/functions`;
+        const html = generateAgentHtml({ restaurantId, functionBaseUrl, printers: networkPrinters });
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -685,7 +686,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 }
 
 // ── Standalone HTML agent (PC fallback only) ────────────────────────────────
-function generateAgentHtml({ restaurantId, functionBaseUrl, appId, printers }) {
+function generateAgentHtml({ restaurantId, functionBaseUrl, printers }) {
     const printersJson = JSON.stringify(printers);
     // The standalone agent calls functions via the platform's /functions/ route
     // functionBaseUrl is embedded at download time (file:// has no origin)
@@ -731,14 +732,13 @@ function generateAgentHtml({ restaurantId, functionBaseUrl, appId, printers }) {
 <script>
 const RESTAURANT_ID=${JSON.stringify(restaurantId)};
 const FUNCTION_BASE=${JSON.stringify(functionBaseUrl)};
-const APP_ID=${JSON.stringify(appId || '')};
 const AGENT_ID='pc-agent-'+Math.random().toString(36).slice(2,10);
 const PRINTERS=${printersJson};
 let polling=false,pollTimer=null,statDone=0,statFail=0,statRetry=0,statPoll=0;
 function log(msg,type=''){const d=document.getElementById('log');const p=document.createElement('p');p.className=type;p.textContent='['+new Date().toLocaleTimeString()+'] '+msg;d.appendChild(p);d.scrollTop=d.scrollHeight;if(d.children.length>200)d.removeChild(d.firstChild);}
 function upd(){document.getElementById('stat-done').textContent=statDone;document.getElementById('stat-fail').textContent=statFail;document.getElementById('stat-retry').textContent=statRetry;document.getElementById('stat-poll').textContent=statPoll;}
 async function api(fnName, payload){
-  const url=FUNCTION_BASE+'/functions/'+fnName;
+  const url=FUNCTION_BASE+'/'+fnName;
   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'include'});
   if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(txt?' - '+txt.slice(0,120):''));}
   return r.json();
