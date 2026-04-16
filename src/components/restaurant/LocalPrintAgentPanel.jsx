@@ -395,9 +395,12 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 
     // ── Download fallback (for PC/browser use) ─────────────────────────────
     const handleDownload = () => {
-        const appBaseUrl = window.location.origin;
-        const functionBaseUrl = appBaseUrl.includes('localhost') ? 'http://localhost:3001' : appBaseUrl;
-        const html = generateAgentHtml({ restaurantId, functionBaseUrl, printers: networkPrinters });
+        // Derive the real API base — works on platform domains and custom domains
+        // Must be set at download time because the file runs locally (file://) with no origin
+        const hostname = window.location.hostname;
+        const appId = import.meta.env.VITE_BASE44_APP_ID;
+        const functionBaseUrl = `https://${hostname}`;
+        const html = generateAgentHtml({ restaurantId, functionBaseUrl, appId, printers: networkPrinters });
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -682,8 +685,10 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 }
 
 // ── Standalone HTML agent (PC fallback only) ────────────────────────────────
-function generateAgentHtml({ restaurantId, functionBaseUrl, printers }) {
+function generateAgentHtml({ restaurantId, functionBaseUrl, appId, printers }) {
     const printersJson = JSON.stringify(printers);
+    // The standalone agent calls functions via the platform's /functions/ route
+    // functionBaseUrl is embedded at download time (file:// has no origin)
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -726,14 +731,20 @@ function generateAgentHtml({ restaurantId, functionBaseUrl, printers }) {
 <script>
 const RESTAURANT_ID=${JSON.stringify(restaurantId)};
 const FUNCTION_BASE=${JSON.stringify(functionBaseUrl)};
+const APP_ID=${JSON.stringify(appId || '')};
 const AGENT_ID='pc-agent-'+Math.random().toString(36).slice(2,10);
 const PRINTERS=${printersJson};
 let polling=false,pollTimer=null,statDone=0,statFail=0,statRetry=0,statPoll=0;
 function log(msg,type=''){const d=document.getElementById('log');const p=document.createElement('p');p.className=type;p.textContent='['+new Date().toLocaleTimeString()+'] '+msg;d.appendChild(p);d.scrollTop=d.scrollHeight;if(d.children.length>200)d.removeChild(d.firstChild);}
 function upd(){document.getElementById('stat-done').textContent=statDone;document.getElementById('stat-fail').textContent=statFail;document.getElementById('stat-retry').textContent=statRetry;document.getElementById('stat-poll').textContent=statPoll;}
-async function api(payload){const r=await fetch(FUNCTION_BASE+'/api/functions/managePrintQueue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
-async function printViaBackend(job){const printer=PRINTERS.find(p=>p.network_ip===job.printer_ip)||PRINTERS[0];if(!printer)throw new Error('No printer');const r=await fetch(FUNCTION_BASE+'/api/functions/networkPrint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:job.action==='test'?'test':'print_receipt',printer_ip:job.printer_ip||printer.network_ip,printer_port:job.printer_port||printer.network_port||'9100',printer_name:printer.name||'Printer',command_set:job.command_set||printer.command_set||'esc_pos',order:job.order_data,restaurant:job.restaurant_data,config:{printer_width:job.printer_width||printer.printer_width||'80mm',command_set:job.command_set||printer.command_set||'esc_pos',template:job.template||printer.template||'standard',show_customer_details:true,header_text:printer.header_text||'',footer_text:printer.footer_text||'',...(job.config||{})}})});const d=await r.json();if(!d.success)throw new Error(d.error||'Print failed');}
-async function pollOnce(){if(!polling)return;statPoll++;upd();try{const res=await api({action:'poll',restaurant_id:RESTAURANT_ID,agent_id:AGENT_ID});const job=res.job;if(!job)return;log('Job '+job.id.slice(-6)+' ('+job.action+')','info');try{await printViaBackend(job);await api({action:'complete',job_id:job.id,agent_id:AGENT_ID});statDone++;log('✓ Printed','ok');}catch(e){const fr=await api({action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>({}));if(fr.retried){statRetry++;log('↺ Retry '+fr.retry_count+': '+e.message,'err');}else{statFail++;log('✗ '+e.message,'err');}}}catch(e){log('Poll error: '+e.message,'err');}upd();}
+async function api(fnName, payload){
+  const url=FUNCTION_BASE+'/functions/'+fnName;
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'include'});
+  if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(txt?' - '+txt.slice(0,120):''));}
+  return r.json();
+}
+async function printViaBackend(job){const printer=PRINTERS.find(p=>p.network_ip===job.printer_ip)||PRINTERS[0];if(!printer)throw new Error('No printer configured');const d=await api('networkPrint',{action:job.action==='test'?'test':'print_receipt',printer_ip:job.printer_ip||printer.network_ip,printer_port:job.printer_port||printer.network_port||'9100',printer_name:printer.name||'Printer',command_set:job.command_set||printer.command_set||'esc_pos',order:job.order_data,restaurant:job.restaurant_data,config:{printer_width:job.printer_width||printer.printer_width||'80mm',command_set:job.command_set||printer.command_set||'esc_pos',template:job.template||printer.template||'standard',show_customer_details:true,header_text:printer.header_text||'',footer_text:printer.footer_text||'',...(job.config||{})}});if(!d.success)throw new Error(d.error||'Print failed');}
+async function pollOnce(){if(!polling)return;statPoll++;upd();try{const res=await api('managePrintQueue',{action:'poll',restaurant_id:RESTAURANT_ID,agent_id:AGENT_ID});const job=res.job;if(!job)return;log('Job '+job.id.slice(-6)+' ('+job.action+')','info');try{await printViaBackend(job);await api('managePrintQueue',{action:'complete',job_id:job.id,agent_id:AGENT_ID});statDone++;log('✓ Printed','ok');}catch(e){const fr=await api('managePrintQueue',{action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>({}));if(fr.retried){statRetry++;log('↺ Retry '+fr.retry_count+': '+e.message,'err');}else{statFail++;log('✗ '+e.message,'err');}}}catch(e){log('Poll error: '+e.message,'err');}upd();}
 function startAgent(){if(polling)return;polling=true;document.getElementById('status-badge').textContent='🟢 Running';document.getElementById('status-badge').className='badge badge-green';document.getElementById('btn-start').disabled=true;document.getElementById('btn-stop').disabled=false;log('Agent started','ok');pollTimer=setInterval(pollOnce,3000);pollOnce();}
 function stopAgent(){polling=false;clearInterval(pollTimer);document.getElementById('status-badge').textContent='⏸ Stopped';document.getElementById('status-badge').className='badge badge-gray';document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;log('Stopped');}
 window.onload=()=>{log('Ready. Click Start.','info');startAgent();};
