@@ -72,7 +72,21 @@ Deno.serve(async (req) => {
             return Response.json({ success: true, order: updated }, { headers: CORS_HEADERS });
         }
 
-        return Response.json({ error: 'Unknown action. Use: getOrders or updateStatus' }, { status: 400, headers: CORS_HEADERS });
+        // ── ACTION: Reject order ─────────────────────────────────────────
+        if (action === 'rejectOrder') {
+            if (!orderId) return Response.json({ error: 'orderId is required' }, { status: 400, headers: CORS_HEADERS });
+
+            const base44 = createClientFromRequest(req);
+            const rejectionReason = body.rejectionReason || 'Rejected by restaurant';
+            const updated = await base44.asServiceRole.entities.Order.update(orderId, {
+                status: 'cancelled',
+                rejection_reason: rejectionReason,
+            });
+
+            return Response.json({ success: true, order: updated }, { headers: CORS_HEADERS });
+        }
+
+        return Response.json({ error: 'Unknown action. Use: getOrders, updateStatus, rejectOrder' }, { status: 400, headers: CORS_HEADERS });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500, headers: CORS_HEADERS });
