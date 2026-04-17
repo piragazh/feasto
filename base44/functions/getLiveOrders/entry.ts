@@ -5,15 +5,16 @@ const ALLOWED_STATUSES = ['confirmed', 'preparing', 'out_for_delivery', 'ready_f
 
 Deno.serve(async (req) => {
     try {
-        // Validate API Key
-        const androidApiKey = req.headers.get('X-API-Key');
+        const body = await req.json();
+
+        // Validate API Key — accept from header OR body (body only for testing)
+        const androidApiKey = req.headers.get('X-API-Key') || body.apiKey;
         const expectedApiKey = Deno.env.get("ANDROID_APP_API_KEY");
 
         if (!androidApiKey || androidApiKey !== expectedApiKey) {
             return Response.json({ error: 'Unauthorized: Invalid API Key' }, { status: 401 });
         }
 
-        const body = await req.json();
         const { action, restaurantId, orderId, status } = body;
 
         // ── ACTION: Get live orders ──────────────────────────────────────
@@ -41,10 +42,7 @@ Deno.serve(async (req) => {
             }
 
             const base44 = createClientFromRequest(req);
-            const updated = await base44.asServiceRole.entities.Order.update(orderId, {
-                status,
-                status_history: undefined // will be appended server-side if needed
-            });
+            const updated = await base44.asServiceRole.entities.Order.update(orderId, { status });
 
             return Response.json({ success: true, order: updated });
         }
