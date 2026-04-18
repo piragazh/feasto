@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const LIVE_STATUSES = ['new', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'];
+const LIVE_STATUSES = ['pending', 'new', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'];
 const ALLOWED_STATUSES = ['confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection', 'delivered', 'collected', 'cancelled'];
 
 const CORS_HEADERS = {
