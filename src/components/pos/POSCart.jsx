@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle } from 'lucide-react';
+import POSNoSaleButton from './POSNoSaleButton';
 
 // Inline mini confirm dialog
 function ConfirmPopup({ message, onConfirm, onCancel, isDark }) {
@@ -30,6 +31,7 @@ export default function POSCart({
     onSelectTable, onAddToTable, onCharge,
     isAddingToTable,
     discount,
+    restaurant,
 }) {
     const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
 
@@ -172,6 +174,7 @@ export default function POSCart({
                             <Trash2 className="h-3.5 w-3.5" />
                             Clear
                         </button>
+                        <POSNoSaleButton restaurant={restaurant} isDark={isDark} t={t} />
                     </>
                 ) : (
                     <>
@@ -191,6 +194,7 @@ export default function POSCart({
                             <Trash2 className="h-3.5 w-3.5" />
                             Clear Cart
                         </button>
+                        <POSNoSaleButton restaurant={restaurant} isDark={isDark} t={t} />
                     </>
                 )}
             </div>

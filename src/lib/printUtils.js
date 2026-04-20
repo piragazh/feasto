@@ -179,6 +179,71 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
 }
 
 /**
+ * Open the cash drawer by sending the ESC/POS drawer-open command
+ * to the first available configured POS printer (network or Bluetooth).
+ */
+export async function openCashDrawer(restaurant) {
+    const globalCfg = restaurant?.printer_config || {};
+    const centralized = globalCfg.centralized_printers || [];
+    const svcs = btServices();
+
+    // Find the first pos_order printer
+    const candidates = centralized.length > 0
+        ? centralized.filter(p => (p.assigned_channels || []).includes('pos_order'))
+        : [];
+    const toTry = candidates.length > 0 ? candidates : centralized;
+
+    for (const printerConfig of toTry) {
+        const slotIndex = centralized.indexOf(printerConfig);
+        const type = printerConfig.connection_type || 'bluetooth';
+
+        if (type === 'network' && printerConfig.network_ip) {
+            const res = await base44.functions.invoke('networkPrint', {
+                action: 'print_receipt',
+                printer_ip: printerConfig.network_ip,
+                printer_port: String(printerConfig.network_port || '9100'),
+                open_cash_drawer: true,
+                order: { items: [], total: 0, order_type: 'pos' },
+                restaurant: {},
+                config: { template: 'minimal', show_order_number: false, show_customer_details: false },
+            });
+            if (res.data?.success) return true;
+        } else if (type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
+            const service = svcs[slotIndex];
+            if (!service) continue;
+            if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+            if (service.isConnected()) {
+                // Send raw cash drawer ESC/POS bytes directly
+                const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+                await service.sendCommand(CASH_DRAWER_CMD);
+                return true;
+            }
+        }
+    }
+
+    // Legacy fallback
+    if (globalCfg.network_ip) {
+        const res = await base44.functions.invoke('networkPrint', {
+            action: 'print_receipt',
+            printer_ip: globalCfg.network_ip,
+            printer_port: String(globalCfg.network_port || '9100'),
+            open_cash_drawer: true,
+            order: { items: [], total: 0, order_type: 'pos' },
+            restaurant: {},
+            config: { template: 'minimal', show_order_number: false, show_customer_details: false },
+        });
+        if (res.data?.success) return true;
+    }
+    if (printerManager.printerA.isConnected()) {
+        const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+        await printerManager.printerA.sendCommand(CASH_DRAWER_CMD);
+        return true;
+    }
+
+    throw new Error('No connected printer found to open cash drawer');
+}
+
+/**
  * Returns true if any printer is assigned to the given channel.
  */
 export function hasPrinterForChannel(restaurant, channel) {
