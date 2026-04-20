@@ -16,6 +16,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const ESC = 0x1B;
 const GS = 0x1D;
 
+// ESC/POS cash drawer open command (works on both drawer pin 2 and pin 5)
+// ESC p <pin> <on-time> <off-time>
+const CASH_DRAWER_CMD = [ESC, 0x70, 0x00, 0x19, 0xFA];
+
 function buildCommands(commandSet = 'esc_pos') {
     const sets = {
         esc_pos:     { init: [ESC,0x40], alignCenter: [ESC,0x61,0x01], alignLeft: [ESC,0x61,0x00], boldOn: [ESC,0x45,0x01], boldOff: [ESC,0x45,0x00], cut: [GS,0x56,0x41,0x00], doubleHeight: [ESC,0x21,0x10], normal: [ESC,0x21,0x00] },
@@ -37,7 +41,11 @@ function bytes(...args) {
     return out;
 }
 
-function buildReceiptBytes(order, restaurant, config) {
+function buildCashDrawerBytes() {
+    return new Uint8Array(CASH_DRAWER_CMD);
+}
+
+function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     const cmd = buildCommands(config.command_set);
     const lineWidth = (config.printer_width === '58mm') ? 32 : 48;
     const chunks = [];
@@ -115,6 +123,7 @@ function buildReceiptBytes(order, restaurant, config) {
     add('================================\n');
     add(cmd.alignCenter, 'Thank you!\n\n\n');
     add(cmd.cut);
+    if (openCashDrawer) chunks.push(new Uint8Array(CASH_DRAWER_CMD));
 
     const total_len = chunks.reduce((n, c) => n + c.length, 0);
     const buf = new Uint8Array(total_len);
@@ -158,15 +167,16 @@ Deno.serve(async (req) => {
 
         const body = await req.json();
         const {
-            action,          // 'test' | 'print_receipt' | 'ping'
-            tablet_ip,       // IP address of the Android tablet on the LAN
-            tablet_port,     // Port the Android HTTP server is listening on (default: 8080)
-            printer_ip,      // Forwarded to Android app — the actual printer IP
-            printer_port,    // Forwarded to Android app — the printer port (default: 9100)
+            action,            // 'test' | 'print_receipt' | 'ping'
+            tablet_ip,         // IP address of the Android tablet on the LAN
+            tablet_port,       // Port the Android HTTP server is listening on (default: 8080)
+            printer_ip,        // Forwarded to Android app — the actual printer IP
+            printer_port,      // Forwarded to Android app — the printer port (default: 9100)
             command_set,
             order,
             restaurant,
             config,
+            open_cash_drawer,  // boolean — if true, appends ESC/POS cash drawer open command after cut
         } = body;
 
         if (!tablet_ip) {
@@ -207,7 +217,7 @@ Deno.serve(async (req) => {
                 footer_text: '',
                 ...(config || {}),
             };
-            rawBytes = buildReceiptBytes(order, restaurant || {}, mergedConfig);
+            rawBytes = buildReceiptBytes(order, restaurant || {}, mergedConfig, !!open_cash_drawer);
         } else {
             return Response.json({ error: 'action must be: test, print_receipt, ping' }, { status: 400 });
         }

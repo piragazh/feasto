@@ -4,6 +4,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const ESC = 0x1B;
 const GS = 0x1D;
 
+// ESC/POS cash drawer open command (works on both drawer pin 2 and pin 5)
+// ESC p <pin> <on-time> <off-time>
+const CASH_DRAWER_CMD = [ESC, 0x70, 0x00, 0x19, 0xFA];
+
 function buildCommands(commandSet = 'esc_pos') {
     const sets = {
         esc_pos:      { init: [ESC,0x40], alignCenter: [ESC,0x61,0x01], alignLeft: [ESC,0x61,0x00], boldOn: [ESC,0x45,0x01], boldOff: [ESC,0x45,0x00], cut: [GS,0x56,0x41,0x00], doubleHeight: [ESC,0x21,0x10], normal: [ESC,0x21,0x00] },
@@ -25,7 +29,11 @@ function bytes(...args) {
     return out;
 }
 
-function buildReceiptBytes(order, restaurant, config) {
+function buildCashDrawerBytes() {
+    return new Uint8Array(CASH_DRAWER_CMD);
+}
+
+function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     const cmd = buildCommands(config.command_set);
     const lineWidth = (config.printer_width === '58mm') ? 32 : 48;
     const chunks = [];
@@ -135,6 +143,7 @@ function buildReceiptBytes(order, restaurant, config) {
     add(cmd.alignCenter);
     add('Thank you!\n\n\n');
     add(cmd.cut);
+    if (openCashDrawer) add(CASH_DRAWER_CMD);
 
     // Merge all chunks into one buffer
     const total_len = chunks.reduce((n, c) => n + c.length, 0);
@@ -210,7 +219,7 @@ Deno.serve(async (req) => {
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json();
-        const { action, printer_ip, printer_port, command_set, order, restaurant, config, printer_name } = body;
+        const { action, printer_ip, printer_port, command_set, order, restaurant, config, printer_name, open_cash_drawer } = body;
 
         if (!printer_ip) return Response.json({ error: 'printer_ip is required' }, { status: 400 });
 
@@ -231,7 +240,7 @@ Deno.serve(async (req) => {
                 footer_text: '',
                 ...(config || {}),
             };
-            data = buildReceiptBytes(order, restaurant || {}, mergedConfig);
+            data = buildReceiptBytes(order, restaurant || {}, mergedConfig, !!open_cash_drawer);
         } else if (action === 'build_raw') {
             // Return raw ESC/POS bytes as base64 — for local agents that handle TCP themselves
             let rawData;
