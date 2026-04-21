@@ -13,15 +13,22 @@ import RequireAuth from '@/components/auth/RequireAuth';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { NavigationStackProvider } from '@/lib/NavigationStack';
 import { StackNavigationAnimator } from '@/lib/StackNavigationAnimator';
-const OfflineRiskControlCenter = React.lazy(() => import('./pages/OfflineRiskControlCenter'));
-const RestaurantOfflineRiskOverview = React.lazy(() => import('./pages/RestaurantOfflineRiskOverview'));
-const ReconciliationDashboard = React.lazy(() => import('./pages/ReconciliationDashboard'));
-const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
-const AdminRestaurants = React.lazy(() => import('./pages/AdminRestaurants'));
-const KioskDashboard = React.lazy(() => import('./pages/KioskDashboard'));
-const POSDashboard = React.lazy(() => import('./pages/POSDashboard'));
-const TabletDashboard = React.lazy(() => import('./pages/TabletDashboard'));
+const lazyWithRetry = (importFn) =>
+  React.lazy(() =>
+    importFn().catch(() =>
+      new Promise((res) => setTimeout(res, 1500)).then(() => importFn())
+    )
+  );
+
+const OfflineRiskControlCenter = lazyWithRetry(() => import('./pages/OfflineRiskControlCenter'));
+const RestaurantOfflineRiskOverview = lazyWithRetry(() => import('./pages/RestaurantOfflineRiskOverview'));
+const ReconciliationDashboard = lazyWithRetry(() => import('./pages/ReconciliationDashboard'));
+const SuperAdmin = lazyWithRetry(() => import('./pages/SuperAdmin'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const AdminRestaurants = lazyWithRetry(() => import('./pages/AdminRestaurants'));
+const KioskDashboard = lazyWithRetry(() => import('./pages/KioskDashboard'));
+const POSDashboard = lazyWithRetry(() => import('./pages/POSDashboard'));
+const TabletDashboard = lazyWithRetry(() => import('./pages/TabletDashboard'));
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
 
