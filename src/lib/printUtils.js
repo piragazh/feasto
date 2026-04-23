@@ -173,7 +173,34 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
         }
     }
 
-    // No printer succeeded — use browser/dialog fallback
+    // No direct printer succeeded — try Android agent queue as last resort before browser fallback
+    try {
+        const restaurantId = restaurant?.id;
+        if (restaurantId) {
+            await base44.functions.invoke('managePrintQueue', {
+                action: 'enqueue',
+                restaurant_id: restaurantId,
+                print_action: 'print_receipt',
+                printer_ip: (centralized[0]?.network_ip) || '',
+                printer_port: String(centralized[0]?.network_port || '9100'),
+                command_set: centralized[0]?.command_set || globalCfg.command_set || 'esc_pos',
+                printer_width: centralized[0]?.printer_width || globalCfg.printer_width || '80mm',
+                template: centralized[0]?.template || globalCfg.template || 'standard',
+                order_data: order,
+                restaurant_data: {
+                    name: restaurant?.name,
+                    address: restaurant?.address,
+                    logo_url: restaurant?.logo_url,
+                },
+                config: centralized[0] || globalCfg,
+            });
+            return 'Android Agent';
+        }
+    } catch (e) {
+        console.warn('[printUtils] Android agent queue failed:', e.message);
+    }
+
+    // All methods failed — use browser/dialog fallback
     if (browserFallback) browserFallback();
     return null;
 }
