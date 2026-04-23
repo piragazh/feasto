@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, ChevronDown, ChevronUp, User, MonitorSmartphone, BadgeCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Eye, Search, Filter, ChevronDown, ChevronUp, User, MonitorSmartphone, BadgeCheck } from 'lucide-react';
 import PrintFallbackDialog from '@/components/restaurant/PrintFallbackDialog';
 import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
@@ -1228,6 +1228,20 @@ Provide only the time range (e.g., "25-30 min").`;
                                                 size="icon"
                                             >
                                                 <Printer className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const r = restaurantRef.current;
+                                                    const cfg = r?.printer_config || {};
+                                                    const centralized = cfg.centralized_printers || [];
+                                                    const fallbackCfg = centralized.length > 0 ? { ...cfg, ...centralized[0] } : cfg;
+                                                    setPrintFallback({ order, restaurant: r, config: fallbackCfg, errorMessage: null });
+                                                }}
+                                                variant="outline"
+                                                size="icon"
+                                                title="Preview receipt"
+                                            >
+                                                <Eye className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </CardContent>
