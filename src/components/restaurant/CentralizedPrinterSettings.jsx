@@ -402,11 +402,13 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
         }
     };
 
+    const enabled = printer.enabled !== false; // default true
+
     return (
-        <div className={`border-2 ${accentClass} rounded-xl p-5 space-y-4`}>
+        <div className={`border-2 ${accentClass} rounded-xl p-5 space-y-4 ${!enabled ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                    <Printer className="h-5 w-5 text-gray-600" />
+                    <Printer className={`h-5 w-5 ${enabled ? 'text-gray-600' : 'text-gray-400'}`} />
                     <div>
                         <Input
                             value={printer.name || ''}
@@ -418,6 +420,16 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
+                    {/* Enable / Disable toggle */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50">
+                        <span className={`text-xs font-medium ${enabled ? 'text-green-700' : 'text-gray-400'}`}>
+                            {enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <Switch
+                            checked={enabled}
+                            onCheckedChange={v => onUpdate({ enabled: v })}
+                        />
+                    </div>
                     {type === 'bluetooth' && service && <PrinterStatusBadge service={service} label={`Printer ${index + 1}`} />}
                     {type === 'network' && <NetworkPrinterStatusBadge ip={printer.network_ip} port={printer.network_port} />}
                     {type === 'bluetooth' && service && (
@@ -560,6 +572,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
 // ── Main component ─────────────────────────────────────────────────────────
 const DEFAULT_PRINTER = {
     name: '',
+    enabled: true,
     connection_type: 'bluetooth',
     bluetooth_printer: null,
     usb_vendor_id: '',

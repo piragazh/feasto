@@ -94,10 +94,10 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
     if (centralized.length > 0) {
         const effectiveChannel = resolveChannel(channel, centralized);
         const assigned = centralized.filter(p =>
-            (p.assigned_channels || []).includes(effectiveChannel)
+            p.enabled !== false && (p.assigned_channels || []).includes(effectiveChannel)
         );
-        // If nothing assigned to this channel, try all printers
-        const toTry = assigned.length > 0 ? assigned : centralized;
+        // If nothing assigned to this channel, try all enabled printers
+        const toTry = assigned.length > 0 ? assigned : centralized.filter(p => p.enabled !== false);
 
         for (const printerConfig of toTry) {
             // slotIndex is the position in the full centralized array (0-based),
@@ -216,9 +216,9 @@ export async function openCashDrawer(restaurant) {
 
     // Find the first pos_order printer
     const candidates = centralized.length > 0
-        ? centralized.filter(p => (p.assigned_channels || []).includes('pos_order'))
+        ? centralized.filter(p => p.enabled !== false && (p.assigned_channels || []).includes('pos_order'))
         : [];
-    const toTry = candidates.length > 0 ? candidates : centralized;
+    const toTry = candidates.length > 0 ? candidates : centralized.filter(p => p.enabled !== false);
 
     for (const printerConfig of toTry) {
         const slotIndex = centralized.indexOf(printerConfig);
