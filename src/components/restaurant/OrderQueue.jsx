@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, Smartphone } from 'lucide-react';
 import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -39,30 +39,21 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         refetchInterval: 15000,
     });
 
-    // Auto-print new orders when Bluetooth printer is connected
+    // Auto-print new orders (Bluetooth → Android agent → browser)
     React.useEffect(() => {
         if (!restaurant?.printer_config?.auto_print) return;
-        if (!restaurant?.printer_config?.bluetooth_printer) return;
 
         const checkForNewOrders = async () => {
             const pendingOrders = orders.filter(o => o.status === 'pending');
-            
             for (const order of pendingOrders) {
-                const printed = localStorage.getItem(`printed_${order.id}`);
-                if (!printed) {
-                    try {
-                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
-                        localStorage.setItem(`printed_${order.id}`, 'true');
-                        toast.success(`Receipt printed for order ${order.order_number || order.id.slice(-6)}`);
-                    } catch (error) {
-                        console.error('Auto-print failed:', error);
-                        toast.error('Failed to print. Check printer connection.');
-                    }
-                }
+                if (localStorage.getItem(`printed_${order.id}`)) continue;
+                localStorage.setItem(`printed_${order.id}`, 'true'); // mark early to avoid double-print
+                await handlePrint(order);
             }
         };
 
         checkForNewOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [orders, restaurant]);
 
     const updateOrderMutation = useMutation({
@@ -104,20 +95,8 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
     const handleAccept = async (orderId) => {
         updateOrderMutation.mutate({ orderId, status: 'confirmed' });
         toast.success('Order accepted!');
-        
-        // Auto-print to Bluetooth if configured, otherwise browser print
         const order = orders.find(o => o.id === orderId);
-        if (restaurant?.printer_config?.bluetooth_printer) {
-            try {
-                await printerService.printReceipt(order, restaurant, restaurant.printer_config);
-                toast.success('Receipt printed to Bluetooth printer');
-            } catch (error) {
-                console.error('Bluetooth print failed:', error);
-                printOrderDetails(orderId);
-            }
-        } else {
-            printOrderDetails(orderId);
-        }
+        if (order) handlePrint(order);
     };
 
     const handleReject = async (orderId, reason) => {
@@ -177,6 +156,57 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         } else {
             setSelectedOrders(new Set(filteredOrders.map(o => o.id)));
         }
+    };
+
+    // Queue a print job for the Android agent
+    const queueAndroidPrint = async (order) => {
+        const printerConfig = restaurant?.printer_config || {};
+        // Use the first centralized printer config that has an Android-compatible setup
+        const agentPrinterCfg = printerConfig.centralized_printers?.[0] || printerConfig;
+        await base44.functions.invoke('managePrintQueue', {
+            action: 'queue',
+            restaurant_id: restaurantId,
+            print_job: {
+                action: 'print_receipt',
+                printer_ip: agentPrinterCfg.network_ip || agentPrinterCfg.printer_ip || '',
+                printer_port: agentPrinterCfg.network_port || agentPrinterCfg.printer_port || '9100',
+                command_set: agentPrinterCfg.command_set || 'esc_pos',
+                printer_width: agentPrinterCfg.printer_width || '80mm',
+                template: agentPrinterCfg.template || 'standard',
+                order_data: order,
+                restaurant_data: {
+                    name: restaurant?.name,
+                    address: restaurant?.address,
+                    logo_url: restaurant?.logo_url,
+                },
+                config: agentPrinterCfg,
+            },
+        });
+        toast.success('Print job sent to Android agent 📲');
+    };
+
+    const hasAndroidAgent = !!restaurant?.printer_config;
+
+    const handlePrint = async (order) => {
+        // 1. Try Bluetooth first
+        if (restaurant?.printer_config?.bluetooth_printer) {
+            try {
+                await printerService.printReceipt(order, restaurant, restaurant.printer_config);
+                toast.success('Receipt printed to Bluetooth printer');
+                return;
+            } catch (error) {
+                console.error('Bluetooth print failed:', error);
+            }
+        }
+        // 2. Try Android agent (network printer via agent)
+        try {
+            await queueAndroidPrint(order);
+            return;
+        } catch (e) {
+            console.error('Android agent print failed:', e);
+        }
+        // 3. Fallback: browser print
+        printOrderDetails(order.id);
     };
 
     const printOrderDetails = (orderId) => {
@@ -643,26 +673,15 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                         )}
 
                                         <Button
-                                            onClick={async () => {
-                                                if (restaurant?.printer_config?.bluetooth_printer) {
-                                                    try {
-                                                        await printerService.printReceipt(order, restaurant, restaurant.printer_config);
-                                                        toast.success('Receipt printed to Bluetooth printer');
-                                                    } catch (error) {
-                                                        console.error('Bluetooth print error:', error);
-                                                        toast.error('Bluetooth print failed, opening browser print...');
-                                                        printOrderDetails(order.id);
-                                                    }
-                                                } else {
-                                                    printOrderDetails(order.id);
-                                                }
-                                            }}
+                                            onClick={() => handlePrint(order)}
                                             variant="outline"
                                             size="icon"
-                                            className={restaurant?.printer_config?.bluetooth_printer ? "bg-blue-50 border-blue-200 hover:bg-blue-100" : ""}
-                                            title={restaurant?.printer_config?.bluetooth_printer ? "Print to Bluetooth Printer" : "Print to Browser"}
+                                            className={restaurant?.printer_config?.bluetooth_printer ? "bg-blue-50 border-blue-200 hover:bg-blue-100" : "bg-green-50 border-green-200 hover:bg-green-100"}
+                                            title={restaurant?.printer_config?.bluetooth_printer ? "Print to Bluetooth Printer" : "Print via Android Agent / Browser"}
                                         >
-                                            <Printer className={`h-4 w-4 ${restaurant?.printer_config?.bluetooth_printer ? 'text-blue-600' : ''}`} />
+                                            {restaurant?.printer_config?.bluetooth_printer
+                                                ? <Printer className="h-4 w-4 text-blue-600" />
+                                                : <Smartphone className="h-4 w-4 text-green-600" />}
                                         </Button>
                                     </div>
                                 </CardContent>
