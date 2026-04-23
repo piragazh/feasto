@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     Smartphone, CheckCircle2, AlertCircle, Clock, RefreshCw,
-    Copy, ExternalLink, Wifi, WifiOff, Circle, RotateCcw, X
+    Copy, Wifi, WifiOff, Circle, RotateCcw, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -43,32 +43,52 @@ function CopyField({ label, value, mono = false }) {
     );
 }
 
+const OFFLINE_THRESHOLD_MS = 60 * 1000; // 60 seconds
+
 export default function AndroidAgentSetupPanel({ restaurantId }) {
     const [jobs, setJobs] = useState([]);
     const [loadingJobs, setLoadingJobs] = useState(false);
     const [cleaning, setCleaning] = useState(false);
+    // agentHeartbeats: { [agentId]: ISO timestamp of last seen }
+    const [agentHeartbeats, setAgentHeartbeats] = useState({});
+    const [now, setNow] = useState(Date.now());
+
+    // Tick every 5s so Online/Offline badges re-evaluate
+    useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 5000);
+        return () => clearInterval(t);
+    }, []);
 
     // Derive the function endpoint URL
     const hostname = window.location.hostname;
     const appId = import.meta.env.VITE_BASE44_APP_ID;
     const functionUrl = `https://${hostname}/api/v2/apps/${appId}/functions/managePrintQueue`;
 
-    // Detect active Android agents from recent 'processing' jobs
-    const activeAgents = [...new Set(
-        jobs
-            .filter(j => j.agent_id && j.agent_id.startsWith('android-'))
-            .map(j => j.agent_id)
-    )];
+    // Build per-agent status from heartbeats
+    const agentStatuses = Object.entries(agentHeartbeats).map(([agentId, lastSeen]) => ({
+        agentId,
+        lastSeen,
+        isOnline: (now - new Date(lastSeen).getTime()) < OFFLINE_THRESHOLD_MS,
+        secondsAgo: Math.floor((now - new Date(lastSeen).getTime()) / 1000),
+    }));
 
-    // Detect any agent that completed a job in the last 5 minutes
-    const recentAgents = [...new Set(
-        jobs
-            .filter(j => {
-                if (!j.agent_id || !j.completed_at) return false;
-                return new Date(j.completed_at) > new Date(Date.now() - 5 * 60 * 1000);
-            })
-            .map(j => j.agent_id)
-    )];
+    // Also seed from recent jobs so agents appear even before first heartbeat fetch
+    useEffect(() => {
+        if (jobs.length === 0) return;
+        const seeded = {};
+        jobs.forEach(j => {
+            if (!j.agent_id) return;
+            const t = j.completed_at || j.updated_date || j.created_date;
+            if (!t) return;
+            if (!seeded[j.agent_id] || new Date(t) > new Date(seeded[j.agent_id])) {
+                seeded[j.agent_id] = t;
+            }
+        });
+        setAgentHeartbeats(prev => {
+            const merged = { ...seeded, ...prev }; // prev (real heartbeats) win over job-derived
+            return merged;
+        });
+    }, [jobs]);
 
     const fetchJobs = useCallback(async () => {
         if (!restaurantId) return;
@@ -78,7 +98,24 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                 action: 'list',
                 restaurant_id: restaurantId,
             });
-            setJobs(res.data?.jobs || []);
+            const fetchedJobs = res.data?.jobs || [];
+            setJobs(fetchedJobs);
+
+            // Update heartbeats from the most recent job activity per agent
+            // This catches agents that polled jobs since the last panel refresh
+            setAgentHeartbeats(prev => {
+                const updated = { ...prev };
+                fetchedJobs.forEach(j => {
+                    if (!j.agent_id) return;
+                    // Use updated_date as a proxy for last poll time
+                    const t = j.updated_date || j.created_date;
+                    if (!t) return;
+                    if (!updated[j.agent_id] || new Date(t) > new Date(updated[j.agent_id])) {
+                        updated[j.agent_id] = t;
+                    }
+                });
+                return updated;
+            });
         } catch (e) {
             console.error('Failed to fetch jobs:', e);
         } finally {
@@ -130,42 +167,64 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
 
     const pendingCount = jobs.filter(j => j.status === 'pending').length;
     const processingCount = jobs.filter(j => j.status === 'processing').length;
+    const onlineCount = agentStatuses.filter(a => a.isOnline).length;
 
     return (
         <div className="space-y-5">
             {/* Active Android Agents */}
-            <Card className={`border-2 ${recentAgents.length > 0 ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
+            <Card className={`border-2 ${onlineCount > 0 ? 'border-green-300 bg-green-50' : agentStatuses.length > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
                 <CardContent className="pt-5">
                     <div className="flex items-center gap-3 mb-4">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${recentAgents.length > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
-                            <Smartphone className={`h-5 w-5 ${recentAgents.length > 0 ? 'text-green-600' : 'text-gray-400'}`} />
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${onlineCount > 0 ? 'bg-green-100' : agentStatuses.length > 0 ? 'bg-red-100' : 'bg-gray-100'}`}>
+                            <Smartphone className={`h-5 w-5 ${onlineCount > 0 ? 'text-green-600' : agentStatuses.length > 0 ? 'text-red-500' : 'text-gray-400'}`} />
                         </div>
                         <div>
                             <p className="font-semibold text-sm">Android Print Agents</p>
                             <p className="text-xs text-gray-500">
-                                {recentAgents.length > 0
-                                    ? `${recentAgents.length} agent(s) active in last 5 minutes`
-                                    : 'No Android agents seen recently — waiting for tablets to connect'}
+                                {agentStatuses.length === 0
+                                    ? 'No Android agents seen yet — waiting for tablets to connect'
+                                    : `${onlineCount} online · ${agentStatuses.length - onlineCount} offline`}
                             </p>
                         </div>
-                        {recentAgents.length > 0 ? (
-                            <Badge className="ml-auto bg-green-100 text-green-700 gap-1">
-                                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse inline-block" />
-                                Connected
-                            </Badge>
-                        ) : (
+                        {agentStatuses.length === 0 ? (
                             <Badge className="ml-auto bg-gray-100 text-gray-500 gap-1">
                                 <WifiOff className="h-3 w-3" />Waiting
+                            </Badge>
+                        ) : onlineCount > 0 ? (
+                            <Badge className="ml-auto bg-green-100 text-green-700 gap-1">
+                                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse inline-block" />
+                                {onlineCount} Online
+                            </Badge>
+                        ) : (
+                            <Badge className="ml-auto bg-red-100 text-red-700 gap-1">
+                                <WifiOff className="h-3 w-3" />All Offline
                             </Badge>
                         )}
                     </div>
 
-                    {recentAgents.length > 0 && (
+                    {agentStatuses.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                            {recentAgents.map(agentId => (
-                                <div key={agentId} className="flex items-center gap-2 bg-white border border-green-200 rounded-lg px-3 py-1.5 text-xs">
-                                    <span className="h-2 w-2 rounded-full bg-green-400 inline-block" />
-                                    <span className="font-mono text-gray-700">{agentId}</span>
+                            {agentStatuses.map(({ agentId, isOnline, secondsAgo, lastSeen }) => (
+                                <div
+                                    key={agentId}
+                                    className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-xs ${
+                                        isOnline
+                                            ? 'bg-white border-green-200'
+                                            : 'bg-red-50 border-red-200'
+                                    }`}
+                                >
+                                    <span className={`h-2 w-2 rounded-full flex-shrink-0 ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                                    <div>
+                                        <p className="font-mono text-gray-800 font-medium">{agentId}</p>
+                                        <p className={`text-[10px] mt-0.5 ${isOnline ? 'text-green-600' : 'text-red-600'}`}>
+                                            {isOnline
+                                                ? secondsAgo < 5 ? 'Just now' : `${secondsAgo}s ago`
+                                                : `Offline — last seen ${secondsAgo}s ago`}
+                                        </p>
+                                    </div>
+                                    <Badge className={`ml-1 text-[10px] px-1.5 py-0 ${isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                        {isOnline ? 'Online' : 'Offline'}
+                                    </Badge>
                                 </div>
                             ))}
                         </div>

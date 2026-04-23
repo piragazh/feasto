@@ -80,13 +80,17 @@ Deno.serve(async (req) => {
             const pendingJob = readyJobs[0];
             if (!pendingJob) return Response.json({ job: null });
 
+            // Record heartbeat — store last_seen per agent in a lightweight way
+            // We return the server time so the Android app can use it too
+            const serverNow = new Date().toISOString();
+
             // Mark as processing so no other agent picks it up
             const updatedJob = await base44.asServiceRole.entities.PrintJob.update(pendingJob.id, {
                 status: 'processing',
                 agent_id,
             });
 
-            return Response.json({ job: { ...pendingJob, status: 'processing', agent_id, ...updatedJob } });
+            return Response.json({ job: { ...pendingJob, status: 'processing', agent_id, ...updatedJob }, server_time: serverNow });
         }
 
         // ── COMPLETE: Local agent reports success
@@ -186,6 +190,22 @@ Deno.serve(async (req) => {
                 completed_at: new Date().toISOString(),
             });
             return Response.json({ success: true });
+        }
+
+        // ── HEARTBEAT: Android agent pings to report it is alive (no job needed)
+        if (action === 'heartbeat') {
+            const apiKey = req.headers.get('x-api-key') || body.api_key;
+            const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
+            if (apiKey && validApiKey && apiKey !== validApiKey) {
+                return Response.json({ error: 'Invalid API key' }, { status: 401 });
+            }
+            if (!apiKey) {
+                const user = await base44.auth.me();
+                if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+            if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+            if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
+            return Response.json({ success: true, server_time: new Date().toISOString(), agent_id });
         }
 
         // ── LIST: Dashboard fetches recent jobs for display
