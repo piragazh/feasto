@@ -36,6 +36,17 @@ Deno.serve(async (req) => {
 
         // ── POLL: Called by the local agent every few seconds to pick up pending jobs
         if (action === 'poll') {
+            // Allow Android app agents to authenticate via API key instead of user session
+            const apiKey = req.headers.get('x-api-key') || body.api_key;
+            const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
+            if (apiKey && validApiKey && apiKey !== validApiKey) {
+                return Response.json({ error: 'Invalid API key' }, { status: 401 });
+            }
+            if (!apiKey) {
+                // Fall back to user auth for dashboard-based agents
+                const user = await base44.auth.me();
+                if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            }
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
