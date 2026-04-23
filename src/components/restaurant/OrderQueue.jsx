@@ -164,23 +164,21 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
         // Use the first centralized printer config that has an Android-compatible setup
         const agentPrinterCfg = printerConfig.centralized_printers?.[0] || printerConfig;
         await base44.functions.invoke('managePrintQueue', {
-            action: 'queue',
+            action: 'enqueue',
             restaurant_id: restaurantId,
-            print_job: {
-                action: 'print_receipt',
-                printer_ip: agentPrinterCfg.network_ip || agentPrinterCfg.printer_ip || '',
-                printer_port: agentPrinterCfg.network_port || agentPrinterCfg.printer_port || '9100',
-                command_set: agentPrinterCfg.command_set || 'esc_pos',
-                printer_width: agentPrinterCfg.printer_width || '80mm',
-                template: agentPrinterCfg.template || 'standard',
-                order_data: order,
-                restaurant_data: {
-                    name: restaurant?.name,
-                    address: restaurant?.address,
-                    logo_url: restaurant?.logo_url,
-                },
-                config: agentPrinterCfg,
+            print_action: 'print_receipt',
+            printer_ip: agentPrinterCfg.network_ip || agentPrinterCfg.printer_ip || '',
+            printer_port: agentPrinterCfg.network_port || agentPrinterCfg.printer_port || '9100',
+            command_set: agentPrinterCfg.command_set || 'esc_pos',
+            printer_width: agentPrinterCfg.printer_width || '80mm',
+            template: agentPrinterCfg.template || 'standard',
+            order_data: order,
+            restaurant_data: {
+                name: restaurant?.name,
+                address: restaurant?.address,
+                logo_url: restaurant?.logo_url,
             },
+            config: agentPrinterCfg,
         });
         toast.success('Print job sent to Android agent 📲');
     };

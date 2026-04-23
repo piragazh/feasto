@@ -131,7 +131,7 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
 
     const handleManualRetry = async (jobId) => {
         try {
-            await base44.functions.invoke('managePrintQueue', { action: 'manual_retry', job_id: jobId });
+            await base44.functions.invoke('managePrintQueue', { action: 'manual_retry', job_id: jobId, restaurant_id: restaurantId });
             toast.success('Job re-queued');
             fetchJobs();
         } catch (e) {
@@ -141,7 +141,7 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
 
     const handleCancelJob = async (jobId) => {
         try {
-            await base44.functions.invoke('managePrintQueue', { action: 'cancel', job_id: jobId });
+            await base44.functions.invoke('managePrintQueue', { action: 'cancel', job_id: jobId, restaurant_id: restaurantId });
             toast.success('Job cancelled');
             fetchJobs();
         } catch (e) {
