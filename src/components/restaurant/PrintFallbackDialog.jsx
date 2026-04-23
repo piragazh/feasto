@@ -89,14 +89,16 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
                     </Button>
                 </DialogHeader>
 
-                {/* Error notice */}
-                <div className="mx-4 mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                    <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-600" />
-                    <div>
-                        <p className="font-semibold">Printer not connected</p>
-                        <p className="text-xs mt-0.5">{errorMessage || 'No Bluetooth printer available. Here is the order for manual reference.'}</p>
+                {/* Error notice — only shown when there's an actual error, not for preview */}
+                {errorMessage !== null && (
+                    <div className="mx-4 mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-600" />
+                        <div>
+                            <p className="font-semibold">Printer not connected</p>
+                            <p className="text-xs mt-0.5">{errorMessage || 'No Bluetooth printer available. Here is the order for manual reference.'}</p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Receipt body */}
                 <div className="mx-4 my-4 border border-gray-200 rounded-xl overflow-hidden font-mono text-sm">
@@ -228,19 +230,21 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
 
                 {/* Actions */}
                 <div className="px-4 pb-4 flex gap-2">
-                    <Button
-                        onClick={handleReconnectAndPrint}
-                        disabled={reconnecting || reconnected}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    >
-                        {reconnected ? (
-                            <><CheckCircle2 className="h-4 w-4 mr-2" />Printed!</>
-                        ) : reconnecting ? (
-                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Reconnecting...</>
-                        ) : (
-                            <><RefreshCw className="h-4 w-4 mr-2" />Reconnect & Print</>
-                        )}
-                    </Button>
+                    {errorMessage !== null && (
+                        <Button
+                            onClick={handleReconnectAndPrint}
+                            disabled={reconnecting || reconnected}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            {reconnected ? (
+                                <><CheckCircle2 className="h-4 w-4 mr-2" />Printed!</>
+                            ) : reconnecting ? (
+                                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Reconnecting...</>
+                            ) : (
+                                <><RefreshCw className="h-4 w-4 mr-2" />Reconnect & Print</>
+                            )}
+                        </Button>
+                    )}
                     <Button onClick={onClose} variant="outline" className="flex-1">
                         <X className="h-4 w-4 mr-2" />
                         Close
