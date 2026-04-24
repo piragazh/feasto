@@ -4,9 +4,12 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Bluetooth, Printer, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { printerService } from './PrinterService';
+import { printerService as defaultPrinterService } from './PrinterService';
 
-export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSelect }) {
+export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSelect, printerService: printerServiceProp }) {
+    // Use the injected service (per-slot from PrinterCard) or fall back to the global singleton
+    const printerService = printerServiceProp || defaultPrinterService;
+
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectedDevice, setConnectedDevice] = useState(null);
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -34,7 +37,7 @@ export default function BluetoothPrinterManager({ selectedPrinter, onPrinterSele
         }, 10000);
 
         return () => clearInterval(interval);
-    }, [selectedPrinter]);
+    }, [selectedPrinter, printerService]);
 
     const scanForPrinters = async () => {
         if (!navigator.bluetooth) {

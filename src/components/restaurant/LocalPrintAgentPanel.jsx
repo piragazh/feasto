@@ -412,7 +412,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 
     const handleManualRetry = async (jobId) => {
         try {
-            await base44.functions.invoke('managePrintQueue', { action: 'manual_retry', job_id: jobId });
+            await base44.functions.invoke('managePrintQueue', { action: 'manual_retry', job_id: jobId, restaurant_id: restaurantId });
             toast.success('Job re-queued for printing');
             fetchJobs();
         } catch (e) {
@@ -422,7 +422,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 
     const handleCancelJob = async (jobId) => {
         try {
-            await base44.functions.invoke('managePrintQueue', { action: 'cancel', job_id: jobId });
+            await base44.functions.invoke('managePrintQueue', { action: 'cancel', job_id: jobId, restaurant_id: restaurantId });
             toast.success('Job cancelled');
             fetchJobs();
         } catch (e) {

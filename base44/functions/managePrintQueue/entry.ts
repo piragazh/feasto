@@ -53,10 +53,13 @@ Deno.serve(async (req) => {
             const now = new Date();
 
             // Reset stuck 'processing' jobs older than 2 minutes back to 'pending'
+            // Use a time-bound filter to avoid fetching the entire job history
             const stuckCutoff = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+            const stuckSince = new Date(now.getTime() - 30 * 60 * 1000).toISOString(); // only look back 30m
             const stuckJobs = await base44.asServiceRole.entities.PrintJob.filter({
                 restaurant_id,
                 status: 'processing',
+                created_date: { $gte: stuckSince },
             });
             for (const j of stuckJobs) {
                 if ((j.updated_date || j.created_date) < stuckCutoff) {

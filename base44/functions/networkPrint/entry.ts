@@ -221,7 +221,10 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { action, printer_ip, printer_port, command_set, order, restaurant, config, printer_name, open_cash_drawer } = body;
 
-        if (!printer_ip) return Response.json({ error: 'printer_ip is required' }, { status: 400 });
+        // build_raw only generates ESC/POS bytes — no TCP needed, so printer_ip is optional for it
+        if (!printer_ip && action !== 'build_raw') {
+            return Response.json({ error: 'printer_ip is required' }, { status: 400 });
+        }
 
         let data;
 

@@ -9,6 +9,7 @@ import {
     Copy, Wifi, WifiOff, Circle, RotateCcw, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getApiUrl } from '@/lib/api-origin';
 
 function JobStatusBadge({ job }) {
     const { status, retry_count, next_retry_at } = job;
@@ -59,11 +60,12 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
         return () => clearInterval(t);
     }, []);
 
-    // Derive the function endpoint URLs
-    const hostname = window.location.hostname;
-    const appId = import.meta.env.VITE_BASE44_APP_ID;
-    const functionUrl = `https://${hostname}/api/v2/apps/${appId}/functions/managePrintQueue`;
-    const wsUrl = `wss://${hostname}/api/v2/apps/${appId}/functions/printAgentWS`;
+    // Derive the function endpoint URLs using the canonical API origin
+    // (avoids custom-domain hosts that don't expose backend function endpoints)
+    const appId = import.meta.env.VITE_BASE44_APP_ID || '';
+    const functionUrl = getApiUrl(`/api/v2/apps/${appId}/functions/managePrintQueue`);
+    // Convert https:// → wss:// for the WebSocket endpoint
+    const wsUrl = getApiUrl(`/api/v2/apps/${appId}/functions/printAgentWS`).replace(/^https/, 'wss').replace(/^http/, 'ws');
 
     // Build per-agent status from heartbeats
     const agentStatuses = Object.entries(agentHeartbeats).map(([agentId, lastSeen]) => ({
