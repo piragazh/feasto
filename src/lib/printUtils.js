@@ -184,6 +184,11 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                 : null;
             const agentPrinterCfg = channelPrinter || centralized[0] || {};
 
+            // Only enqueue if the agent printer has a network target — enqueueing
+            // a job with no IP/printer info would create a ghost job in the queue.
+            const hasNetworkTarget = !!(agentPrinterCfg.network_ip || agentPrinterCfg.bluetooth_printer?.id);
+            if (!hasNetworkTarget) throw new Error('No printer target for agent queue');
+
             // Build a clean receipt config — strip non-receipt fields
             const receiptConfig = buildPerPrinterConfig(globalCfg, agentPrinterCfg);
 
@@ -287,7 +292,7 @@ export function hasPrinterForChannel(restaurant, channel) {
     const cfg = restaurant?.printer_config || {};
     const centralized = cfg.centralized_printers || [];
     if (centralized.length > 0) {
-        return centralized.some(p => (p.assigned_channels || []).includes(channel));
+        return centralized.some(p => p.enabled !== false && (p.assigned_channels || []).includes(channel));
     }
     return !!(cfg.bluetooth_printer?.id || cfg.network_ip);
 }

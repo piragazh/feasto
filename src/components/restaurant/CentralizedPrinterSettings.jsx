@@ -320,7 +320,7 @@ function PrinterReceiptSettings({ printer, onUpdate }) {
                                 <div key={key} className={`flex items-center justify-between p-2.5 border rounded-lg ${highlight ? 'border-orange-200 bg-orange-50' : ''}`}>
                                     <p className="text-xs font-medium text-gray-700">{label}</p>
                                     <Switch
-                                        checked={printer[key] !== false && printer[key] !== undefined ? (printer[key] || false) : false}
+                                        checked={printer[key] !== undefined ? !!printer[key] : !!DEFAULT_PRINTER[key]}
                                         onCheckedChange={v => onUpdate({ [key]: v })}
                                     />
                                 </div>
@@ -684,8 +684,8 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
     const mutation = useMutation({
         mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
         onSuccess: () => {
-            queryClient.invalidateQueries(['restaurant-printers', restaurantId]);
-            queryClient.invalidateQueries(['restaurant', restaurantId]);
+            queryClient.invalidateQueries({ queryKey: ['restaurant-printers', restaurantId] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success('Printer settings saved');
         },
         onError: () => toast.error('Failed to save'),
