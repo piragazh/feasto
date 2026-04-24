@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { printerManager } from '@/components/restaurant/PrinterService';
@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Eye, Search, Filter, ChevronDown, ChevronUp, User, MonitorSmartphone, BadgeCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Eye, Search, Filter, ChevronDown, ChevronUp, User, BadgeCheck } from 'lucide-react';
 import PrintFallbackDialog from '@/components/restaurant/PrintFallbackDialog';
 import { formatUKTime } from '@/lib/ukDateUtils';
 import { toast } from 'sonner';
@@ -312,9 +312,11 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                 await sendCustomerNotification(orderId, status, rejection_reason);
             }
 
-            // Print receipt after order is confirmed in the database
+            // Print receipt after order is confirmed in the database.
+            // Use ref to always call latest version (avoids stale closure).
             if (_printAfter) {
-                await printOrderDetails(orderId);
+                // Small delay to let the DB write propagate before fresh-fetch in printOrderDetails
+                setTimeout(() => printOrderDetailsRef.current?.(orderId), 300);
             }
             
             if (onOrderUpdate) onOrderUpdate();
@@ -454,37 +456,36 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         }
 
         if (newStatus === 'out_for_delivery') {
-            const drivers = await base44.entities.Driver.filter({ 
-                is_available: true,
-                current_order_id: null 
-            });
-            
-            if (drivers.length > 0) {
-                const driver = drivers[0];
+            // Auto-assign first available driver if present, and calculate ETA
+            try {
+                const drivers = await base44.entities.Driver.filter({ 
+                    is_available: true,
+                    current_order_id: null 
+                });
                 
-                const etaPrompt = `Calculate estimated delivery time for a food delivery order.
+                if (drivers.length > 0) {
+                    const driver = drivers[0];
+                    const etaPrompt = `Calculate estimated delivery time for a food delivery order.
 Distance: Assume 3-5 km average urban delivery.
 Traffic: Consider it's ${new Date().getHours()}:00, adjust for peak hours (12-14, 18-21).
 Vehicle: ${driver.vehicle_type}
 Provide only the time range (e.g., "25-30 min").`;
-                
-                try {
-                    const etaResponse = await base44.integrations.Core.InvokeLLM({
-                        prompt: etaPrompt
-                    });
                     
-                    await base44.entities.Order.update(orderId, { 
-                        driver_id: driver.id,
-                        estimated_delivery: etaResponse
-                    });
+                    const etaResponse = await base44.integrations.Core.InvokeLLM({ prompt: etaPrompt }).catch(() => null);
                     
-                    await base44.entities.Driver.update(driver.id, {
-                        current_order_id: orderId,
-                        is_available: false
-                    });
-                } catch (e) {
-                    console.error('ETA calculation failed:', e);
+                    await Promise.all([
+                        base44.entities.Order.update(orderId, { 
+                            driver_id: driver.id,
+                            estimated_delivery: etaResponse || '',
+                        }),
+                        base44.entities.Driver.update(driver.id, {
+                            current_order_id: orderId,
+                            is_available: false,
+                        }),
+                    ]);
                 }
+            } catch (e) {
+                console.error('Driver auto-assign / ETA failed:', e);
             }
         }
         

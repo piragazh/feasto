@@ -99,8 +99,8 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const jobsForRestaurant = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
-            const job = jobsForRestaurant.find(j => j.id === job_id);
+            const jobsForRestaurant = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
+            const job = jobsForRestaurant[0];
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
 
@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const failJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
-            const job = failJobs.find(j => j.id === job_id);
+            const failJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
+            const job = failJobs[0];
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
 
@@ -159,8 +159,8 @@ Deno.serve(async (req) => {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const retryJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
-            const job = retryJobs.find(j => j.id === job_id);
+            const retryJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
+            const job = retryJobs[0];
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.status !== 'failed') return Response.json({ error: 'Only failed jobs can be manually retried' }, { status: 400 });
 
@@ -181,8 +181,8 @@ Deno.serve(async (req) => {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const cancelJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
-            const job = cancelJobs.find(j => j.id === job_id);
+            const cancelJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
+            const job = cancelJobs[0];
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (!['pending', 'processing'].includes(job.status)) return Response.json({ error: 'Only pending or processing jobs can be cancelled' }, { status: 400 });
 
@@ -232,11 +232,12 @@ Deno.serve(async (req) => {
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const jobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
-            const old = jobs.filter(j =>
-                (j.status === 'done' || j.status === 'failed') &&
-                new Date(j.created_date) < new Date(Date.now() - 24 * 60 * 60 * 1000)
-            );
+            const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const [doneOld, failedOld] = await Promise.all([
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'done', created_date: { $lt: cutoff } }),
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'failed', created_date: { $lt: cutoff } }),
+            ]);
+            const old = [...doneOld, ...failedOld];
             for (const j of old) {
                 await base44.asServiceRole.entities.PrintJob.delete(j.id);
             }

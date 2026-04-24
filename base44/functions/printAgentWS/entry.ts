@@ -34,7 +34,8 @@ const agentInFlight = new Map();
 let pollTimer = null;
 
 // Stuck-job recovery runs less frequently to avoid excessive DB reads
-let lastStuckCheck = 0;
+// Per-restaurant last-check timestamps to prevent one restaurant blocking others
+const lastStuckCheckByRestaurant = new Map();
 const STUCK_CHECK_INTERVAL_MS = 2 * 60 * 1000; // every 2 minutes
 
 function startPolling() {
@@ -83,9 +84,10 @@ async function pollForJobs() {
         const serviceRole = restaurantAgents[0].serviceRole;
 
         try {
-            // ── Stuck-job recovery (rate-limited to every 2 min) ────────────
+            // ── Stuck-job recovery (rate-limited per restaurant to every 2 min) ──
+            const lastStuckCheck = lastStuckCheckByRestaurant.get(restaurantId) || 0;
             if (now - lastStuckCheck > STUCK_CHECK_INTERVAL_MS) {
-                lastStuckCheck = now;
+                lastStuckCheckByRestaurant.set(restaurantId, now);
                 const stuckCutoff = new Date(now - 2 * 60 * 1000).toISOString();
                 const stuckJobs = await serviceRole.entities.PrintJob.filter({
                     restaurant_id: restaurantId,
@@ -268,8 +270,8 @@ Deno.serve(async (req) => {
                 return;
             }
             try {
-                const jobs = await connectionServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' });
-                const job = jobs.find(j => j.id === job_id);
+                const jobs = await connectionServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
+                const job = jobs[0];
 
                 // Always clear in-flight regardless of job state
                 getAgentInFlight(registeredAgentId).delete(job_id);
