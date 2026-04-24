@@ -177,22 +177,32 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
     try {
         const restaurantId = restaurant?.id;
         if (restaurantId) {
+            // Use the channel-matched printer config (or first enabled printer as fallback)
+            const effectiveChannel = centralized.length > 0 ? resolveChannel(channel, centralized) : null;
+            const channelPrinter = effectiveChannel
+                ? (centralized.find(p => p.enabled !== false && (p.assigned_channels || []).includes(effectiveChannel)) || centralized.find(p => p.enabled !== false))
+                : null;
+            const agentPrinterCfg = channelPrinter || centralized[0] || {};
+
+            // Build a clean receipt config — strip non-receipt fields
+            const receiptConfig = buildPerPrinterConfig(globalCfg, agentPrinterCfg);
+
             await base44.functions.invoke('managePrintQueue', {
                 action: 'enqueue',
                 restaurant_id: restaurantId,
                 print_action: 'print_receipt',
-                printer_ip: (centralized[0]?.network_ip) || '',
-                printer_port: String(centralized[0]?.network_port || '9100'),
-                command_set: centralized[0]?.command_set || globalCfg.command_set || 'esc_pos',
-                printer_width: centralized[0]?.printer_width || globalCfg.printer_width || '80mm',
-                template: centralized[0]?.template || globalCfg.template || 'standard',
+                printer_ip: agentPrinterCfg.network_ip || '',
+                printer_port: String(agentPrinterCfg.network_port || '9100'),
+                command_set: receiptConfig.command_set,
+                printer_width: receiptConfig.printer_width,
+                template: receiptConfig.template,
                 order_data: order,
                 restaurant_data: {
                     name: restaurant?.name,
                     address: restaurant?.address,
                     logo_url: restaurant?.logo_url,
                 },
-                config: centralized[0] || globalCfg,
+                config: receiptConfig,
             });
             return 'Android Agent';
         }

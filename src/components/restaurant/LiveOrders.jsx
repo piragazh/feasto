@@ -119,6 +119,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     // Determine order channel for printer routing
     const getOrderChannel = (order) => {
         if (order.order_source === 'kiosk') return 'kiosk_order';
+        if (order.order_source === 'pos') return 'pos_order';
         if (order.order_type === 'dine_in') return 'pos_order';
         if (order.order_type === 'collection' || order.order_type === 'takeaway') return 'online_order';
         return 'online_order';
@@ -269,7 +270,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     });
 
     const updateOrderMutation = useMutation({
-        mutationFn: async ({ orderId, status, rejection_reason, notify = true }) => {
+        mutationFn: async ({ orderId, status, rejection_reason, notify = true, _printAfter = false }) => {
             // SECURITY: Route through hardened backend function with role checks
             const response = await base44.functions.invoke('updateOrderStatus', {
                 order_id: orderId,
@@ -278,11 +279,16 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             });
             return response?.data || response;
         },
-        onSuccess: async (data, { orderId, status, rejection_reason, notify = true }) => {
+        onSuccess: async (data, { orderId, status, rejection_reason, notify = true, _printAfter = false }) => {
             queryClient.invalidateQueries(['live-orders']);
             
             if (notify) {
                 await sendCustomerNotification(orderId, status, rejection_reason);
+            }
+
+            // Print receipt after order is confirmed in the database
+            if (_printAfter) {
+                await printOrderDetails(orderId);
             }
             
             if (onOrderUpdate) onOrderUpdate();
@@ -351,9 +357,10 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     };
 
     const handleAccept = (orderId) => {
-        updateOrderMutation.mutate({ orderId, status: 'confirmed' });
+        // Print is triggered in onSuccess callback of updateOrderMutation to ensure
+        // the order is confirmed before the receipt is sent to the printer.
+        updateOrderMutation.mutate({ orderId, status: 'confirmed', _printAfter: true });
         toast.success('Order accepted! Preparing...');
-        printOrderDetails(orderId);
     };
 
     const handleReject = async (orderId, reason) => {
