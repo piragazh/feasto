@@ -20,20 +20,22 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const RETRY_DELAYS_SECONDS = [30, 120, 300];
 const MAX_RETRIES = RETRY_DELAYS_SECONDS.length;
-const WS_OPEN = 1; // WebSocket.OPEN numeric value — Deno doesn't expose the constant
+const WS_OPEN = 1; // WebSocket.OPEN numeric constant — Deno doesn't expose the static property
 
-// agentId → { socket, restaurantId, agentId, connectedAt }
+// agentId → { socket, restaurantId, agentId, connectedAt, serviceRole }
+// Each agent carries its OWN serviceRole scoped to its connection's auth token.
 const agents = new Map();
 
-// Track which job IDs are currently being pushed to avoid double-dispatch
-const inFlightJobIds = new Set();
+// Per-agent in-flight tracking: agentId → Set<jobId>
+// Prevents double-dispatch for a specific agent only.
+const agentInFlight = new Map();
 
 // Single poll timer — runs while any agent is connected
 let pollTimer = null;
 
-// We keep a persistent service role client seeded from the first connection's req.
-// Recreated whenever it might be stale (first connect).
-let sharedServiceRole = null;
+// Stuck-job recovery runs less frequently to avoid excessive DB reads
+let lastStuckCheck = 0;
+const STUCK_CHECK_INTERVAL_MS = 2 * 60 * 1000; // every 2 minutes
 
 function startPolling() {
     if (pollTimer) return;
@@ -47,62 +49,82 @@ function stopPolling() {
     }
 }
 
-async function pollForJobs() {
-    if (agents.size === 0 || !sharedServiceRole) return;
+function getAgentInFlight(agentId) {
+    if (!agentInFlight.has(agentId)) agentInFlight.set(agentId, new Set());
+    return agentInFlight.get(agentId);
+}
 
-    // Unique restaurant IDs that have at least one connected agent
+function isJobInFlightAnywhere(jobId) {
+    for (const set of agentInFlight.values()) {
+        if (set.has(jobId)) return true;
+    }
+    return false;
+}
+
+async function pollForJobs() {
+    if (agents.size === 0) return;
+
+    const now = Date.now();
+    const nowIso = new Date(now).toISOString();
+
+    // ── Unique restaurant IDs with connected agents ───────────────────────
     const restaurantIds = [...new Set([...agents.values()].map(a => a.restaurantId))];
 
     for (const restaurantId of restaurantIds) {
-        try {
-            const now = new Date();
-            const nowIso = now.toISOString();
-            const stuckCutoff = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+        // Get all online agents for this restaurant
+        const restaurantAgents = [...agents.values()].filter(
+            a => a.restaurantId === restaurantId && a.socket.readyState === WS_OPEN
+        );
+        if (restaurantAgents.length === 0) continue;
 
-            // ── Reset stuck processing jobs older than 2 min ──────────────
-            const stuckJobs = await sharedServiceRole.entities.PrintJob.filter({
-                restaurant_id: restaurantId,
-                status: 'processing',
-            });
-            for (const j of stuckJobs) {
-                const updatedAt = j.updated_date || j.created_date;
-                if (updatedAt < stuckCutoff && !inFlightJobIds.has(j.id)) {
-                    await sharedServiceRole.entities.PrintJob.update(j.id, {
-                        status: 'pending',
-                        agent_id: null,
-                    });
+        // Use the first agent's serviceRole for DB operations for this restaurant.
+        // Each agent's serviceRole is scoped to its own connection — this is safe because
+        // all agents for the same restaurant have equivalent access rights.
+        const serviceRole = restaurantAgents[0].serviceRole;
+
+        try {
+            // ── Stuck-job recovery (rate-limited to every 2 min) ────────────
+            if (now - lastStuckCheck > STUCK_CHECK_INTERVAL_MS) {
+                lastStuckCheck = now;
+                const stuckCutoff = new Date(now - 2 * 60 * 1000).toISOString();
+                const stuckJobs = await serviceRole.entities.PrintJob.filter({
+                    restaurant_id: restaurantId,
+                    status: 'processing',
+                });
+                for (const j of stuckJobs) {
+                    const updatedAt = j.updated_date || j.created_date;
+                    if (updatedAt < stuckCutoff && !isJobInFlightAnywhere(j.id)) {
+                        await serviceRole.entities.PrintJob.update(j.id, {
+                            status: 'pending',
+                            agent_id: null,
+                        });
+                    }
                 }
             }
 
-            // ── Fetch pending jobs ready to run ───────────────────────────
-            const pendingJobs = await sharedServiceRole.entities.PrintJob.filter({
+            // ── Fetch pending jobs ready to dispatch ─────────────────────────
+            const pendingJobs = await serviceRole.entities.PrintJob.filter({
                 restaurant_id: restaurantId,
                 status: 'pending',
             });
             const readyJobs = pendingJobs
                 .filter(j => !j.next_retry_at || j.next_retry_at <= nowIso)
-                .filter(j => !inFlightJobIds.has(j.id)) // skip already dispatched
+                .filter(j => !isJobInFlightAnywhere(j.id))
                 .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
 
             if (readyJobs.length === 0) continue;
 
-            // ── Get all online agents for this restaurant ─────────────────
-            const restaurantAgents = [...agents.values()].filter(
-                a => a.restaurantId === restaurantId && a.socket.readyState === WS_OPEN
-            );
-            if (restaurantAgents.length === 0) continue;
-
-            // Distribute jobs round-robin across agents
+            // ── Round-robin distribution across agents ────────────────────────
             for (let i = 0; i < readyJobs.length; i++) {
                 const job = readyJobs[i];
                 const agent = restaurantAgents[i % restaurantAgents.length];
+                const inFlight = getAgentInFlight(agent.agentId);
 
-                // Mark in-flight before async DB write to prevent double-dispatch
-                inFlightJobIds.add(job.id);
+                // Mark in-flight BEFORE async DB write to prevent double-dispatch
+                inFlight.add(job.id);
 
                 try {
-                    // Claim the job
-                    const updatedJob = await sharedServiceRole.entities.PrintJob.update(job.id, {
+                    const updatedJob = await serviceRole.entities.PrintJob.update(job.id, {
                         status: 'processing',
                         agent_id: agent.agentId,
                     });
@@ -115,14 +137,14 @@ async function pollForJobs() {
                         console.log(`[WS] Pushed job ${job.id} to agent ${agent.agentId}`);
                     } else {
                         // Agent disconnected between check and send — release job
-                        await sharedServiceRole.entities.PrintJob.update(job.id, {
+                        await serviceRole.entities.PrintJob.update(job.id, {
                             status: 'pending',
                             agent_id: null,
                         });
-                        inFlightJobIds.delete(job.id);
+                        inFlight.delete(job.id);
                     }
                 } catch (err) {
-                    inFlightJobIds.delete(job.id);
+                    inFlight.delete(job.id);
                     console.error(`[WS] Failed to dispatch job ${job.id}:`, err.message);
                 }
             }
@@ -153,9 +175,10 @@ Deno.serve(async (req) => {
     // Upgrade the connection
     const { socket, response } = Deno.upgradeWebSocket(req);
 
-    // Seed shared service role from this request (refreshed on each new connection)
+    // Create a service role client scoped to THIS connection's auth token.
+    // Stored on the agent entry so DB ops always use the correct auth context.
     const base44 = createClientFromRequest(req);
-    sharedServiceRole = base44.asServiceRole;
+    const connectionServiceRole = base44.asServiceRole;
 
     let registeredAgentId = null;
 
@@ -189,9 +212,10 @@ Deno.serve(async (req) => {
                 return;
             }
 
-            // If this agent was previously registered (reconnect), clean up old entry
+            // Clean up any previous registration for this socket (reconnect case)
             if (registeredAgentId && agents.has(registeredAgentId)) {
                 agents.delete(registeredAgentId);
+                agentInFlight.delete(registeredAgentId);
             }
 
             registeredAgentId = agent_id;
@@ -200,7 +224,9 @@ Deno.serve(async (req) => {
                 restaurantId: restaurant_id,
                 agentId: agent_id,
                 connectedAt: new Date().toISOString(),
+                serviceRole: connectionServiceRole, // scoped to this connection
             });
+            agentInFlight.set(agent_id, new Set());
 
             console.log(`[WS] Agent registered: ${agent_id} for restaurant ${restaurant_id}`);
             socket.send(JSON.stringify({
@@ -220,12 +246,12 @@ Deno.serve(async (req) => {
                 return;
             }
             try {
-                await sharedServiceRole.entities.PrintJob.update(job_id, {
+                await connectionServiceRole.entities.PrintJob.update(job_id, {
                     status: 'done',
                     completed_at: new Date().toISOString(),
                     next_retry_at: null,
                 });
-                inFlightJobIds.delete(job_id);
+                getAgentInFlight(registeredAgentId).delete(job_id);
                 socket.send(JSON.stringify({ type: 'job_ack', job_id, status: 'done' }));
                 console.log(`[WS] Job ${job_id} done by ${registeredAgentId}`);
             } catch (err) {
@@ -242,21 +268,21 @@ Deno.serve(async (req) => {
                 return;
             }
             try {
-                const jobs = await sharedServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' });
+                const jobs = await connectionServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' });
                 const job = jobs.find(j => j.id === job_id);
 
+                // Always clear in-flight regardless of job state
+                getAgentInFlight(registeredAgentId).delete(job_id);
+
                 if (!job) {
-                    // Job may have been manually cancelled — just clear in-flight
-                    inFlightJobIds.delete(job_id);
                     socket.send(JSON.stringify({ type: 'job_ack', job_id, status: 'not_found' }));
                     return;
                 }
 
                 const retryCount = (job.retry_count || 0) + 1;
-                inFlightJobIds.delete(job_id);
 
                 if (retryCount > MAX_RETRIES) {
-                    await sharedServiceRole.entities.PrintJob.update(job_id, {
+                    await connectionServiceRole.entities.PrintJob.update(job_id, {
                         status: 'failed',
                         error_message: `Failed after ${MAX_RETRIES} retries. Last: ${error_message || 'Unknown'}`,
                         completed_at: new Date().toISOString(),
@@ -267,7 +293,7 @@ Deno.serve(async (req) => {
                 } else {
                     const delaySecs = RETRY_DELAYS_SECONDS[retryCount - 1] || 300;
                     const nextRetryAt = new Date(Date.now() + delaySecs * 1000).toISOString();
-                    await sharedServiceRole.entities.PrintJob.update(job_id, {
+                    await connectionServiceRole.entities.PrintJob.update(job_id, {
                         status: 'pending',
                         agent_id: null,
                         error_message: `Attempt ${retryCount} failed: ${error_message || 'Unknown'}. Retry in ${delaySecs}s.`,
@@ -289,6 +315,7 @@ Deno.serve(async (req) => {
     socket.onclose = () => {
         if (registeredAgentId) {
             agents.delete(registeredAgentId);
+            agentInFlight.delete(registeredAgentId);
             console.log(`[WS] Agent disconnected: ${registeredAgentId}`);
         }
         stopPolling();
@@ -297,8 +324,9 @@ Deno.serve(async (req) => {
     socket.onerror = (err) => {
         console.error('[WS] Socket error:', err.message || err);
         if (registeredAgentId) {
+            // Only clean up THIS agent's in-flight jobs — not all agents
+            agentInFlight.delete(registeredAgentId);
             agents.delete(registeredAgentId);
-            inFlightJobIds.clear(); // Safety: clear in-flight on error
         }
     };
 

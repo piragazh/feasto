@@ -211,15 +211,19 @@ Deno.serve(async (req) => {
             return Response.json({ success: true, server_time: new Date().toISOString(), agent_id });
         }
 
-        // ── LIST: Dashboard fetches recent jobs for display
+        // ── LIST: Dashboard fetches recent jobs for display (last 24h only)
         if (action === 'list') {
             const user = await base44.auth.me();
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const jobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id });
+            const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const jobs = await base44.asServiceRole.entities.PrintJob.filter({
+                restaurant_id,
+                created_date: { $gte: since },
+            });
             jobs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-            return Response.json({ jobs: jobs.slice(0, 20) });
+            return Response.json({ jobs: jobs.slice(0, 50) });
         }
 
         // ── CLEANUP: Remove old done/failed jobs (called by dashboard)

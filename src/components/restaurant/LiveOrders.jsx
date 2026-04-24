@@ -77,10 +77,30 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     const { data: allOrders = [], isLoading } = useQuery({
         queryKey: ['live-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ 
-            restaurant_id: restaurantId,
-            status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] }
-        }, '-created_date'),
+        queryFn: async () => {
+            // Fetch both legacy status-based orders AND kiosk order_status-based orders.
+            // Kiosk orders keep status='pending' while progressing via order_status,
+            // so we must include them explicitly to avoid them vanishing mid-lifecycle.
+            const [legacyOrders, kioskOrders] = await Promise.all([
+                base44.entities.Order.filter({
+                    restaurant_id: restaurantId,
+                    status: { $in: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'] },
+                }, '-created_date'),
+                base44.entities.Order.filter({
+                    restaurant_id: restaurantId,
+                    order_source: 'kiosk',
+                    order_status: { $in: ['new', 'confirmed', 'preparing', 'ready'] },
+                }, '-created_date'),
+            ]);
+            // Deduplicate by id (kiosk orders with status=pending will appear in both)
+            const seen = new Set();
+            const merged = [];
+            for (const o of [...legacyOrders, ...kioskOrders]) {
+                if (!seen.has(o.id)) { seen.add(o.id); merged.push(o); }
+            }
+            merged.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+            return merged;
+        },
         refetchInterval: 15000,
     });
 
@@ -140,16 +160,21 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     // Auto-print using centralized printer config with channel routing.
     // All errors are caught — failure does not disrupt live order flow.
+    // The fallback shows the PrintFallbackDialog; we do NOT recursively call
+    // printOrderDetails here because that would cause a double-print loop.
     const autoPrintOrder = async (order, restaurant) => {
-        try {
-            const channel = getOrderChannel(order);
-            await printWithCentralizedConfig(order, restaurant, channel, () => {
-                if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
+        const channel = getOrderChannel(order);
+        const config = restaurant?.printer_config || {};
+        const centralized = config.centralized_printers || [];
+        await printWithCentralizedConfig(order, restaurant, channel, () => {
+            const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
+            setPrintFallback({
+                order,
+                restaurant,
+                config: fallbackCfg,
+                errorMessage: 'No printer connected for auto-print. Here is the order for manual reference.',
             });
-        } catch (err) {
-            console.error('[autoPrintOrder] Error:', err);
-            if (printOrderDetailsRef.current) printOrderDetailsRef.current(order.id);
-        }
+        });
     };
 
     const confirmKioskPaymentMutation = useMutation({
@@ -182,7 +207,8 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             queryClient.invalidateQueries(['live-orders']);
             toast.success(`✓ Payment confirmed for order ${data.order_number}`);
             if (data.order_id) {
-                setTimeout(() => printOrderDetails(data.order_id), 500);
+                // Use ref to avoid stale closure; delay to let invalidation settle
+                setTimeout(() => printOrderDetailsRef.current?.(data.order_id), 500);
             }
             if (onOrderUpdate) onOrderUpdate();
         },
@@ -477,14 +503,16 @@ Provide only the time range (e.g., "25-30 min").`;
     };
 
     const printOrderDetails = async (orderId) => {
-        // Try cache first, fall back to fresh fetch (handles stale cache after invalidation)
-        let order = allOrders.find(o => o.id === orderId);
-        if (!order) {
-            try {
-                const fresh = await base44.entities.Order.filter({ id: orderId });
-                order = fresh?.[0];
-            } catch {}
-        }
+        // Always fetch fresh from DB — do NOT rely on the React Query cache here.
+        // When called from onSuccess (after accept/confirm), the cache may still hold
+        // the pre-update order object (status=pending) even after invalidation fires.
+        let order = null;
+        try {
+            const fresh = await base44.entities.Order.filter({ id: orderId });
+            order = fresh?.[0];
+        } catch {}
+        // Fall back to cache only if DB fetch fails
+        if (!order) order = allOrders.find(o => o.id === orderId);
         if (!order) return;
 
         // Use cached restaurant or fetch fresh
