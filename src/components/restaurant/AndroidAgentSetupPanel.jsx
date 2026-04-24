@@ -59,10 +59,11 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
         return () => clearInterval(t);
     }, []);
 
-    // Derive the function endpoint URL
+    // Derive the function endpoint URLs
     const hostname = window.location.hostname;
     const appId = import.meta.env.VITE_BASE44_APP_ID;
     const functionUrl = `https://${hostname}/api/v2/apps/${appId}/functions/managePrintQueue`;
+    const wsUrl = `wss://${hostname}/api/v2/apps/${appId}/functions/printAgentWS`;
 
     // Build per-agent status from heartbeats
     const agentStatuses = Object.entries(agentHeartbeats).map(([agentId, lastSeen]) => ({
@@ -242,11 +243,33 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                     <CardDescription>Enter these values in your Android PrintService app settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <CopyField
-                        label="Print Queue Endpoint URL"
-                        value={functionUrl}
-                        mono
-                    />
+                    {/* WebSocket (recommended) */}
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl space-y-3">
+                        <p className="text-xs font-semibold text-green-800 flex items-center gap-1.5">
+                            <Wifi className="h-3.5 w-3.5" />
+                            ⚡ Recommended: WebSocket Connection (real-time, instant push)
+                        </p>
+                        <CopyField
+                            label="WebSocket URL (connect once, receive jobs instantly)"
+                            value={`${wsUrl}?api_key=YOUR_API_KEY`}
+                            mono
+                        />
+                        <p className="text-[11px] text-green-700 leading-relaxed">
+                            Replace <code className="bg-green-100 px-1 rounded font-mono">YOUR_API_KEY</code> with your <code className="bg-green-100 px-1 rounded font-mono">ANDROID_APP_API_KEY</code> secret. 
+                            After connecting, send <code className="bg-green-100 px-1 rounded font-mono">{"{"}"type":"register","restaurant_id":"...","agent_id":"android-tablet-1"{"}"}</code>
+                        </p>
+                    </div>
+
+                    {/* HTTP Polling fallback */}
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+                        <p className="text-xs font-semibold text-gray-600">Fallback: HTTP Polling (legacy)</p>
+                        <CopyField
+                            label="Print Queue Endpoint URL (HTTP polling)"
+                            value={functionUrl}
+                            mono
+                        />
+                    </div>
+
                     <CopyField
                         label="Restaurant ID"
                         value={restaurantId}
@@ -263,20 +286,38 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                         <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <div>
                             <strong>Agent ID:</strong> Set a unique name for each Android tablet (e.g. <code className="bg-blue-100 px-1 rounded font-mono">android-kitchen-1</code>, <code className="bg-blue-100 px-1 rounded font-mono">android-bar</code>). 
-                            This identifies which device is processing jobs in the queue below. It must start with <code className="bg-blue-100 px-1 rounded font-mono">android-</code> to appear in the agent list above.
+                            This identifies which device is processing jobs in the queue below.
                         </div>
                     </div>
 
                     {/* How it works */}
-                    <div className="border rounded-xl p-4 bg-gray-50 text-sm space-y-2">
-                        <p className="font-semibold text-gray-700">How it works</p>
-                        <ol className="list-decimal list-inside space-y-1 text-gray-600 text-xs leading-relaxed">
-                            <li>Open your Android PrintService app and go to <strong>Settings</strong></li>
-                            <li>Paste the <strong>Endpoint URL</strong>, <strong>Restaurant ID</strong>, and <strong>API Key</strong> above</li>
-                            <li>Set a unique <strong>Agent ID</strong> for this tablet</li>
-                            <li>The app will automatically poll for new print jobs every few seconds</li>
-                            <li>When a new order arrives, the job appears below and the tablet prints it automatically</li>
-                        </ol>
+                    <div className="border rounded-xl p-4 bg-gray-50 text-sm space-y-3">
+                        <p className="font-semibold text-gray-700">WebSocket Protocol (for Android developers)</p>
+                        <div className="space-y-2 text-xs text-gray-600 font-mono">
+                            <div className="bg-white border rounded-lg p-2 space-y-1">
+                                <p className="text-gray-400 font-sans font-medium">1. Connect</p>
+                                <p className="text-green-700">wss://...printAgentWS?api_key=YOUR_KEY</p>
+                            </div>
+                            <div className="bg-white border rounded-lg p-2 space-y-1">
+                                <p className="text-gray-400 font-sans font-medium">2. Register</p>
+                                <p className="text-blue-700">{'→ {"type":"register","restaurant_id":"...","agent_id":"android-1"}'}</p>
+                                <p className="text-gray-500">{'← {"type":"registered","agent_id":"android-1"}'}</p>
+                            </div>
+                            <div className="bg-white border rounded-lg p-2 space-y-1">
+                                <p className="text-gray-400 font-sans font-medium">3. Receive jobs (server pushes instantly)</p>
+                                <p className="text-gray-500">{'← {"type":"new_job","job":{...}}'}</p>
+                            </div>
+                            <div className="bg-white border rounded-lg p-2 space-y-1">
+                                <p className="text-gray-400 font-sans font-medium">4. Report result</p>
+                                <p className="text-blue-700">{'→ {"type":"job_complete","job_id":"...","restaurant_id":"..."}'}</p>
+                                <p className="text-blue-700">{'→ {"type":"job_failed","job_id":"...","restaurant_id":"...","error_message":"..."}'}</p>
+                            </div>
+                            <div className="bg-white border rounded-lg p-2 space-y-1">
+                                <p className="text-gray-400 font-sans font-medium">5. Keepalive every 30s</p>
+                                <p className="text-blue-700">{'→ {"type":"ping"}'}</p>
+                                <p className="text-gray-500">{'← {"type":"pong"}'}</p>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
