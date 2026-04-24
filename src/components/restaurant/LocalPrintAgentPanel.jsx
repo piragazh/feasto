@@ -8,6 +8,7 @@ import {
     Wifi, Trash2, Circle, Play, Square, Zap, Download, Usb, RotateCcw, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getApiUrl } from '@/lib/api-origin';
 
 // ── Local relay script (Node.js) — bridging browser → LAN printer TCP ──────
 const RELAY_SCRIPT_CONTENT = `// MealDrop Local Print Relay
@@ -337,6 +338,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                 action: 'complete',
                 job_id: job.id,
                 agent_id: AGENT_ID,
+                restaurant_id: restaurantId,
             });
 
             setStats(s => ({ ...s, done: s.done + 1 }));
@@ -349,6 +351,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                 action: 'fail',
                 job_id: job.id,
                 agent_id: AGENT_ID,
+                restaurant_id: restaurantId,
                 error_message: e.message,
             }).catch(() => ({ data: {} }));
 
@@ -478,12 +481,9 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
 
     // ── Download fallback (for PC/browser use) ─────────────────────────────
     const handleDownload = () => {
-        // Build the exact function base URL the SDK uses, embedded at download time
-        // so the standalone file (opened as file://) always hits the right endpoint.
-        const hostname = window.location.hostname;
-        const appId = import.meta.env.VITE_BASE44_APP_ID;
-        // Match the SDK's function invocation path: /api/v2/apps/{appId}/functions/{name}
-        const functionBaseUrl = `https://${hostname}/api/v2/apps/${appId}/functions`;
+        // Use the canonical API origin (not the current hostname, which may be a custom domain)
+        const appId = import.meta.env.VITE_BASE44_APP_ID || '';
+        const functionBaseUrl = getApiUrl(`/api/v2/apps/${appId}/functions`);
         const html = generateAgentHtml({ restaurantId, functionBaseUrl, printers: networkPrinters });
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -926,10 +926,10 @@ async function pollOnce(){
     log('Job '+job.id.slice(-6)+' ('+job.action+')','info');
     try{
       await printJob(job);
-      await api('managePrintQueue',{action:'complete',job_id:job.id,agent_id:AGENT_ID});
+      await api('managePrintQueue',{action:'complete',job_id:job.id,agent_id:AGENT_ID,restaurant_id:RESTAURANT_ID});
       statDone++;log('✓ Printed','ok');
     }catch(e){
-      const fr=await api('managePrintQueue',{action:'fail',job_id:job.id,agent_id:AGENT_ID,error_message:e.message}).catch(()=>({}));
+      const fr=await api('managePrintQueue',{action:'fail',job_id:job.id,agent_id:AGENT_ID,restaurant_id:RESTAURANT_ID,error_message:e.message}).catch(()=>({}));
       if(fr.retried){statRetry++;log('↺ Retry '+fr.retry_count+': '+e.message,'err');}
       else{statFail++;log('✗ '+e.message,'err');}
     }

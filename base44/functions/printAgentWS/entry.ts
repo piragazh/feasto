@@ -89,9 +89,12 @@ async function pollForJobs() {
             if (now - lastStuckCheck > STUCK_CHECK_INTERVAL_MS) {
                 lastStuckCheckByRestaurant.set(restaurantId, now);
                 const stuckCutoff = new Date(now - 2 * 60 * 1000).toISOString();
+                // Time-bound the scan to avoid loading all-time history at scale
+                const stuckSince = new Date(now - 30 * 60 * 1000).toISOString();
                 const stuckJobs = await serviceRole.entities.PrintJob.filter({
                     restaurant_id: restaurantId,
                     status: 'processing',
+                    created_date: { $gte: stuckSince },
                 });
                 for (const j of stuckJobs) {
                     const updatedAt = j.updated_date || j.created_date;
@@ -105,9 +108,12 @@ async function pollForJobs() {
             }
 
             // ── Fetch pending jobs ready to dispatch ─────────────────────────
+            // Time-bound to last 30 minutes to avoid loading all-time history
+            const pendingSince = new Date(now - 30 * 60 * 1000).toISOString();
             const pendingJobs = await serviceRole.entities.PrintJob.filter({
                 restaurant_id: restaurantId,
                 status: 'pending',
+                created_date: { $gte: pendingSince },
             });
             const readyJobs = pendingJobs
                 .filter(j => !j.next_retry_at || j.next_retry_at <= nowIso)
@@ -248,6 +254,18 @@ Deno.serve(async (req) => {
                 return;
             }
             try {
+                // Verify this agent owns the job before marking done
+                const jobs = await connectionServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
+                const job = jobs[0];
+                if (!job) {
+                    socket.send(JSON.stringify({ type: 'job_ack', job_id, status: 'not_found' }));
+                    getAgentInFlight(registeredAgentId).delete(job_id);
+                    return;
+                }
+                if (job.agent_id && job.agent_id !== registeredAgentId) {
+                    socket.send(JSON.stringify({ type: 'error', message: `Job ${job_id} is owned by agent ${job.agent_id}, not ${registeredAgentId}` }));
+                    return;
+                }
                 await connectionServiceRole.entities.PrintJob.update(job_id, {
                     status: 'done',
                     completed_at: new Date().toISOString(),

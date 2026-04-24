@@ -240,12 +240,13 @@ export async function openCashDrawer(restaurant) {
         const type = printerConfig.connection_type || 'bluetooth';
 
         if (type === 'network' && printerConfig.network_ip) {
+            // Send a minimal receipt with open_cash_drawer flag (networkPrint appends the drawer command)
             const res = await base44.functions.invoke('networkPrint', {
                 action: 'print_receipt',
                 printer_ip: printerConfig.network_ip,
                 printer_port: String(printerConfig.network_port || '9100'),
                 open_cash_drawer: true,
-                order: { items: [], total: 0, order_type: 'pos' },
+                order: { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' },
                 restaurant: {},
                 config: { template: 'minimal', show_order_number: false, show_customer_details: false },
             });
@@ -270,7 +271,7 @@ export async function openCashDrawer(restaurant) {
             printer_ip: globalCfg.network_ip,
             printer_port: String(globalCfg.network_port || '9100'),
             open_cash_drawer: true,
-            order: { items: [], total: 0, order_type: 'pos' },
+            order: { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' },
             restaurant: {},
             config: { template: 'minimal', show_order_number: false, show_customer_details: false },
         });

@@ -68,9 +68,11 @@ Deno.serve(async (req) => {
             }
 
             // Fetch pending jobs that are ready to be picked up (not waiting for retry backoff)
+            // Time-bound to last 30 minutes to avoid loading all-time history
             const pendingJobs = await base44.asServiceRole.entities.PrintJob.filter({
                 restaurant_id,
                 status: 'pending',
+                created_date: { $gte: stuckSince },
             });
 
             // Filter out jobs that are waiting for retry backoff
@@ -86,6 +88,14 @@ Deno.serve(async (req) => {
             // Record heartbeat — store last_seen per agent in a lightweight way
             // We return the server time so the Android app can use it too
             const serverNow = new Date().toISOString();
+
+            // Re-fetch the job to guard against race where two agents polled simultaneously.
+            // If another agent already claimed it, gracefully return no-job to this agent.
+            const latestJobArr = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: pendingJob.id });
+            const latestJob = latestJobArr[0];
+            if (!latestJob || latestJob.status !== 'pending') {
+                return Response.json({ job: null }); // already claimed by another agent
+            }
 
             // Mark as processing so no other agent picks it up
             const updatedJob = await base44.asServiceRole.entities.PrintJob.update(pendingJob.id, {
