@@ -206,9 +206,20 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                 restaurant_data: {
                     name: restaurant?.name,
                     address: restaurant?.address,
+                    phone: restaurant?.phone,
                     logo_url: restaurant?.logo_url,
                 },
-                config: receiptConfig,
+                config: {
+                    printer_width: receiptConfig.printer_width,
+                    command_set: receiptConfig.command_set,
+                    template: receiptConfig.template,
+                    font_size: receiptConfig.font_size,
+                    show_logo: receiptConfig.show_logo,
+                    show_order_number: receiptConfig.show_order_number,
+                    show_customer_details: receiptConfig.show_customer_details,
+                    header_text: receiptConfig.header_text,
+                    footer_text: receiptConfig.footer_text,
+                },
             });
             return 'Android Agent';
         }

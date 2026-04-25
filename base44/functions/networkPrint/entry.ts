@@ -236,6 +236,7 @@ Deno.serve(async (req) => {
                 printer_width: '80mm',
                 command_set: 'esc_pos',
                 template: 'standard',
+                font_size: 'medium',
                 show_logo: true,
                 show_order_number: true,
                 show_customer_details: true,
@@ -250,10 +251,12 @@ Deno.serve(async (req) => {
             if (body.test_mode || !order) {
                 rawData = buildTestBytes(printer_name || 'Network Printer', command_set || 'esc_pos');
             } else {
+                // Config from the print job takes priority — defaults only fill gaps
                 const mergedConfig = {
                     printer_width: '80mm', command_set: 'esc_pos', template: 'standard',
                     show_logo: true, show_order_number: true, show_customer_details: true,
-                    header_text: '', footer_text: '', ...(config || {}),
+                    header_text: '', footer_text: '', font_size: 'medium',
+                    ...(config || {}),
                 };
                 rawData = buildReceiptBytes(order, restaurant || {}, mergedConfig);
             }
