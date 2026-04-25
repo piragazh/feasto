@@ -68,7 +68,12 @@ async function printNetworkReceipt(order, restaurant, printerConfig, globalCfg) 
         printer_ip: ip,
         printer_port: port,
         order,
-        restaurant,
+        restaurant: {
+            name: restaurant?.name || '',
+            address: restaurant?.address || '',
+            phone: restaurant?.phone || '',
+            logo_url: restaurant?.logo_url || '',
+        },
         config: cfg,
     });
     if (!res.data?.success) throw new Error(res.data?.error || 'Network print failed');
@@ -204,10 +209,10 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                 template: receiptConfig.template,
                 order_data: order,
                 restaurant_data: {
-                    name: restaurant?.name,
-                    address: restaurant?.address,
-                    phone: restaurant?.phone,
-                    logo_url: restaurant?.logo_url,
+                    name: restaurant?.name || '',
+                    address: restaurant?.address || '',
+                    phone: restaurant?.phone || '',
+                    logo_url: restaurant?.logo_url || '',
                 },
                 config: {
                     printer_width: receiptConfig.printer_width,

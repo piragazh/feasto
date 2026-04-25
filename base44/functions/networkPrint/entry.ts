@@ -47,7 +47,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     add(cmd.boldOff);
     add(cmd.normal);
 
-    if (restaurant?.address && config.template !== 'compact') {
+    if (restaurant?.address && restaurant.address !== 'null' && config.template !== 'compact') {
         add(`${restaurant.address}\n`);
     }
     add(cmd.alignLeft);
@@ -79,10 +79,10 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
         add(cmd.boldOn);
         add('Customer:\n');
         add(cmd.boldOff);
-        const customerName = order.guest_name || order.created_by || 'N/A';
+        const customerName = (order.guest_name && order.guest_name !== 'null') ? order.guest_name : (order.created_by && order.created_by !== 'null') ? order.created_by : 'N/A';
         add(`${customerName}\n`);
-        if (order.phone) add(`Tel: ${order.phone}\n`);
-        if (order.delivery_address) add(`${order.delivery_address}\n`);
+        if (order.phone && order.phone !== 'null') add(`Tel: ${order.phone}\n`);
+        if (order.delivery_address && order.delivery_address !== 'null') add(`${order.delivery_address}\n`);
         add('--------------------------------\n');
     }
 

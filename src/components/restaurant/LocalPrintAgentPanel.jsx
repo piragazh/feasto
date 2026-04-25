@@ -263,22 +263,23 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
             const usbDev = usbDeviceRef.current;
             if (!job.printer_ip && usbDev) {
                 // Build receipt via backend then send raw bytes over USB
+                const jobCfg = job.config || {};
                 const printRes = await base44.functions.invoke('networkPrint', {
                     action: 'build_raw',  // returns base64 bytes without sending
                     printer_name: 'USB Printer',
-                    command_set: job.command_set || 'esc_pos',
-                    printer_width: job.printer_width || '80mm',
+                    command_set: jobCfg.command_set || job.command_set || 'esc_pos',
                     order: job.order_data,
                     restaurant: job.restaurant_data,
                     config: {
-                        printer_width: job.printer_width || '80mm',
-                        command_set: job.command_set || 'esc_pos',
-                        template: job.template || 'standard',
-                        show_customer_details: true,
-                        show_order_number: true,
-                        header_text: '',
-                        footer_text: '',
-                        ...(job.config || {}),
+                        printer_width: jobCfg.printer_width || job.printer_width || '80mm',
+                        command_set: jobCfg.command_set || job.command_set || 'esc_pos',
+                        template: jobCfg.template || job.template || 'standard',
+                        font_size: jobCfg.font_size || 'medium',
+                        show_logo: jobCfg.show_logo !== undefined ? jobCfg.show_logo : true,
+                        show_order_number: jobCfg.show_order_number !== undefined ? jobCfg.show_order_number : true,
+                        show_customer_details: jobCfg.show_customer_details !== undefined ? jobCfg.show_customer_details : true,
+                        header_text: jobCfg.header_text || '',
+                        footer_text: jobCfg.footer_text || '',
                     },
                 });
 
@@ -297,24 +298,28 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
                 const port = job.printer_port || printer.network_port || '9100';
 
                 // Step 1: ask cloud to build bytes (no TCP from cloud)
+                // Use job.config as primary source (set at enqueue time from printer settings),
+                // fall back to local printer settings only for fields not in job.config
+                const jobConfig = job.config || {};
                 const buildRes = await base44.functions.invoke('networkPrint', {
                     action: 'build_raw',
                     printer_ip: ip,
                     printer_port: port,
                     printer_name: printer.name || 'Printer',
-                    command_set: job.command_set || printer.command_set || 'esc_pos',
+                    command_set: jobConfig.command_set || job.command_set || printer.command_set || 'esc_pos',
                     test_mode: job.action === 'test',
                     order: job.order_data,
                     restaurant: job.restaurant_data,
                     config: {
-                        printer_width: job.printer_width || printer.printer_width || '80mm',
-                        command_set: job.command_set || printer.command_set || 'esc_pos',
-                        template: job.template || printer.template || 'standard',
-                        show_customer_details: printer.show_customer_details !== false,
-                        show_order_number: printer.show_order_number !== false,
-                        header_text: printer.header_text || '',
-                        footer_text: printer.footer_text || '',
-                        ...(job.config || {}),
+                        printer_width: jobConfig.printer_width || job.printer_width || printer.printer_width || '80mm',
+                        command_set: jobConfig.command_set || job.command_set || printer.command_set || 'esc_pos',
+                        template: jobConfig.template || job.template || printer.template || 'standard',
+                        font_size: jobConfig.font_size || printer.font_size || 'medium',
+                        show_logo: jobConfig.show_logo !== undefined ? jobConfig.show_logo : (printer.show_logo !== false),
+                        show_order_number: jobConfig.show_order_number !== undefined ? jobConfig.show_order_number : (printer.show_order_number !== false),
+                        show_customer_details: jobConfig.show_customer_details !== undefined ? jobConfig.show_customer_details : (printer.show_customer_details !== false),
+                        header_text: jobConfig.header_text !== undefined ? jobConfig.header_text : (printer.header_text || ''),
+                        footer_text: jobConfig.footer_text !== undefined ? jobConfig.footer_text : (printer.footer_text || ''),
                     },
                 });
 
@@ -900,16 +905,27 @@ async function printJob(job){
   const ip=job.printer_ip||printer.network_ip;
   const port=job.printer_port||printer.network_port||'9100';
   // Step 1: ask cloud to build ESC/POS bytes (no TCP from cloud)
+  const jc=job.config||{};
   const buildRes=await api('networkPrint',{
     action:'build_raw',
     printer_ip:ip,
     printer_port:port,
     printer_name:printer.name||'Printer',
-    command_set:job.command_set||printer.command_set||'esc_pos',
+    command_set:jc.command_set||job.command_set||printer.command_set||'esc_pos',
     test_mode:job.action==='test',
     order:job.order_data,
     restaurant:job.restaurant_data,
-    config:{printer_width:job.printer_width||printer.printer_width||'80mm',command_set:job.command_set||printer.command_set||'esc_pos',template:job.template||printer.template||'standard',show_customer_details:true,header_text:printer.header_text||'',footer_text:printer.footer_text||'',...(job.config||{})}
+    config:{
+      printer_width:jc.printer_width||job.printer_width||printer.printer_width||'80mm',
+      command_set:jc.command_set||job.command_set||printer.command_set||'esc_pos',
+      template:jc.template||job.template||printer.template||'standard',
+      font_size:jc.font_size||'medium',
+      show_logo:jc.show_logo!==undefined?jc.show_logo:true,
+      show_order_number:jc.show_order_number!==undefined?jc.show_order_number:true,
+      show_customer_details:jc.show_customer_details!==undefined?jc.show_customer_details:true,
+      header_text:jc.header_text||printer.header_text||'',
+      footer_text:jc.footer_text||printer.footer_text||''
+    }
   });
   if(!buildRes.raw_base64)throw new Error('Cloud did not return raw bytes');
   // Step 2: relay bytes to printer via local TCP relay
