@@ -9,7 +9,6 @@ import {
     Copy, Wifi, WifiOff, Circle, RotateCcw, X
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getApiUrl } from '@/lib/api-origin';
 
 function JobStatusBadge({ job }) {
     const { status, retry_count, next_retry_at } = job;
@@ -60,12 +59,9 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
         return () => clearInterval(t);
     }, []);
 
-    // Derive the function endpoint URLs using the canonical API origin
-    // (avoids custom-domain hosts that don't expose backend function endpoints)
-    const appId = import.meta.env.VITE_BASE44_APP_ID || '';
-    const functionUrl = getApiUrl(`/api/v2/apps/${appId}/functions/managePrintQueue`);
-    // Convert https:// → wss:// for the WebSocket endpoint
-    const wsUrl = getApiUrl(`/api/v2/apps/${appId}/functions/printAgentWS`).replace(/^https/, 'wss').replace(/^http/, 'ws');
+    // Use the current origin for function URLs — on custom domains (mealdrop.co.uk)
+    // the /functions/ path works for HTTP. WebSocket is NOT supported on Base44 functions.
+    const functionUrl = `${window.location.origin}/functions/managePrintQueue`;
 
     // Build per-agent status from heartbeats (agentHeartbeats is now a map of agentId → DB record or fallback obj)
     const agentStatuses = Object.values(agentHeartbeats).map(agent => {
@@ -238,31 +234,26 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                     <CardDescription>Enter these values in your Android PrintService app settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* WebSocket (recommended) */}
+                    {/* HTTP Polling — primary method */}
                     <div className="p-3 bg-green-50 border border-green-200 rounded-xl space-y-3">
                         <p className="text-xs font-semibold text-green-800 flex items-center gap-1.5">
                             <Wifi className="h-3.5 w-3.5" />
-                            ⚡ Recommended: WebSocket Connection (real-time, instant push)
+                            ✅ HTTP Polling (use this — WebSocket not supported on this platform)
                         </p>
                         <CopyField
-                            label="WebSocket URL (connect once, receive jobs instantly)"
-                            value={`${wsUrl}?api_key=YOUR_API_KEY`}
-                            mono
-                        />
-                        <p className="text-[11px] text-green-700 leading-relaxed">
-                            Replace <code className="bg-green-100 px-1 rounded font-mono">YOUR_API_KEY</code> with your <code className="bg-green-100 px-1 rounded font-mono">ANDROID_APP_API_KEY</code> secret. 
-                            After connecting, send <code className="bg-green-100 px-1 rounded font-mono">{"{"}"type":"register","restaurant_id":"...","agent_id":"android-tablet-1"{"}"}</code>
-                        </p>
-                    </div>
-
-                    {/* HTTP Polling fallback */}
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-                        <p className="text-xs font-semibold text-gray-600">Fallback: HTTP Polling (legacy)</p>
-                        <CopyField
-                            label="Print Queue Endpoint URL (HTTP polling)"
+                            label="Print Queue Endpoint URL"
                             value={functionUrl}
                             mono
                         />
+                        <p className="text-[11px] text-green-700 leading-relaxed">
+                            The Android app should poll this URL every few seconds using POST with <code className="bg-green-100 px-1 rounded font-mono">action: "poll"</code>. Include your API key in the <code className="bg-green-100 px-1 rounded font-mono">x-api-key</code> header.
+                        </p>
+                    </div>
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex gap-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <strong>WebSocket not supported:</strong> The Base44 platform does not support WebSocket upgrades on backend functions. Use HTTP polling only — set the WebSocket URL field in the Android app to blank or leave it unused.
+                        </div>
                     </div>
 
                     <CopyField
@@ -287,30 +278,26 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
 
                     {/* How it works */}
                     <div className="border rounded-xl p-4 bg-gray-50 text-sm space-y-3">
-                        <p className="font-semibold text-gray-700">WebSocket Protocol (for Android developers)</p>
+                        <p className="font-semibold text-gray-700">HTTP Polling Protocol (for Android developers)</p>
                         <div className="space-y-2 text-xs text-gray-600 font-mono">
                             <div className="bg-white border rounded-lg p-2 space-y-1">
-                                <p className="text-gray-400 font-sans font-medium">1. Connect</p>
-                                <p className="text-green-700">wss://...printAgentWS?api_key=YOUR_KEY</p>
+                                <p className="text-gray-400 font-sans font-medium">1. Poll for jobs (every 3–5 seconds)</p>
+                                <p className="text-blue-700">POST /functions/managePrintQueue</p>
+                                <p className="text-gray-500">Header: x-api-key: YOUR_KEY</p>
+                                <p className="text-gray-500">{'Body: {"action":"poll","restaurant_id":"...","agent_id":"android-1"}'}</p>
+                                <p className="text-green-700">{'← {"jobs":[{"id":"...","action":"print_receipt","order_data":{...}}]}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
-                                <p className="text-gray-400 font-sans font-medium">2. Register</p>
-                                <p className="text-blue-700">{'→ {"type":"register","restaurant_id":"...","agent_id":"android-1"}'}</p>
-                                <p className="text-gray-500">{'← {"type":"registered","agent_id":"android-1"}'}</p>
+                                <p className="text-gray-400 font-sans font-medium">2. Mark job complete</p>
+                                <p className="text-blue-700">{'Body: {"action":"complete","job_id":"...","restaurant_id":"..."}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
-                                <p className="text-gray-400 font-sans font-medium">3. Receive jobs (server pushes instantly)</p>
-                                <p className="text-gray-500">{'← {"type":"new_job","job":{...}}'}</p>
+                                <p className="text-gray-400 font-sans font-medium">3. Mark job failed</p>
+                                <p className="text-blue-700">{'Body: {"action":"fail","job_id":"...","restaurant_id":"...","error_message":"..."}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
-                                <p className="text-gray-400 font-sans font-medium">4. Report result</p>
-                                <p className="text-blue-700">{'→ {"type":"job_complete","job_id":"...","restaurant_id":"..."}'}</p>
-                                <p className="text-blue-700">{'→ {"type":"job_failed","job_id":"...","restaurant_id":"...","error_message":"..."}'}</p>
-                            </div>
-                            <div className="bg-white border rounded-lg p-2 space-y-1">
-                                <p className="text-gray-400 font-sans font-medium">5. Keepalive every 30s</p>
-                                <p className="text-blue-700">{'→ {"type":"ping"}'}</p>
-                                <p className="text-gray-500">{'← {"type":"pong"}'}</p>
+                                <p className="text-gray-400 font-sans font-medium">4. Heartbeat (send with every poll)</p>
+                                <p className="text-gray-500">Include <code className="font-mono bg-gray-100 px-0.5 rounded">agent_id</code> in every request body — server auto-updates last_seen</p>
                             </div>
                         </div>
                     </div>
