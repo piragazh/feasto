@@ -16,6 +16,16 @@ Deno.serve(async (req) => {
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!body.restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
+            // Authorization: only admins or managers of this restaurant can enqueue
+            if (user.role !== 'admin') {
+                const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+                    user_email: user.email,
+                    is_active: true,
+                });
+                const authorized = managers.some(m => (m.restaurant_ids || []).includes(body.restaurant_id));
+                if (!authorized) return Response.json({ error: 'Forbidden' }, { status: 403 });
+            }
+
             const job = await base44.asServiceRole.entities.PrintJob.create({
                 restaurant_id: body.restaurant_id,
                 action: body.print_action || 'print_receipt',
@@ -39,11 +49,13 @@ Deno.serve(async (req) => {
             // Allow Android app agents to authenticate via API key instead of user session
             const apiKey = req.headers.get('x-api-key') || body.api_key;
             const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
-            if (apiKey && validApiKey && apiKey !== validApiKey) {
-                return Response.json({ error: 'Invalid API key' }, { status: 401 });
-            }
-            if (!apiKey) {
-                // Fall back to user auth for dashboard-based agents
+            if (apiKey) {
+                // API key provided — must be valid
+                if (!validApiKey || apiKey !== validApiKey) {
+                    return Response.json({ error: 'Invalid API key' }, { status: 401 });
+                }
+            } else {
+                // No API key — fall back to user session auth
                 const user = await base44.auth.me();
                 if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             }
@@ -90,9 +102,9 @@ Deno.serve(async (req) => {
             const serverNow = new Date().toISOString();
 
             // Re-fetch the job to guard against race where two agents polled simultaneously.
-            // If another agent already claimed it, gracefully return no-job to this agent.
-            const latestJobArr = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: pendingJob.id });
-            const latestJob = latestJobArr[0];
+            // Filter by id only (some SDKs don't support multi-field AND on filter), verify restaurant_id in JS.
+            const latestJobArr = await base44.asServiceRole.entities.PrintJob.filter({ id: pendingJob.id });
+            const latestJob = latestJobArr.find(j => j.restaurant_id === restaurant_id);
             if (!latestJob || latestJob.status !== 'pending') {
                 return Response.json({ job: null }); // already claimed by another agent
             }
@@ -212,10 +224,11 @@ Deno.serve(async (req) => {
         if (action === 'heartbeat') {
             const apiKey = req.headers.get('x-api-key') || body.api_key;
             const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
-            if (apiKey && validApiKey && apiKey !== validApiKey) {
-                return Response.json({ error: 'Invalid API key' }, { status: 401 });
-            }
-            if (!apiKey) {
+            if (apiKey) {
+                if (!validApiKey || apiKey !== validApiKey) {
+                    return Response.json({ error: 'Invalid API key' }, { status: 401 });
+                }
+            } else {
                 const user = await base44.auth.me();
                 if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             }

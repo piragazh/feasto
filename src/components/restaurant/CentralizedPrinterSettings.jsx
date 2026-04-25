@@ -10,17 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
     Printer, Bluetooth, Usb, Wifi, Save, CheckCircle2,
-    AlertCircle, Info, RefreshCw, Circle, ShoppingBag, Cpu,
+    AlertCircle, Info, RefreshCw, ShoppingBag, Cpu,
     TabletSmartphone, ArrowRight, Zap, Plus, Trash2, FlaskConical,
-    WifiOff, MonitorSmartphone, ChevronDown, ChevronUp
+    WifiOff, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
 import { printerManager } from '@/components/restaurant/PrinterService';
+import PrinterStatusBadge from '@/components/restaurant/PrinterStatusBadge';
 import NetworkPrinterManager, { NetworkPrinterStatusBadge } from '@/components/restaurant/NetworkPrinterManager';
 import LocalPrintAgentPanel from '@/components/restaurant/LocalPrintAgentPanel';
 import PrinterDiagnosticTool from '@/components/restaurant/PrinterDiagnosticTool';
-import AndroidPrintServicePanel from '@/components/restaurant/AndroidPrintServicePanel';
 import AndroidAgentSetupPanel from '@/components/restaurant/AndroidAgentSetupPanel';
 
 // ── Order type channels ────────────────────────────────────────────────────
@@ -29,21 +29,6 @@ const ORDER_CHANNELS = [
     { id: 'pos_order',    label: 'POS Orders',    icon: Cpu,          color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
     { id: 'kiosk_order',  label: 'Kiosk Orders',  icon: TabletSmartphone, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
 ];
-
-// ── Printer status badge ───────────────────────────────────────────────────
-function PrinterStatusBadge({ service, label }) {
-    const [status, setStatus] = useState(() => service.getConnectionStatus());
-    useEffect(() => {
-        service.setConnectionStatusCallback(() => setStatus(service.getConnectionStatus()));
-        setStatus(service.getConnectionStatus());
-        service.startHeartbeat(6000);
-        return () => { service.stopHeartbeat(); service.setConnectionStatusCallback(null); };
-    }, [service]);
-    const { connected, reconnecting, printerName } = status;
-    if (reconnecting) return <Badge className="bg-amber-100 text-amber-700 gap-1"><RefreshCw className="h-3 w-3 animate-spin" />Reconnecting…</Badge>;
-    if (connected) return <Badge className="bg-green-100 text-green-700 gap-1"><CheckCircle2 className="h-3 w-3" />{printerName || label} — Connected</Badge>;
-    return <Badge className="bg-gray-100 text-gray-500 gap-1"><Circle className="h-3 w-3" />{label} — Not Connected</Badge>;
-}
 
 // ── Template definitions ───────────────────────────────────────────────────
 const TEMPLATES = [
@@ -747,7 +732,6 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     { id: 'printers', label: '🖨️ Printers' },
                     { id: 'agent', label: '⚡ Local Print Agent' },
                     { id: 'android_agent', label: '📲 Android Agent' },
-                    { id: 'android', label: '📱 Android Push' },
                     { id: 'diagnostics', label: '🔬 Diagnostics' },
                 ].map(tab => (
                     <button
@@ -770,13 +754,6 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
 
             {activeTab === 'android_agent' && (
                 <AndroidAgentSetupPanel restaurantId={restaurantId} />
-            )}
-
-            {activeTab === 'android' && (
-                <AndroidPrintServicePanel
-                    restaurant={restaurant}
-                    onSave={(data) => mutation.mutate(data)}
-                />
             )}
 
             {activeTab === 'diagnostics' && (

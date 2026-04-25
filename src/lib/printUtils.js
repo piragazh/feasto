@@ -184,10 +184,11 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
                 : null;
             const agentPrinterCfg = channelPrinter || centralized[0] || {};
 
-            // Only enqueue if the agent printer has a network target — enqueueing
-            // a job with no IP/printer info would create a ghost job in the queue.
-            const hasNetworkTarget = !!(agentPrinterCfg.network_ip || agentPrinterCfg.bluetooth_printer?.id);
-            if (!hasNetworkTarget) throw new Error('No printer target for agent queue');
+            // Only enqueue if the agent printer has a network IP — the Android agent
+            // communicates over network (TCP/IP). Bluetooth-only printers cannot be
+            // reached by the agent, so enqueueing them would create ghost jobs.
+            const hasNetworkTarget = !!agentPrinterCfg.network_ip;
+            if (!hasNetworkTarget) throw new Error('No network printer target for agent queue');
 
             // Build a clean receipt config — strip non-receipt fields
             const receiptConfig = buildPerPrinterConfig(globalCfg, agentPrinterCfg);

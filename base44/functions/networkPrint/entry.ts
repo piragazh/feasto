@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
             data = new Uint8Array(binaryStr.length);
             for (let i = 0; i < binaryStr.length; i++) data[i] = binaryStr.charCodeAt(i);
         } else {
-            return Response.json({ error: 'action must be one of: test, print_receipt, ping, print_raw_base64' }, { status: 400 });
+            return Response.json({ error: 'action must be one of: test, print_receipt, build_raw, ping, print_raw_base64' }, { status: 400 });
         }
 
         // Normalise port — ensure it is always a valid string with a fallback

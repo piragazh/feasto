@@ -208,13 +208,39 @@ Deno.serve(async (req) => {
 
         // ── PING ──────────────────────────────────────────────────────────
         if (type === 'ping') {
-            socket.send(JSON.stringify({ type: 'pong', server_time: new Date().toISOString() }));
+            const now = new Date().toISOString();
+            socket.send(JSON.stringify({ type: 'pong', server_time: now }));
+            // Persist heartbeat to DB so dashboard can see WS agents
+            if (registeredAgentId) {
+                const agent = agents.get(registeredAgentId);
+                if (agent) {
+                    try {
+                        const existing = await connectionServiceRole.entities.AgentHeartbeat.filter({
+                            agent_id: registeredAgentId,
+                        });
+                        const dbAgent = existing.find(a => a.restaurant_id === agent.restaurantId);
+                        if (dbAgent) {
+                            await connectionServiceRole.entities.AgentHeartbeat.update(dbAgent.id, { last_seen: now, connection_mode: 'websocket' });
+                        } else {
+                            await connectionServiceRole.entities.AgentHeartbeat.create({
+                                restaurant_id: agent.restaurantId,
+                                agent_id: registeredAgentId,
+                                last_seen: now,
+                                agent_type: 'android',
+                                connection_mode: 'websocket',
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('[WS] Failed to persist ping heartbeat:', e.message);
+                    }
+                }
+            }
             return;
         }
 
         // ── REGISTER ──────────────────────────────────────────────────────
         if (type === 'register') {
-            const { restaurant_id, agent_id } = msg;
+            const { restaurant_id, agent_id, printer_address } = msg;
             if (!restaurant_id || !agent_id) {
                 socket.send(JSON.stringify({ type: 'error', message: 'register requires restaurant_id and agent_id' }));
                 return;
@@ -232,16 +258,41 @@ Deno.serve(async (req) => {
                 restaurantId: restaurant_id,
                 agentId: agent_id,
                 connectedAt: new Date().toISOString(),
-                serviceRole: connectionServiceRole, // scoped to this connection
+                serviceRole: connectionServiceRole,
             });
             agentInFlight.set(agent_id, new Set());
+
+            // Persist registration to DB so dashboard shows this WS agent as online
+            const now = new Date().toISOString();
+            try {
+                const existing = await connectionServiceRole.entities.AgentHeartbeat.filter({ agent_id });
+                const dbAgent = existing.find(a => a.restaurant_id === restaurant_id);
+                if (dbAgent) {
+                    await connectionServiceRole.entities.AgentHeartbeat.update(dbAgent.id, {
+                        last_seen: now,
+                        connection_mode: 'websocket',
+                        printer_address: printer_address || dbAgent.printer_address || '',
+                    });
+                } else {
+                    await connectionServiceRole.entities.AgentHeartbeat.create({
+                        restaurant_id,
+                        agent_id,
+                        last_seen: now,
+                        agent_type: 'android',
+                        connection_mode: 'websocket',
+                        printer_address: printer_address || '',
+                    });
+                }
+            } catch (e) {
+                console.warn('[WS] Failed to persist register heartbeat:', e.message);
+            }
 
             console.log(`[WS] Agent registered: ${agent_id} for restaurant ${restaurant_id}`);
             socket.send(JSON.stringify({
                 type: 'registered',
                 agent_id,
                 restaurant_id,
-                server_time: new Date().toISOString(),
+                server_time: now,
             }));
             return;
         }
