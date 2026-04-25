@@ -21,18 +21,22 @@ Deno.serve(async (req) => {
 
         // ── ENQUEUE: Called by the dashboard/auto-print when a new job needs printing
         if (action === 'enqueue') {
-            const user = await base44.auth.me();
-            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!body.restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            // Authorization: only admins or managers of this restaurant can enqueue
-            if (user.role !== 'admin') {
-                const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
-                    user_email: user.email,
-                    is_active: true,
-                });
-                const authorized = managers.some(m => (m.restaurant_ids || []).includes(body.restaurant_id));
-                if (!authorized) return Response.json({ error: 'Forbidden' }, { status: 403 });
+            // Accept either user session OR API key for enqueue
+            const apiKeyAuth = authenticateApiKey(req, body);
+            if (apiKeyAuth.error) {
+                // No valid API key — try user session
+                const user = await base44.auth.me().catch(() => null);
+                if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+                if (user.role !== 'admin') {
+                    const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+                        user_email: user.email,
+                        is_active: true,
+                    });
+                    const authorized = managers.some(m => (m.restaurant_ids || []).includes(body.restaurant_id));
+                    if (!authorized) return Response.json({ error: 'Forbidden' }, { status: 403 });
+                }
             }
 
             const job = await base44.asServiceRole.entities.PrintJob.create({
@@ -61,15 +65,12 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
             const now = new Date();
-
-            // Reset stuck 'processing' jobs older than 2 minutes back to 'pending'
-            // Use a time-bound filter to avoid fetching the entire job history
             const stuckCutoff = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
-            const stuckSince = new Date(now.getTime() - 30 * 60 * 1000).toISOString(); // only look back 30m
+
+            // Reset stuck 'processing' jobs older than 2 minutes back to 'pending' (no time bound — catch all)
             const stuckJobs = await base44.asServiceRole.entities.PrintJob.filter({
                 restaurant_id,
                 status: 'processing',
-                created_date: { $gte: stuckSince },
             });
             for (const j of stuckJobs) {
                 if ((j.updated_date || j.created_date) < stuckCutoff) {
@@ -77,12 +78,10 @@ Deno.serve(async (req) => {
                 }
             }
 
-            // Fetch pending jobs that are ready to be picked up (not waiting for retry backoff)
-            // Time-bound to last 30 minutes to avoid loading all-time history
+            // Fetch ALL pending jobs — no time bound so old stuck jobs are also picked up
             const pendingJobs = await base44.asServiceRole.entities.PrintJob.filter({
                 restaurant_id,
                 status: 'pending',
-                created_date: { $gte: stuckSince },
             });
 
             // Filter out jobs that are waiting for retry backoff
@@ -265,19 +264,27 @@ Deno.serve(async (req) => {
             return Response.json({ agents });
         }
 
-        // ── LIST: Dashboard fetches recent jobs for display (last 24h only)
+        // ── LIST: Dashboard fetches jobs — pending/processing always shown, done/failed last 24h
         if (action === 'list') {
             const user = await base44.auth.me();
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
             const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-            const jobs = await base44.asServiceRole.entities.PrintJob.filter({
+            const [activeJobs, recentJobs] = await Promise.all([
+                // All pending/processing regardless of age
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'pending' }),
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' }),
+            ]);
+            const historicJobs = await base44.asServiceRole.entities.PrintJob.filter({
                 restaurant_id,
                 created_date: { $gte: since },
             });
-            jobs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-            return Response.json({ jobs: jobs.slice(0, 50) });
+            // Merge, deduplicate by id
+            const allJobs = [...activeJobs, ...recentJobs, ...historicJobs];
+            const unique = Object.values(Object.fromEntries(allJobs.map(j => [j.id, j])));
+            unique.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+            return Response.json({ jobs: unique.slice(0, 50) });
         }
 
         // ── CLEANUP: Remove old done/failed jobs (called by dashboard)
