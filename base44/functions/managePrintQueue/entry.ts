@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
             const now = new Date();
-            const stuckCutoff = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+            const stuckCutoff = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
 
             // Reset stuck 'processing' jobs older than 2 minutes back to 'pending' (no time bound — catch all)
             const stuckJobs = await base44.asServiceRole.entities.PrintJob.filter({
