@@ -4,6 +4,15 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const RETRY_DELAYS_SECONDS = [30, 120, 300];
 const MAX_RETRIES = RETRY_DELAYS_SECONDS.length;
 
+// Helper: authenticate Android agent via API key (used by agent-facing actions)
+function authenticateApiKey(req, body) {
+    const apiKey = req.headers.get('x-api-key') || body.api_key;
+    const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
+    if (!validApiKey) return { error: 'Server not configured (missing ANDROID_APP_API_KEY)' };
+    if (!apiKey || apiKey !== validApiKey) return { error: 'Invalid API key' };
+    return { ok: true };
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -46,19 +55,8 @@ Deno.serve(async (req) => {
 
         // ── POLL: Called by the local agent every few seconds to pick up pending jobs
         if (action === 'poll') {
-            // Allow Android app agents to authenticate via API key instead of user session
-            const apiKey = req.headers.get('x-api-key') || body.api_key;
-            const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
-            if (apiKey) {
-                // API key provided — must be valid
-                if (!validApiKey || apiKey !== validApiKey) {
-                    return Response.json({ error: 'Invalid API key' }, { status: 401 });
-                }
-            } else {
-                // No API key — fall back to user session auth
-                const user = await base44.auth.me();
-                if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-            }
+            const auth = authenticateApiKey(req, body);
+            if (auth.error) return Response.json({ error: auth.error }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
@@ -120,6 +118,8 @@ Deno.serve(async (req) => {
 
         // ── COMPLETE: Local agent reports success
         if (action === 'complete') {
+            const auth = authenticateApiKey(req, body);
+            if (auth.error) return Response.json({ error: auth.error }, { status: 401 });
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
@@ -139,6 +139,8 @@ Deno.serve(async (req) => {
 
         // ── FAIL: Local agent reports failure — apply exponential backoff retry
         if (action === 'fail') {
+            const auth = authenticateApiKey(req, body);
+            if (auth.error) return Response.json({ error: auth.error }, { status: 401 });
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
@@ -222,16 +224,8 @@ Deno.serve(async (req) => {
 
         // ── HEARTBEAT: Android agent pings to report it is alive — persisted to DB
         if (action === 'heartbeat') {
-            const apiKey = req.headers.get('x-api-key') || body.api_key;
-            const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
-            if (apiKey) {
-                if (!validApiKey || apiKey !== validApiKey) {
-                    return Response.json({ error: 'Invalid API key' }, { status: 401 });
-                }
-            } else {
-                const user = await base44.auth.me();
-                if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-            }
+            const auth = authenticateApiKey(req, body);
+            if (auth.error) return Response.json({ error: auth.error }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
