@@ -215,10 +215,17 @@ async function sendToNetworkPrinter(ip, port, data, timeoutMs = 8000) {
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
         const body = await req.json();
+
+        // Allow Android agents with API key to call build_raw without a user session
+        const apiKey = req.headers.get('x-api-key') || body.api_key;
+        const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
+        const hasValidApiKey = validApiKey && apiKey === validApiKey;
+
+        if (!hasValidApiKey) {
+            const user = await base44.auth.me();
+            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
         const { action, printer_ip, printer_port, command_set, order, restaurant, config, printer_name, open_cash_drawer } = body;
 
         // build_raw only generates ESC/POS bytes — no TCP needed, so printer_ip is optional for it
