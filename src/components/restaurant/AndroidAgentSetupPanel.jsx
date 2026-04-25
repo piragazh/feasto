@@ -67,58 +67,45 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
     // Convert https:// → wss:// for the WebSocket endpoint
     const wsUrl = getApiUrl(`/api/v2/apps/${appId}/functions/printAgentWS`).replace(/^https/, 'wss').replace(/^http/, 'ws');
 
-    // Build per-agent status from heartbeats
-    const agentStatuses = Object.entries(agentHeartbeats).map(([agentId, lastSeen]) => ({
-        agentId,
-        lastSeen,
-        isOnline: (now - new Date(lastSeen).getTime()) < OFFLINE_THRESHOLD_MS,
-        secondsAgo: Math.floor((now - new Date(lastSeen).getTime()) / 1000),
-    }));
-
-    // Also seed from recent jobs so agents appear even before first heartbeat fetch
-    useEffect(() => {
-        if (jobs.length === 0) return;
-        const seeded = {};
-        jobs.forEach(j => {
-            if (!j.agent_id) return;
-            const t = j.completed_at || j.updated_date || j.created_date;
-            if (!t) return;
-            if (!seeded[j.agent_id] || new Date(t) > new Date(seeded[j.agent_id])) {
-                seeded[j.agent_id] = t;
-            }
-        });
-        setAgentHeartbeats(prev => {
-            const merged = { ...seeded, ...prev }; // prev (real heartbeats) win over job-derived
-            return merged;
-        });
-    }, [jobs]);
+    // Build per-agent status from heartbeats (agentHeartbeats is now a map of agentId → DB record or fallback obj)
+    const agentStatuses = Object.values(agentHeartbeats).map(agent => {
+        const lastSeen = agent.last_seen;
+        const ageMs = now - new Date(lastSeen).getTime();
+        return {
+            agentId: agent.agent_id,
+            lastSeen,
+            connectionMode: agent.connection_mode || 'polling',
+            printerAddress: agent.printer_address || null,
+            isOnline: ageMs < OFFLINE_THRESHOLD_MS,
+            secondsAgo: Math.floor(ageMs / 1000),
+        };
+    });
 
     const fetchJobs = useCallback(async () => {
         if (!restaurantId) return;
         setLoadingJobs(true);
         try {
-            const res = await base44.functions.invoke('managePrintQueue', {
-                action: 'list',
-                restaurant_id: restaurantId,
-            });
-            const fetchedJobs = res.data?.jobs || [];
+            // Fetch jobs AND agent heartbeats in parallel
+            const [jobsRes, agentsRes] = await Promise.all([
+                base44.functions.invoke('managePrintQueue', { action: 'list', restaurant_id: restaurantId }),
+                base44.functions.invoke('managePrintQueue', { action: 'list_agents', restaurant_id: restaurantId }),
+            ]);
+            const fetchedJobs = jobsRes.data?.jobs || [];
             setJobs(fetchedJobs);
 
-            // Update heartbeats from the most recent job activity per agent
-            // This catches agents that polled jobs since the last panel refresh
-            setAgentHeartbeats(prev => {
-                const updated = { ...prev };
-                fetchedJobs.forEach(j => {
-                    if (!j.agent_id) return;
-                    // Use updated_date as a proxy for last poll time
-                    const t = j.updated_date || j.created_date;
-                    if (!t) return;
-                    if (!updated[j.agent_id] || new Date(t) > new Date(updated[j.agent_id])) {
-                        updated[j.agent_id] = t;
-                    }
-                });
-                return updated;
+            // Build heartbeat map from real DB records (primary source)
+            const dbAgents = agentsRes.data?.agents || [];
+            const heartbeatMap = {};
+            dbAgents.forEach(a => { heartbeatMap[a.agent_id] = a; });
+
+            // Also seed from job activity as fallback for agents that never sent a heartbeat
+            fetchedJobs.forEach(j => {
+                if (!j.agent_id || heartbeatMap[j.agent_id]) return;
+                const t = j.updated_date || j.created_date;
+                if (t) heartbeatMap[j.agent_id] = { agent_id: j.agent_id, last_seen: t, connection_mode: 'polling' };
             });
+
+            setAgentHeartbeats(heartbeatMap);
         } catch (e) {
             console.error('Failed to fetch jobs:', e);
         } finally {
@@ -207,16 +194,14 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
 
                     {agentStatuses.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                            {agentStatuses.map(({ agentId, isOnline, secondsAgo, lastSeen }) => (
+                            {agentStatuses.map(({ agentId, isOnline, secondsAgo, connectionMode, printerAddress }) => (
                                 <div
                                     key={agentId}
-                                    className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-xs ${
-                                        isOnline
-                                            ? 'bg-white border-green-200'
-                                            : 'bg-red-50 border-red-200'
+                                    className={`flex items-start gap-2 border rounded-lg px-3 py-2 text-xs ${
+                                        isOnline ? 'bg-white border-green-200' : 'bg-red-50 border-red-200'
                                     }`}
                                 >
-                                    <span className={`h-2 w-2 rounded-full flex-shrink-0 ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                                    <span className={`h-2 w-2 rounded-full flex-shrink-0 mt-1 ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
                                     <div>
                                         <p className="font-mono text-gray-800 font-medium">{agentId}</p>
                                         <p className={`text-[10px] mt-0.5 ${isOnline ? 'text-green-600' : 'text-red-600'}`}>
@@ -224,6 +209,14 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                                                 ? secondsAgo < 5 ? 'Just now' : `${secondsAgo}s ago`
                                                 : `Offline — last seen ${secondsAgo}s ago`}
                                         </p>
+                                        {connectionMode && (
+                                            <p className="text-[10px] text-gray-400 mt-0.5">
+                                                via {connectionMode === 'websocket' ? '⚡ WebSocket' : '🔄 HTTP Poll'}
+                                            </p>
+                                        )}
+                                        {printerAddress && (
+                                            <p className="text-[10px] text-gray-400 font-mono">{printerAddress}</p>
+                                        )}
                                     </div>
                                     <Badge className={`ml-1 text-[10px] px-1.5 py-0 ${isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                         {isOnline ? 'Online' : 'Offline'}

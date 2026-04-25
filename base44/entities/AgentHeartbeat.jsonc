@@ -1,0 +1,47 @@
+{
+  "name": "AgentHeartbeat",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this agent belongs to"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Unique identifier for the Android agent (e.g. android-kitchen-1)"
+    },
+    "last_seen": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last heartbeat received from this agent"
+    },
+    "agent_type": {
+      "type": "string",
+      "enum": [
+        "android",
+        "dashboard",
+        "pc"
+      ],
+      "default": "android",
+      "description": "Type of agent"
+    },
+    "printer_address": {
+      "type": "string",
+      "description": "Printer address this agent is connected to (BT MAC or IP:port)"
+    },
+    "connection_mode": {
+      "type": "string",
+      "enum": [
+        "websocket",
+        "polling"
+      ],
+      "default": "websocket",
+      "description": "How this agent is connected"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "agent_id",
+    "last_seen"
+  ]
+}

@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
             return Response.json({ success: true });
         }
 
-        // ── HEARTBEAT: Android agent pings to report it is alive (no job needed)
+        // ── HEARTBEAT: Android agent pings to report it is alive — persisted to DB
         if (action === 'heartbeat') {
             const apiKey = req.headers.get('x-api-key') || body.api_key;
             const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
@@ -221,7 +221,41 @@ Deno.serve(async (req) => {
             }
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
-            return Response.json({ success: true, server_time: new Date().toISOString(), agent_id });
+
+            const now = new Date().toISOString();
+            // Upsert: find existing heartbeat record for this agent and update it,
+            // or create a new one if it doesn't exist yet.
+            const existing = await base44.asServiceRole.entities.AgentHeartbeat.filter({
+                restaurant_id,
+                agent_id,
+            });
+            if (existing.length > 0) {
+                await base44.asServiceRole.entities.AgentHeartbeat.update(existing[0].id, {
+                    last_seen: now,
+                    connection_mode: body.connection_mode || 'polling',
+                    printer_address: body.printer_address || existing[0].printer_address,
+                });
+            } else {
+                await base44.asServiceRole.entities.AgentHeartbeat.create({
+                    restaurant_id,
+                    agent_id,
+                    last_seen: now,
+                    agent_type: body.agent_type || 'android',
+                    connection_mode: body.connection_mode || 'polling',
+                    printer_address: body.printer_address || '',
+                });
+            }
+            return Response.json({ success: true, server_time: now, agent_id });
+        }
+
+        // ── LIST_AGENTS: Dashboard fetches all known agents and their last-seen timestamps
+        if (action === 'list_agents') {
+            const user = await base44.auth.me();
+            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+
+            const agents = await base44.asServiceRole.entities.AgentHeartbeat.filter({ restaurant_id });
+            return Response.json({ agents });
         }
 
         // ── LIST: Dashboard fetches recent jobs for display (last 24h only)
