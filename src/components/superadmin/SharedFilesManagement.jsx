@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { getApiUrl } from '@/lib/api-origin';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,15 +74,19 @@ export default function SharedFilesManagement() {
 
         setUploading(true);
         try {
-            // Use backend function via fetch with FormData (platform UploadFile blocks .apk)
-            const formData = new FormData();
-            formData.append('file', selectedFile, selectedFile.name);
-            const uploadRes = await fetch(getApiUrl('/uploadPublicFile'), {
-                method: 'POST',
-                body: formData,
-                credentials: 'include',
+            // Read file as base64 and send as JSON (FormData is not supported by the SDK invoke path)
+            const arrayBuffer = await selectedFile.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            const file_base64 = btoa(binary);
+
+            const uploadRes = await base44.functions.invoke('uploadPublicFile', {
+                file_base64,
+                file_name: selectedFile.name,
+                file_type: selectedFile.type || 'application/octet-stream',
             });
-            const uploadData = await uploadRes.json();
+            const uploadData = uploadRes.data;
             if (!uploadData?.file_url) throw new Error(uploadData?.error || 'Upload failed');
             const file_url = uploadData.file_url;
             await base44.entities.SharedFile.create({
