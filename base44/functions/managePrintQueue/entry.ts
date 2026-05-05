@@ -65,12 +65,14 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
 
             const now = new Date();
-            const stuckCutoff = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
+            const stuckCutoff = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+            const stuckSince = new Date(now.getTime() - 30 * 60 * 1000).toISOString();
 
-            // Reset stuck 'processing' jobs older than 2 minutes back to 'pending' (no time bound — catch all)
+            // Reset stuck 'processing' jobs older than 2 minutes — time-bound to last 30 min to avoid full-table scan
             const stuckJobs = await base44.asServiceRole.entities.PrintJob.filter({
                 restaurant_id,
                 status: 'processing',
+                created_date: { $gte: stuckSince },
             });
             for (const j of stuckJobs) {
                 const jobDate = j.updated_date || j.created_date;
@@ -100,9 +102,9 @@ Deno.serve(async (req) => {
             const serverNow = new Date().toISOString();
 
             // Re-fetch the job to guard against race where two agents polled simultaneously.
-            // Filter by id only (some SDKs don't support multi-field AND on filter), verify restaurant_id in JS.
-            const latestJobArr = await base44.asServiceRole.entities.PrintJob.filter({ id: pendingJob.id });
-            const latestJob = latestJobArr.find(j => j.restaurant_id === restaurant_id);
+            // Filter by restaurant_id + id to avoid cross-tenant data exposure via service role.
+            const latestJobArr = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: pendingJob.id });
+            const latestJob = latestJobArr[0];
             if (!latestJob || latestJob.status !== 'pending') {
                 return Response.json({ job: null }); // already claimed by another agent
             }

@@ -82,31 +82,41 @@ function AgentStatusBadge({ status, lastSeen }) {
 }
 
 // ── Network Printer Status Badge (ping-based) ─────────────────────────────
-export function NetworkPrinterStatusBadge({ ip, port, pingIntervalMs = 30000 }) {
+export function NetworkPrinterStatusBadge({ ip, port, pingIntervalMs = 60000 }) {
     const [status, setStatus] = useState('unknown');
     const timerRef = useRef(null);
+    // Track current ip/port in a ref so the interval callback always sees latest values
+    // without needing to be recreated on every change
+    const ipRef = useRef(ip);
+    const portRef = useRef(port);
+    useEffect(() => { ipRef.current = ip; portRef.current = port; }, [ip, port]);
 
     const ping = useCallback(async () => {
-        if (!ip) return;
+        const currentIp = ipRef.current;
+        if (!currentIp) return;
         setStatus('checking');
         try {
             const res = await base44.functions.invoke('networkPrint', {
                 action: 'ping',
-                printer_ip: ip,
-                printer_port: port || '9100',
+                printer_ip: currentIp,
+                printer_port: portRef.current || '9100',
             });
             setStatus(res.data?.success ? 'reachable' : 'unreachable');
         } catch {
             setStatus('unreachable');
         }
-    }, [ip, port]);
+    }, []); // stable — reads from refs
 
     useEffect(() => {
-        if (!ip) return;
-        ping();
-        timerRef.current = setInterval(ping, pingIntervalMs);
-        return () => clearInterval(timerRef.current);
-    }, [ip, port, pingIntervalMs, ping]);
+        if (!ip) { setStatus('unknown'); return; }
+        // Stagger initial pings by up to 5s to avoid N simultaneous pings when multiple cards mount
+        const initialDelay = Math.floor(Math.random() * 5000);
+        const t = setTimeout(() => {
+            ping();
+            timerRef.current = setInterval(ping, pingIntervalMs);
+        }, initialDelay);
+        return () => { clearTimeout(t); clearInterval(timerRef.current); };
+    }, [ip, pingIntervalMs, ping]);
 
     if (!ip) return <Badge className="bg-gray-100 text-gray-500 gap-1 text-xs"><Circle className="h-3 w-3" />Not Configured</Badge>;
     if (status === 'checking') return <Badge className="bg-amber-100 text-amber-700 gap-1 text-xs"><Loader2 className="h-3 w-3 animate-spin" />Checking…</Badge>;

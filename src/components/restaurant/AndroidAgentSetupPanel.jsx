@@ -63,7 +63,8 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
     // Use the current origin for function URLs — on custom domains (mealdrop.co.uk)
     // the /functions/ path works for HTTP. WebSocket is NOT supported on Base44 functions.
     const appId = import.meta.env.VITE_BASE44_APP_ID || '';
-    const functionUrl = getApiUrl(`/api/v2/apps/${appId}/functions/managePrintQueue`);
+    const functionBaseUrl = getApiUrl(`/api/v2/apps/${appId}/functions`);
+    const functionUrl = `${functionBaseUrl}/managePrintQueue`;
 
     // Build per-agent status from heartbeats (agentHeartbeats is now a map of agentId → DB record or fallback obj)
     const agentStatuses = Object.values(agentHeartbeats).map(agent => {
@@ -245,7 +246,7 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                         <CopyField
                             label="Print Queue Endpoint URL"
                             value={functionUrl}
-                            mono
+                            mono={true}
                         />
                         <p className="text-[11px] text-green-700 leading-relaxed">
                             The Android app should poll this URL every few seconds using POST with <code className="bg-green-100 px-1 rounded font-mono">action: "poll"</code>. Include your API key in the <code className="bg-green-100 px-1 rounded font-mono">x-api-key</code> header.
