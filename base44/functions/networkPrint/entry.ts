@@ -353,14 +353,15 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         const body = await req.json();
 
-        // Allow Android agents with API key to call build_raw without a user session
+        // Allow Android agents with API key
         const apiKey = req.headers.get('x-api-key') || body.api_key;
         const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
         const hasValidApiKey = validApiKey && apiKey === validApiKey;
 
         if (!hasValidApiKey) {
-            const user = await base44.auth.me();
-            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            // Use isAuthenticated check — avoids User entity permission issues
+            const isAuth = await base44.auth.isAuthenticated();
+            if (!isAuth) return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
         const { action, printer_ip, printer_port, command_set, order, restaurant, config, printer_name, open_cash_drawer } = body;
 
