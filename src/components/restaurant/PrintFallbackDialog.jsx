@@ -193,8 +193,8 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
                             <>
                                 <div className="border-t border-dashed border-gray-300" />
                                 <div className="space-y-1 text-sm">
-                                    {(order.guest_name || order.created_by) && (
-                                        <div className="font-medium">{order.guest_name || order.created_by}</div>
+                                    {(order.guest_name || order.customer_email) && (
+                                        <div className="font-medium">{order.guest_name || order.customer_email}</div>
                                     )}
                                     {order.phone && (
                                         <div className="flex items-center gap-1.5 text-gray-600">

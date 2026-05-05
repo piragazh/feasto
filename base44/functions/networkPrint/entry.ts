@@ -79,7 +79,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
         add(cmd.boldOn);
         add('Customer:\n');
         add(cmd.boldOff);
-        const customerName = (order.guest_name && order.guest_name !== 'null') ? order.guest_name : (order.created_by && order.created_by !== 'null') ? order.created_by : 'N/A';
+        const customerName = (order.guest_name && order.guest_name !== 'null') ? order.guest_name : (order.customer_email && !order.customer_email.includes('@base44') && order.customer_email !== 'null') ? order.customer_email : (order.phone || 'N/A');
         add(`${customerName}\n`);
         if (order.phone && order.phone !== 'null') add(`Tel: ${order.phone}\n`);
         if (order.delivery_address && order.delivery_address !== 'null') add(`${order.delivery_address}\n`);
