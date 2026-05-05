@@ -199,8 +199,9 @@ Deno.serve(async (req) => {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const retryJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
-            const job = retryJobs[0];
+            // Filter by id only — multi-field AND not guaranteed; verify restaurant_id in JS
+            const retryJobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
+            const job = retryJobs.find(j => j.restaurant_id === restaurant_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.status !== 'failed') return Response.json({ error: 'Only failed jobs can be manually retried' }, { status: 400 });
 
@@ -221,8 +222,9 @@ Deno.serve(async (req) => {
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const cancelJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
-            const job = cancelJobs[0];
+            // Filter by id only — multi-field AND not guaranteed; verify restaurant_id in JS
+            const cancelJobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
+            const job = cancelJobs.find(j => j.restaurant_id === restaurant_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (!['pending', 'processing'].includes(job.status)) return Response.json({ error: 'Only pending or processing jobs can be cancelled' }, { status: 400 });
 
