@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 // ── Agent Status Hook ─────────────────────────────────────────────────────
 // Infers agent liveness by checking for a recently-processed PrintJob.
 // If any job was completed/processed within the last 5 minutes, agent is "online".
+const AGENT_ONLINE_THRESHOLD_MS = 60 * 1000; // 60s — matches AndroidAgentSetupPanel
+
 function useAgentStatus(restaurantId) {
     const [status, setStatus] = useState('unknown'); // unknown | online | offline
     const [lastSeen, setLastSeen] = useState(null);
@@ -22,20 +24,22 @@ function useAgentStatus(restaurantId) {
         if (!restaurantId) return;
         try {
             const res = await base44.functions.invoke('managePrintQueue', {
-                action: 'list',
+                action: 'list_agents',
                 restaurant_id: restaurantId,
             });
-            const jobs = res.data?.jobs || [];
-            // Find the most recently completed/processing job
-            const recentJob = jobs
-                .filter(j => j.agent_id && (j.status === 'done' || j.status === 'processing'))
-                .sort((a, b) => new Date(b.updated_date || b.created_date) - new Date(a.updated_date || a.created_date))[0];
+            const agents = res.data?.agents || [];
+            if (agents.length === 0) { setStatus('offline'); return; }
 
-            if (recentJob) {
-                const ageMs = Date.now() - new Date(recentJob.updated_date || recentJob.created_date).getTime();
-                if (ageMs < 5 * 60 * 1000) { // within 5 minutes
+            // Find the most recently active agent
+            const mostRecent = agents
+                .filter(a => a.last_seen)
+                .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen))[0];
+
+            if (mostRecent) {
+                const ageMs = Date.now() - new Date(mostRecent.last_seen).getTime();
+                if (ageMs < AGENT_ONLINE_THRESHOLD_MS) {
                     setStatus('online');
-                    setLastSeen(new Date(recentJob.updated_date || recentJob.created_date));
+                    setLastSeen(new Date(mostRecent.last_seen));
                     return;
                 }
             }

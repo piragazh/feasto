@@ -162,10 +162,20 @@ function buildTestBytes(commandSet) {
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+        // Parse body FIRST so api_key in body is available for auth
         const body = await req.json();
+
+        // Allow API key auth (Android agents) OR user session (dashboard)
+        const apiKey = req.headers.get('x-api-key') || body.api_key;
+        const validApiKey = Deno.env.get('ANDROID_APP_API_KEY');
+        const hasValidApiKey = validApiKey && apiKey === validApiKey;
+
+        if (!hasValidApiKey) {
+            const user = await base44.auth.me().catch(() => null);
+            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const {
             action,            // 'test' | 'print_receipt' | 'ping'
             tablet_ip,         // IP address of the Android tablet on the LAN

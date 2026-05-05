@@ -138,9 +138,16 @@ async function pollForJobs() {
                     });
 
                     if (agent.socket.readyState === WS_OPEN) {
+                        // Preserve all original job fields (order_data, restaurant_data etc).
+                        // updatedJob from SDK may be partial — do NOT spread it over job directly.
                         agent.socket.send(JSON.stringify({
                             type: 'new_job',
-                            job: { ...job, ...updatedJob, status: 'processing', agent_id: agent.agentId },
+                            job: {
+                                ...job,
+                                status: 'processing',
+                                agent_id: agent.agentId,
+                                updated_date: updatedJob?.updated_date || new Date().toISOString(),
+                            },
                         }));
                         console.log(`[WS] Pushed job ${job.id} to agent ${agent.agentId}`);
                     } else {
@@ -306,9 +313,9 @@ Deno.serve(async (req) => {
                 return;
             }
             try {
-                // Verify this agent owns the job before marking done
-                const jobs = await connectionServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
-                const job = jobs[0];
+                // Filter by id only — multi-field AND not guaranteed by SDK; verify restaurant_id in JS
+                const allJobs = await connectionServiceRole.entities.PrintJob.filter({ id: job_id });
+                const job = allJobs.find(j => j.restaurant_id === restaurant_id);
                 if (!job) {
                     socket.send(JSON.stringify({ type: 'job_ack', job_id, status: 'not_found' }));
                     getAgentInFlight(registeredAgentId).delete(job_id);
@@ -340,8 +347,9 @@ Deno.serve(async (req) => {
                 return;
             }
             try {
-                const jobs = await connectionServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
-                const job = jobs[0];
+                // Filter by id only — multi-field AND not guaranteed by SDK; verify restaurant_id in JS
+                const allJobs = await connectionServiceRole.entities.PrintJob.filter({ id: job_id });
+                const job = allJobs.find(j => j.restaurant_id === restaurant_id);
 
                 // Always clear in-flight regardless of job state
                 getAgentInFlight(registeredAgentId).delete(job_id);

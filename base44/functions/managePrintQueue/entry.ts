@@ -135,8 +135,9 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const jobsForRestaurant = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
-            const job = jobsForRestaurant[0];
+            // Filter by id only — multi-field AND not guaranteed; verify restaurant_id in JS
+            const completeJobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
+            const job = completeJobs.find(j => j.restaurant_id === restaurant_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
 
@@ -156,8 +157,9 @@ Deno.serve(async (req) => {
             if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
-            const failJobs = await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, id: job_id });
-            const job = failJobs[0];
+            // Filter by id only — multi-field AND not guaranteed; verify restaurant_id in JS
+            const failJobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
+            const job = failJobs.find(j => j.restaurant_id === restaurant_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
             if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
 
