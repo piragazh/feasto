@@ -101,8 +101,9 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
         const assigned = centralized.filter(p =>
             p.enabled !== false && (p.assigned_channels || []).includes(effectiveChannel)
         );
-        // If nothing assigned to this channel, try all enabled printers
-        const toTry = assigned.length > 0 ? assigned : centralized.filter(p => p.enabled !== false);
+        // If nothing assigned to this channel, fall back to first enabled printer only (not ALL)
+        const fallbackPrinters = centralized.filter(p => p.enabled !== false);
+        const toTry = assigned.length > 0 ? assigned : (fallbackPrinters.length > 0 ? [fallbackPrinters[0]] : []);
 
         for (const printerConfig of toTry) {
             // slotIndex is the position in the full centralized array (0-based),
