@@ -44,18 +44,31 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'File too large (max 50MB)' }, { status: 400 });
         }
 
-        // Upload file to public folder
-        const response = await base44.integrations.Core.UploadFile({
-            file: file
-        });
+        // For APK files, use UploadPrivateFile + signed URL to bypass platform restrictions
+        // For all other files, use standard public upload
+        let file_url;
+        if (isApk) {
+            const privateRes = await base44.integrations.Core.UploadPrivateFile({ file });
+            if (!privateRes?.file_uri) {
+                return Response.json({ error: 'Upload failed' }, { status: 500 });
+            }
+            const signedRes = await base44.integrations.Core.CreateFileSignedUrl({
+                file_uri: privateRes.file_uri,
+                expires_in: 60 * 60 * 24 * 365, // 1 year
+            });
+            file_url = signedRes?.signed_url;
+        } else {
+            const response = await base44.integrations.Core.UploadFile({ file });
+            file_url = response?.file_url;
+        }
 
-        if (!response?.file_url) {
+        if (!file_url) {
             return Response.json({ error: 'Upload failed' }, { status: 500 });
         }
 
         return Response.json({
             success: true,
-            file_url: response.file_url,
+            file_url,
             file_name: file.name
         });
     } catch (error) {

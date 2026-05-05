@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getApiUrl } from '@/lib/api-origin';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,12 +75,17 @@ export default function SharedFilesManagement() {
 
         setUploading(true);
         try {
-            // Use backend function for upload (supports APKs and all file types)
+            // Use backend function via fetch with FormData (platform UploadFile blocks .apk)
             const formData = new FormData();
-            formData.append('file', selectedFile);
-            const res = await base44.functions.invoke('uploadPublicFile', formData);
-            if (!res.data?.file_url) throw new Error(res.data?.error || 'Upload failed');
-            const file_url = res.data.file_url;
+            formData.append('file', selectedFile, selectedFile.name);
+            const uploadRes = await fetch(getApiUrl('/uploadPublicFile'), {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            });
+            const uploadData = await uploadRes.json();
+            if (!uploadData?.file_url) throw new Error(uploadData?.error || 'Upload failed');
+            const file_url = uploadData.file_url;
             await base44.entities.SharedFile.create({
                 title: form.title.trim(),
                 description: form.description.trim(),
@@ -87,7 +93,7 @@ export default function SharedFilesManagement() {
                 file_url,
                 file_name: selectedFile.name,
                 file_size: selectedFile.size,
-                file_type: selectedFile.type || 'application/octet-stream',
+                file_type: selectedFile.type || 'application/vnd.android.package-archive',
                 is_active: true,
                 download_count: 0,
             });
