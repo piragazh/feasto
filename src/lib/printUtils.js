@@ -76,7 +76,7 @@ async function printNetworkReceipt(order, restaurant, printerConfig, globalCfg) 
         },
         config: cfg,
     });
-    if (!res.data?.success) throw new Error(res.data?.error || 'Network print failed');
+    if (!res.data?.success) throw new Error(res.data?.error || res.data?.message || 'Network print failed');
     return true;
 }
 
@@ -105,10 +105,12 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
         const fallbackPrinters = centralized.filter(p => p.enabled !== false);
         const toTry = assigned.length > 0 ? assigned : (fallbackPrinters.length > 0 ? [fallbackPrinters[0]] : []);
 
-        for (const printerConfig of toTry) {
-            // slotIndex is the position in the full centralized array (0-based),
+        for (let toTryIdx = 0; toTryIdx < toTry.length; toTryIdx++) {
+            const printerConfig = toTry[toTryIdx];
+            // slotIndex is the position in the ORIGINAL centralized array (0-based),
             // used to pick the correct BT service. Only 2 BT services exist (A and B).
-            const slotIndex = centralized.indexOf(printerConfig);
+            // Use findIndex to guard against object reference issues.
+            const slotIndex = centralized.findIndex(p => p === printerConfig || (p.name && p.name === printerConfig.name && p.network_ip === printerConfig.network_ip));
             const type = printerConfig.connection_type || 'bluetooth';
 
             if (type === 'network' && printerConfig.network_ip) {

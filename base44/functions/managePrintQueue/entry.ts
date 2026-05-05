@@ -73,7 +73,8 @@ Deno.serve(async (req) => {
                 status: 'processing',
             });
             for (const j of stuckJobs) {
-                if ((j.updated_date || j.created_date) < stuckCutoff) {
+                const jobDate = j.updated_date || j.created_date;
+                if (jobDate && jobDate < stuckCutoff) {
                     await base44.asServiceRole.entities.PrintJob.update(j.id, { status: 'pending', agent_id: null });
                 }
             }
@@ -270,18 +271,15 @@ Deno.serve(async (req) => {
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
+            // Single query for all jobs in last 24h (includes pending/processing/done/failed)
+            // plus a separate safety net for any older pending/processing jobs
             const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-            const [activeJobs, recentJobs] = await Promise.all([
-                // All pending/processing regardless of age
-                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'pending' }),
-                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' }),
+            const [recentJobs, activeJobs] = await Promise.all([
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, created_date: { $gte: since } }),
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: { $in: ['pending', 'processing'] } }),
             ]);
-            const historicJobs = await base44.asServiceRole.entities.PrintJob.filter({
-                restaurant_id,
-                created_date: { $gte: since },
-            });
-            // Merge, deduplicate by id
-            const allJobs = [...activeJobs, ...recentJobs, ...historicJobs];
+            // Merge and deduplicate — activeJobs catches old stuck jobs outside 24h window
+            const allJobs = [...recentJobs, ...activeJobs];
             const unique = Object.values(Object.fromEntries(allJobs.map(j => [j.id, j])));
             unique.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
             return Response.json({ jobs: unique.slice(0, 50) });

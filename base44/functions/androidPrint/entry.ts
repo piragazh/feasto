@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'tablet_ip is required' }, { status: 400 });
         }
 
-        const androidPort = tablet_port || 8080;
+        const androidPort = parseInt(tablet_port) || 8080;
         const androidBaseUrl = `http://${tablet_ip}:${androidPort}`;
 
         // ── PING: just check if the Android app is reachable ──────────────
@@ -223,7 +223,10 @@ Deno.serve(async (req) => {
         }
 
         // ── Base64-encode and POST to Android app ─────────────────────────
-        const base64Data = btoa(String.fromCharCode(...rawBytes));
+        // Use loop instead of spread to avoid stack overflow on large receipts
+        let _binary = '';
+        for (let i = 0; i < rawBytes.length; i++) _binary += String.fromCharCode(rawBytes[i]);
+        const base64Data = btoa(_binary);
 
         const payload = {
             base64EscPosData: base64Data,
