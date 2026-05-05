@@ -74,7 +74,14 @@ export default function SharedFilesManagement() {
 
         setUploading(true);
         try {
-            const { file_url } = await base44.integrations.Core.UploadFile({ file: selectedFile });
+            // Ensure APK files have a proper MIME type (browsers may leave it empty)
+            let fileToUpload = selectedFile;
+            if (selectedFile.name.endsWith('.apk') && !selectedFile.type) {
+                fileToUpload = new File([selectedFile], selectedFile.name, {
+                    type: 'application/vnd.android.package-archive',
+                });
+            }
+            const { file_url } = await base44.integrations.Core.UploadFile({ file: fileToUpload });
             await base44.entities.SharedFile.create({
                 title: form.title.trim(),
                 description: form.description.trim(),
@@ -82,7 +89,7 @@ export default function SharedFilesManagement() {
                 file_url,
                 file_name: selectedFile.name,
                 file_size: selectedFile.size,
-                file_type: selectedFile.type,
+                file_type: fileToUpload.type || selectedFile.type,
                 is_active: true,
                 download_count: 0,
             });
