@@ -26,11 +26,15 @@ Deno.serve(async (req) => {
             'audio/mpeg', 'audio/wav',
             'text/plain', 'text/csv',
             'application/json',
+            'application/vnd.android.package-archive',
+            'application/octet-stream',
         ];
         const BLOCKED_EXTENSIONS = ['.html', '.htm', '.js', '.mjs', '.ts', '.php', '.py', '.sh', '.exe'];
         const fileName = (file.name || '').toLowerCase();
         const hasBlockedExt = BLOCKED_EXTENSIONS.some(ext => fileName.endsWith(ext));
-        if (hasBlockedExt || (file.type && !ALLOWED_TYPES.includes(file.type))) {
+        // Allow .apk regardless of MIME type
+        const isApk = fileName.endsWith('.apk');
+        if (!isApk && (hasBlockedExt || (file.type && !ALLOWED_TYPES.includes(file.type)))) {
             return Response.json({ error: `File type not allowed: ${file.type || fileName}` }, { status: 400 });
         }
 

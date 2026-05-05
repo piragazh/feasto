@@ -74,14 +74,12 @@ export default function SharedFilesManagement() {
 
         setUploading(true);
         try {
-            // Ensure APK files have a proper MIME type (browsers may leave it empty)
-            let fileToUpload = selectedFile;
-            if (selectedFile.name.endsWith('.apk') && !selectedFile.type) {
-                fileToUpload = new File([selectedFile], selectedFile.name, {
-                    type: 'application/vnd.android.package-archive',
-                });
-            }
-            const { file_url } = await base44.integrations.Core.UploadFile({ file: fileToUpload });
+            // Use backend function for upload (supports APKs and all file types)
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            const res = await base44.functions.invoke('uploadPublicFile', formData);
+            if (!res.data?.file_url) throw new Error(res.data?.error || 'Upload failed');
+            const file_url = res.data.file_url;
             await base44.entities.SharedFile.create({
                 title: form.title.trim(),
                 description: form.description.trim(),
@@ -89,7 +87,7 @@ export default function SharedFilesManagement() {
                 file_url,
                 file_name: selectedFile.name,
                 file_size: selectedFile.size,
-                file_type: fileToUpload.type || selectedFile.type,
+                file_type: selectedFile.type || 'application/octet-stream',
                 is_active: true,
                 download_count: 0,
             });
