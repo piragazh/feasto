@@ -33,113 +33,249 @@ function buildCashDrawerBytes() {
     return new Uint8Array(CASH_DRAWER_CMD);
 }
 
+// Helper: pad a string to fill lineWidth with value right-aligned
+function rPad(label, value, lineWidth) {
+    const pad = Math.max(1, lineWidth - label.length - value.length);
+    return `${label}${' '.repeat(pad)}${value}`;
+}
+
+// Helper: wrap long text to lineWidth, returning array of lines
+function wrapText(text, lineWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+        if ((current + (current ? ' ' : '') + word).length <= lineWidth) {
+            current += (current ? ' ' : '') + word;
+        } else {
+            if (current) lines.push(current);
+            // If single word is too long, hard-break it
+            if (word.length > lineWidth) {
+                for (let i = 0; i < word.length; i += lineWidth) lines.push(word.slice(i, i + lineWidth));
+                current = '';
+            } else {
+                current = word;
+            }
+        }
+    }
+    if (current) lines.push(current);
+    return lines.length ? lines : [''];
+}
+
+// Helper: format customizations into readable strings
+function formatCustomizations(item) {
+    const lines = [];
+    if (!item.customizations || typeof item.customizations !== 'object') return lines;
+
+    for (const [key, val] of Object.entries(item.customizations)) {
+        let displayVal = '';
+
+        if (key.includes('meal_customizations') && typeof val === 'object' && !Array.isArray(val)) {
+            // Nested meal customizations
+            for (const [mKey, mVal] of Object.entries(val)) {
+                const v = Array.isArray(mVal) ? mVal.join(', ') : String(mVal);
+                if (v) lines.push(`  + ${mKey.replace(/_/g, ' ')}: ${v}`);
+            }
+            continue;
+        }
+
+        if (Array.isArray(val)) {
+            displayVal = val.join(', ');
+        } else if (typeof val === 'object' && val !== null) {
+            displayVal = val.selection ? String(val.selection) : JSON.stringify(val);
+        } else {
+            displayVal = String(val);
+        }
+
+        if (displayVal && displayVal !== 'null') {
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            lines.push(`  + ${label}: ${displayVal}`);
+        }
+    }
+    return lines;
+}
+
 function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     const cmd = buildCommands(config.command_set);
-    const lineWidth = (config.printer_width === '58mm') ? 32 : 48;
+    const W = (config.printer_width === '58mm') ? 32 : 48;  // line width chars
+    const isCompact = config.template === 'compact';
+    const isMinimal = config.template === 'minimal';
     const chunks = [];
-
     const add = (...parts) => chunks.push(bytes(...parts));
+    const line  = (char = '-') => add(`${char.repeat(W)}\n`);
+    const blank = () => add('\n');
 
+    // ══════════════════════════════════════════
+    //  HEADER — Restaurant name + address
+    // ══════════════════════════════════════════
     add(cmd.init);
-    add(cmd.alignCenter);
-    add(cmd.boldOn);
-    add(`${restaurant?.name || 'ORDER'}\n`);
-    add(cmd.boldOff);
-    add(cmd.normal);
+    add(cmd.alignCenter, cmd.boldOn, cmd.doubleHeight);
+    add(`${(restaurant?.name || 'ORDER').toUpperCase()}\n`);
+    add(cmd.normal, cmd.boldOff);
 
-    if (restaurant?.address && restaurant.address !== 'null' && config.template !== 'compact') {
+    if (restaurant?.address && restaurant.address !== 'null' && !isCompact) {
         add(`${restaurant.address}\n`);
     }
-    add(cmd.alignLeft);
-    add('================================\n');
-
     if (config.header_text) {
+        blank();
         add(`${config.header_text}\n`);
-        add('================================\n');
     }
 
+    // ══════════════════════════════════════════
+    //  ORDER NUMBER — Big & bold for rush-hour
+    // ══════════════════════════════════════════
     if (config.show_order_number !== false) {
-        add(cmd.boldOn, cmd.alignCenter);
-        if (config.template === 'itemized') add(cmd.doubleHeight);
+        line('=');
+        add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
         const orderNum = order.order_number || `#${(order.id || '').slice(-6)}`;
         add(`ORDER ${orderNum}\n`);
         add(cmd.normal, cmd.boldOff, cmd.alignLeft);
     }
 
-    if (config.template !== 'compact') {
-        add(`${new Date(order.created_date || Date.now()).toLocaleString()}\n`);
-    }
+    // ══════════════════════════════════════════
+    //  ORDER META — Type, time, source
+    // ══════════════════════════════════════════
+    line('=');
+
     const orderTypeLabel = order.order_type
         ? order.order_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
         : (order.order_source === 'pos' ? 'POS' : order.order_source === 'kiosk' ? 'Kiosk' : 'Delivery');
-    add(`Type: ${orderTypeLabel}\n`);
-    add('--------------------------------\n');
 
-    if (config.show_customer_details !== false && config.template !== 'compact') {
+    // Order type in bold — most important operational field
+    add(cmd.boldOn);
+    add(`>>> ${orderTypeLabel.toUpperCase()} <<<\n`);
+    add(cmd.boldOff);
+
+    if (!isCompact) {
+        const dt = new Date(order.created_date || Date.now());
+        const timeStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        add(`Time: ${timeStr}  Date: ${dateStr}\n`);
+    }
+
+    if (order.table_number) {
         add(cmd.boldOn);
-        add('Customer:\n');
+        add(`TABLE: ${order.table_number}\n`);
         add(cmd.boldOff);
-        const customerName = (order.guest_name && order.guest_name !== 'null') ? order.guest_name : (order.customer_email && !order.customer_email.includes('@base44') && order.customer_email !== 'null') ? order.customer_email : (order.phone || 'N/A');
-        add(`${customerName}\n`);
-        if (order.phone && order.phone !== 'null') add(`Tel: ${order.phone}\n`);
-        if (order.delivery_address && order.delivery_address !== 'null') add(`${order.delivery_address}\n`);
-        add('--------------------------------\n');
     }
 
-    for (const item of (order.items || [])) {
-        if (config.template === 'itemized') {
+    // ══════════════════════════════════════════
+    //  CUSTOMER DETAILS
+    // ══════════════════════════════════════════
+    if (config.show_customer_details !== false && !isCompact) {
+        line('-');
+        const customerName = (order.guest_name && order.guest_name !== 'null')
+            ? order.guest_name
+            : (order.customer_email && !order.customer_email.includes('@base44') && order.customer_email !== 'null')
+                ? order.customer_email
+                : null;
+
+        if (customerName) {
             add(cmd.boldOn);
-            add(`${item.quantity}x ${item.name}\n`);
+            add(`${customerName}\n`);
             add(cmd.boldOff);
-            add(`    £${((item.price || 0) * item.quantity).toFixed(2)}\n`);
-        } else {
-            const itemName = `${item.quantity}x ${item.name}`;
-            const price = `£${((item.price || 0) * item.quantity).toFixed(2)}`;
-            const padding = Math.max(1, lineWidth - itemName.length - price.length);
-            add(`${itemName}${' '.repeat(padding)}${price}\n`);
         }
-        if ((config.template === 'detailed' || config.template === 'itemized') && item.customizations) {
-            for (const [k, v] of Object.entries(item.customizations)) {
-                if (typeof v !== 'object') add(`  ${k}: ${v}\n`);
-            }
+        if (order.phone && order.phone !== 'null') {
+            add(`Tel: ${order.phone}\n`);
+        }
+        if (order.delivery_address && order.delivery_address !== 'null' && order.order_type === 'delivery') {
+            const addrLines = wrapText(`Addr: ${order.delivery_address}`, W);
+            for (const l of addrLines) add(`${l}\n`);
         }
     }
 
-    add('================================\n');
+    // ══════════════════════════════════════════
+    //  SPECIAL NOTES — Highlighted first
+    // ══════════════════════════════════════════
+    if (order.notes) {
+        line('*');
+        add(cmd.boldOn);
+        add(`!! NOTES: ${order.notes}\n`);
+        add(cmd.boldOff);
+        line('*');
+    }
 
-    if (config.template !== 'compact') {
+    // ══════════════════════════════════════════
+    //  ITEMS — Clear, numbered, with customizations
+    // ══════════════════════════════════════════
+    line('=');
+    add(cmd.boldOn);
+    add(`ITEMS (${(order.items || []).length})\n`);
+    add(cmd.boldOff);
+    line('-');
+
+    const items = order.items || [];
+    items.forEach((item, idx) => {
+        const qty = item.quantity || 1;
+        const itemPrice = `£${((item.price || 0) * qty).toFixed(2)}`;
+        const itemLabel = `${idx + 1}. ${qty}x ${item.name}`;
+
+        // Item name — bold, with price right-aligned
+        add(cmd.boldOn);
+        if (itemLabel.length + itemPrice.length + 1 <= W) {
+            add(`${rPad(itemLabel, itemPrice, W)}\n`);
+        } else {
+            // Name too long — wrap it, price on its own line
+            const nameLines = wrapText(itemLabel, W);
+            for (const nl of nameLines) add(`${nl}\n`);
+            add(`${' '.repeat(Math.max(0, W - itemPrice.length))}${itemPrice}\n`);
+        }
+        add(cmd.boldOff);
+
+        // Customizations — clearly indented
+        const custLines = formatCustomizations(item);
+        for (const cl of custLines) {
+            add(`${cl}\n`);
+        }
+
+        // Blank line between items for readability (skip after last)
+        if (idx < items.length - 1) blank();
+    });
+
+    // ══════════════════════════════════════════
+    //  TOTALS
+    // ══════════════════════════════════════════
+    line('=');
+
+    if (!isCompact && !isMinimal) {
         const sub = `£${(order.subtotal || 0).toFixed(2)}`;
-        add(`Subtotal:${' '.repeat(Math.max(1, lineWidth - 9 - sub.length))}${sub}\n`);
+        add(`${rPad('Subtotal:', sub, W)}\n`);
         if ((order.delivery_fee || 0) > 0) {
             const fee = `£${order.delivery_fee.toFixed(2)}`;
-            add(`Delivery:${' '.repeat(Math.max(1, lineWidth - 9 - fee.length))}${fee}\n`);
+            add(`${rPad('Delivery:', fee, W)}\n`);
+        }
+        if ((order.small_order_surcharge || 0) > 0) {
+            const sur = `£${order.small_order_surcharge.toFixed(2)}`;
+            add(`${rPad('Surcharge:', sur, W)}\n`);
         }
         if ((order.discount || 0) > 0) {
             const disc = `-£${order.discount.toFixed(2)}`;
-            add(`Discount:${' '.repeat(Math.max(1, lineWidth - 9 - disc.length))}${disc}\n`);
+            add(`${rPad('Discount:', disc, W)}\n`);
         }
+        line('-');
     }
 
-    add(cmd.boldOn);
-    if (config.template === 'itemized') add(cmd.doubleHeight);
-    const total = `£${(order.total || 0).toFixed(2)}`;
-    add(`TOTAL:${' '.repeat(Math.max(1, lineWidth - 6 - total.length))}${total}\n`);
-    add(cmd.normal, cmd.boldOff);
+    // TOTAL — double height for instant visibility
+    add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
+    add(`TOTAL: £${(order.total || 0).toFixed(2)}\n`);
+    add(cmd.normal, cmd.boldOff, cmd.alignLeft);
 
-    if (config.template !== 'minimal') add(`Payment: ${order.payment_method || 'N/A'}\n`);
-    if (order.notes) {
-        add('--------------------------------\n');
-        add(`Notes: ${order.notes}\n`);
+    if (!isMinimal) {
+        const payLabel = (order.payment_method || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        add(`Payment: ${payLabel}\n`);
     }
 
+    // ══════════════════════════════════════════
+    //  FOOTER
+    // ══════════════════════════════════════════
     if (config.footer_text) {
-        add('================================\n');
+        line('=');
         add(cmd.alignCenter);
         add(`${config.footer_text}\n`);
         add(cmd.alignLeft);
     }
 
-    add('================================\n');
+    line('=');
     add(cmd.alignCenter);
     add('Thank you!\n\n\n');
     add(cmd.cut);
