@@ -273,7 +273,7 @@ export default function NetworkPrinterManager({ printer, onUpdate, restaurantId 
                     <Input
                         placeholder="192.168.1.100"
                         value={ip}
-                        onChange={e => onUpdate({ network_ip: e.target.value })}
+                        onChange={e => onUpdate({ network_ip: e.target.value.trim() })}
                         className="mt-1 font-mono text-sm"
                     />
                 </div>
@@ -282,7 +282,7 @@ export default function NetworkPrinterManager({ printer, onUpdate, restaurantId 
                     <Input
                         placeholder="9100"
                         value={port}
-                        onChange={e => onUpdate({ network_port: e.target.value })}
+                        onChange={e => onUpdate({ network_port: e.target.value.trim() })}
                         className="mt-1 font-mono text-sm"
                     />
                 </div>

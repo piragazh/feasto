@@ -167,6 +167,29 @@ function TemplatePreviewStrip({ tpl }) {
     );
 }
 
+// ── Default printer config (must be declared before any component that references it) ──
+const DEFAULT_PRINTER = {
+    name: '',
+    enabled: true,
+    connection_type: 'bluetooth',
+    bluetooth_printer: null,
+    usb_vendor_id: '',
+    usb_product_id: '',
+    network_ip: '',
+    network_port: '9100',
+    assigned_channels: [],
+    printer_width: '80mm',
+    command_set: 'esc_pos',
+    template: 'standard',
+    header_text: '',
+    footer_text: '',
+    font_size: 'medium',
+    show_logo: true,
+    show_order_number: true,
+    show_customer_details: true,
+    auto_print: false,
+};
+
 // ── Per-printer receipt settings ───────────────────────────────────────────
 function PrinterReceiptSettings({ printer, onUpdate }) {
     const [expanded, setExpanded] = useState(false);
@@ -555,28 +578,6 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-const DEFAULT_PRINTER = {
-    name: '',
-    enabled: true,
-    connection_type: 'bluetooth',
-    bluetooth_printer: null,
-    usb_vendor_id: '',
-    usb_product_id: '',
-    network_ip: '',
-    network_port: '9100',
-    assigned_channels: [],
-    // Per-printer receipt settings
-    printer_width: '80mm',
-    command_set: 'esc_pos',
-    template: 'standard',
-    header_text: '',
-    footer_text: '',
-    font_size: 'medium',
-    show_logo: true,
-    show_order_number: true,
-    show_customer_details: true,
-    auto_print: false,
-};
 
 export default function CentralizedPrinterSettings({ restaurantId }) {
     const queryClient = useQueryClient();

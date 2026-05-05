@@ -378,7 +378,7 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
     // ── Start / stop agent ─────────────────────────────────────────────────
     const startAgent = useCallback(() => {
         if (agentRunningRef.current) return;
-        if (networkPrinters.length === 0 && !usbDeviceRef.current) {
+        if (networkPrintersRef.current.length === 0 && !usbDeviceRef.current) {
             toast.error('Configure a Network printer or connect a USB printer first');
             return;
         }

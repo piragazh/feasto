@@ -216,9 +216,10 @@ Deno.serve(async (req) => {
                 if (agent) {
                     try {
                         const existing = await connectionServiceRole.entities.AgentHeartbeat.filter({
+                            restaurant_id: agent.restaurantId,
                             agent_id: registeredAgentId,
                         });
-                        const dbAgent = existing.find(a => a.restaurant_id === agent.restaurantId);
+                        const dbAgent = existing[0];
                         if (dbAgent) {
                             await connectionServiceRole.entities.AgentHeartbeat.update(dbAgent.id, { last_seen: now, connection_mode: 'websocket' });
                         } else {
@@ -265,8 +266,8 @@ Deno.serve(async (req) => {
             // Persist registration to DB so dashboard shows this WS agent as online
             const now = new Date().toISOString();
             try {
-                const existing = await connectionServiceRole.entities.AgentHeartbeat.filter({ agent_id });
-                const dbAgent = existing.find(a => a.restaurant_id === restaurant_id);
+                const existing = await connectionServiceRole.entities.AgentHeartbeat.filter({ restaurant_id, agent_id });
+                const dbAgent = existing[0];
                 if (dbAgent) {
                     await connectionServiceRole.entities.AgentHeartbeat.update(dbAgent.id, {
                         last_seen: now,
