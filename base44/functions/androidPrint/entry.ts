@@ -183,8 +183,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'tablet_ip is required' }, { status: 400 });
         }
 
-        const androidPort = parseInt(tablet_port) || 8080;
-        const androidBaseUrl = `http://${tablet_ip}:${androidPort}`;
+        const androidPort = parseInt(String(tablet_port || '').trim()) || 8080;
+        const androidBaseUrl = `http://${String(tablet_ip).trim()}:${androidPort}`;
 
         // ── PING: just check if the Android app is reachable ──────────────
         if (action === 'ping') {

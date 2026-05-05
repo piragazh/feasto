@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
+import { getApiUrl } from '@/lib/api-origin';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,7 +62,8 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
 
     // Use the current origin for function URLs — on custom domains (mealdrop.co.uk)
     // the /functions/ path works for HTTP. WebSocket is NOT supported on Base44 functions.
-    const functionUrl = `${window.location.origin}/functions/managePrintQueue`;
+    const appId = import.meta.env.VITE_BASE44_APP_ID || '';
+    const functionUrl = getApiUrl(`/api/v2/apps/${appId}/functions/managePrintQueue`);
 
     // Build per-agent status from heartbeats (agentHeartbeats is now a map of agentId → DB record or fallback obj)
     const agentStatuses = Object.values(agentHeartbeats).map(agent => {

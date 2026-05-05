@@ -46,36 +46,46 @@ export default function AndroidPrintServicePanel({ restaurant, onSave }) {
     const handlePing = async () => {
         setPingStatus('loading');
         setPingMsg('');
-        const res = await base44.functions.invoke('androidPrint', {
-            action: 'ping',
-            tablet_ip: tabletIp.trim(),
-            tablet_port: parseInt(tabletPort) || 8080,
-        });
-        if (res.data?.success) {
-            setPingStatus('ok');
-            setPingMsg(res.data.message || 'Reachable');
-        } else {
+        try {
+            const res = await base44.functions.invoke('androidPrint', {
+                action: 'ping',
+                tablet_ip: tabletIp.trim(),
+                tablet_port: parseInt(tabletPort) || 8080,
+            });
+            if (res.data?.success) {
+                setPingStatus('ok');
+                setPingMsg(res.data.message || 'Reachable');
+            } else {
+                setPingStatus('fail');
+                setPingMsg(res.data?.message || res.data?.error || 'Unreachable');
+            }
+        } catch (e) {
             setPingStatus('fail');
-            setPingMsg(res.data?.message || res.data?.error || 'Unreachable');
+            setPingMsg(e.message || 'Request failed');
         }
     };
 
     const handleTestPrint = async () => {
         setTestStatus('loading');
         setTestMsg('');
-        const res = await base44.functions.invoke('androidPrint', {
-            action: 'test',
-            tablet_ip: tabletIp.trim(),
-            tablet_port: parseInt(tabletPort) || 8080,
-            printer_ip: printerIp.trim() || null,
-            printer_port: printerPort.trim() || '9100',
-        });
-        if (res.data?.success) {
-            setTestStatus('ok');
-            setTestMsg(res.data.message || 'Test print sent!');
-        } else {
+        try {
+            const res = await base44.functions.invoke('androidPrint', {
+                action: 'test',
+                tablet_ip: tabletIp.trim(),
+                tablet_port: parseInt(tabletPort) || 8080,
+                printer_ip: printerIp.trim() || null,
+                printer_port: printerPort.trim() || '9100',
+            });
+            if (res.data?.success) {
+                setTestStatus('ok');
+                setTestMsg(res.data.message || 'Test print sent!');
+            } else {
+                setTestStatus('fail');
+                setTestMsg(res.data?.error || 'Test print failed');
+            }
+        } catch (e) {
             setTestStatus('fail');
-            setTestMsg(res.data?.error || 'Test print failed');
+            setTestMsg(e.message || 'Request failed');
         }
     };
 
