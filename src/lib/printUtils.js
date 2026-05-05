@@ -266,7 +266,12 @@ export async function openCashDrawer(restaurant) {
                 open_cash_drawer: true,
                 order: { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' },
                 restaurant: {},
-                config: { template: 'minimal', show_order_number: false, show_customer_details: false },
+                config: {
+                    template: 'minimal',
+                    command_set: printerConfig.command_set || globalCfg.command_set || 'esc_pos',
+                    show_order_number: false,
+                    show_customer_details: false,
+                },
             });
             if (res.data?.success) return true;
         } else if (type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
@@ -291,7 +296,12 @@ export async function openCashDrawer(restaurant) {
             open_cash_drawer: true,
             order: { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' },
             restaurant: {},
-            config: { template: 'minimal', show_order_number: false, show_customer_details: false },
+            config: {
+                template: 'minimal',
+                command_set: globalCfg.command_set || 'esc_pos',
+                show_order_number: false,
+                show_customer_details: false,
+            },
         });
         if (res.data?.success) return true;
     }

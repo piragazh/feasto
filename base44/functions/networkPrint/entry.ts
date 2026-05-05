@@ -279,7 +279,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     add(cmd.alignCenter);
     add('Thank you!\n\n\n');
     add(cmd.cut);
-    if (openCashDrawer) add(CASH_DRAWER_CMD);
+    if (openCashDrawer) add(new Uint8Array(CASH_DRAWER_CMD));
 
     // Merge all chunks into one buffer
     const total_len = chunks.reduce((n, c) => n + c.length, 0);
@@ -404,7 +404,10 @@ Deno.serve(async (req) => {
                 };
                 rawData = buildReceiptBytes(order, restaurant || {}, mergedConfig);
             }
-            const base64 = btoa(String.fromCharCode(...rawData));
+            // Use loop instead of spread to avoid stack overflow on large receipts
+            let binary = '';
+            for (let i = 0; i < rawData.length; i++) binary += String.fromCharCode(rawData[i]);
+            const base64 = btoa(binary);
             return Response.json({ success: true, raw_base64: base64 });
 
         } else if (action === 'ping') {
@@ -432,9 +435,12 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'action must be one of: test, print_receipt, build_raw, ping, print_raw_base64' }, { status: 400 });
         }
 
-        // Normalise port — ensure it is always a valid string with a fallback
-        const resolvedPort = printer_port || '9100';
-        await sendToNetworkPrinter(printer_ip, resolvedPort, data);
+        // Normalise port — trim whitespace and fallback to 9100
+        const resolvedPort = String(printer_port || '9100').trim();
+        if (!data || data.length === 0) {
+            return Response.json({ error: 'No print data to send' }, { status: 400 });
+        }
+        await sendToNetworkPrinter(printer_ip.trim(), resolvedPort, data);
 
         return Response.json({ success: true, message: `Print job sent to ${printer_ip}:${resolvedPort}` });
 
