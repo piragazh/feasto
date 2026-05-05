@@ -43,6 +43,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
     const [currentUser, setCurrentUser] = useState(null);
     const queryClient = useQueryClient();
     const prevOrderIds = useRef(new Set());
+    const printedOrderIds = useRef(new Set()); // Guard: track orders already sent to printer
     const restaurantRef = useRef(null);
     const printOrderDetailsRef = useRef(null);
 
@@ -123,11 +124,13 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         if (brandNew.length > 0 && prevOrderIds.current.size > 0) {
             const r = restaurantRef.current;
             const cfg = r?.printer_config || {};
-            // Check if any printer has auto_print enabled
             const centralized = cfg.centralized_printers || [];
             const shouldAutoPrint = centralized.some(p => p.auto_print) || cfg.auto_print;
             if (shouldAutoPrint && r) {
                 brandNew.forEach(order => {
+                    // Dedup guard: skip if already printed (e.g. via _printAfter on Accept)
+                    if (printedOrderIds.current.has(order.id)) return;
+                    printedOrderIds.current.add(order.id);
                     autoPrintOrder(order, r);
                 });
             }
@@ -313,9 +316,9 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             }
 
             // Print receipt after order is confirmed in the database.
-            // Use ref to always call latest version (avoids stale closure).
+            // Mark as printed BEFORE firing so the auto-print useEffect skips it.
             if (_printAfter) {
-                // Small delay to let the DB write propagate before fresh-fetch in printOrderDetails
+                printedOrderIds.current.add(orderId);
                 setTimeout(() => printOrderDetailsRef.current?.(orderId), 300);
             }
             
