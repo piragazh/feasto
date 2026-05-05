@@ -109,8 +109,14 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
             const printerConfig = toTry[toTryIdx];
             // slotIndex is the position in the ORIGINAL centralized array (0-based),
             // used to pick the correct BT service. Only 2 BT services exist (A and B).
-            // Use findIndex to guard against object reference issues.
-            const slotIndex = centralized.findIndex(p => p === printerConfig || (p.name && p.name === printerConfig.name && p.network_ip === printerConfig.network_ip));
+            // Use strict reference equality first, then fall back to index-of-assigned-list
+            // mapped back to the centralized array.
+            let slotIndex = centralized.indexOf(printerConfig);
+            if (slotIndex === -1) {
+                // Object identity lost (e.g. after JSON round-trip) — fall back to position
+                // within the assigned list as a best-effort slot approximation.
+                slotIndex = toTryIdx;
+            }
             const type = printerConfig.connection_type || 'bluetooth';
 
             if (type === 'network' && printerConfig.network_ip) {
@@ -255,12 +261,14 @@ export async function openCashDrawer(restaurant) {
         : [];
     const toTry = candidates.length > 0 ? candidates : centralized.filter(p => p.enabled !== false);
 
-    for (const printerConfig of toTry) {
-        const slotIndex = centralized.indexOf(printerConfig);
+    for (let cdIdx = 0; cdIdx < toTry.length; cdIdx++) {
+        const printerConfig = toTry[cdIdx];
+        // Use strict reference equality; fall back to loop index if objects lost identity
+        let slotIndex = centralized.indexOf(printerConfig);
+        if (slotIndex === -1) slotIndex = cdIdx;
         const type = printerConfig.connection_type || 'bluetooth';
 
         if (type === 'network' && printerConfig.network_ip) {
-            // Send a minimal receipt with open_cash_drawer flag (networkPrint appends the drawer command)
             const res = await base44.functions.invoke('networkPrint', {
                 action: 'print_receipt',
                 printer_ip: printerConfig.network_ip,
@@ -281,7 +289,6 @@ export async function openCashDrawer(restaurant) {
             if (!service) continue;
             if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
             if (service.isConnected()) {
-                // Send raw cash drawer ESC/POS bytes directly
                 const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
                 await service.sendCommand(CASH_DRAWER_CMD);
                 return true;

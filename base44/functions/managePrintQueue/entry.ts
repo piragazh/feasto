@@ -115,7 +115,16 @@ Deno.serve(async (req) => {
                 agent_id,
             });
 
-            return Response.json({ job: { ...pendingJob, status: 'processing', agent_id, ...updatedJob }, server_time: serverNow });
+            // Merge carefully: keep ALL original job fields (order_data, restaurant_data etc.)
+            // then apply only the known-changed fields. Do NOT spread updatedJob directly
+            // because the SDK may return a partial object that clobbers order_data with undefined.
+            const jobToReturn = {
+                ...pendingJob,
+                status: 'processing',
+                agent_id,
+                updated_date: updatedJob?.updated_date || new Date().toISOString(),
+            };
+            return Response.json({ job: jobToReturn, server_time: serverNow });
         }
 
         // ── COMPLETE: Local agent reports success
@@ -183,7 +192,7 @@ Deno.serve(async (req) => {
 
         // ── MANUAL_RETRY: Dashboard user manually retries a failed job
         if (action === 'manual_retry') {
-            const user = await base44.auth.me();
+            const user = await base44.auth.me().catch(() => null);
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
@@ -205,7 +214,7 @@ Deno.serve(async (req) => {
 
         // ── CANCEL: Dashboard user cancels a pending or processing job
         if (action === 'cancel') {
-            const user = await base44.auth.me();
+            const user = await base44.auth.me().catch(() => null);
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
@@ -259,7 +268,7 @@ Deno.serve(async (req) => {
 
         // ── LIST_AGENTS: Dashboard fetches all known agents and their last-seen timestamps
         if (action === 'list_agents') {
-            const user = await base44.auth.me();
+            const user = await base44.auth.me().catch(() => null);
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
@@ -269,7 +278,7 @@ Deno.serve(async (req) => {
 
         // ── LIST: Dashboard fetches jobs — pending/processing always shown, done/failed last 24h
         if (action === 'list') {
-            const user = await base44.auth.me();
+            const user = await base44.auth.me().catch(() => null);
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 
@@ -289,7 +298,7 @@ Deno.serve(async (req) => {
 
         // ── CLEANUP: Remove old done/failed jobs (called by dashboard)
         if (action === 'cleanup') {
-            const user = await base44.auth.me();
+            const user = await base44.auth.me().catch(() => null);
             if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
 

@@ -387,7 +387,9 @@ export default function LocalPrintAgentPanel({ restaurantId, printers = [] }) {
         addLog(`Agent started (${AGENT_ID})`, 'ok');
         pollTimerRef.current = setInterval(pollOnce, 3000);
         pollOnce();
-    }, [networkPrinters, pollOnce, addLog]);
+    // networkPrintersRef is used at runtime (not networkPrinters) — exclude stale render value from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pollOnce, addLog]);
 
     const stopAgent = useCallback(() => {
         agentRunningRef.current = false;
