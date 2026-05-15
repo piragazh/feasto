@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, Calendar, Zap, Users, Clock, CheckCircle2, Loader2, MessageSquare } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle, Calendar, Zap, Users, Clock, CheckCircle2, Loader2, MessageSquare, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import WinBackAutomationSettings from './WinBackAutomationSettings';
 
 export default function WinBackCampaignWorkflow({ restaurantId, restaurantName }) {
     const queryClient = useQueryClient();
@@ -96,6 +98,23 @@ export default function WinBackCampaignWorkflow({ restaurantId, restaurantName }
 
     return (
         <div className="space-y-6">
+        <Tabs defaultValue="automation">
+            <TabsList className="w-full">
+                <TabsTrigger value="automation" className="flex-1 flex items-center gap-2">
+                    <Bot className="h-4 w-4" />
+                    Automated Engine
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="flex-1 flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    One-Off Campaign
+                </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="automation" className="mt-4">
+                <WinBackAutomationSettings restaurantId={restaurantId} restaurantName={restaurantName} />
+            </TabsContent>
+
+            <TabsContent value="manual" className="mt-4">
             {/* Overview Card */}
             <Card className="border-l-4 border-l-red-500">
                 <CardHeader>
@@ -318,6 +337,8 @@ export default function WinBackCampaignWorkflow({ restaurantId, restaurantName }
                     </CardContent>
                 </Card>
             )}
+            </TabsContent>
+        </Tabs>
         </div>
     );
 }

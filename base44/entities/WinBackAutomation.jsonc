@@ -1,0 +1,89 @@
+{
+  "name": "WinBackAutomation",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this automation belongs to"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the automation is active"
+    },
+    "inactivity_days": {
+      "type": "number",
+      "default": 60,
+      "description": "Days of inactivity before triggering campaign"
+    },
+    "coupon_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed",
+        "free_delivery"
+      ],
+      "default": "percentage",
+      "description": "Type of win-back coupon discount"
+    },
+    "coupon_value": {
+      "type": "number",
+      "default": 15,
+      "description": "Discount value (percentage or fixed amount)"
+    },
+    "coupon_validity_days": {
+      "type": "number",
+      "default": 14,
+      "description": "How many days the generated coupon remains valid"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "sms",
+        "email"
+      ],
+      "default": "whatsapp",
+      "description": "Delivery channel for the win-back message"
+    },
+    "message_template": {
+      "type": "string",
+      "description": "Message template with placeholders: [NAME], [DAYS], [DISCOUNT], [COUPON_CODE], [OFFER]"
+    },
+    "email_subject": {
+      "type": "string",
+      "default": "We Miss You \u2014 Here's a Special Offer \ud83c\udf81",
+      "description": "Subject line for email campaigns"
+    },
+    "last_run_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last automation run"
+    },
+    "last_run_sent": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of messages sent in last run"
+    },
+    "last_run_skipped": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of customers skipped (opted out) in last run"
+    },
+    "total_sent_all_time": {
+      "type": "number",
+      "default": 0,
+      "description": "Cumulative messages sent across all runs"
+    },
+    "contacted_customer_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Phone/email keys of customers already contacted this cycle \u2014 prevents duplicate sends"
+    }
+  },
+  "required": [
+    "restaurant_id"
+  ]
+}
