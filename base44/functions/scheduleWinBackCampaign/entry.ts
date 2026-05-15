@@ -72,10 +72,11 @@ Deno.serve(async (req) => {
             (Date.now() - new Date(customer.lastOrderDate).getTime()) / (1000 * 60 * 60 * 24)
         );
 
+        const discountText = coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : coupon.discount_type === 'fixed' ? `£${coupon.discount_value}` : 'free delivery';
         const personalised = message
             .replace(/\[NAME\]/g, customer.name || 'Customer')
             .replace(/\[DAYS\]/g, daysSinceLast)
-            .replace(/\[DISCOUNT\]/g, coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `£${coupon.discount_value}`)
+            .replace(/\[DISCOUNT\]/g, discountText)
             .replace(/\[COUPON_CODE\]/g, couponCode)
             .replace(/\[OFFER\]/g, offerText)
             .replace(/\[RESTAURANT_LINK\]/g, restaurantName);

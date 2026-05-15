@@ -4,6 +4,11 @@ import twilio from 'npm:twilio@4.10.0';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+
+        // Auth guard — this function must not be publicly callable
+        const user = await base44.auth.me().catch(() => null);
+        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
         const { phone, message, couponCode, restaurantId, restaurantName } = await req.json();
 
         if (!phone || !message) {

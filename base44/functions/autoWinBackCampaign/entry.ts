@@ -155,10 +155,11 @@ async function processAutomation(base44, automation) {
             : `Hi [NAME] 👋\n\nWe miss you at ${restaurantName}! It's been [DAYS] days since your last visit.\n\nHere's a special offer just for you:\n🎁 Use code [COUPON_CODE] for [DISCOUNT] off!\n\nValid for ${coupon_validity_days} days only.`;
 
         const template = message_template || defaultTemplate;
+        const discountText = coupon_type === 'percentage' ? `${coupon_value}%` : coupon_type === 'fixed' ? `£${coupon_value}` : 'free delivery';
         const personalised = template
             .replace(/\[NAME\]/g, customer.name || 'there')
             .replace(/\[DAYS\]/g, daysSinceLast)
-            .replace(/\[DISCOUNT\]/g, coupon_type === 'percentage' ? `${coupon_value}%` : `£${coupon_value}`)
+            .replace(/\[DISCOUNT\]/g, discountText)
             .replace(/\[COUPON_CODE\]/g, couponCode)
             .replace(/\[OFFER\]/g, offerText)
             .replace(/\[RESTAURANT_LINK\]/g, restaurantName);
@@ -207,8 +208,12 @@ async function processAutomation(base44, automation) {
         totalFailed += r.failed || 0;
 
         // Only mark as contacted if the message was actually sent (not skipped/failed)
+        // Push the same key format used in the dedup filter (customer.key = phone || email || created_by)
         if (wasSent) {
-            newContactedKeys.push(recipient.phone || recipient.email);
+            const contactedKey = recipient.phone || recipient.email;
+            if (contactedKey && !newContactedKeys.includes(contactedKey)) {
+                newContactedKeys.push(contactedKey);
+            }
         }
     }
 
