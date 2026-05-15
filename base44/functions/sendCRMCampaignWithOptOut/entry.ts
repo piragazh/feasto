@@ -1,4 +1,17 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+
+const encoder = new TextEncoder();
+const SECRET_KEY = Deno.env.get('SCHEDULED_DIGEST_SECRET') || 'fallback-secret';
+
+async function generateUnsubscribeToken(identifier, channel) {
+  const timestamp = Date.now();
+  const data = `${identifier}:${channel}:${timestamp}`;
+  const keyData = encoder.encode(SECRET_KEY);
+  const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+  const hmac = btoa(String.fromCharCode(...new Uint8Array(signature)));
+  return btoa(`${data}:${hmac}`);
+}
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
@@ -33,15 +46,6 @@ Deno.serve(async (req) => {
 
   const results = { sent: 0, failed: 0, skipped: 0, errors: [] };
 
-  // Simple HMAC-style token: base64(email:channel:timestamp) — good enough for unsubscribe links
-  const getUnsubscribeToken = (identifier, ch) => {
-    try {
-      return btoa(encodeURIComponent(`${identifier}:${ch}:${Date.now()}`));
-    } catch {
-      return null;
-    }
-  };
-
   if (channel === 'email') {
     const validEmails = recipients.filter(r => r.email && r.email.includes('@'));
     
@@ -54,9 +58,17 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Unsubscribe link is already embedded in the HTML template by the frontend.
-        // If sending plain text only (no htmlBody), append a text unsubscribe notice.
-        const bodyToSend = htmlBody || textBody;
+        // Generate a real HMAC-signed unsubscribe token and inject it into the email body
+        let bodyToSend = htmlBody || textBody;
+        if (htmlBody && r.email) {
+          const token = await generateUnsubscribeToken(r.email, 'email');
+          const unsubUrl = `${APP_URL}/unsubscribe?token=${encodeURIComponent(token)}&channel=email`;
+          // Replace the dead href="#" unsubscribe placeholder in the HTML template
+          bodyToSend = htmlBody.replace(
+            /href="#"([^>]*>Unsubscribe<)/,
+            `href="${unsubUrl}"$1`
+          );
+        }
 
         await base44.integrations.Core.SendEmail({
           to: r.email,
@@ -78,11 +90,13 @@ Deno.serve(async (req) => {
 
     for (const r of validRecipients) {
       try {
-        // Check if user opted out of promotional SMS/WhatsApp
-        const users = await base44.asServiceRole.entities.User.filter({ phone: r.phone });
-        if (users?.length > 0 && users[0].promotional_sms_opted_out) {
-          results.skipped++;
-          continue;
+        // Opt-out check: User entity has email not phone — match by email if available
+        if (r.email) {
+          const users = await base44.asServiceRole.entities.User.filter({ email: r.email });
+          if (users?.length > 0 && users[0].promotional_sms_opted_out) {
+            results.skipped++;
+            continue;
+          }
         }
 
         let to = r.phone.trim();

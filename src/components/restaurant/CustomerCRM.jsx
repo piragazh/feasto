@@ -226,7 +226,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         };
 
         return { customers, segments };
-    }, [orders, reviews]);
+    }, [orders, reviews, menuItems]);
 
     const filteredCustomers = useMemo(() => {
         return customerAnalytics.customers.filter(customer => {

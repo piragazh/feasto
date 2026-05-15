@@ -251,7 +251,7 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
             const failed = result.data?.failed || 0;
             const skipped = result.data?.skipped || 0;
             toast.success(`✅ Sent to ${sent} customers${failed > 0 ? `, ${failed} failed` : ''}${skipped > 0 ? `, ${skipped} opted out` : ''}`);
-            onClose();
+            handleClose();
         } catch (e) {
             toast.error('Failed to send campaign: ' + e.message);
         } finally {
@@ -268,8 +268,13 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
         setSelectedTemplate('');
     };
 
+    const handleClose = () => {
+        handleReset();
+        onClose();
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onClose}>
+        <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -552,7 +557,7 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-1">
-                        <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+                        <Button variant="outline" onClick={handleClose} className="flex-1">Cancel</Button>
                         <Button
                             onClick={handleSend}
                             disabled={sending || aiLoading || imageGenLoading || !textBody.trim()}

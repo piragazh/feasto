@@ -23,10 +23,17 @@ async function generateUnsubscribeToken(email, channel) {
 async function validateUnsubscribeToken(token) {
   try {
     const decoded = atob(token);
-    const parts = decoded.split(':');
-    if (parts.length !== 4) return null;
+    // Split on ':' but HMAC (base64) may contain '=', '+', '/' but NOT ':'.
+    // Format is: email:channel:timestamp:hmac — split into max 4 parts from the left.
+    const firstColon = decoded.indexOf(':');
+    const secondColon = decoded.indexOf(':', firstColon + 1);
+    const thirdColon = decoded.indexOf(':', secondColon + 1);
+    if (firstColon === -1 || secondColon === -1 || thirdColon === -1) return null;
 
-    const [email, channel, timestamp, providedHmac] = parts;
+    const email = decoded.slice(0, firstColon);
+    const channel = decoded.slice(firstColon + 1, secondColon);
+    const timestamp = decoded.slice(secondColon + 1, thirdColon);
+    const providedHmac = decoded.slice(thirdColon + 1);
     const data = `${email}:${channel}:${timestamp}`;
     
     const keyData = encoder.encode(SECRET_KEY);
@@ -109,7 +116,7 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') {
       const base44 = createClientFromRequest(req);
       const user = await base44.auth.me();
-      if (!user?.role === 'admin') {
+      if (user?.role !== 'admin') {
         return Response.json({ error: 'Unauthorized' }, { status: 403 });
       }
 
@@ -118,7 +125,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Missing email or channel' }, { status: 400 });
       }
 
-      const token = generateUnsubscribeToken(email, channel);
+      const token = await generateUnsubscribeToken(email, channel);
       return Response.json({ token });
     }
 
