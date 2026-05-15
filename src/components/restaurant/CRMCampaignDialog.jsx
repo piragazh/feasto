@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-    Mail, MessageSquare, Send, Wand2, Loader2, Smartphone, Eye, ChevronDown, ChevronUp, Tag, X, Check
+    Mail, MessageSquare, Send, Wand2, Loader2, Smartphone, Eye, ChevronDown, ChevronUp, Tag, X, Check, ImagePlus, Sparkles, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -112,6 +112,7 @@ export default function CRMCampaignDialog({ open, onClose, targetSegment, segmen
     const [textBody, setTextBody] = useState('');
     const [selectedCouponId, setSelectedCouponId] = useState('none');
     const [heroImageUrl, setHeroImageUrl] = useState('');
+    const [imageGenLoading, setImageGenLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [sending, setSending] = useState(false);
@@ -152,6 +153,28 @@ export default function CRMCampaignDialog({ open, onClose, targetSegment, segmen
         if (c.discount_type === 'free_item') return 'Free item';
         if (c.discount_type === 'buy_one_get_one') return 'Buy 1 Get 1';
         return '';
+    };
+
+    const generatePromoImage = async () => {
+        setImageGenLoading(true);
+        try {
+            const couponText = selectedCoupon ? `with a bold "${couponDescription(selectedCoupon)}" offer badge` : '';
+            const prompt = `A stunning, professional food promotion marketing image for a restaurant called "${restaurantName}". 
+Vibrant, appetising food photography style. Warm orange and white colour palette. 
+Show delicious plated food in the foreground ${couponText}. 
+Clean modern layout, high contrast, suitable as an email hero banner. 
+Photorealistic, mouth-watering, commercial food photography quality. 16:9 aspect ratio.`;
+
+            const result = await base44.integrations.Core.GenerateImage({ prompt });
+            if (result?.url) {
+                setHeroImageUrl(result.url);
+                toast.success('Promotion image generated!');
+            }
+        } catch (e) {
+            toast.error('Failed to generate image');
+        } finally {
+            setImageGenLoading(false);
+        }
     };
 
     const generateWithAI = async (templateGoal) => {
@@ -356,16 +379,56 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
                         )}
                     </div>
 
-                    {/* Hero Image URL (email only) */}
+                    {/* Hero Image (email only) */}
                     {channel === 'email' && (
                         <div>
-                            <Label className="text-sm font-semibold mb-1 block">Hero Image URL <span className="font-normal text-gray-400">(optional)</span></Label>
-                            <Input
-                                placeholder="https://images.unsplash.com/photo-... (food photo URL)"
-                                value={heroImageUrl}
-                                onChange={e => setHeroImageUrl(e.target.value)}
-                            />
-                            <p className="text-xs text-gray-400 mt-1">Paste a URL to a food photo to add a beautiful image banner to the email</p>
+                            <Label className="text-sm font-semibold mb-2 block flex items-center gap-1">
+                                <ImagePlus className="h-4 w-4 text-orange-500" />
+                                Promotion Image <span className="font-normal text-gray-400">(optional)</span>
+                            </Label>
+
+                            {/* AI Generate button */}
+                            <button
+                                onClick={generatePromoImage}
+                                disabled={imageGenLoading}
+                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:border-purple-400 hover:bg-purple-100 transition-all text-sm font-semibold disabled:opacity-60 mb-2"
+                            >
+                                {imageGenLoading
+                                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating image with AI...</>
+                                    : <><Sparkles className="h-4 w-4" /> Generate Promotion Image with AI</>
+                                }
+                            </button>
+
+                            {/* Generated / manual preview */}
+                            {heroImageUrl ? (
+                                <div className="relative rounded-xl overflow-hidden border-2 border-gray-200">
+                                    <img src={heroImageUrl} alt="Hero" className="w-full h-40 object-cover" />
+                                    <div className="absolute top-2 right-2 flex gap-1">
+                                        <button
+                                            onClick={generatePromoImage}
+                                            disabled={imageGenLoading}
+                                            title="Regenerate"
+                                            className="bg-white/90 hover:bg-white rounded-lg p-1.5 shadow text-purple-600 disabled:opacity-50"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={() => setHeroImageUrl('')}
+                                            title="Remove"
+                                            className="bg-white/90 hover:bg-white rounded-lg p-1.5 shadow text-red-500"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Input
+                                    placeholder="Or paste an image URL manually..."
+                                    value={heroImageUrl}
+                                    onChange={e => setHeroImageUrl(e.target.value)}
+                                    className="text-sm"
+                                />
+                            )}
                         </div>
                     )}
 
@@ -492,7 +555,7 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
                         <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
                         <Button
                             onClick={handleSend}
-                            disabled={sending || aiLoading || !textBody.trim()}
+                            disabled={sending || aiLoading || imageGenLoading || !textBody.trim()}
                             className="flex-2 bg-orange-500 hover:bg-orange-600 text-white px-8"
                         >
                             {sending
