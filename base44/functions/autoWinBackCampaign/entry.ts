@@ -57,10 +57,6 @@ async function processAutomation(base44, automation) {
     const { restaurant_id, inactivity_days = 60, coupon_type, coupon_value, coupon_validity_days = 14,
             channel = 'whatsapp', message_template, email_subject, contacted_customer_keys = [] } = automation;
 
-    const cutoffDate = new Date(Date.now() - inactivity_days * 24 * 60 * 60 * 1000);
-
-    // Fetch recent orders for this restaurant (last 2 years is enough)
-    const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString();
     const orders = await base44.asServiceRole.entities.Order.filter(
         { restaurant_id },
         '-created_date',
@@ -128,9 +124,9 @@ async function processAutomation(base44, automation) {
     const newContactedKeys = [...contacted_customer_keys];
 
     for (const customer of eligibleCustomers) {
-        const timestamp = Date.now().toString(36).toUpperCase();
-        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const couponCode = `WB-${timestamp}-${rand}`;
+        // Use crypto.randomUUID to guarantee uniqueness even inside tight loops
+        const rand = crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
+        const couponCode = `WB-${rand}`;
 
         // Create 1-use coupon in DB
         await base44.asServiceRole.entities.Coupon.create({
@@ -174,19 +170,13 @@ async function processAutomation(base44, automation) {
             coupon_code: couponCode,
             personalised_message: personalised
         });
-
-        newContactedKeys.push(customer.key);
     }
 
-    // Send via sendCRMCampaignWithOptOut using admin service role
-    // We call it in batches to avoid timeout issues
+    // Send individually so each recipient gets their personalised message + coupon
     let totalSent = 0;
     let totalSkipped = 0;
     let totalFailed = 0;
 
-    // For SMS/WhatsApp: recipients already have coupon in their personalised message
-    // We pass personalised_message per-recipient but sendCRMCampaignWithOptOut uses a shared textBody.
-    // Solution: send individually so each gets their personal message.
     for (const recipient of recipients) {
         const payload = {
             channel,
@@ -196,7 +186,6 @@ async function processAutomation(base44, automation) {
             restaurant_id
         };
 
-        // For email: build a simple HTML wrapper
         if (channel === 'email') {
             payload.htmlBody = buildSimpleHtmlEmail({
                 restaurantName,
@@ -212,9 +201,15 @@ async function processAutomation(base44, automation) {
             .catch(e => ({ data: { sent: 0, failed: 1, skipped: 0 } }));
 
         const r = resp?.data || {};
+        const wasSent = (r.sent || 0) > 0;
         totalSent += r.sent || 0;
         totalSkipped += r.skipped || 0;
         totalFailed += r.failed || 0;
+
+        // Only mark as contacted if the message was actually sent (not skipped/failed)
+        if (wasSent) {
+            newContactedKeys.push(recipient.phone || recipient.email);
+        }
     }
 
     // Update automation record

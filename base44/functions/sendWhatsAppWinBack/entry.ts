@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import twilio from 'npm:twilio@4.10.0';
 
 Deno.serve(async (req) => {
