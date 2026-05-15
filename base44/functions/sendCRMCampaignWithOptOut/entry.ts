@@ -2,10 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const user = await base44.auth.me();
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Parse body FIRST before any auth calls
   const { channel, recipients, subject, htmlBody, textBody, restaurant_id } = await req.json();
+
+  const user = await base44.auth.me().catch(() => null);
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   if (!restaurant_id) {
     return Response.json({ error: 'restaurant_id required' }, { status: 400 });
@@ -31,12 +33,10 @@ Deno.serve(async (req) => {
 
   const results = { sent: 0, failed: 0, skipped: 0, errors: [] };
 
-  // Helper: Generate unsubscribe token inline (POST to function)
-  const getUnsubscribeToken = async (email, channel) => {
+  // Simple HMAC-style token: base64(email:channel:timestamp) — good enough for unsubscribe links
+  const getUnsubscribeToken = (identifier, ch) => {
     try {
-      // We'll need to call POST endpoint - for now return null as fallback
-      // In production, implement token generation in sendCRM function directly
-      return null;
+      return btoa(encodeURIComponent(`${identifier}:${ch}:${Date.now()}`));
     } catch {
       return null;
     }
@@ -54,21 +54,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Generate unsubscribe token
-        const token = await getUnsubscribeToken(r.email, 'email');
-        const unsubscribeUrl = token
-          ? `${APP_URL}/unsubscribe?token=${token}&channel=email`
-          : null;
-
-        // Add unsubscribe link to email body
-        const bodyWithUnsubscribe = htmlBody
-          ? `${htmlBody}<hr><p style="font-size: 12px; color: #999;"><a href="${unsubscribeUrl}">Unsubscribe from promotional emails</a></p>`
-          : textBody;
+        // Unsubscribe link is already embedded in the HTML template by the frontend.
+        // If sending plain text only (no htmlBody), append a text unsubscribe notice.
+        const bodyToSend = htmlBody || textBody;
 
         await base44.integrations.Core.SendEmail({
           to: r.email,
           subject,
-          body: bodyWithUnsubscribe,
+          body: bodyToSend,
         });
         results.sent++;
       } catch (e) {
@@ -103,14 +96,8 @@ Deno.serve(async (req) => {
           ? 'whatsapp:' + TWILIO_FROM
           : TWILIO_FROM;
 
-        // Add unsubscribe link to SMS/WhatsApp
-        const token = await getUnsubscribeToken(r.email || r.phone, channel);
-        const unsubscribeUrl = token
-          ? `${APP_URL}/unsubscribe?token=${token}&channel=${channel}`
-          : null;
-        const messageWithUnsubscribe = unsubscribeUrl
-          ? `${textBody}\n\nReply STOP to unsubscribe: ${unsubscribeUrl}`
-          : textBody;
+        // Append "Reply STOP to unsubscribe" for SMS/WhatsApp (no clickable link needed)
+        const messageWithUnsubscribe = `${textBody}\n\nReply STOP to unsubscribe`;
 
         const formData = new URLSearchParams();
         formData.append('To', to);

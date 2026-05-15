@@ -48,6 +48,16 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
     });
 
+    const { data: restaurantData } = useQuery({
+        queryKey: ['crm-restaurant', restaurantId],
+        queryFn: async () => {
+            const results = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return results?.[0] || null;
+        },
+        enabled: !!restaurantId,
+    });
+    const restaurantLogo = restaurantData?.logo_url || restaurantData?.image_url || null;
+
     // Analyze customer data
     const customerAnalytics = useMemo(() => {
         const customerData = {};
@@ -572,6 +582,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                         segmentConfig={segmentConfig}
                         restaurantName={restaurantName}
                         restaurantId={restaurantId}
+                        restaurantLogo={restaurantLogo}
                     />
                 </TabsContent>
 
