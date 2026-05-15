@@ -1,4 +1,7 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+
+// DEPRECATED: Use sendCRMCampaignWithOptOut instead — this version has no opt-out/GDPR protection.
+// Kept only for backward compatibility. Do NOT add new callers.
 
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);

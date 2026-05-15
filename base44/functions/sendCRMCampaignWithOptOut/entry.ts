@@ -63,11 +63,12 @@ Deno.serve(async (req) => {
         if (htmlBody && r.email) {
           const token = await generateUnsubscribeToken(r.email, 'email');
           const unsubUrl = `${APP_URL}/unsubscribe?token=${encodeURIComponent(token)}&channel=email`;
-          // Replace the dead href="#" unsubscribe placeholder in the HTML template
-          bodyToSend = htmlBody.replace(
-            /href="#"([^>]*>Unsubscribe<)/,
-            `href="${unsubUrl}"$1`
-          );
+          // Replace the sentinel placeholder injected by buildHtmlEmail
+          bodyToSend = htmlBody.replace('UNSUBSCRIBE_URL_PLACEHOLDER', unsubUrl);
+          // Fallback: also catch any leftover href="#" on unsubscribe anchor
+          if (bodyToSend === htmlBody) {
+            bodyToSend = htmlBody.replace(/href="#"([^>]*>[^<]*[Uu]nsubscribe)/, `href="${unsubUrl}"$1`);
+          }
         }
 
         await base44.integrations.Core.SendEmail({
@@ -110,8 +111,10 @@ Deno.serve(async (req) => {
           ? 'whatsapp:' + TWILIO_FROM
           : TWILIO_FROM;
 
+        // Append coupon code if provided (frontend says it will be appended — honour that promise)
+        const couponSuffix = r.coupon_code ? `\n\nUse code: ${r.coupon_code}` : '';
         // Append "Reply STOP to unsubscribe" for SMS/WhatsApp (no clickable link needed)
-        const messageWithUnsubscribe = `${textBody}\n\nReply STOP to unsubscribe`;
+        const messageWithUnsubscribe = `${textBody}${couponSuffix}\n\nReply STOP to unsubscribe`;
 
         const formData = new URLSearchParams();
         formData.append('To', to);

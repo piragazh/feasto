@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { getApiUrl } from '@/lib/api-origin';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +23,9 @@ export default function Unsubscribe() {
       }
 
       try {
-        // Call the unsubscribe endpoint via GET
+        // Call the unsubscribe endpoint via GET — use getApiUrl so custom domains work correctly
         const response = await fetch(
-          `/unsubscribeFromPromotions?token=${encodeURIComponent(token)}&channel=${encodeURIComponent(channel)}`
+          getApiUrl(`/unsubscribeFromPromotions?token=${encodeURIComponent(token)}&channel=${encodeURIComponent(channel)}`)
         );
 
         if (response.ok) {

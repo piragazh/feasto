@@ -24,7 +24,7 @@ const AI_TEMPLATES = [
 ];
 
 // Beautiful, modern HTML email template
-function buildHtmlEmail({ restaurantName, restaurantLogo, textBody, subject, coupon, heroImageUrl }) {
+function buildHtmlEmail({ restaurantName, restaurantLogo, textBody, subject, coupon, heroImageUrl, orderUrl }) {
     const couponBlock = coupon
         ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
             <tr><td align="center">
@@ -85,7 +85,7 @@ function buildHtmlEmail({ restaurantName, restaurantLogo, textBody, subject, cou
           <!-- CTA Button -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:32px;">
             <tr><td align="center">
-              <a href="#" style="background:#f97316;color:#ffffff;padding:16px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:0.3px;">🍽️ Order Now</a>
+              <a href="${orderUrl || '#'}" style="background:#f97316;color:#ffffff;padding:16px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:0.3px;">🍽️ Order Now</a>
             </td></tr>
           </table>
         </td></tr>
@@ -96,7 +96,7 @@ function buildHtmlEmail({ restaurantName, restaurantLogo, textBody, subject, cou
         <!-- Footer -->
         <tr><td style="background:#f9fafb;padding:24px 40px;text-align:center;">
           <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Thank you for being a valued customer of <strong>${restaurantName}</strong>.</p>
-          <p style="margin:0;color:#9ca3af;font-size:11px;">You're receiving this because you've ordered with us. <a href="#" style="color:#f97316;">Unsubscribe</a></p>
+          <p style="margin:0;color:#9ca3af;font-size:11px;">You're receiving this because you've ordered with us. <a href="UNSUBSCRIBE_URL_PLACEHOLDER" style="color:#f97316;">Unsubscribe</a></p>
         </td></tr>
 
       </table>
@@ -222,6 +222,7 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
         }
     };
 
+    const orderUrl = `${window.location.origin}/Restaurant?id=${restaurantId}`;
     const builtEmail = buildHtmlEmail({
         restaurantName,
         restaurantLogo,
@@ -229,6 +230,7 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
         subject,
         coupon: selectedCoupon,
         heroImageUrl: heroImageUrl.trim() || null,
+        orderUrl,
     });
 
     const handleSend = async () => {
@@ -237,7 +239,11 @@ Make it personal, action-oriented, and exciting. Use natural line breaks.`;
 
         setSending(true);
         try {
-            const recipients = targetSegment?.recipients || [];
+            const rawRecipients = targetSegment?.recipients || [];
+            // For SMS/WhatsApp, attach the selected coupon code to each recipient so the backend can append it
+            const recipients = (channel === 'sms' || channel === 'whatsapp') && selectedCoupon
+                ? rawRecipients.map(r => ({ ...r, coupon_code: selectedCoupon.code }))
+                : rawRecipients;
             const result = await base44.functions.invoke('sendCRMCampaignWithOptOut', {
                 channel,
                 recipients,
