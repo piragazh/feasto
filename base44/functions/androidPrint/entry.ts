@@ -94,9 +94,21 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
 
     for (const item of (order.items || [])) {
         const itemName = `${item.quantity}x ${item.name}`;
-        const price = `£${((item.price || 0) * item.quantity).toFixed(2)}`;
-        const padding = Math.max(1, lineWidth - itemName.length - price.length);
-        add(`${itemName}${' '.repeat(padding)}${price}\n`);
+        const price = `\xA3${((item.price || 0) * item.quantity).toFixed(2)}`;
+        // Use byte lengths — £ is 2 bytes in UTF-8 but 1 JS char, causing price to wrap
+        const itemBytes = encoder.encode(itemName).length;
+        const priceBytes = encoder.encode(price).length;
+        if (itemBytes + priceBytes + 1 <= lineWidth) {
+            const padding = lineWidth - itemBytes - priceBytes;
+            add(`${itemName}${' '.repeat(padding)}${price}\n`);
+        } else {
+            // Name too long — truncate and put price on same line
+            const maxNameBytes = lineWidth - priceBytes - 1;
+            let truncated = itemName;
+            while (encoder.encode(truncated).length > maxNameBytes) truncated = truncated.slice(0, -1);
+            const padding = lineWidth - encoder.encode(truncated).length - priceBytes;
+            add(`${truncated}${' '.repeat(Math.max(1, padding))}${price}\n`);
+        }
         if (item.customizations && config.template === 'detailed') {
             for (const [k, v] of Object.entries(item.customizations)) {
                 if (typeof v !== 'object') add(`  ${k}: ${v}\n`);
@@ -105,9 +117,10 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     }
 
     add('================================\n');
-    const totalStr = `£${(order.total || 0).toFixed(2)}`;
+    const totalStr = `\xA3${(order.total || 0).toFixed(2)}`;
     add(cmd.boldOn);
-    add(`TOTAL:${' '.repeat(Math.max(1, lineWidth - 6 - totalStr.length))}${totalStr}\n`);
+    const totalBytes = encoder.encode(totalStr).length;
+    add(`TOTAL:${' '.repeat(Math.max(1, lineWidth - 6 - totalBytes))}${totalStr}\n`);
     add(cmd.normal, cmd.boldOff);
 
     if (order.notes) {

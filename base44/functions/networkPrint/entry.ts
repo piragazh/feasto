@@ -33,9 +33,15 @@ function buildCashDrawerBytes() {
     return new Uint8Array(CASH_DRAWER_CMD);
 }
 
+// Byte-aware length — £ encodes as 2 bytes (0xC2 0xA3) but counts as 1 JS char,
+// causing the padding to be 1 byte too short and the last price digit to wrap.
+function byteLen(str) {
+    return encoder.encode(str).length;
+}
+
 // Helper: pad a string to fill lineWidth with value right-aligned
 function rPad(label, value, lineWidth) {
-    const pad = Math.max(1, lineWidth - label.length - value.length);
+    const pad = Math.max(1, lineWidth - byteLen(label) - byteLen(value));
     return `${label}${' '.repeat(pad)}${value}`;
 }
 
@@ -207,12 +213,12 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     const items = order.items || [];
     items.forEach((item, idx) => {
         const qty = item.quantity || 1;
-        const itemPrice = `£${((item.price || 0) * qty).toFixed(2)}`;
+        const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
         const itemLabel = `${idx + 1}. ${qty}x ${item.name}`;
 
         // Item name — bold, with price right-aligned
         add(cmd.boldOn);
-        if (itemLabel.length + itemPrice.length + 1 <= W) {
+        if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
             add(`${rPad(itemLabel, itemPrice, W)}\n`);
         } else {
             // Name too long — wrap it, price on its own line
@@ -238,18 +244,18 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     line('=');
 
     if (!isCompact && !isMinimal) {
-        const sub = `£${(order.subtotal || 0).toFixed(2)}`;
+        const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;
         add(`${rPad('Subtotal:', sub, W)}\n`);
         if ((order.delivery_fee || 0) > 0) {
-            const fee = `£${order.delivery_fee.toFixed(2)}`;
+            const fee = `\xA3${order.delivery_fee.toFixed(2)}`;
             add(`${rPad('Delivery:', fee, W)}\n`);
         }
         if ((order.small_order_surcharge || 0) > 0) {
-            const sur = `£${order.small_order_surcharge.toFixed(2)}`;
+            const sur = `\xA3${order.small_order_surcharge.toFixed(2)}`;
             add(`${rPad('Surcharge:', sur, W)}\n`);
         }
         if ((order.discount || 0) > 0) {
-            const disc = `-£${order.discount.toFixed(2)}`;
+            const disc = `-\xA3${order.discount.toFixed(2)}`;
             add(`${rPad('Discount:', disc, W)}\n`);
         }
         line('-');
@@ -257,7 +263,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
 
     // TOTAL — double height for instant visibility
     add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
-    add(`TOTAL: £${(order.total || 0).toFixed(2)}\n`);
+    add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
     add(cmd.normal, cmd.boldOff, cmd.alignLeft);
 
     if (!isMinimal) {
