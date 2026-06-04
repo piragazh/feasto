@@ -1,0 +1,163 @@
+{
+  "name": "PromotionalContent",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this content belongs to"
+    },
+    "screen_name": {
+      "type": "string",
+      "description": "Screen name/location"
+    },
+    "title": {
+      "type": "string",
+      "description": "Content title for management"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description"
+    },
+    "media_url": {
+      "type": "string",
+      "description": "URL to the media file"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video",
+        "gif",
+        "widget"
+      ],
+      "description": "Type of media content"
+    },
+    "widget_type": {
+      "type": "string",
+      "enum": [
+        "weather",
+        "clock",
+        "orders",
+        "stock_ticker",
+        "queue_status",
+        "countdown_timer"
+      ],
+      "description": "Widget type \u2014 used when media_type is 'widget'"
+    },
+    "widget_config_id": {
+      "type": "string",
+      "description": "ID of the WidgetConfiguration record"
+    },
+    "layout_template": {
+      "type": "object",
+      "description": "Optional per-item layout template. When set, overrides the screen's default layout_template for this item's duration.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "duration": {
+      "type": "number",
+      "default": 10,
+      "description": "Display duration in seconds"
+    },
+    "video_loop_count": {
+      "type": "number",
+      "default": 1
+    },
+    "transition": {
+      "type": "string",
+      "enum": [
+        "fade",
+        "slide",
+        "zoom",
+        "none"
+      ],
+      "default": "fade"
+    },
+    "display_order": {
+      "type": "number",
+      "default": 0
+    },
+    "priority": {
+      "type": "number",
+      "default": 1
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "recurring": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly",
+                "custom"
+              ]
+            },
+            "days_of_week": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "time_ranges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "start_time": {
+                    "type": "string"
+                  },
+                  "end_time": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "default": false
+    },
+    "ai_prompt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "media_type"
+  ]
+}

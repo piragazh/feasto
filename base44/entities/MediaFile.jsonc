@@ -1,0 +1,47 @@
+{
+  "name": "MediaFile",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this file belongs to"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL to the uploaded file"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original file name"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "File MIME type"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "File size in bytes"
+    },
+    "folder": {
+      "type": "string",
+      "description": "Folder path (e.g., 'Promotions', 'Seasonal', 'Logos')"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for categorizing media (e.g., 'summer', 'menu', 'logo')"
+    },
+    "used_in_content": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this file is currently used in promotional content"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "file_url",
+    "file_name"
+  ]
+}

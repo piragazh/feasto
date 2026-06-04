@@ -154,8 +154,8 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
 
     if (!isCompact) {
         const dt = new Date(order.created_date || Date.now());
-        const timeStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        const dateStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const timeStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+        const dateStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'Europe/London' });
         add(`Time: ${timeStr}  Date: ${dateStr}\n`);
     }
 

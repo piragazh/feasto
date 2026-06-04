@@ -1,0 +1,65 @@
+{
+  "name": "LoyaltyReward",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant offering the reward (empty for platform-wide)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Reward name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Reward description"
+    },
+    "points_required": {
+      "type": "number",
+      "description": "Points needed to redeem"
+    },
+    "reward_type": {
+      "type": "string",
+      "enum": [
+        "percentage_discount",
+        "fixed_discount",
+        "free_delivery",
+        "free_item"
+      ],
+      "description": "Type of reward"
+    },
+    "discount_value": {
+      "type": "number",
+      "description": "Discount percentage or fixed amount"
+    },
+    "free_item_id": {
+      "type": "string",
+      "description": "Menu item ID for free item rewards"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether reward is currently available"
+    },
+    "tier_required": {
+      "type": "string",
+      "enum": [
+        "bronze",
+        "silver",
+        "gold",
+        "platinum"
+      ],
+      "default": "bronze",
+      "description": "Minimum tier required"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Reward image"
+    }
+  },
+  "required": [
+    "name",
+    "points_required",
+    "reward_type"
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "name": "MenuItem",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Reference to restaurant"
+    },
+    "menu_item_no": {
+      "type": "string",
+      "description": "Menu board item number for quick POS lookup (e.g., 43, 101, A5)"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number"
+    },
+    "pos_price": {
+      "type": "number",
+      "description": "Override price for in-store POS. If not set, uses the standard price."
+    },
+    "availability_channel": {
+      "type": "string",
+      "enum": [
+        "both",
+        "online_only",
+        "pos_only"
+      ],
+      "default": "both",
+      "description": "Where this item is available: both (default), online_only, or pos_only"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "description": "Menu category like Starters, Mains, Desserts"
+    },
+    "subcategory": {
+      "type": "string",
+      "description": "Optional subcategory within the main category"
+    },
+    "is_popular": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_vegetarian": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_spicy": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_available": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether item is currently available or temporarily out of stock"
+    },
+    "show_in_cart_quick_add": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show this item in quick-add section on cart screen for faster ordering"
+    },
+    "availability_schedule": {
+      "type": "object",
+      "description": "Schedule rules for when this item is available",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "days": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "time_from": {
+          "type": "string"
+        },
+        "time_until": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "nutrition": {
+      "type": "object",
+      "description": "Nutritional information per serving",
+      "properties": {
+        "calories": {
+          "type": "number"
+        },
+        "protein_g": {
+          "type": "number"
+        },
+        "carbs_g": {
+          "type": "number"
+        },
+        "fat_g": {
+          "type": "number"
+        },
+        "saturates_g": {
+          "type": "number"
+        },
+        "fibre_g": {
+          "type": "number"
+        },
+        "salt_g": {
+          "type": "number"
+        },
+        "sugar_g": {
+          "type": "number"
+        },
+        "serving_size": {
+          "type": "string"
+        }
+      }
+    },
+    "allergens": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of allergens present"
+    },
+    "customization_options": {
+      "type": "array",
+      "description": "Available customizations for this item",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "single",
+              "multiple",
+              "meal_upgrade"
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "max_quantity": {
+            "type": "number"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "number"
+                },
+                "pos_price": {
+                  "type": "number",
+                  "description": "Override price for this option when ordered via POS. If not set, uses the standard price."
+                }
+              }
+            }
+          },
+          "meal_customizations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "single",
+                    "multiple"
+                  ]
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "max_quantity": {
+                  "type": "number"
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "price": {
+                        "type": "number"
+                      },
+                      "pos_price": {
+                        "type": "number",
+                        "description": "Override price for this option when ordered via POS."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "price"
+  ]
+}

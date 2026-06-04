@@ -75,7 +75,10 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     }
 
     if (config.template !== 'compact') {
-        add(`${new Date(order.created_date || Date.now()).toLocaleString()}\n`);
+        const _dt = new Date(order.created_date || Date.now());
+        const _timeStr = _dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+        const _dateStr = _dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'Europe/London' });
+        add(`${_timeStr}  ${_dateStr}\n`);
     }
     const orderTypeLabel = order.order_type
         ? order.order_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())

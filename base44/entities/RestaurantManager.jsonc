@@ -1,0 +1,28 @@
+{
+  "name": "RestaurantManager",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the manager user"
+    },
+    "restaurant_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of restaurants this manager can access"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "restaurant_ids"
+  ]
+}

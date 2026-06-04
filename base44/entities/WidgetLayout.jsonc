@@ -1,0 +1,88 @@
+{
+  "name": "WidgetLayout",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this widget layout belongs to"
+    },
+    "name": {
+      "type": "string",
+      "description": "Layout name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Layout description"
+    },
+    "zones": {
+      "type": "array",
+      "description": "Widget zones with position and configuration",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "widget_type": {
+            "type": "string",
+            "enum": [
+              "weather",
+              "clock",
+              "orders"
+            ],
+            "description": "Type of widget for this zone"
+          },
+          "widget_config_id": {
+            "type": "string",
+            "description": "ID of WidgetConfiguration to use (overrides default)"
+          },
+          "x": {
+            "type": "number",
+            "description": "X position as percentage"
+          },
+          "y": {
+            "type": "number",
+            "description": "Y position as percentage"
+          },
+          "width": {
+            "type": "number",
+            "description": "Width as percentage"
+          },
+          "height": {
+            "type": "number",
+            "description": "Height as percentage"
+          },
+          "z_index": {
+            "type": "number",
+            "default": 0,
+            "description": "Stacking order"
+          }
+        }
+      }
+    },
+    "apply_to_walls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Media wall names this layout applies to (empty = global)"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is the default widget layout"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "zones"
+  ]
+}

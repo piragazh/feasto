@@ -1,0 +1,33 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "restaurant"
+      ],
+      "description": "Who sent the message"
+    },
+    "message": {
+      "type": "string"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "order_id",
+    "restaurant_id",
+    "sender_type",
+    "message"
+  ]
+}

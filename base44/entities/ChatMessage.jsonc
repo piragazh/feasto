@@ -1,0 +1,48 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "ID of the conversation this message belongs to"
+    },
+    "sender_email": {
+      "type": "string",
+      "description": "Email of the message sender"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Name of the sender"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "restaurant",
+        "driver"
+      ],
+      "description": "Type of sender"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message text content"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL of attached image if any"
+    },
+    "read_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Email addresses of users who have read this message",
+      "default": []
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_email",
+    "sender_type"
+  ]
+}

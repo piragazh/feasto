@@ -1,0 +1,174 @@
+{
+  "name": "Promotion",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this promotion belongs to"
+    },
+    "name": {
+      "type": "string",
+      "description": "Promotion name (e.g., 'Summer Sale', '20% Off')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Promotion description"
+    },
+    "promotion_code": {
+      "type": "string",
+      "description": "Promo code customers can use (e.g., SUMMER10)"
+    },
+    "promotion_type": {
+      "type": "string",
+      "enum": [
+        "percentage_off",
+        "fixed_amount_off",
+        "buy_one_get_one",
+        "buy_two_get_one",
+        "free_delivery",
+        "tiered_discount",
+        "combo_deal"
+      ],
+      "description": "Type of promotion"
+    },
+    "discount_value": {
+      "type": "number",
+      "description": "Percentage (e.g., 20) or fixed amount (e.g., 5.00)"
+    },
+    "tiered_discounts": {
+      "type": "array",
+      "description": "For tiered discount promotions (e.g., 10% off \u00a350+, 20% off \u00a3100+)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "min_order_value": {
+            "type": "number",
+            "description": "Minimum order value to qualify for this tier"
+          },
+          "discount_type": {
+            "type": "string",
+            "enum": [
+              "percentage",
+              "fixed"
+            ],
+            "description": "Type of discount for this tier"
+          },
+          "discount_value": {
+            "type": "number",
+            "description": "Discount percentage or fixed amount"
+          }
+        },
+        "required": [
+          "min_order_value",
+          "discount_type",
+          "discount_value"
+        ]
+      }
+    },
+    "combo_deal": {
+      "type": "object",
+      "description": "For combo deal promotions (e.g., free drink with main meal)",
+      "properties": {
+        "main_item_id": {
+          "type": "string",
+          "description": "Item customer must buy (e.g., main meal)"
+        },
+        "free_item_id": {
+          "type": "string",
+          "description": "Item given free when main item is purchased"
+        },
+        "combo_name": {
+          "type": "string",
+          "description": "Display name for the combo (e.g., 'Main + Free Drink')"
+        },
+        "applicable_main_categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Limit to specific menu categories for main item (optional)"
+        }
+      }
+    },
+    "condition_type": {
+      "type": "string",
+      "enum": [
+        "minimum_order",
+        "no_condition"
+      ],
+      "default": "no_condition",
+      "description": "Type of condition to qualify for promotion"
+    },
+    "minimum_order": {
+      "type": "number",
+      "description": "Minimum order amount to qualify for promotion"
+    },
+    "condition_text": {
+      "type": "string",
+      "description": "Human-readable condition text (e.g., 'when you spend \u00a315', 'with selected items')"
+    },
+    "applicable_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Menu item IDs this promotion applies to (empty = all items)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When promotion starts"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When promotion ends"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether promotion is currently active"
+    },
+    "usage_limit": {
+      "type": "number",
+      "description": "Maximum number of times this promotion can be used globally"
+    },
+    "per_customer_limit": {
+      "type": "number",
+      "description": "Maximum number of times each customer can use this promotion"
+    },
+    "usage_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times used"
+    },
+    "customer_usage": {
+      "type": "object",
+      "description": "Track usage per customer email",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "total_revenue_generated": {
+      "type": "number",
+      "default": 0,
+      "description": "Total revenue from orders using this promotion"
+    },
+    "total_discount_given": {
+      "type": "number",
+      "default": 0,
+      "description": "Total discount amount given"
+    },
+    "badge_text": {
+      "type": "string",
+      "description": "Short badge text to display (e.g., '20% OFF', 'FREE ITEM')"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "promotion_type",
+    "start_date",
+    "end_date"
+  ]
+}

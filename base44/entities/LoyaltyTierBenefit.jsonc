@@ -1,0 +1,56 @@
+{
+  "name": "LoyaltyTierBenefit",
+  "type": "object",
+  "properties": {
+    "tier_name": {
+      "type": "string",
+      "enum": [
+        "Bronze",
+        "Silver",
+        "Gold",
+        "Platinum"
+      ],
+      "description": "The loyalty tier this benefit applies to"
+    },
+    "tier_min_points": {
+      "type": "number",
+      "description": "Minimum points required for this tier"
+    },
+    "benefit_name": {
+      "type": "string",
+      "description": "Name of the benefit (e.g., Free Delivery, Extra Points)"
+    },
+    "benefit_description": {
+      "type": "string",
+      "description": "Detailed description of the benefit"
+    },
+    "benefit_type": {
+      "type": "string",
+      "enum": [
+        "free_delivery",
+        "bonus_points",
+        "early_access",
+        "priority_support",
+        "exclusive_offers",
+        "birthday_bonus",
+        "custom"
+      ],
+      "description": "Type of benefit for system processing"
+    },
+    "benefit_value": {
+      "type": "number",
+      "description": "Value associated with benefit (e.g., points multiplier 1.5x, discount percentage)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this benefit is currently active"
+    }
+  },
+  "required": [
+    "tier_name",
+    "benefit_name",
+    "benefit_description",
+    "benefit_type"
+  ]
+}

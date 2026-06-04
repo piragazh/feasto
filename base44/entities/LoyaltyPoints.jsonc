@@ -1,0 +1,46 @@
+{
+  "name": "LoyaltyPoints",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email for registered users, or 'phone:PHONENUMBER' for guests"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Normalized phone number (digits only) for guest users"
+    },
+    "points_earned": {
+      "type": "number",
+      "default": 0,
+      "description": "Total points ever earned"
+    },
+    "points_redeemed": {
+      "type": "number",
+      "default": 0,
+      "description": "Total points redeemed"
+    },
+    "total_points": {
+      "type": "number",
+      "default": 0,
+      "description": "Current available points balance"
+    },
+    "orders_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of qualifying orders"
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "bronze",
+        "silver",
+        "gold"
+      ],
+      "default": "bronze"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

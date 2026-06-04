@@ -1,0 +1,74 @@
+{
+  "name": "SupportTicket",
+  "type": "object",
+  "properties": {
+    "customer_email": {
+      "type": "string",
+      "description": "Customer who created the ticket"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Ticket subject"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the issue"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "resolved",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "order_issue",
+        "delivery_problem",
+        "payment_issue",
+        "refund_request",
+        "general_inquiry",
+        "other"
+      ],
+      "description": "Type of support request"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related order ID if applicable"
+    },
+    "chat_history": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Full conversation history before escalation"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Internal notes from support team"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "customer_email",
+    "subject",
+    "description"
+  ]
+}

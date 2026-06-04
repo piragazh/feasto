@@ -1,0 +1,90 @@
+{
+  "name": "Review",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "menu_item_id": {
+      "type": "string",
+      "description": "Optional - if reviewing specific item"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Overall star rating 1-5"
+    },
+    "food_quality_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Food quality rating 1-5"
+    },
+    "delivery_time_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Delivery time rating 1-5"
+    },
+    "driver_service_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Driver service rating 1-5"
+    },
+    "review_text": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Email of customer who left review"
+    },
+    "restaurant_response": {
+      "type": "string",
+      "description": "Restaurant's response to the review"
+    },
+    "response_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "moderation_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "flagged"
+      ],
+      "default": "approved",
+      "description": "Review moderation status"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason for rejecting the review"
+    },
+    "flagged_reason": {
+      "type": "string",
+      "description": "Reason for flagging the review"
+    },
+    "moderated_by": {
+      "type": "string",
+      "description": "Email of admin/restaurant who moderated"
+    },
+    "moderated_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When moderation action was taken"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "rating"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "DashboardActivity",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant ID"
+    },
+    "last_active": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time dashboard was active"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User who was last active on dashboard"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "last_active"
+  ]
+}

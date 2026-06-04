@@ -1,0 +1,101 @@
+{
+  "name": "MediaWallPlaylist",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this playlist belongs to"
+    },
+    "wall_name": {
+      "type": "string",
+      "description": "Media wall name"
+    },
+    "name": {
+      "type": "string",
+      "description": "Playlist name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Playlist description"
+    },
+    "content_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ordered list of content IDs in this playlist"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this playlist is currently active"
+    },
+    "loop": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to loop the playlist"
+    },
+    "shuffle": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to shuffle content order"
+    },
+    "schedule": {
+      "type": "object",
+      "description": "When this playlist should be active",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "recurring": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "days_of_week": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "time_ranges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "start_time": {
+                    "type": "string"
+                  },
+                  "end_time": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "priority": {
+      "type": "number",
+      "default": 1,
+      "description": "Playlist priority for overlapping schedules"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "wall_name",
+    "name",
+    "content_ids"
+  ]
+}

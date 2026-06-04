@@ -1,0 +1,22 @@
+{
+  "name": "Favorite",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who favorited"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "ID of the favorited restaurant"
+    },
+    "restaurant_name": {
+      "type": "string",
+      "description": "Name of the restaurant (cached for performance)"
+    }
+  },
+  "required": [
+    "user_email",
+    "restaurant_id"
+  ]
+}

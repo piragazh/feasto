@@ -1,0 +1,45 @@
+{
+  "name": "RestaurantMessage",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this message is for"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "restaurant"
+      ],
+      "description": "Who sent the message"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Message subject"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message content"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ],
+      "default": "normal"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "sender_type",
+    "message"
+  ]
+}

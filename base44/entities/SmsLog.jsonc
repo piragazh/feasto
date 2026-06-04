@@ -1,0 +1,59 @@
+{
+  "name": "SmsLog",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant that triggered this SMS"
+    },
+    "restaurant_name": {
+      "type": "string",
+      "description": "Restaurant name for display"
+    },
+    "to": {
+      "type": "string",
+      "description": "Recipient phone number"
+    },
+    "message": {
+      "type": "string",
+      "description": "SMS message body"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related order ID if applicable"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "failed",
+        "simulated"
+      ],
+      "default": "sent",
+      "description": "Whether the SMS was sent, failed, or simulated (Twilio not configured)"
+    },
+    "message_sid": {
+      "type": "string",
+      "description": "Twilio message SID on success"
+    },
+    "error_details": {
+      "type": "string",
+      "description": "Error details if failed"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "customer_notification",
+        "restaurant_alert",
+        "other"
+      ],
+      "default": "customer_notification",
+      "description": "Type of SMS"
+    }
+  },
+  "required": [
+    "to",
+    "message",
+    "status"
+  ]
+}

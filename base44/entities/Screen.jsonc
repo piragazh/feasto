@@ -1,0 +1,195 @@
+{
+  "name": "Screen",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this screen belongs to"
+    },
+    "screen_name": {
+      "type": "string",
+      "description": "Display name for the screen (e.g., Main Entrance, Counter)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether screen is active"
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Group names this screen belongs to (e.g., 'Entrance Screens', 'Kitchen Displays')"
+    },
+    "health_status": {
+      "type": "string",
+      "enum": [
+        "online",
+        "offline",
+        "warning",
+        "error"
+      ],
+      "default": "offline",
+      "description": "Current health status of the screen"
+    },
+    "last_heartbeat": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time screen checked in"
+    },
+    "heartbeat_interval": {
+      "type": "number",
+      "default": 60,
+      "description": "Expected heartbeat interval in seconds"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "resolved": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Error log for this screen"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolved": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Warning log for this screen"
+    },
+    "uptime_percentage": {
+      "type": "number",
+      "description": "Uptime percentage over last 24 hours"
+    },
+    "last_offline_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When screen went offline"
+    },
+    "notification_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether offline notification has been sent"
+    },
+    "orientation": {
+      "type": "string",
+      "enum": [
+        "landscape",
+        "portrait",
+        "auto"
+      ],
+      "default": "landscape",
+      "description": "Screen orientation mode"
+    },
+    "media_wall_config": {
+      "type": "object",
+      "description": "Media wall configuration for multi-screen setups",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "wall_name": {
+          "type": "string",
+          "description": "Name of the media wall (all screens in same wall must have same name)"
+        },
+        "position": {
+          "type": "object",
+          "description": "Position in media wall grid",
+          "properties": {
+            "row": {
+              "type": "number"
+            },
+            "col": {
+              "type": "number"
+            }
+          }
+        },
+        "grid_size": {
+          "type": "object",
+          "description": "Total grid dimensions",
+          "properties": {
+            "rows": {
+              "type": "number"
+            },
+            "cols": {
+              "type": "number"
+            }
+          }
+        },
+        "bezel_compensation": {
+          "type": "number",
+          "default": 0,
+          "description": "Bezel width in pixels to compensate for screen borders"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "description": "Screen rotation in degrees"
+        }
+      }
+    },
+    "layout_template": {
+      "type": "object",
+      "description": "Custom layout configuration with zones"
+    },
+    "screen_info": {
+      "type": "object",
+      "description": "Screen device info (browser, resolution, etc.)"
+    },
+    "pending_command": {
+      "type": "string",
+      "description": "Command waiting to be executed (refresh_content, reboot, etc.)"
+    },
+    "command_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the command was issued"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "screen_name"
+  ]
+}

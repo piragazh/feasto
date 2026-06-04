@@ -1,0 +1,45 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user receiving the notification"
+    },
+    "title": {
+      "type": "string",
+      "description": "Notification title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Notification message"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "order_confirmed",
+        "out_for_delivery",
+        "delivered",
+        "new_order",
+        "order_cancelled",
+        "order_assigned",
+        "new_order_available"
+      ],
+      "description": "Type of notification"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related order ID"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "user_email",
+    "title",
+    "message",
+    "type"
+  ]
+}

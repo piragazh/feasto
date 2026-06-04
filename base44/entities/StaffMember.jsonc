@@ -1,0 +1,63 @@
+{
+  "name": "StaffMember",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this staff member belongs to"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Staff member full name"
+    },
+    "email": {
+      "type": "string",
+      "description": "Staff member login email"
+    },
+    "staff_number": {
+      "type": "string",
+      "description": "Short unique identifier e.g. S001 used for POS login"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "waiter",
+        "cashier",
+        "kitchen_staff",
+        "manager"
+      ],
+      "description": "Staff role"
+    },
+    "pin": {
+      "type": "string",
+      "description": "4-digit PIN for quick login"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "invite_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "invite_token": {
+      "type": "string"
+    },
+    "invite_token_expires": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "onboarding_complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "full_name",
+    "role"
+  ]
+}

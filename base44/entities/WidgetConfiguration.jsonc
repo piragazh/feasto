@@ -1,0 +1,306 @@
+{
+  "name": "WidgetConfiguration",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this configuration belongs to"
+    },
+    "name": {
+      "type": "string",
+      "description": "Configuration name for easy identification"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of this configuration"
+    },
+    "widget_type": {
+      "type": "string",
+      "enum": [
+        "weather",
+        "clock",
+        "orders",
+        "stock_ticker",
+        "queue_status",
+        "countdown_timer",
+        "menu_widget"
+      ],
+      "description": "Type of widget this configuration is for"
+    },
+    "settings": {
+      "type": "object",
+      "description": "Widget-specific settings",
+      "properties": {
+        "weather": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string"
+            },
+            "units": {
+              "type": "string",
+              "enum": [
+                "metric",
+                "imperial"
+              ],
+              "default": "metric"
+            },
+            "show_forecast": {
+              "type": "boolean",
+              "default": false
+            },
+            "theme": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light",
+                "transparent"
+              ],
+              "default": "dark"
+            }
+          }
+        },
+        "clock": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "12h",
+                "24h"
+              ],
+              "default": "24h"
+            },
+            "show_seconds": {
+              "type": "boolean",
+              "default": true
+            },
+            "show_date": {
+              "type": "boolean",
+              "default": true
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "theme": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light",
+                "transparent"
+              ],
+              "default": "dark"
+            }
+          }
+        },
+        "orders": {
+          "type": "object",
+          "properties": {
+            "display_mode": {
+              "type": "string",
+              "enum": [
+                "recent",
+                "pending",
+                "preparing"
+              ],
+              "default": "preparing"
+            },
+            "max_orders": {
+              "type": "number",
+              "default": 5
+            },
+            "show_customer_name": {
+              "type": "boolean",
+              "default": false
+            },
+            "auto_refresh_interval": {
+              "type": "number",
+              "default": 30
+            }
+          }
+        },
+        "stock_ticker": {
+          "type": "object",
+          "properties": {
+            "symbols": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "refresh_interval": {
+              "type": "number",
+              "default": 60
+            },
+            "show_change": {
+              "type": "boolean",
+              "default": true
+            },
+            "scroll_speed": {
+              "type": "string",
+              "enum": [
+                "slow",
+                "medium",
+                "fast"
+              ],
+              "default": "medium"
+            },
+            "theme": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light",
+                "finance"
+              ],
+              "default": "dark"
+            }
+          }
+        },
+        "queue_status": {
+          "type": "object",
+          "properties": {
+            "queue_label": {
+              "type": "string",
+              "default": "Now Serving"
+            },
+            "max_display": {
+              "type": "number",
+              "default": 6
+            },
+            "show_wait_time": {
+              "type": "boolean",
+              "default": true
+            },
+            "avg_wait_minutes": {
+              "type": "number",
+              "default": 10
+            },
+            "status_filter": {
+              "type": "string",
+              "enum": [
+                "preparing",
+                "ready",
+                "all_active"
+              ],
+              "default": "preparing"
+            },
+            "theme": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light",
+                "branded"
+              ],
+              "default": "dark"
+            }
+          }
+        },
+        "countdown_timer": {
+          "type": "object",
+          "properties": {
+            "target_date": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "message_after": {
+              "type": "string"
+            },
+            "theme": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light",
+                "fire",
+                "celebration"
+              ],
+              "default": "dark"
+            },
+            "show_seconds": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "menu_widget": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "default": "Our Menu"
+            },
+            "category_filter": {
+              "type": "string",
+              "default": "all",
+              "description": "Category name or 'all'"
+            },
+            "max_items": {
+              "type": "number",
+              "default": 12
+            },
+            "columns": {
+              "type": "number",
+              "enum": [
+                1,
+                2
+              ],
+              "default": 2
+            },
+            "show_prices": {
+              "type": "boolean",
+              "default": true
+            },
+            "show_images": {
+              "type": "boolean",
+              "default": true
+            },
+            "show_unavailable": {
+              "type": "boolean",
+              "default": false
+            },
+            "theme": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light",
+                "branded"
+              ],
+              "default": "dark"
+            },
+            "refresh_interval": {
+              "type": "number",
+              "default": 60,
+              "description": "Auto-refresh interval in seconds"
+            }
+          }
+        }
+      }
+    },
+    "apply_to_walls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Media wall names this config applies to (empty = global)"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "widget_type",
+    "settings"
+  ]
+}

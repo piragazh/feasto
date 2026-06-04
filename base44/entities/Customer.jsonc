@@ -1,0 +1,67 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "phone_number": {
+      "type": "string",
+      "description": "Unique phone number of the customer"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Full name of the customer"
+    },
+    "email": {
+      "type": "string",
+      "description": "Customer email address"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this customer belongs to"
+    },
+    "delivery_address": {
+      "type": "string",
+      "description": "Default/preferred delivery address"
+    },
+    "saved_addresses": {
+      "type": "array",
+      "description": "All saved delivery addresses for this customer",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Address label (e.g. Home, Work)"
+          },
+          "address": {
+            "type": "string",
+            "description": "Full address"
+          },
+          "is_default": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this is the default/preferred address"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Any internal notes about the customer"
+    },
+    "total_orders": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of orders placed by this customer"
+    },
+    "last_order_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date of the last order placed by this customer"
+    }
+  },
+  "required": [
+    "phone_number",
+    "full_name",
+    "restaurant_id"
+  ]
+}

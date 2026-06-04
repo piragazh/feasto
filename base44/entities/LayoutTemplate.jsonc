@@ -1,0 +1,99 @@
+{
+  "name": "LayoutTemplate",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this template belongs to"
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the layout template"
+    },
+    "description": {
+      "type": "string",
+      "description": "Template description"
+    },
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number",
+            "description": "X position as percentage"
+          },
+          "y": {
+            "type": "number",
+            "description": "Y position as percentage"
+          },
+          "width": {
+            "type": "number",
+            "description": "Width as percentage"
+          },
+          "height": {
+            "type": "number",
+            "description": "Height as percentage"
+          },
+          "content_type": {
+            "type": "string",
+            "enum": [
+              "media",
+              "menu",
+              "weather",
+              "clock",
+              "live_orders",
+              "ticker",
+              "branding",
+              "queue_status",
+              "text",
+              "carousel",
+              "widget"
+            ],
+            "default": "media"
+          },
+          "widget_config_id": {
+            "type": "string",
+            "description": "Optional WidgetConfiguration record ID"
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": false
+    },
+    "default_for_groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "default_for_screen_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "portrait",
+          "landscape",
+          "square"
+        ]
+      }
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "zones"
+  ]
+}

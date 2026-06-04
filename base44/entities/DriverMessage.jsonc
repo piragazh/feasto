@@ -1,0 +1,41 @@
+{
+  "name": "DriverMessage",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Order this message is related to"
+    },
+    "driver_id": {
+      "type": "string",
+      "description": "Driver involved in the conversation"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant involved in the conversation"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "driver",
+        "restaurant"
+      ],
+      "description": "Who sent the message"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message content"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "order_id",
+    "driver_id",
+    "restaurant_id",
+    "sender_type",
+    "message"
+  ]
+}

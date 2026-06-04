@@ -1,0 +1,127 @@
+{
+  "name": "MediaWallContent",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this content belongs to"
+    },
+    "wall_name": {
+      "type": "string",
+      "description": "Media wall name (e.g., Main Wall, Drive-Thru Wall)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Content title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Content description"
+    },
+    "media_url": {
+      "type": "string",
+      "description": "URL to full-screen media spanning entire wall (or 'widget' for custom widgets)"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video",
+        "widget_time",
+        "widget_weather",
+        "widget_orders"
+      ],
+      "description": "Type of media - can be image/video or custom widget"
+    },
+    "widget_config": {
+      "type": "object",
+      "description": "Configuration for custom widgets"
+    },
+    "duration": {
+      "type": "number",
+      "default": 10,
+      "description": "Display duration in seconds"
+    },
+    "priority": {
+      "type": "number",
+      "default": 1,
+      "description": "Display priority (1-10)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether content is active"
+    },
+    "schedule": {
+      "type": "object",
+      "description": "Scheduling configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "recurring": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "days_of_week": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "time_ranges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "start_time": {
+                    "type": "string"
+                  },
+                  "end_time": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "display_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order in rotation"
+    },
+    "playlist_id": {
+      "type": "string",
+      "description": "ID of the playlist this content belongs to"
+    },
+    "sync_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this content should sync across all wall screens"
+    },
+    "sync_offset": {
+      "type": "number",
+      "default": 0,
+      "description": "Offset in milliseconds for synchronized playback"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "wall_name",
+    "media_url",
+    "media_type"
+  ]
+}

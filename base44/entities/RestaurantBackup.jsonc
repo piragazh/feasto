@@ -1,0 +1,36 @@
+{
+  "name": "RestaurantBackup",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Human-readable label for this backup"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Admin email who created the backup"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant ID this backup covers (empty = all restaurants)"
+    },
+    "restaurant_name": {
+      "type": "string",
+      "description": "Restaurant name for display"
+    },
+    "snapshot": {
+      "type": "object",
+      "description": "Full snapshot: { restaurants, menuItems, promotions, coupons, mealDeals }",
+      "additionalProperties": true
+    },
+    "item_counts": {
+      "type": "object",
+      "description": "Summary counts per entity type",
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "label",
+    "snapshot"
+  ]
+}

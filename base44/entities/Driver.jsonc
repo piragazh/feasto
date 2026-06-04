@@ -1,0 +1,83 @@
+{
+  "name": "Driver",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Driver's email address (linked to their user account)"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "restaurant_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of restaurants this driver works for"
+    },
+    "payment_config": {
+      "type": "object",
+      "description": "Payment configuration per restaurant with all three rates",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "hourly_rate": {
+            "type": "number"
+          },
+          "per_mile_rate": {
+            "type": "number"
+          },
+          "per_delivery_fee": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "vehicle_type": {
+      "type": "string",
+      "enum": [
+        "bike",
+        "scooter",
+        "car"
+      ],
+      "default": "bike"
+    },
+    "current_location": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        }
+      }
+    },
+    "is_available": {
+      "type": "boolean",
+      "default": true
+    },
+    "current_order_id": {
+      "type": "string",
+      "description": "ID of order currently being delivered"
+    },
+    "total_deliveries": {
+      "type": "number",
+      "default": 0
+    },
+    "rating": {
+      "type": "number",
+      "default": 5.0
+    }
+  },
+  "required": [
+    "email",
+    "full_name",
+    "phone",
+    "restaurant_ids"
+  ]
+}

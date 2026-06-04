@@ -1,0 +1,22 @@
+{
+  "name": "SystemSettings",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "description": "Unique setting identifier"
+    },
+    "setting_value": {
+      "type": "string",
+      "description": "Setting value"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this setting controls"
+    }
+  },
+  "required": [
+    "setting_key",
+    "setting_value"
+  ]
+}

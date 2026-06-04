@@ -1,0 +1,26 @@
+{
+  "name": "CuisineType",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the cuisine type (e.g., Pizza, Burgers)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icon emoji or image URL"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this cuisine type is active"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

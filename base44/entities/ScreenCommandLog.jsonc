@@ -1,0 +1,56 @@
+{
+  "name": "ScreenCommandLog",
+  "type": "object",
+  "properties": {
+    "screen_id": {
+      "type": "string",
+      "description": "Screen that received the command"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant the screen belongs to"
+    },
+    "screen_name": {
+      "type": "string",
+      "description": "Name of the screen for quick reference"
+    },
+    "command": {
+      "type": "string",
+      "description": "Command sent (reboot, refresh_content, clear_cache, etc.)"
+    },
+    "command_params": {
+      "type": "object",
+      "description": "Additional parameters for the command"
+    },
+    "issued_by": {
+      "type": "string",
+      "description": "Email of admin who issued the command"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "executed",
+        "failed",
+        "timeout"
+      ],
+      "default": "pending",
+      "description": "Execution status of the command"
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the command was executed by the screen"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error message if command failed"
+    }
+  },
+  "required": [
+    "screen_id",
+    "restaurant_id",
+    "command",
+    "issued_by"
+  ]
+}

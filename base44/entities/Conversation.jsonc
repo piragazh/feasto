@@ -1,0 +1,47 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Email addresses of conversation participants"
+    },
+    "participant_types": {
+      "type": "object",
+      "description": "Map of email to type (customer, restaurant, driver)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related order ID if this is an order conversation"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant ID if involved in conversation"
+    },
+    "last_message": {
+      "type": "string",
+      "description": "Preview of last message"
+    },
+    "last_message_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time of last message"
+    },
+    "unread_count": {
+      "type": "object",
+      "description": "Unread message count per participant",
+      "additionalProperties": {
+        "type": "number"
+      }
+    }
+  },
+  "required": [
+    "participants"
+  ]
+}

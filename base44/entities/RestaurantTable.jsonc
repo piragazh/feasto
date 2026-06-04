@@ -1,0 +1,86 @@
+{
+  "name": "RestaurantTable",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant this table belongs to"
+    },
+    "table_number": {
+      "type": "string",
+      "description": "Human-readable table number (e.g., Table 1, Window Seat)"
+    },
+    "capacity": {
+      "type": "number",
+      "description": "Number of seats at this table",
+      "minimum": 1
+    },
+    "location": {
+      "type": "string",
+      "description": "Table location in restaurant (e.g., Window, Corner, Bar)"
+    },
+    "shape": {
+      "type": "string",
+      "enum": [
+        "square",
+        "round",
+        "rect"
+      ],
+      "default": "square",
+      "description": "Visual shape of the table in floor plan"
+    },
+    "position": {
+      "type": "object",
+      "description": "Table position on floor plan (x, y coordinates)",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "occupied",
+        "reserved",
+        "needs_cleaning",
+        "maintenance"
+      ],
+      "default": "available",
+      "description": "Current status of the table"
+    },
+    "current_order_id": {
+      "type": "string",
+      "description": "Current order at this table if occupied"
+    },
+    "assigned_server": {
+      "type": "string",
+      "description": "Name of server assigned to this table"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Staff notes or special requests for this table"
+    },
+    "merged_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of other tables merged with this one"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this table is active/in use"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "table_number",
+    "capacity"
+  ]
+}

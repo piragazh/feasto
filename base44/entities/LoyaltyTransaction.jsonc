@@ -1,0 +1,58 @@
+{
+  "name": "LoyaltyTransaction",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User's email"
+    },
+    "transaction_type": {
+      "type": "string",
+      "enum": [
+        "earned",
+        "redeemed",
+        "expired"
+      ],
+      "description": "Type of transaction"
+    },
+    "points": {
+      "type": "number",
+      "description": "Points amount (positive for earned, negative for redeemed)"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related order ID"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant involved"
+    },
+    "restaurant_name": {
+      "type": "string",
+      "description": "Restaurant name"
+    },
+    "reward_id": {
+      "type": "string",
+      "description": "Reward ID if redeemed"
+    },
+    "description": {
+      "type": "string",
+      "description": "Transaction description"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When these points expire (1 year from earned date)"
+    },
+    "is_expired": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether these points have expired"
+    }
+  },
+  "required": [
+    "user_email",
+    "transaction_type",
+    "points"
+  ]
+}

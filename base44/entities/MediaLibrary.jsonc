@@ -1,0 +1,91 @@
+{
+  "name": "MediaLibrary",
+  "type": "object",
+  "properties": {
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded file"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original filename"
+    },
+    "file_type": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video",
+        "document",
+        "other"
+      ],
+      "description": "Type of media file"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "File size in bytes"
+    },
+    "mime_type": {
+      "type": "string",
+      "description": "MIME type of the file"
+    },
+    "title": {
+      "type": "string",
+      "description": "Custom title for the media"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description or notes about the media"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for categorization and search"
+    },
+    "category": {
+      "type": "string",
+      "description": "Category of the media (e.g., Product Photos, Marketing, Menus)"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Associated restaurant (optional)"
+    },
+    "width": {
+      "type": "number",
+      "description": "Image/video width in pixels"
+    },
+    "height": {
+      "type": "number",
+      "description": "Image/video height in pixels"
+    },
+    "duration": {
+      "type": "number",
+      "description": "Video duration in seconds"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Thumbnail preview URL"
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the file is publicly accessible"
+    },
+    "usage_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times this media has been used"
+    },
+    "last_used_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the media was last used"
+    }
+  },
+  "required": [
+    "file_url",
+    "file_name",
+    "file_type"
+  ]
+}

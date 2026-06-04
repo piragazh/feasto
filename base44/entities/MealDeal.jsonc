@@ -1,0 +1,75 @@
+{
+  "name": "MealDeal",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the meal deal"
+    },
+    "description": {
+      "type": "string"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "original_price": {
+      "type": "number",
+      "description": "Total price of items individually"
+    },
+    "deal_price": {
+      "type": "number",
+      "description": "Discounted combo price"
+    },
+    "items": {
+      "type": "array",
+      "description": "Specific menu items included in the deal",
+      "items": {
+        "type": "object",
+        "properties": {
+          "menu_item_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "category_rules": {
+      "type": "array",
+      "description": "Category-based selection rules - customers choose items from these categories",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Menu category (e.g., Pizza, Burger, Sides, Drinks)"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Number of items customer can choose from this category"
+          },
+          "label": {
+            "type": "string",
+            "description": "Display label (e.g., 'Choose 2 Pizzas', 'Choose 1 Side')"
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "deal_price"
+  ]
+}

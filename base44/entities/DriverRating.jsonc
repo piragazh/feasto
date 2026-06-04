@@ -1,0 +1,34 @@
+{
+  "name": "DriverRating",
+  "type": "object",
+  "properties": {
+    "driver_id": {
+      "type": "string"
+    },
+    "order_id": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "feedback": {
+      "type": "string"
+    },
+    "rated_by": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "restaurant"
+      ],
+      "description": "Who provided the rating"
+    }
+  },
+  "required": [
+    "driver_id",
+    "order_id",
+    "rating",
+    "rated_by"
+  ]
+}
