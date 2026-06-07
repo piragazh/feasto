@@ -1,5 +1,5 @@
 import React from 'react';
-import RestaurantCard from './RestaurantCard';
+import RestaurantCardWrapper from './RestaurantCardWrapper';
 import { Star } from 'lucide-react';
 
 export default function FeaturedRestaurants({ restaurants }) {
@@ -24,7 +24,7 @@ export default function FeaturedRestaurants({ restaurants }) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {featured.map((restaurant) => (
-                    <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                    <RestaurantCardWrapper key={restaurant.id} restaurant={restaurant} distance={restaurant.distance ?? null} />
                 ))}
             </div>
         </div>

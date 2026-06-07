@@ -131,16 +131,16 @@ export default function RestaurantCardDark({ restaurant, distance, showFavoriteB
                             </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1">
+                            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                                 <Clock className="h-3.5 w-3.5 text-blue-300" />
                                 <span className="text-white text-xs font-medium">{restaurant.delivery_time || '25-35 min'}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1">
+                            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                                 <Bike className="h-3.5 w-3.5 text-green-300" />
                                 <span className="text-white text-xs font-semibold">{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free delivery'}</span>
                             </div>
                             {distance != null && (
-                                <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1">
+                                <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                                     <MapPin className="h-3.5 w-3.5 text-orange-300" />
                                     <span className="text-white text-xs font-medium">{distance.toFixed(1)} mi</span>
                                 </div>
