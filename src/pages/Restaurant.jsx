@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Star, Clock, Bike, ArrowLeft, ShoppingBag, MapPin, Info, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import MenuItemCard from '@/components/restaurant/MenuItemCard';
+import MenuLayoutWrapper from '@/components/restaurant/MenuLayoutWrapper';
 import ItemCustomizationModal from '@/components/restaurant/ItemCustomizationModal';
 import CartDrawer from '@/components/cart/CartDrawer';
 import { motion } from 'framer-motion';
@@ -1321,16 +1321,12 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                  <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
                                      {matchingKey}
                                  </h3>
-                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                     {categoryItems.map(item => (
-                                         <MenuItemCard 
-                                             key={item.id} 
-                                             item={item} 
-                                             promotion={getActivePromotionForItem(item.id)}
-                                             onAddToCart={handleItemClick} 
-                                         />
-                                     ))}
-                                 </div>
+                                 <MenuLayoutWrapper
+                                     items={categoryItems}
+                                     layout={restaurant?.menu_layout || 'list'}
+                                     getPromotion={getActivePromotionForItem}
+                                     onAddToCart={handleItemClick}
+                                 />
                              </div>
                          );
                          })}

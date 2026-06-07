@@ -121,6 +121,16 @@
       "default": "standard",
       "description": "How this restaurant's card appears on the home screen listing"
     },
+    "menu_layout": {
+      "type": "string",
+      "enum": [
+        "list",
+        "grid",
+        "compact"
+      ],
+      "default": "list",
+      "description": "How menu items are displayed on the restaurant page (list, grid, compact)"
+    },
     "cuisine_type": {
       "type": "string"
     },

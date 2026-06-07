@@ -28,6 +28,7 @@ export default function ProfileManagement({ restaurantId }) {
         our_story: '',
         is_halal: false,
         card_style: 'standard',
+        menu_layout: 'list',
         gallery_images: [],
         social_media: {
             facebook: '',
@@ -54,6 +55,7 @@ export default function ProfileManagement({ restaurantId }) {
                 our_story: restaurant.our_story || '',
                 is_halal: restaurant.is_halal || false,
                 card_style: restaurant.card_style || 'standard',
+                menu_layout: restaurant.menu_layout || 'list',
                 gallery_images: restaurant.gallery_images || [],
                 social_media: restaurant.social_media || {
                     facebook: '',
@@ -138,6 +140,7 @@ export default function ProfileManagement({ restaurantId }) {
             our_story: formData.our_story,
             is_halal: formData.is_halal,
             card_style: formData.card_style,
+            menu_layout: formData.menu_layout,
             gallery_images: formData.gallery_images,
             social_media: formData.social_media,
             awards_certifications: formData.awards_certifications
@@ -221,6 +224,44 @@ export default function ProfileManagement({ restaurantId }) {
                                 <div className="text-xs text-gray-500 mt-0.5">{style.desc}</div>
                                 {formData.card_style === style.value && (
                                     <div className="mt-2 text-xs text-orange-600 font-medium">✓ Selected</div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Menu Layout */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5 text-blue-500" />
+                        Menu Item Layout
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">Choose how menu items are displayed on your restaurant page.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[
+                            { value: 'list', label: 'List', desc: 'Classic card with image and details side by side', preview: '📋' },
+                            { value: 'grid', label: 'Grid', desc: 'Square image tiles in a multi-column grid', preview: '⊞' },
+                            { value: 'compact', label: 'Compact', desc: 'Dense single-line rows for quick scanning', preview: '☰' }
+                        ].map(opt => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, menu_layout: opt.value }))}
+                                className={`text-left p-4 rounded-xl border-2 transition-all ${
+                                    formData.menu_layout === opt.value
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                            >
+                                <div className="text-2xl mb-2">{opt.preview}</div>
+                                <div className="font-semibold text-gray-900 text-sm">{opt.label}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">{opt.desc}</div>
+                                {formData.menu_layout === opt.value && (
+                                    <div className="mt-2 text-xs text-blue-600 font-medium">✓ Selected</div>
                                 )}
                             </button>
                         ))}
