@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Save, Upload, Plus, Trash2, Award, BookOpen, Share2, Image as ImageIcon } from 'lucide-react';
+import { Save, Upload, Plus, Trash2, Award, BookOpen, Share2, Image as ImageIcon, LayoutGrid } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { toast } from 'sonner';
 
@@ -27,6 +27,7 @@ export default function ProfileManagement({ restaurantId }) {
         about_us: '',
         our_story: '',
         is_halal: false,
+        card_style: 'standard',
         gallery_images: [],
         social_media: {
             facebook: '',
@@ -52,6 +53,7 @@ export default function ProfileManagement({ restaurantId }) {
                 about_us: restaurant.about_us || '',
                 our_story: restaurant.our_story || '',
                 is_halal: restaurant.is_halal || false,
+                card_style: restaurant.card_style || 'standard',
                 gallery_images: restaurant.gallery_images || [],
                 social_media: restaurant.social_media || {
                     facebook: '',
@@ -135,6 +137,7 @@ export default function ProfileManagement({ restaurantId }) {
             about_us: formData.about_us,
             our_story: formData.our_story,
             is_halal: formData.is_halal,
+            card_style: formData.card_style,
             gallery_images: formData.gallery_images,
             social_media: formData.social_media,
             awards_certifications: formData.awards_certifications
@@ -169,6 +172,59 @@ export default function ProfileManagement({ restaurantId }) {
                             <p className="text-xs text-green-600">This badge will appear on your restaurant page</p>
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            {/* Card Style */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5 text-purple-500" />
+                        Home Screen Card Style
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">Choose how your restaurant appears in the customer home screen listing.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[
+                            {
+                                value: 'standard',
+                                label: 'Standard',
+                                desc: 'Classic card with image on top and details below',
+                                preview: '🖼️ + 📝'
+                            },
+                            {
+                                value: 'horizontal',
+                                label: 'Horizontal',
+                                desc: 'Compact side-by-side image and info layout',
+                                preview: '🖼️ ↔️ 📝'
+                            },
+                            {
+                                value: 'dark_minimal',
+                                label: 'Dark Immersive',
+                                desc: 'Full-image card with text overlaid on dark gradient',
+                                preview: '🌃'
+                            }
+                        ].map(style => (
+                            <button
+                                key={style.value}
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, card_style: style.value }))}
+                                className={`text-left p-4 rounded-xl border-2 transition-all ${
+                                    formData.card_style === style.value
+                                        ? 'border-orange-500 bg-orange-50'
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                            >
+                                <div className="text-2xl mb-2">{style.preview}</div>
+                                <div className="font-semibold text-gray-900 text-sm">{style.label}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">{style.desc}</div>
+                                {formData.card_style === style.value && (
+                                    <div className="mt-2 text-xs text-orange-600 font-medium">✓ Selected</div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
                 </CardContent>
             </Card>
 

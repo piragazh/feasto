@@ -10,7 +10,7 @@ import HeroSection from '@/components/home/HeroSection';
 import CuisineFilter from '@/components/home/CuisineFilter';
 import PersonalizedRecommendations from '@/components/home/PersonalizedRecommendations';
 import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
-import RestaurantCard from '@/components/home/RestaurantCard';
+import RestaurantCardWrapper from '@/components/home/RestaurantCardWrapper';
 import EnhancedSearchBar from '@/components/home/EnhancedSearchBar';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
@@ -179,7 +179,7 @@ export default function Home() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {filteredRestaurants.map((restaurant) => (
-                            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                            <RestaurantCardWrapper key={restaurant.id} restaurant={restaurant} distance={restaurant.distance} />
                         ))}
                     </div>
                 )}

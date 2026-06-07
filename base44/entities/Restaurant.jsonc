@@ -111,6 +111,16 @@
         }
       }
     },
+    "card_style": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "horizontal",
+        "dark_minimal"
+      ],
+      "default": "standard",
+      "description": "How this restaurant's card appears on the home screen listing"
+    },
     "cuisine_type": {
       "type": "string"
     },
