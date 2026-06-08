@@ -110,10 +110,12 @@ export default function BrandingManager({ restaurantId }) {
 
     const saveMutation = useMutation({
         mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
-            toast.success(config.enabled ? 'Brand settings saved and live!' : 'Brand settings saved (branding is off — enable to go live).');
+            // Read enabled from the saved data, not from stale closure state
+            const savedEnabled = variables?.branding_config?.enabled === true;
+            toast.success(savedEnabled ? 'Brand settings saved and live!' : 'Brand settings saved (branding is off — enable to go live).');
         },
         onError: (err) => toast.error('Failed to save brand settings: ' + (err?.message || 'unknown error'))
     });

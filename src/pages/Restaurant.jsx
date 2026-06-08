@@ -967,15 +967,16 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         >
             {(() => {
                 const bc = restaurant?.branding_config;
-                const primary = (bc?.enabled && bc?.primary_color) ? bc.primary_color : (restaurant?.theme_primary_color || '#f97316');
-                const btnTextColor = (bc?.enabled && bc?.button_text_color) ? bc.button_text_color : '#ffffff';
-                const btnRadius = bc?.enabled
+                const isBrandingOn = bc?.enabled === true;
+                const primary = (isBrandingOn && bc?.primary_color) ? bc.primary_color : (restaurant?.theme_primary_color || '#f97316');
+                const btnTextColor = (isBrandingOn && bc?.button_text_color) ? bc.button_text_color : '#ffffff';
+                const btnRadius = isBrandingOn
                     ? ({ rounded: '8px', pill: '9999px', sharp: '2px' }[bc?.button_style] || '8px')
                     : '12px';
-                const heroOpacity = (bc?.enabled && bc?.hero_overlay_opacity != null) ? bc.hero_overlay_opacity : 0.55;
+                const heroOpacity = (isBrandingOn && bc?.hero_overlay_opacity != null) ? bc.hero_overlay_opacity : 0.55;
 
                 // Inject font link for the chosen font style (safe side-effect: only runs once per font)
-                if (bc?.enabled && bc?.font_style && bc.font_style !== 'modern') {
+                if (isBrandingOn && bc?.font_style && bc.font_style !== 'modern') {
                     const fontMap = {
                         classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
                         playful: 'Nunito:wght@400;600;700;800',
@@ -997,7 +998,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     playful: '"Nunito", sans-serif',
                     elegant: '"Cormorant Garamond", serif'
                 };
-                const fontFamily = (bc?.enabled && bc?.font_style) ? (fontFamilyMap[bc.font_style] || 'inherit') : 'inherit';
+                const fontFamily = (isBrandingOn && bc?.font_style) ? (fontFamilyMap[bc.font_style] || 'inherit') : 'inherit';
 
                 return (
                     <style>{`
@@ -1027,7 +1028,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                         .restaurant-page .hover\\:text-orange-600:hover {
                             color: ${primary} !important;
                         }
-                        ${bc?.enabled ? `
+                        ${isBrandingOn ? `
                         .restaurant-page .btn-primary-custom {
                             background-color: ${primary};
                             color: ${btnTextColor};
@@ -1053,7 +1054,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     style={{ objectPosition: 'center 30%' }}
                 />
                 {/* Gradient — uses custom class when branding enabled */}
-                <div className={`absolute inset-0 ${restaurant?.branding_config?.enabled ? 'hero-overlay-custom' : 'bg-gradient-to-t from-black/85 via-black/40 to-black/10'}`} />
+                <div className={`absolute inset-0 ${restaurant?.branding_config?.enabled === true ? 'hero-overlay-custom' : 'bg-gradient-to-t from-black/85 via-black/40 to-black/10'}`} />
 
                 {/* Top action buttons */}
                 <div className="absolute top-4 left-4 md:left-8 flex gap-2 z-10">
