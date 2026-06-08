@@ -131,6 +131,74 @@
       "default": "list",
       "description": "How menu items are displayed on the restaurant page (list, grid, compact)"
     },
+    "branding_config": {
+      "type": "object",
+      "description": "Extended brand customisation settings. Only applied when enabled=true.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When false, restaurant uses default platform styles"
+        },
+        "primary_color": {
+          "type": "string",
+          "description": "Primary brand color hex"
+        },
+        "secondary_color": {
+          "type": "string",
+          "description": "Secondary / accent color hex"
+        },
+        "background_color": {
+          "type": "string",
+          "description": "Page background color hex"
+        },
+        "button_style": {
+          "type": "string",
+          "enum": [
+            "rounded",
+            "pill",
+            "sharp"
+          ],
+          "default": "rounded",
+          "description": "Button corner style"
+        },
+        "button_text_color": {
+          "type": "string",
+          "description": "Text color on primary buttons",
+          "default": "#ffffff"
+        },
+        "font_style": {
+          "type": "string",
+          "enum": [
+            "modern",
+            "classic",
+            "playful",
+            "elegant"
+          ],
+          "default": "modern",
+          "description": "Font personality applied via Google Fonts"
+        },
+        "hero_overlay_opacity": {
+          "type": "number",
+          "default": 0.5,
+          "description": "Hero image gradient opacity 0-1"
+        },
+        "card_background": {
+          "type": "string",
+          "description": "Menu item card background color",
+          "default": "#ffffff"
+        },
+        "nav_background": {
+          "type": "string",
+          "description": "Category nav / header background color",
+          "default": "#ffffff"
+        },
+        "ai_palette_name": {
+          "type": "string",
+          "description": "Name of the AI-suggested palette last applied"
+        }
+      }
+    },
     "cuisine_type": {
       "type": "string"
     },

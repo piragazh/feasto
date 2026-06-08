@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell, ShieldOff } from 'lucide-react';
+import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell, ShieldOff, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 import InfoSectionSettings from './InfoSectionSettings';
@@ -15,6 +15,7 @@ import CentralizedPrinterSettings from './CentralizedPrinterSettings';
 import SmsNotificationSettings from './SmsNotificationSettings';
 import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
 import TemporaryClosureSettings from './TemporaryClosureSettings';
+import BrandingManager from './BrandingManager';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -385,6 +386,17 @@ export default function RestaurantSettings({ restaurantId }) {
                     Notifications
                 </Button>
                 <Button
+                    variant={activeSection === 'branding' ? 'default' : 'outline'}
+                    onClick={() => setActiveSection('branding')}
+                    className={activeSection === 'branding' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
+                >
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Brand Studio
+                    {restaurant?.branding_config?.enabled && (
+                        <span className="ml-2 bg-purple-500 text-white text-xs rounded-full px-1.5 py-0.5">ON</span>
+                    )}
+                </Button>
+                <Button
                     variant={activeSection === 'closure' ? 'default' : 'outline'}
                     onClick={() => setActiveSection('closure')}
                     className={restaurant?.temporary_closure?.enabled ? 'border-red-400 text-red-600' : ''}
@@ -396,6 +408,10 @@ export default function RestaurantSettings({ restaurantId }) {
                     )}
                 </Button>
             </div>
+
+            {activeSection === 'branding' && (
+                <BrandingManager restaurantId={restaurantId} />
+            )}
 
             {activeSection === 'closure' && (
                 <TemporaryClosureSettings restaurantId={restaurantId} />

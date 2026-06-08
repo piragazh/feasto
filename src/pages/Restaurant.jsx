@@ -958,35 +958,91 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
-            {restaurant?.theme_primary_color && (
-                <style>{`
-                    :root {
-                        --primary: ${restaurant.theme_primary_color};
+        <div
+            className="restaurant-page min-h-screen pb-32 md:pb-8"
+            style={restaurant?.branding_config?.enabled && restaurant?.branding_config?.background_color
+                ? { backgroundColor: restaurant.branding_config.background_color }
+                : { backgroundColor: '#f9fafb' }
+            }
+        >
+            {(() => {
+                const bc = restaurant?.branding_config;
+                const primary = (bc?.enabled && bc?.primary_color) ? bc.primary_color : (restaurant?.theme_primary_color || '#f97316');
+                const btnTextColor = (bc?.enabled && bc?.button_text_color) ? bc.button_text_color : '#ffffff';
+                const btnRadius = bc?.enabled
+                    ? ({ rounded: '8px', pill: '9999px', sharp: '2px' }[bc?.button_style] || '8px')
+                    : '12px';
+                const heroOpacity = (bc?.enabled && bc?.hero_overlay_opacity != null) ? bc.hero_overlay_opacity : 0.55;
+
+                // Inject font link for the chosen font style
+                if (bc?.enabled && bc?.font_style) {
+                    const fontMap = {
+                        modern: 'Inter:wght@400;600;700;800',
+                        classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
+                        playful: 'Nunito:wght@400;600;700;800',
+                        elegant: 'Cormorant+Garamond:wght@400;600;700&family=Raleway:wght@400;500;600'
+                    };
+                    const fontQuery = fontMap[bc.font_style];
+                    if (fontQuery && !document.getElementById(`font-${bc.font_style}`)) {
+                        const link = document.createElement('link');
+                        link.id = `font-${bc.font_style}`;
+                        link.rel = 'stylesheet';
+                        link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}&display=swap`;
+                        document.head.appendChild(link);
                     }
-                    .bg-orange-500 {
-                        background-color: ${restaurant.theme_primary_color} !important;
-                    }
-                    .text-orange-500 {
-                        color: ${restaurant.theme_primary_color} !important;
-                    }
-                    .border-orange-300 {
-                        border-color: ${restaurant.theme_primary_color}60 !important;
-                    }
-                    .bg-orange-50 {
-                        background-color: ${restaurant.theme_primary_color}10 !important;
-                    }
-                    .hover\\:bg-orange-100:hover {
-                        background-color: ${restaurant.theme_primary_color}20 !important;
-                    }
-                    .hover\\:bg-orange-600:hover {
-                        background-color: ${restaurant.theme_primary_color}dd !important;
-                    }
-                    .hover\\:text-orange-600:hover {
-                        color: ${restaurant.theme_primary_color} !important;
-                    }
-                `}</style>
-            )}
+                }
+
+                const fontFamilyMap = {
+                    modern: 'Inter, system-ui, sans-serif',
+                    classic: '"Playfair Display", Georgia, serif',
+                    playful: '"Nunito", sans-serif',
+                    elegant: '"Cormorant Garamond", serif'
+                };
+                const fontFamily = (bc?.enabled && bc?.font_style) ? (fontFamilyMap[bc.font_style] || 'inherit') : 'inherit';
+
+                return (
+                    <style>{`
+                        .restaurant-page {
+                            font-family: ${fontFamily};
+                        }
+                        .restaurant-page .bg-orange-500,
+                        .restaurant-page [class*="bg-orange-500"] {
+                            background-color: ${primary} !important;
+                        }
+                        .restaurant-page .text-orange-500,
+                        .restaurant-page [class*="text-orange-500"] {
+                            color: ${primary} !important;
+                        }
+                        .restaurant-page .border-orange-300 {
+                            border-color: ${primary}60 !important;
+                        }
+                        .restaurant-page .bg-orange-50 {
+                            background-color: ${primary}10 !important;
+                        }
+                        .restaurant-page .hover\\:bg-orange-100:hover {
+                            background-color: ${primary}20 !important;
+                        }
+                        .restaurant-page .hover\\:bg-orange-600:hover {
+                            background-color: ${primary}dd !important;
+                        }
+                        .restaurant-page .hover\\:text-orange-600:hover {
+                            color: ${primary} !important;
+                        }
+                        ${bc?.enabled ? `
+                        .restaurant-page .btn-primary-custom {
+                            background-color: ${primary};
+                            color: ${btnTextColor};
+                            border-radius: ${btnRadius};
+                        }
+                        .restaurant-page .hero-overlay-custom {
+                            background: linear-gradient(to top, rgba(0,0,0,${heroOpacity}), rgba(0,0,0,${heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
+                        }
+                        ${bc?.nav_background ? `.restaurant-page .bg-white.border-b { background-color: ${bc.nav_background} !important; }` : ''}
+                        ${bc?.card_background ? `.restaurant-page .bg-white.shadow-md, .restaurant-page .bg-white.border.border-gray-200 { background-color: ${bc.card_background} !important; }` : ''}
+                        ` : ''}
+                    `}</style>
+                );
+            })()}
             {/* Hero */}
             <div className="relative h-56 sm:h-72 md:h-80 -mx-4 md:mx-0">
                 <img
@@ -997,8 +1053,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     fetchpriority="high"
                     style={{ objectPosition: 'center 30%' }}
                 />
-                {/* Stronger gradient on mobile for readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+                {/* Gradient — uses custom class when branding enabled */}
+                <div className={`absolute inset-0 ${restaurant?.branding_config?.enabled ? 'hero-overlay-custom' : 'bg-gradient-to-t from-black/85 via-black/40 to-black/10'}`} />
 
                 {/* Top action buttons */}
                 <div className="absolute top-4 left-4 md:left-8 flex gap-2 z-10">
