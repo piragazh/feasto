@@ -392,7 +392,7 @@ export default function RestaurantSettings({ restaurantId }) {
                 >
                     <Wand2 className="h-4 w-4 mr-2" />
                     Brand Studio
-                    {restaurant?.branding_config?.enabled && (
+                    {restaurant?.branding_config?.enabled === true && (
                         <span className="ml-2 bg-purple-500 text-white text-xs rounded-full px-1.5 py-0.5">ON</span>
                     )}
                 </Button>

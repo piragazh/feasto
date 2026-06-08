@@ -960,7 +960,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     return (
         <div
             className="restaurant-page min-h-screen pb-32 md:pb-8"
-            style={restaurant?.branding_config?.enabled && restaurant?.branding_config?.background_color
+            style={restaurant?.branding_config?.enabled === true && restaurant?.branding_config?.background_color
                 ? { backgroundColor: restaurant.branding_config.background_color }
                 : { backgroundColor: '#f9fafb' }
             }

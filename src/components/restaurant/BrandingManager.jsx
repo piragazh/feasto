@@ -93,20 +93,19 @@ export default function BrandingManager({ restaurantId }) {
     });
 
     // Sync local state from DB when restaurant loads
+    // Use restaurant.id as dependency key so re-mounting for a different restaurant resets properly
     useEffect(() => {
-        if (restaurant) {
-            const bc = restaurant.branding_config;
-            if (bc && typeof bc === 'object') {
-                setConfig({ ...DEFAULT_CONFIG, ...bc });
-            } else {
-                // Pre-fill primary_color from existing theme_primary_color
-                setConfig(prev => ({
-                    ...DEFAULT_CONFIG,
-                    primary_color: restaurant.theme_primary_color || DEFAULT_CONFIG.primary_color
-                }));
-            }
+        if (!restaurant) return;
+        const bc = restaurant.branding_config;
+        if (bc && typeof bc === 'object' && !Array.isArray(bc)) {
+            setConfig({ ...DEFAULT_CONFIG, ...bc });
+        } else {
+            setConfig({
+                ...DEFAULT_CONFIG,
+                primary_color: restaurant.theme_primary_color || DEFAULT_CONFIG.primary_color
+            });
         }
-    }, [restaurant]);
+    }, [restaurant?.id]);
 
     const saveMutation = useMutation({
         mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
@@ -121,10 +120,14 @@ export default function BrandingManager({ restaurantId }) {
     });
 
     const handleSave = () => {
-        // Always keep theme_primary_color in sync with branding primary color
+        if (saveMutation.isPending) return;
+        // Validate primary_color is a valid hex before saving
+        const isValidHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h);
+        const safePrimary = isValidHex(config.primary_color) ? config.primary_color : DEFAULT_CONFIG.primary_color;
+        const safeConfig = { ...config, primary_color: safePrimary };
         saveMutation.mutate({
-            branding_config: config,
-            theme_primary_color: config.primary_color
+            branding_config: safeConfig,
+            theme_primary_color: safePrimary
         });
     };
 
@@ -150,8 +153,9 @@ export default function BrandingManager({ restaurantId }) {
 
     // ── AI brand analysis ─────────────────────────────────────────────────────
     const analyzeBranding = async () => {
-        if (!restaurant) return;
+        if (!restaurant || analyzingBrand) return;
         setAnalyzingBrand(true);
+        setAiSuggestions(null);
         try {
             const result = await base44.integrations.Core.InvokeLLM({
                 prompt: `You are a professional restaurant branding consultant. Analyze this restaurant and suggest 4 distinct brand palette options, each suited to different personalities.
@@ -572,7 +576,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
 
                                     {aiSuggestions.palettes?.map((palette, idx) => {
                                         // Validate hex values from AI before rendering
-                                        const isValidHex = (h) => /^#[0-9a-fA-F]{3,6}$/.test(h);
+                                        const isValidHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h);
                                         const primary = isValidHex(palette.primary) ? palette.primary : '#f97316';
                                         const secondary = isValidHex(palette.secondary) ? palette.secondary : '#fed7aa';
                                         const background = isValidHex(palette.background) ? palette.background : '#f9fafb';
