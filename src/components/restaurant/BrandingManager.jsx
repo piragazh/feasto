@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import DesignTemplates from './DesignTemplates';
 
 // ─── Font map: name → Google Fonts import + CSS font-family value ────────────
 const FONT_STYLES = {
@@ -131,6 +132,10 @@ export default function BrandingManager({ restaurantId }) {
         });
     };
 
+    const applyTemplate = (tpl) => {
+        setConfig(prev => ({ ...prev, ...tpl.config }));
+    };
+
     const applyPreset = (preset) => {
         setConfig(prev => ({
             ...prev,
@@ -251,6 +256,12 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                     )}
                 </CardContent>
             </Card>
+
+            {/* Design Templates */}
+            <DesignTemplates
+                currentTemplateName={config.ai_palette_name}
+                onApply={applyTemplate}
+            />
 
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* ── Left: Controls ── */}
