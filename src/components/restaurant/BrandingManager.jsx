@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, EyeOff, RotateCcw, Zap } from 'lucide-react';
+import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ─── Font map: name → Google Fonts import + CSS font-family value ────────────
@@ -81,7 +81,6 @@ export default function BrandingManager({ restaurantId }) {
     const [config, setConfig] = useState(DEFAULT_CONFIG);
     const [analyzingBrand, setAnalyzingBrand] = useState(false);
     const [aiSuggestions, setAiSuggestions] = useState(null);
-    const [previewMode, setPreviewMode] = useState(false);
     const queryClient = useQueryClient();
 
     const { data: restaurant, isLoading } = useQuery({
@@ -114,9 +113,9 @@ export default function BrandingManager({ restaurantId }) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
-            toast.success('Brand settings saved! Changes are now live.');
+            toast.success(config.enabled ? 'Brand settings saved and live!' : 'Brand settings saved (branding is off — enable to go live).');
         },
-        onError: () => toast.error('Failed to save brand settings')
+        onError: (err) => toast.error('Failed to save brand settings: ' + (err?.message || 'unknown error'))
     });
 
     const handleSave = () => {

@@ -974,10 +974,9 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     : '12px';
                 const heroOpacity = (bc?.enabled && bc?.hero_overlay_opacity != null) ? bc.hero_overlay_opacity : 0.55;
 
-                // Inject font link for the chosen font style
-                if (bc?.enabled && bc?.font_style) {
+                // Inject font link for the chosen font style (safe side-effect: only runs once per font)
+                if (bc?.enabled && bc?.font_style && bc.font_style !== 'modern') {
                     const fontMap = {
-                        modern: 'Inter:wght@400;600;700;800',
                         classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
                         playful: 'Nunito:wght@400;600;700;800',
                         elegant: 'Cormorant+Garamond:wght@400;600;700&family=Raleway:wght@400;500;600'
@@ -1037,8 +1036,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                         .restaurant-page .hero-overlay-custom {
                             background: linear-gradient(to top, rgba(0,0,0,${heroOpacity}), rgba(0,0,0,${heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
                         }
-                        ${bc?.nav_background ? `.restaurant-page .bg-white.border-b { background-color: ${bc.nav_background} !important; }` : ''}
-                        ${bc?.card_background ? `.restaurant-page .bg-white.shadow-md, .restaurant-page .bg-white.border.border-gray-200 { background-color: ${bc.card_background} !important; }` : ''}
+                        ${(bc?.nav_background && bc.nav_background !== '#ffffff') ? `.restaurant-page .nav-bar-custom { background-color: ${bc.nav_background} !important; }` : ''}
+                        ${(bc?.card_background && bc.card_background !== '#ffffff') ? `.restaurant-page .menu-card-custom { background-color: ${bc.card_background} !important; }` : ''}
                         ` : ''}
                     `}</style>
                 );
