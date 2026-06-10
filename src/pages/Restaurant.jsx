@@ -670,6 +670,25 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         }
     }, [restaurantId]);
 
+    // Inject Google Font for branding font style
+    useEffect(() => {
+        const bc = restaurant?.branding_config;
+        if (!bc?.enabled || !bc?.font_style || bc.font_style === 'modern') return;
+        const fontMap = {
+            classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
+            playful: 'Nunito:wght@400;600;700;800',
+            elegant: 'Cormorant+Garamond:wght@400;600;700&family=Raleway:wght@400;500;600'
+        };
+        const fontQuery = fontMap[bc.font_style];
+        if (fontQuery && !document.getElementById(`font-${bc.font_style}`)) {
+            const link = document.createElement('link');
+            link.id = `font-${bc.font_style}`;
+            link.rel = 'stylesheet';
+            link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}&display=swap`;
+            document.head.appendChild(link);
+        }
+    }, [restaurant?.branding_config?.font_style, restaurant?.branding_config?.enabled]);
+
     // SEO Meta Tags - must be before any conditional returns
     useEffect(() => {
         if (!restaurant) return;
@@ -977,23 +996,6 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 const headingColor = (isBrandingOn && bc?.heading_color) ? bc.heading_color : '#111827';
                 const addToCartColor = (isBrandingOn && bc?.add_to_cart_color) ? bc.add_to_cart_color : primary;
 
-                // Inject font link for the chosen font style (safe side-effect: only runs once per font)
-                if (isBrandingOn && bc?.font_style && bc.font_style !== 'modern') {
-                    const fontMap = {
-                        classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
-                        playful: 'Nunito:wght@400;600;700;800',
-                        elegant: 'Cormorant+Garamond:wght@400;600;700&family=Raleway:wght@400;500;600'
-                    };
-                    const fontQuery = fontMap[bc.font_style];
-                    if (fontQuery && !document.getElementById(`font-${bc.font_style}`)) {
-                        const link = document.createElement('link');
-                        link.id = `font-${bc.font_style}`;
-                        link.rel = 'stylesheet';
-                        link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}&display=swap`;
-                        document.head.appendChild(link);
-                    }
-                }
-
                 const fontFamilyMap = {
                     modern: 'Inter, system-ui, sans-serif',
                     classic: '"Playfair Display", Georgia, serif',
@@ -1037,6 +1039,19 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                             background-color: ${addToCartColor} !important;
                             color: ${btnTextColor} !important;
                         }
+                        .restaurant-page .add-to-cart-btn:hover {
+                            background-color: ${addToCartColor}dd !important;
+                            opacity: 0.9;
+                        }
+                        .restaurant-page .nav-bar-custom {
+                            background-color: ${isBrandingOn ? (bc?.nav_background || '#ffffff') : '#ffffff'} !important;
+                        }
+                        .restaurant-page .menu-card-custom {
+                            background-color: ${isBrandingOn ? (bc?.card_background || '#ffffff') : '#ffffff'} !important;
+                        }
+                        .restaurant-page .menu-card-compact:hover {
+                            background-color: ${isBrandingOn ? (bc?.card_background || '#ffffff') + 'cc' : '#f9fafb'} !important;
+                        }
                         ${isBrandingOn ? `
                         .restaurant-page .btn-primary-custom {
                             background-color: ${primary};
@@ -1046,8 +1061,6 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                         .restaurant-page .hero-overlay-custom {
                             background: linear-gradient(to top, rgba(0,0,0,${heroOpacity}), rgba(0,0,0,${heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
                         }
-                        .restaurant-page .nav-bar-custom { background-color: ${bc?.nav_background || '#ffffff'} !important; }
-                        .restaurant-page .menu-card-custom { background-color: ${bc?.card_background || '#ffffff'} !important; }
                         .restaurant-page .category-heading {
                             border-color: ${headingColor}30 !important;
                         }
@@ -1309,7 +1322,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 </div>
 
                 {categories.length > 0 && (
-                    <div className="bg-white border rounded-xl p-3 mb-6 sticky top-14 z-20 shadow-md">
+                    <div className="nav-bar-custom border rounded-xl p-3 mb-6 sticky top-14 z-20 shadow-md">
                         <div className="relative">
                             {showLeftArrow && (
                                 <button

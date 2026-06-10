@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Flame, Leaf, Gift } from 'lucide-react';
 
@@ -7,7 +6,7 @@ export default function MenuItemCardCompact({ item, promotion, onAddToCart }) {
     const isAvailable = item.is_available !== false;
 
     return (
-        <div className={`flex items-center justify-between gap-3 py-3 px-4 border-b last:border-b-0 transition-colors ${
+        <div className={`menu-card-compact flex items-center justify-between gap-3 py-3 px-4 border-b last:border-b-0 transition-colors ${
             isAvailable ? 'hover:bg-gray-50' : 'opacity-60 bg-gray-50'
         }`}>
             <div className="flex-1 min-w-0">
@@ -40,13 +39,13 @@ export default function MenuItemCardCompact({ item, promotion, onAddToCart }) {
             )}
 
             {isAvailable ? (
-                <Button
+                <button
+                    type="button"
                     onClick={() => { window.navigator?.vibrate?.([10]); onAddToCart(item); }}
-                    size="icon"
-                    className="add-to-cart-btn h-9 w-9 rounded-full shadow-md flex-shrink-0"
+                    className="add-to-cart-btn h-9 w-9 rounded-full shadow-md flex-shrink-0 flex items-center justify-center text-white font-bold"
                 >
                     <Plus className="h-4 w-4" />
-                </Button>
+                </button>
             ) : (
                 <Badge variant="outline" className="text-xs flex-shrink-0">Unavailable</Badge>
             )}

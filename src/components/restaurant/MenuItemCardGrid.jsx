@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Flame, Leaf, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -12,9 +11,9 @@ export default function MenuItemCardGrid({ item, promotion, onAddToCart }) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             whileHover={isAvailable ? { y: -3 } : {}}
-            className={`group rounded-2xl overflow-hidden transition-all duration-300 relative flex flex-col ${
+            className={`menu-card-custom group rounded-2xl overflow-hidden transition-all duration-300 relative flex flex-col ${
                 isAvailable
-                    ? 'bg-white shadow-md hover:shadow-xl'
+                    ? 'shadow-md hover:shadow-xl'
                     : 'bg-gray-50 border border-gray-200 opacity-60 grayscale'
             }`}
         >
@@ -45,13 +44,13 @@ export default function MenuItemCardGrid({ item, promotion, onAddToCart }) {
                     </div>
                 )}
                 {isAvailable && (
-                    <Button
+                    <button
+                        type="button"
                         onClick={() => { window.navigator?.vibrate?.([10]); onAddToCart(item); }}
-                        size="icon"
-                        className="add-to-cart-btn absolute bottom-2 right-2 h-10 w-10 rounded-full shadow-lg transition-all hover:scale-110"
+                        className="add-to-cart-btn absolute bottom-2 right-2 h-10 w-10 rounded-full shadow-lg transition-all hover:scale-110 flex items-center justify-center text-white font-bold"
                     >
                         <Plus className="h-5 w-5" />
-                    </Button>
+                    </button>
                 )}
             </div>
 

@@ -21,7 +21,7 @@ export default function MenuLayoutWrapper({ items, layout, getPromotion, onAddTo
 
     if (layout === 'compact') {
         return (
-            <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+            <div className="menu-card-custom rounded-2xl shadow-md overflow-hidden">
                 {items.map(item => (
                     <MenuItemCardCompact
                         key={item.id}

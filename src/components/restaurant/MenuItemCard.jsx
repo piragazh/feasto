@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Flame, Leaf, Gift, Settings2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -15,9 +14,9 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={isAvailable ? { y: -2, scale: 1.01 } : {}}
-            className={`group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative min-h-[180px] ${
+            className={`menu-card-custom group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative min-h-[180px] ${
                 isAvailable 
-                    ? 'bg-white shadow-md hover:shadow-2xl border-0' 
+                    ? 'shadow-md hover:shadow-2xl border-0' 
                     : 'bg-gray-50 border border-gray-200 opacity-70 grayscale'
             }`}
         >
@@ -97,24 +96,24 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
                             </div>
                         )}
                         {isAvailable && (
-                            <Button
+                            <button
+                               type="button"
                                onClick={() => { window.navigator?.vibrate?.([10]); onAddToCart(item); }}
-                               size="icon"
-                               className="add-to-cart-btn absolute -bottom-2 -right-2 h-12 w-12 rounded-full shadow-xl transition-all hover:scale-110"
+                               className="add-to-cart-btn absolute -bottom-2 -right-2 h-12 w-12 rounded-full shadow-xl transition-all hover:scale-110 flex items-center justify-center text-white font-bold"
                             >
                                 <Plus className="h-5 w-5" />
-                            </Button>
+                            </button>
                         )}
                     </div>
                 ) : (
                     isAvailable && (
-                        <Button
+                        <button
+                            type="button"
                             onClick={() => { window.navigator?.vibrate?.([10]); onAddToCart(item); }}
-                            size="icon"
-                            className="add-to-cart-btn h-12 w-12 rounded-full shadow-xl transition-all hover:scale-110"
+                            className="add-to-cart-btn h-12 w-12 rounded-full shadow-xl transition-all hover:scale-110 flex items-center justify-center text-white font-bold"
                         >
                             <Plus className="h-5 w-5" />
-                        </Button>
+                        </button>
                     )
                 )}
             </div>
