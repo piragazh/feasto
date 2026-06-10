@@ -1046,8 +1046,11 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                         .restaurant-page .hero-overlay-custom {
                             background: linear-gradient(to top, rgba(0,0,0,${heroOpacity}), rgba(0,0,0,${heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
                         }
-                        ${(bc?.nav_background && bc.nav_background !== '#ffffff') ? `.restaurant-page .nav-bar-custom { background-color: ${bc.nav_background} !important; }` : ''}
-                        ${(bc?.card_background && bc.card_background !== '#ffffff') ? `.restaurant-page .menu-card-custom { background-color: ${bc.card_background} !important; }` : ''}
+                        .restaurant-page .nav-bar-custom { background-color: ${bc?.nav_background || '#ffffff'} !important; }
+                        .restaurant-page .menu-card-custom { background-color: ${bc?.card_background || '#ffffff'} !important; }
+                        .restaurant-page .category-heading {
+                            border-color: ${headingColor}30 !important;
+                        }
                         ` : ''}
                     `}</style>
                 );

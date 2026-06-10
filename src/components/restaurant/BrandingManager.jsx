@@ -537,28 +537,33 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 </div>
 
                                 {/* Menu card sample */}
-                                <div className="p-3 space-y-2">
-                                    {['Grilled Chicken', 'Margherita Pizza'].map((item, i) => (
-                                        <div
-                                            key={item}
-                                            className="flex items-center justify-between p-2 rounded-lg border"
-                                            style={{ backgroundColor: config.card_background || '#ffffff' }}
-                                        >
-                                            <div>
-                                                <p className="text-xs font-semibold" style={{ fontFamily: fontHeading, color: config.heading_color || '#111827' }}>{item}</p>
-                                                <p className="text-xs text-gray-400">£{(8.99 + i * 2).toFixed(2)}</p>
-                                            </div>
-                                            <button
-                                                className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"
-                                                style={{
-                                                    backgroundColor: config.add_to_cart_color || config.primary_color || '#f97316',
-                                                    color: config.button_text_color || '#ffffff',
-                                                }}
+                                <div className="px-3 pt-2 pb-1">
+                                    <p className="text-xs font-bold uppercase tracking-wide border-b pb-1 mb-2" style={{ color: config.heading_color || '#111827', borderColor: (config.heading_color || '#111827') + '30', fontFamily: fontHeading }}>
+                                        Mains
+                                    </p>
+                                    <div className="space-y-2">
+                                        {['Grilled Chicken', 'Margherita Pizza'].map((item, i) => (
+                                            <div
+                                                key={item}
+                                                className="flex items-center justify-between p-2 rounded-lg border"
+                                                style={{ backgroundColor: config.card_background || '#ffffff' }}
                                             >
-                                                +
-                                            </button>
-                                        </div>
-                                    ))}
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-800" style={{ fontFamily: fontHeading }}>{item}</p>
+                                                    <p className="text-xs text-gray-400">£{(8.99 + i * 2).toFixed(2)}</p>
+                                                </div>
+                                                <button
+                                                    className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"
+                                                    style={{
+                                                        backgroundColor: config.add_to_cart_color || config.primary_color || '#f97316',
+                                                        color: config.button_text_color || '#ffffff',
+                                                    }}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {/* Cart bar */}
