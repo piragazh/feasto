@@ -14,7 +14,7 @@ export default function MenuItemCardGrid({ item, promotion, onAddToCart }) {
             className={`menu-card-custom group rounded-2xl overflow-hidden transition-all duration-300 relative flex flex-col ${
                 isAvailable
                     ? 'shadow-md hover:shadow-xl'
-                    : 'bg-gray-50 border border-gray-200 opacity-60 grayscale'
+                    : 'border border-gray-200 opacity-60 grayscale'
             }`}
         >
             {/* Image */}
