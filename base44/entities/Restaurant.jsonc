@@ -167,6 +167,16 @@
           "description": "Text color on primary buttons",
           "default": "#ffffff"
         },
+        "add_to_cart_color": {
+          "type": "string",
+          "description": "Color of the Add to Cart (+) button on menu item cards",
+          "default": "#f97316"
+        },
+        "heading_color": {
+          "type": "string",
+          "description": "Color of category heading text on the restaurant page",
+          "default": "#111827"
+        },
         "font_style": {
           "type": "string",
           "enum": [
@@ -182,6 +192,10 @@
           "type": "number",
           "default": 0.5,
           "description": "Hero image gradient opacity 0-1"
+        },
+        "hero_image_url": {
+          "type": "string",
+          "description": "Custom hero image URL (overrides restaurant image_url on storefront)"
         },
         "card_background": {
           "type": "string",

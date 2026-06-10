@@ -7,9 +7,35 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap } from 'lucide-react';
+import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap, ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import DesignTemplates from './DesignTemplates';
+
+// ─── Hero image uploader sub-component ───────────────────────────────────────
+function HeroImageUploader({ onUploaded }) {
+    const [uploading, setUploading] = useState(false);
+    const handleFile = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            onUploaded(file_url);
+            toast.success('Hero image uploaded!');
+        } catch (err) {
+            toast.error('Upload failed: ' + (err?.message || 'unknown error'));
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+    return (
+        <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border-2 border-dashed cursor-pointer transition-colors text-sm font-medium ${uploading ? 'border-gray-200 text-gray-400 bg-gray-50' : 'border-purple-300 text-purple-600 bg-purple-50 hover:bg-purple-100'}`}>
+            {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> Upload Hero Image</>}
+            <input type="file" accept="image/*" className="sr-only" onChange={handleFile} disabled={uploading} />
+        </label>
+    );
+}
 
 // ─── Font map: name → Google Fonts import + CSS font-family value ────────────
 const FONT_STYLES = {
@@ -71,8 +97,11 @@ const DEFAULT_CONFIG = {
     background_color: '#f9fafb',
     button_style: 'rounded',
     button_text_color: '#ffffff',
+    add_to_cart_color: '#f97316',
+    heading_color: '#111827',
     font_style: 'modern',
     hero_overlay_opacity: 0.55,
+    hero_image_url: '',
     card_background: '#ffffff',
     nav_background: '#ffffff',
     ai_palette_name: ''
@@ -282,7 +311,9 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 { key: 'background_color', label: 'Page Background', hint: 'Main page background' },
                                 { key: 'nav_background', label: 'Navigation Background', hint: 'Top nav & category bar' },
                                 { key: 'card_background', label: 'Menu Card Background', hint: 'Individual menu item cards' },
-                                { key: 'button_text_color', label: 'Button Text Colour', hint: 'Text on primary buttons' }
+                                { key: 'button_text_color', label: 'Button Text Colour', hint: 'Text on primary buttons' },
+                                { key: 'add_to_cart_color', label: 'Add to Cart Button', hint: 'The + button on menu item cards' },
+                                { key: 'heading_color', label: 'Category Heading Colour', hint: 'Category section titles on the menu page' }
                             ].map(({ key, label, hint }) => (
                                 <div key={key}>
                                     <Label className="text-sm font-medium">{label}</Label>
@@ -407,6 +438,40 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Hero Image */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <ImageIcon className="h-4 w-4 text-blue-500" />
+                                Hero Image
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <p className="text-xs text-gray-400">Upload a custom hero/banner image for your storefront. Overrides the default restaurant image when branding is enabled.</p>
+                            {config.hero_image_url ? (
+                                <div className="relative rounded-xl overflow-hidden border">
+                                    <img
+                                        src={config.hero_image_url}
+                                        alt="Hero preview"
+                                        className="w-full h-32 object-cover"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfig(prev => ({ ...prev, hero_image_url: '' }))}
+                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600"
+                                    >✕</button>
+                                </div>
+                            ) : (
+                                <div className="border-2 border-dashed border-gray-200 rounded-xl h-24 flex items-center justify-center text-gray-400">
+                                    <span className="text-sm">No custom hero image set</span>
+                                </div>
+                            )}
+                            <HeroImageUploader
+                                onUploaded={(url) => setConfig(prev => ({ ...prev, hero_image_url: url }))}
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* ── Right: Preview + AI + Presets ── */}
@@ -429,7 +494,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 {/* Hero */}
                                 <div className="relative h-28 overflow-hidden">
                                     <img
-                                        src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
+                                        src={config.hero_image_url || restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
                                         alt="preview"
                                         className="w-full h-full object-cover"
                                     />
@@ -480,15 +545,14 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                             style={{ backgroundColor: config.card_background || '#ffffff' }}
                                         >
                                             <div>
-                                                <p className="text-xs font-semibold text-gray-800" style={{ fontFamily: fontHeading }}>{item}</p>
+                                                <p className="text-xs font-semibold" style={{ fontFamily: fontHeading, color: config.heading_color || '#111827' }}>{item}</p>
                                                 <p className="text-xs text-gray-400">£{(8.99 + i * 2).toFixed(2)}</p>
                                             </div>
                                             <button
-                                                className="text-xs font-bold px-3 py-1"
+                                                className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"
                                                 style={{
-                                                    backgroundColor: config.primary_color || '#f97316',
+                                                    backgroundColor: config.add_to_cart_color || config.primary_color || '#f97316',
                                                     color: config.button_text_color || '#ffffff',
-                                                    borderRadius: buttonRadiusMap[config.button_style] || '8px'
                                                 }}
                                             >
                                                 +

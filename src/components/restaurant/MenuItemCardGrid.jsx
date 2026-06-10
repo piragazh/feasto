@@ -48,7 +48,7 @@ export default function MenuItemCardGrid({ item, promotion, onAddToCart }) {
                     <Button
                         onClick={() => { window.navigator?.vibrate?.([10]); onAddToCart(item); }}
                         size="icon"
-                        className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/40 transition-all hover:scale-110"
+                        className="add-to-cart-btn absolute bottom-2 right-2 h-10 w-10 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/40 transition-all hover:scale-110"
                     >
                         <Plus className="h-5 w-5" />
                     </Button>

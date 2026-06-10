@@ -43,7 +43,7 @@ export default function MenuItemCardCompact({ item, promotion, onAddToCart }) {
                 <Button
                     onClick={() => { window.navigator?.vibrate?.([10]); onAddToCart(item); }}
                     size="icon"
-                    className="h-9 w-9 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md flex-shrink-0"
+                    className="add-to-cart-btn h-9 w-9 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md flex-shrink-0"
                 >
                     <Plus className="h-4 w-4" />
                 </Button>

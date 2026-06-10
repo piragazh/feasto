@@ -974,6 +974,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     ? ({ rounded: '8px', pill: '9999px', sharp: '2px' }[bc?.button_style] || '8px')
                     : '12px';
                 const heroOpacity = (isBrandingOn && bc?.hero_overlay_opacity != null) ? bc.hero_overlay_opacity : 0.55;
+                const headingColor = (isBrandingOn && bc?.heading_color) ? bc.heading_color : '#111827';
+                const addToCartColor = (isBrandingOn && bc?.add_to_cart_color) ? bc.add_to_cart_color : primary;
 
                 // Inject font link for the chosen font style (safe side-effect: only runs once per font)
                 if (isBrandingOn && bc?.font_style && bc.font_style !== 'modern') {
@@ -1028,6 +1030,13 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                         .restaurant-page .hover\\:text-orange-600:hover {
                             color: ${primary} !important;
                         }
+                        .restaurant-page .category-heading {
+                            color: ${headingColor} !important;
+                        }
+                        .restaurant-page .add-to-cart-btn {
+                            background-color: ${addToCartColor} !important;
+                            color: ${btnTextColor} !important;
+                        }
                         ${isBrandingOn ? `
                         .restaurant-page .btn-primary-custom {
                             background-color: ${primary};
@@ -1046,7 +1055,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             {/* Hero */}
             <div className="relative h-56 sm:h-72 md:h-80 -mx-4 md:mx-0">
                 <img
-                    src={restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200'}
+                    src={(restaurant?.branding_config?.enabled === true && restaurant?.branding_config?.hero_image_url) ? restaurant.branding_config.hero_image_url : (restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200')}
                     alt={restaurant.name}
                     className="w-full h-full object-cover object-center"
                     loading="eager"
@@ -1374,7 +1383,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                  data-category={category}
                                  style={{ scrollMarginTop: '180px' }}
                              >
-                                 <h3 className="text-2xl font-bold text-gray-900 mb-4 capitalize pb-2 border-b">
+                                 <h3 className="text-2xl font-bold mb-4 capitalize pb-2 border-b category-heading">
                                      {matchingKey}
                                  </h3>
                                  <MenuLayoutWrapper
