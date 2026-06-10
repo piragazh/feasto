@@ -17,7 +17,7 @@ export default function MenuItemCard({ item, promotion, onAddToCart }) {
             className={`menu-card-custom group flex gap-4 p-5 rounded-3xl transition-all duration-300 relative min-h-[180px] ${
                 isAvailable 
                     ? 'shadow-md hover:shadow-2xl border-0' 
-                    : 'bg-gray-50 border border-gray-200 opacity-70 grayscale'
+                    : 'border border-gray-200 opacity-70 grayscale'
             }`}
         >
             {!isAvailable && (

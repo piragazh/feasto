@@ -1049,8 +1049,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                         .restaurant-page .menu-card-custom {
                             background-color: ${isBrandingOn ? (bc?.card_background || '#ffffff') : '#ffffff'} !important;
                         }
-                        .restaurant-page .menu-card-compact:hover {
-                            background-color: ${isBrandingOn ? (bc?.card_background || '#ffffff') + 'cc' : '#f9fafb'} !important;
+                        .restaurant-page .menu-card-compact-item:hover {
+                            background-color: ${isBrandingOn ? (bc?.card_background || '#ffffff') + 'ee' : '#f9fafb'} !important;
                         }
                         ${isBrandingOn ? `
                         .restaurant-page .btn-primary-custom {
@@ -1327,7 +1327,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                             {showLeftArrow && (
                                 <button
                                     onClick={() => scrollCategories('left')}
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50"
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 nav-bar-custom shadow-lg rounded-full p-2 border"
                                     style={{ marginLeft: '-12px' }}
                                 >
                                     <ChevronLeft className="h-5 w-5 text-gray-700" />
@@ -1363,7 +1363,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                             {showRightArrow && (
                                 <button
                                     onClick={() => scrollCategories('right')}
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50"
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 nav-bar-custom shadow-lg rounded-full p-2 border"
                                     style={{ marginRight: '-12px' }}
                                 >
                                     <ChevronRight className="h-5 w-5 text-gray-700" />

@@ -6,8 +6,8 @@ export default function MenuItemCardCompact({ item, promotion, onAddToCart }) {
     const isAvailable = item.is_available !== false;
 
     return (
-        <div className={`menu-card-compact flex items-center justify-between gap-3 py-3 px-4 border-b last:border-b-0 transition-colors ${
-            isAvailable ? 'hover:bg-gray-50' : 'opacity-60 bg-gray-50'
+        <div className={`menu-card-compact-item flex items-center justify-between gap-3 py-3 px-4 border-b last:border-b-0 transition-colors ${
+            isAvailable ? '' : 'opacity-60 bg-gray-50'
         }`}>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
