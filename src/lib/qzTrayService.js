@@ -94,51 +94,13 @@ class QZTrayService {
     // ── Connection ────────────────────────────────────────────────────────────
 
     /**
-     * Quick probe — opens a raw WebSocket to QZ Tray and closes immediately.
-     * Resolves true if QZ Tray is reachable, false if not. Fails within 5s.
-     * This avoids the qz-tray library's connect() hanging forever when the
-     * browser blocks the self-signed cert on HTTPS pages.
-     */
-    _probeQzTray() {
-        const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
-        const url = isHttps ? 'wss://localhost:8181' : 'ws://localhost:8181';
-        return new Promise((resolve) => {
-            let settled = false;
-            let ws;
-            const timer = setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                try { ws?.close(); } catch {}
-                resolve(false);
-            }, 5000);
-            try {
-                ws = new WebSocket(url);
-                ws.onopen = () => {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    try { ws.close(); } catch {}
-                    resolve(true);
-                };
-                ws.onerror = () => {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    resolve(false);
-                };
-            } catch {
-                if (!settled) {
-                    settled = true;
-                    clearTimeout(timer);
-                    resolve(false);
-                }
-            }
-        });
-    }
-
-    /**
-     * Connect to QZ Tray. Probes first (raw WebSocket, fails fast), then
-     * uses the qz-tray library for the real authenticated connection.
+     * Connect to QZ Tray via the qz-tray library.
+     *
+     * Uses retries: 0 so the library fails on the first attempt instead of
+     * looping internally. A hard watchdog timer fires after 10s and updates
+     * state independently — this is NOT a Promise.race (which can hang if the
+     * library's promise never settles). The watchdog directly sets state and
+     * resolves connect() with false.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
@@ -146,34 +108,38 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        // Step 1: Quick probe — is QZ Tray reachable at all?
-        console.log('[QZTray] Probing localhost:8181…');
-        const reachable = await this._probeQzTray();
+        const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+        let settled = false;
 
-        if (!reachable) {
-            const isHttps = window.location?.protocol === 'https:';
-            this._lastError = isHttps
-                ? 'Cannot reach QZ Tray. Click "Accept Cert" below to trust the certificate, then Reconnect.'
-                : 'QZ Tray is not running or unreachable on localhost:8181.';
-            console.warn('[QZTray] Probe failed:', this._lastError);
-            this._connecting = false;
-            this._notifyStatus();
-            this._scheduleReconnect();
-            return false;
-        }
+        // Hard watchdog — fires no matter what, after 10s
+        const watchdog = new Promise((resolve) => {
+            setTimeout(() => {
+                if (settled) return resolve(false);
+                settled = true;
+                console.warn('[QZTray] Watchdog: connection timed out after 10s');
+                this._lastError = isHttps
+                    ? 'Connection timed out. Click "Accept Cert" to trust the QZ Tray certificate, then Reconnect.'
+                    : 'Connection timed out. Make sure QZ Tray is running on this computer.';
+                this._connecting = false;
+                try { qz.websocket.disconnect(); } catch {}
+                this._notifyStatus();
+                this._scheduleReconnect();
+                resolve(false);
+            }, 10000);
+        });
 
-        console.log('[QZTray] Probe succeeded, connecting via library…');
-
-        // Step 2: Connect via the qz-tray library
-        try {
-            await qz.websocket.connect({
-                retries: 0,
-                delay: 0,
-                usingSecure: typeof window !== 'undefined' && window.location?.protocol === 'https:',
-            });
+        // Library connection attempt
+        const libraryConnect = qz.websocket.connect({
+            retries: 0,
+            delay: 0,
+            usingSecure: isHttps,
+        }).then(() => {
+            if (settled) return false; // watchdog already fired
+            settled = true;
             this._connected = true;
             this._reconnectAttempts = 0;
             console.log('[QZTray] Connected successfully');
+            this._connecting = false;
             this._notifyStatus();
 
             qz.websocket.setErrorCallbacks(
@@ -186,19 +152,21 @@ class QZTrayService {
                     this._handleDisconnect();
                 }
             );
-        } catch (e) {
+            return true;
+        }).catch((e) => {
+            if (settled) return false; // watchdog already fired
+            settled = true;
             const msg = e?.message || String(e);
             console.warn('[QZTray] Library connect failed:', msg);
             this._lastError = msg;
-            this._connected = false;
             this._connecting = false;
             this._notifyStatus();
             this._scheduleReconnect();
             return false;
-        }
+        });
 
-        this._connecting = false;
-        return this._connected;
+        // Wait for whichever fires first: library settles or watchdog fires
+        return Promise.race([libraryConnect, watchdog]);
     }
 
     _handleDisconnect() {
