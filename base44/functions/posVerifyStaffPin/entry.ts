@@ -14,6 +14,12 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+async function computePinHash(staffId, pin, restaurantId) {
+    const data = new TextEncoder().encode(`${staffId}:${pin}:${restaurantId}`);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -87,6 +93,9 @@ Deno.serve(async (req) => {
                 restaurant_id: staff.restaurant_id,
                 staff_number: staff.staff_number || null,
             },
+            // SHA-256 hash cached on the terminal for offline PIN verification.
+            // Only the hash is stored — the plaintext PIN never persists in the browser.
+            pin_hash: await computePinHash(staff.id, staff.pin, staff.restaurant_id),
         });
 
     } catch (error) {

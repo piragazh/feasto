@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { UtensilsCrossed, Delete } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { cacheStaffPin, getCachedStaffPin } from './POSOfflineDB';
+
+async function computePinHash(staffId, pin, restaurantId) {
+    const data = new TextEncoder().encode(`${staffId}:${pin}:${restaurantId}`);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 const ROLES = {
     waiter:        { label: 'Waiter',        color: 'bg-blue-500' },
@@ -94,18 +101,59 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
         }
         setVerifying(true);
         setError('');
+
+        // Offline fallback: verify against cached PIN hash
+        if (!navigator.onLine) {
+            try {
+                const cached = await getCachedStaffPin(selected.id);
+                if (!cached) {
+                    setError('Offline — must log in online at least once on this terminal.');
+                    setPin('');
+                    return;
+                }
+                const enteredHash = await computePinHash(selected.id, p, selected.restaurant_id);
+                if (enteredHash === cached.pin_hash) {
+                    onLogin(cached.staff_info);
+                } else {
+                    setError('Incorrect PIN. Try again.');
+                    setPin('');
+                }
+            } catch (e) {
+                setError('Offline PIN verification failed.');
+                setPin('');
+            } finally {
+                setVerifying(false);
+            }
+            return;
+        }
+
         try {
             const result = await base44.functions.invoke('posVerifyStaffPin', {
                 staff_id: selected.id,
                 pin: p,
             });
             if (result?.data?.valid) {
+                // Cache PIN hash for offline login on this terminal
+                if (result.data.pin_hash) {
+                    await cacheStaffPin(selected.id, selected.restaurant_id, result.data.pin_hash, result.data.staff);
+                }
                 onLogin(result.data.staff);
             } else {
                 setError(result?.data?.error || 'Incorrect PIN. Try again.');
                 setPin('');
             }
         } catch (e) {
+            // Network failure mid-request — try offline cache as fallback
+            try {
+                const cached = await getCachedStaffPin(selected.id);
+                if (cached) {
+                    const enteredHash = await computePinHash(selected.id, p, selected.restaurant_id);
+                    if (enteredHash === cached.pin_hash) {
+                        onLogin(cached.staff_info);
+                        return;
+                    }
+                }
+            } catch (_) { /* fall through to error */ }
             setError('Verification failed. Please try again.');
             setPin('');
         } finally {

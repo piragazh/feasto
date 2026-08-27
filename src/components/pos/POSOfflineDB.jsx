@@ -4,13 +4,15 @@
  */
 
 const DB_NAME = 'pos_offline_db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORES = {
     MENU_ITEMS: 'menu_items',
     PENDING_ORDERS: 'pending_orders',
     RESTAURANTS: 'restaurants',
     TABLES: 'tables',
     PENDING_STATUS_UPDATES: 'pending_status_updates',
+    PENDING_TABLE_ORDERS: 'pending_table_orders',
+    STAFF_PINS: 'staff_pins',
 };
 
 let dbInstance = null;
@@ -43,6 +45,16 @@ function openDB() {
                 const store = db.createObjectStore(STORES.PENDING_STATUS_UPDATES, { keyPath: 'offline_id' });
                 store.createIndex('order_id', 'order_id', { unique: false });
                 store.createIndex('synced', 'synced', { unique: false });
+            }
+            // v4: pending table orders (dine-in orders queued while offline)
+            if (!db.objectStoreNames.contains(STORES.PENDING_TABLE_ORDERS)) {
+                const store = db.createObjectStore(STORES.PENDING_TABLE_ORDERS, { keyPath: 'offline_id' });
+                store.createIndex('restaurant_id', 'restaurant_id', { unique: false });
+                store.createIndex('synced', 'synced', { unique: false });
+            }
+            // v4: staff PIN hashes for offline login
+            if (!db.objectStoreNames.contains(STORES.STAFF_PINS)) {
+                db.createObjectStore(STORES.STAFF_PINS, { keyPath: 'staff_id' });
             }
         };
 
@@ -236,4 +248,77 @@ export function setCacheMeta(restaurantId, key, value) {
 
 export function getLastCachedAt(restaurantId, key) {
     return getCacheMeta()?.[restaurantId]?.[key] || null;
+}
+
+// ─── Pending Table Orders (offline dine-in) ──────────────────────────────────
+
+export async function savePendingTableOrder(orderData, tableId, tableNumber) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_TABLE_ORDERS, 'readwrite');
+    const offline_id = `table_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const record = {
+        ...orderData,
+        offline_id,
+        table_id: tableId,
+        table_number: tableNumber,
+        synced: false,
+        syncStatus: 'pending',
+        syncError: null,
+        syncAttempts: 0,
+        created_at: new Date().toISOString(),
+    };
+    await promisify(store.put(record));
+    return record;
+}
+
+export async function getAllPendingTableOrders() {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_TABLE_ORDERS);
+    const all = await promisify(store.getAll());
+    return all.filter(o => !o.synced);
+}
+
+export async function markTableOrderSynced(offline_id) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_TABLE_ORDERS, 'readwrite');
+    const record = await promisify(store.get(offline_id));
+    if (record) {
+        await promisify(store.put({ ...record, synced: true, syncStatus: 'synced', syncError: null }));
+    }
+}
+
+export async function markTableOrderSyncFailed(offline_id, errorMessage) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_TABLE_ORDERS, 'readwrite');
+    const record = await promisify(store.get(offline_id));
+    if (record) {
+        await promisify(store.put({
+            ...record,
+            syncStatus: 'failed',
+            syncError: errorMessage,
+            syncAttempts: (record.syncAttempts || 0) + 1,
+        }));
+    }
+}
+
+// ─── Staff PIN Cache (offline login) ─────────────────────────────────────────
+
+export async function cacheStaffPin(staffId, restaurantId, pinHash, staffInfo) {
+    const db = await openDB();
+    const store = txStore(db, STORES.STAFF_PINS, 'readwrite');
+    const record = {
+        staff_id: staffId,
+        restaurant_id: restaurantId,
+        pin_hash: pinHash,
+        staff_info: staffInfo,
+        cached_at: new Date().toISOString(),
+    };
+    await promisify(store.put(record));
+    return record;
+}
+
+export async function getCachedStaffPin(staffId) {
+    const db = await openDB();
+    const store = txStore(db, STORES.STAFF_PINS);
+    return promisify(store.get(staffId));
 }

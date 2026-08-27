@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt } from './POSOfflineDB';
+import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt, getAllPendingTableOrders, markTableOrderSynced, markTableOrderSyncFailed } from './POSOfflineDB';
 import { WifiOff, RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -82,6 +82,33 @@ export async function triggerSync(restaurantId) {
                 }
             }
 
+            // 3. Sync pending table orders via posCreateOrder
+            const tableOrders = await getAllPendingTableOrders();
+            const tableOrdersForRestaurant = restaurantId
+                ? tableOrders.filter(o => o.restaurant_id === restaurantId)
+                : tableOrders;
+            for (const tOrder of tableOrdersForRestaurant) {
+                try {
+                    const { offline_id, synced: _s, syncStatus: _ss, syncError: _se, syncAttempts: _sa, created_at: _ca, table_id, table_number: _tn, ...orderData } = tOrder;
+                    const result = await base44.functions.invoke('posCreateOrder', orderData);
+                    if (result?.data?.order) {
+                        // Link the real order to the table
+                        await base44.entities.RestaurantTable.update(table_id, {
+                            status: 'occupied',
+                            current_order_id: result.data.order.id,
+                        });
+                        await markTableOrderSynced(offline_id);
+                        synced++;
+                    } else {
+                        await markTableOrderSyncFailed(offline_id, result?.data?.error || 'Unknown error');
+                        failed++;
+                    }
+                } catch (error) {
+                    await markTableOrderSyncFailed(tOrder.offline_id, error.message);
+                    failed++;
+                }
+            }
+
             if (synced > 0) {
                 toast.success(`${synced} offline change${synced > 1 ? 's' : ''} synced`);
                 updateShared({ lastSynced: new Date() });
@@ -94,10 +121,14 @@ export async function triggerSync(restaurantId) {
         } finally {
             const remaining = await getAllPendingUnsynced();
             const statusRemaining = await getAllPendingStatusUpdates();
+            const tableRemaining = await getAllPendingTableOrders();
             const orderCount = restaurantId
                 ? remaining.filter(o => o.restaurant_id === restaurantId).length
                 : remaining.length;
-            updateShared({ isSyncing: false, pendingCount: orderCount + statusRemaining.length });
+            const tableOrderCount = restaurantId
+                ? tableRemaining.filter(o => o.restaurant_id === restaurantId).length
+                : tableRemaining.length;
+            updateShared({ isSyncing: false, pendingCount: orderCount + statusRemaining.length + tableOrderCount });
             syncPromise = null;
         }
     })();
@@ -113,10 +144,14 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
     const refreshCount = useCallback(async () => {
         const pending = await getAllPendingUnsynced();
         const statusUpdates = await getAllPendingStatusUpdates();
+        const tableOrders = await getAllPendingTableOrders();
         const orderCount = restaurantId
             ? pending.filter(o => o.restaurant_id === restaurantId).length
             : pending.length;
-        updateShared({ pendingCount: orderCount + statusUpdates.length });
+        const tableOrderCount = restaurantId
+            ? tableOrders.filter(o => o.restaurant_id === restaurantId).length
+            : tableOrders.length;
+        updateShared({ pendingCount: orderCount + statusUpdates.length + tableOrderCount });
     }, [restaurantId]);
 
     useEffect(() => {

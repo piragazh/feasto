@@ -24,7 +24,7 @@ import POSTablesGrid from './POSTablesGrid';
 import HeldOrdersDrawer from './HeldOrdersDrawer';
 import PhoneOrderDialog from './PhoneOrderDialog';
 import QuickItemLookupDialog from './QuickItemLookupDialog';
-import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta } from './POSOfflineDB';
+import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta, savePendingTableOrder } from './POSOfflineDB';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
@@ -197,8 +197,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         if (isAddingToTable) return;
         setIsAddingToTable(true);
         try {
-            // Route through posCreateOrder for server-side tenant check + subtotal recompute
-            const res = await base44.functions.invoke('posCreateOrder', {
+            const orderData = {
                 restaurant_id: restaurantId,
                 restaurant_name: restaurant?.name || 'POS Order',
                 items: optimisticCart.map(item => ({ menu_item_id: item.menu_item_id || item.id, name: item.name, price: item.price, quantity: item.quantity, customizations: item.customizations || {} })),
@@ -209,7 +208,27 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 payment_method: null,
                 table_id: table.id,
                 table_number: table.table_number,
-            });
+            };
+
+            if (!navigator.onLine) {
+                // Offline: queue table order for sync, update local table cache optimistically
+                await savePendingTableOrder(orderData, table.id, table.table_number);
+                const cachedTables = await getCachedTables(restaurantId);
+                if (cachedTables) {
+                    const updated = cachedTables.map(t =>
+                        t.id === table.id ? { ...t, status: 'occupied', current_order_id: 'offline_pending' } : t
+                    );
+                    await cacheTables(restaurantId, updated);
+                }
+                toast.success(`Order saved offline for ${table.table_number} — will sync when connected`);
+                onClearCart();
+                setSelectedTable(null);
+                await refetchTables();
+                return;
+            }
+
+            // Online: route through posCreateOrder for server-side tenant check + subtotal recompute
+            const res = await base44.functions.invoke('posCreateOrder', orderData);
             if (res?.data?.error) throw new Error(res.data.error);
             const created = res?.data?.order;
             if (!created) throw new Error('Order creation returned no order object');
