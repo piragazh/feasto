@@ -127,10 +127,31 @@ Deno.serve(async (req) => {
     // Perform update
     const result = await base44.asServiceRole.entities.Order.update(order_id, updateData);
 
+    // Dispatch customer-facing status notifications (SMS/WhatsApp) — fire and forget.
+    // Non-blocking: a notification failure never rolls back the status update.
+    base44.asServiceRole.functions
+      .invoke('sendNotificationFromTemplate', {
+        restaurantId: order.restaurant_id,
+        orderId: order_id,
+        newStatus: new_status,
+        orderData: {
+          order_number: order.order_number,
+          phone: order.phone,
+          guest_phone: order.phone,
+          guest_name: order.guest_name,
+          guest_email: order.guest_email,
+          delivery_address: order.delivery_address,
+          estimated_delivery: order.estimated_delivery,
+          items: order.items,
+        },
+        rejectionReason: rejection_reason || null,
+      })
+      .catch((e) => console.error('[updateOrderStatus] Notification dispatch failed:', e?.message));
+
     return Response.json({
-      success: true,
-      order: result,
-      message: `Order status updated from ${currentStatus} to ${new_status}`,
+        success: true,
+        order: result,
+        message: `Order status updated from ${currentStatus} to ${new_status}`,
     });
   } catch (error) {
     console.error('[updateOrderStatus] Error:', error);

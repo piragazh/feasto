@@ -67,18 +67,16 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Check if WhatsApp alerts are enabled - use WhatsApp if enabled, skip SMS entirely
+        // WhatsApp alerts are handled by the Order.create automation (sendWhatsAppOrder),
+        // which fires server-side on every new order. If WhatsApp is enabled, defer entirely
+        // so the restaurant receives exactly one alert (WA) instead of WA + SMS duplicates.
         if (restaurant.whatsapp_alerts_enabled) {
-            try {
-                const waResult = await base44.asServiceRole.functions.invoke('sendWhatsAppOrder', { order_id: orderId });
-                if (waResult?.data?.success) {
-                    return Response.json({ success: true, channel: 'whatsapp', result: waResult?.data ?? null });
-                }
-                // WhatsApp returned non-success — fall through to SMS
-                console.warn('[NOTIFY] WhatsApp alert did not succeed, falling back to SMS:', waResult?.data);
-            } catch (waError) {
-                console.error('[NOTIFY] WhatsApp alert threw, falling back to SMS:', waError?.message || waError);
-            }
+            return Response.json({
+                success: true,
+                message: 'WhatsApp alert handled by Order.create automation',
+                channel: 'whatsapp',
+                deferred: true,
+            });
         }
 
         // Check if SMS alerts are enabled

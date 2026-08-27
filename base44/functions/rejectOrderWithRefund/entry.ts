@@ -83,6 +83,27 @@ Deno.serve(async (req) => {
 
     console.log(`[REJECT] Order ${order_id} rejected by ${user.email}. Reason: ${rejection_reason}`);
 
+    // Notify the customer of the cancellation (SMS/WhatsApp per restaurant settings) — fire and forget.
+    // Sent regardless of refund outcome so the customer is always informed.
+    base44.asServiceRole.functions
+      .invoke('sendNotificationFromTemplate', {
+        restaurantId: order.restaurant_id,
+        orderId: order_id,
+        newStatus: 'cancelled',
+        orderData: {
+          order_number: order.order_number,
+          phone: order.phone,
+          guest_phone: order.phone,
+          guest_name: order.guest_name,
+          guest_email: order.guest_email,
+          delivery_address: order.delivery_address,
+          estimated_delivery: order.estimated_delivery,
+          items: order.items,
+        },
+        rejectionReason,
+      })
+      .catch((e) => console.error('[rejectOrderWithRefund] Cancellation notification failed:', e?.message));
+
     // ─────────────────────────────────────────────────────────────────────────
     // AUTO-REFUND LOGIC: Only for paid card orders
     // ─────────────────────────────────────────────────────────────────────────
