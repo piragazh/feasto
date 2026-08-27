@@ -31,21 +31,21 @@ export default function POSKitchenDisplay({ restaurantId }) {
 
     const markAsPreparing = async (orderId) => {
         try {
-            await base44.entities.Order.update(orderId, { status: 'preparing' });
+            await base44.functions.invoke('updateOrderStatus', { order_id: orderId, new_status: 'preparing' });
             toast.success('Started preparing');
             refetch();
         } catch (error) {
-            toast.error('Failed to update order');
+            toast.error(error?.message || 'Failed to update order');
         }
     };
 
     const markAsReady = async (orderId) => {
         try {
-            await base44.entities.Order.update(orderId, { status: 'ready_for_collection' });
+            await base44.functions.invoke('updateOrderStatus', { order_id: orderId, new_status: 'ready_for_collection' });
             toast.success('Order ready!');
             refetch();
         } catch (error) {
-            toast.error('Failed to update order');
+            toast.error(error?.message || 'Failed to update order');
         }
     };
 
@@ -76,7 +76,19 @@ export default function POSKitchenDisplay({ restaurantId }) {
                         {order.items.map((item, idx) => (
                             <div key={idx} className="flex justify-between text-white mb-2 pb-2 border-b border-gray-500 last:border-0">
                                 <span className="font-bold text-lg">{item.quantity}x</span>
-                                <span className="flex-1 ml-2 text-white">{item.name}</span>
+                                <div className="flex-1 ml-2">
+                                    <span className="text-white">{item.name}</span>
+                                    {item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).length > 0 && (
+                                        <div className="text-xs text-yellow-300 mt-0.5 space-y-0.5">
+                                            {Object.entries(item.customizations).map(([key, val]) => (
+                                                <div key={key}>• {key}: {Array.isArray(val) ? val.join(', ') : val}</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {item.special_instructions && (
+                                        <div className="text-xs text-orange-300 italic mt-0.5">⚠ {item.special_instructions}</div>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -187,9 +199,21 @@ export default function POSKitchenDisplay({ restaurantId }) {
 
                                         <div className="bg-green-600 bg-opacity-50 p-3 rounded mb-3">
                                             {order.items.map((item, idx) => (
-                                                <p key={idx} className="text-white font-semibold text-lg mb-1">
-                                                    {item.quantity}x {item.name}
-                                                </p>
+                                                <div key={idx} className="mb-1">
+                                                    <p className="text-white font-semibold text-lg">
+                                                        {item.quantity}x {item.name}
+                                                    </p>
+                                                    {item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).length > 0 && (
+                                                        <div className="text-xs text-yellow-300 ml-4">
+                                                            {Object.entries(item.customizations).map(([key, val]) => (
+                                                                <span key={key} className="block">• {key}: {Array.isArray(val) ? val.join(', ') : val}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {item.special_instructions && (
+                                                        <p className="text-xs text-orange-300 italic ml-4">⚠ {item.special_instructions}</p>
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
 

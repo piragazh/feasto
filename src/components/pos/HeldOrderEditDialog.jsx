@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,14 @@ import { X, Plus, Minus } from 'lucide-react';
 export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, isDark }) {
     const [label, setLabel] = useState(heldOrder?.label || '');
     const [items, setItems] = useState(heldOrder?.items || []);
+
+    // Reset state when a different held order is opened
+    useEffect(() => {
+        if (open) {
+            setLabel(heldOrder?.label || '');
+            setItems(heldOrder?.items || []);
+        }
+    }, [open, heldOrder]);
 
     const handleQuantityChange = (idx, newQty) => {
         if (newQty <= 0) {

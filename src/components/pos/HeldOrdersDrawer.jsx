@@ -7,6 +7,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
     const [searchQuery, setSearchQuery] = useState('');
     const [editingHeld, setEditingHeld] = useState(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
     const filteredOrders = useMemo(() => {
         return heldOrders.filter(order => {
@@ -122,7 +123,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                         <Edit2 className="h-3 w-3" />
                                     </button>
                                     <button
-                                        onClick={() => onDelete(held.id)}
+                                        onClick={() => setDeleteConfirmId(held.id)}
                                         className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'} text-red-400 transition-colors`}
                                     >
                                         <Trash2 className="h-3 w-3" />
@@ -141,6 +142,27 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                         onSave={handleSaveEdit}
                         isDark={isDark}
                     />
+                )}
+
+                {/* Delete confirmation */}
+                {deleteConfirmId && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+                        <div className={`${isDark ? 'bg-[#1a1d27] border-white/[0.1] text-white' : 'bg-white border-gray-200 text-gray-900'} border rounded-2xl p-5 w-72 shadow-2xl`}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Trash2 className="h-5 w-5 text-red-400 flex-shrink-0" />
+                                <p className="text-sm font-semibold">Delete held order?</p>
+                            </div>
+                            <p className={`text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>This cannot be undone. All items in this held order will be lost.</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => setDeleteConfirmId(null)} className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${isDark ? 'border-white/[0.1] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                    Cancel
+                                </button>
+                                <button onClick={() => { onDelete(deleteConfirmId); setDeleteConfirmId(null); }} className="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
