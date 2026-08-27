@@ -318,6 +318,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                         onBackspace={() => setSpecialInstructions(prev => prev.slice(0, -1))}
                         onSpace={() => setSpecialInstructions(prev => prev + ' ')}
                         onClose={() => setShowKeyboard(false)}
+                        isDark={isDark}
                     />
                 )}
             </DialogContent>

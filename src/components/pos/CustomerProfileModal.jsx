@@ -31,7 +31,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
     const loadOrders = async () => {
         setLoadingOrders(true);
         try {
-            const result = await base44.entities.Order.filter({ phone: customer.phone_number, restaurant_id: restaurantId });
+            const result = await base44.entities.Order.filter({ phone: customer.phone_number, restaurant_id: restaurantId }, '-created_date', 50);
             setOrders(result.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
         } catch {
             setOrders([]);

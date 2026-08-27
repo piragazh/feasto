@@ -17,7 +17,7 @@ import {
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {} }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -735,9 +735,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     onApplyCoupon={handleApplyCoupon}
                     restaurantId={restaurantId}
                     cartSubtotal={cartSubtotal}
-                    customerPhone={window.__phoneOrderDetails?.phone || null}
+                    customerPhone={phoneDetails?.phone || null}
                     customerEmail={null}
                     hasManualDiscount={!!discount}
+                    posTheme={posTheme}
                 />
             )}
 

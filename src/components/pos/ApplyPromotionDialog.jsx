@@ -39,7 +39,9 @@ export default function ApplyPromotionDialog({
     customerEmail = null,    // optional
     hasManualDiscount = false, // mutual exclusion: true when a manual discount is active
     appliedCouponCount = 0,  // how many coupons already on this order
+    posTheme = 'dark',
 }) {
+    const isDark = posTheme === 'dark';
     const [manualCode, setManualCode] = useState('');
     const [validating, setValidating] = useState(null); // coupon code being validated
     const [error, setError] = useState(null);
@@ -101,13 +103,13 @@ export default function ApplyPromotionDialog({
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="bg-gray-800 border-gray-700 max-w-lg">
+            <DialogContent className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} max-w-lg`}>
                 <DialogHeader>
-                    <DialogTitle className="text-white flex items-center gap-2">
+                    <DialogTitle className={`${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
                         <Tag className="h-4 w-4 text-orange-400" />
                         Apply Coupon
                         {appliedCouponCount > 0 && (
-                            <span className="ml-auto text-xs text-gray-400 font-normal">
+                            <span className={`ml-auto text-xs font-normal ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                 {appliedCouponCount}/{MAX_COUPONS} applied
                             </span>
                         )}
@@ -116,9 +118,9 @@ export default function ApplyPromotionDialog({
 
                 {/* Coupon limit warning */}
                 {couponLimitReached && !hasManualDiscount && (
-                    <div className="flex items-start gap-2 bg-gray-500/10 border border-gray-500/30 rounded-lg px-3 py-2">
-                        <AlertCircle className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
-                        <p className="text-gray-300 text-xs">
+                    <div className={`flex items-start gap-2 rounded-lg px-3 py-2 ${isDark ? 'bg-gray-500/10 border-gray-500/30' : 'bg-gray-100 border-gray-300'} border`}>
+                        <AlertCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                        <p className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                             Maximum {MAX_COUPONS} coupons already applied. Remove one before adding another.
                         </p>
                     </div>
@@ -136,14 +138,14 @@ export default function ApplyPromotionDialog({
 
                 {/* Manual code entry */}
                 <div className="space-y-2">
-                    <Label className="text-gray-300 text-sm">Enter coupon code</Label>
+                    <Label className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Enter coupon code</Label>
                     <div className="flex gap-2">
                         <Input
                             value={manualCode}
                             onChange={e => { setManualCode(e.target.value.toUpperCase()); setError(null); }}
                             onKeyDown={e => e.key === 'Enter' && !couponLimitReached && handleManualApply()}
                             placeholder="e.g. SAVE10"
-                            className="bg-gray-700 border-gray-600 text-white uppercase"
+                            className={`${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} uppercase`}
                             disabled={couponLimitReached || hasManualDiscount}
                         />
                         <Button
@@ -167,13 +169,13 @@ export default function ApplyPromotionDialog({
 
                 {/* Eligible coupon list */}
                 <div className="mt-3">
-                    <p className="text-gray-400 text-xs mb-2 uppercase tracking-wide font-semibold">Available coupons</p>
+                    <p className={`text-xs mb-2 uppercase tracking-wide font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Available coupons</p>
                     {isLoading ? (
                         <div className="flex items-center justify-center py-6">
                             <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
                         </div>
                     ) : coupons.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-4">No eligible coupons for this restaurant</p>
+                        <p className={`text-sm text-center py-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No eligible coupons for this restaurant</p>
                     ) : (
                         <div className="space-y-2 max-h-56 overflow-y-auto">
                             {coupons.map(coupon => {
@@ -182,7 +184,7 @@ export default function ApplyPromotionDialog({
                                 return (
                                     <div
                                         key={coupon.id}
-                                        className={`bg-gray-700 p-3 rounded-lg border ${meetsMinimum ? 'border-gray-600' : 'border-gray-700 opacity-50'}`}
+                                        className={`p-3 rounded-lg border ${isDark ? (meetsMinimum ? 'bg-gray-700 border-gray-600' : 'bg-gray-700 border-gray-700 opacity-50') : (meetsMinimum ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-200 opacity-50')}`}
                                     >
                                         <div className="flex justify-between items-start gap-3">
                                             <div className="flex-1 min-w-0">
@@ -231,7 +233,7 @@ export default function ApplyPromotionDialog({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} className="bg-gray-700 border-gray-600 text-white">
+                    <Button variant="outline" onClick={onClose} className={isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'}>
                         Cancel
                     </Button>
                 </DialogFooter>

@@ -38,7 +38,8 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
     const quickItems = currentTab ? grouped[currentTab] : allItems;
 
     const handleAdd = () => {
-        if (!itemName.trim() || !itemPrice || parseFloat(itemPrice) <= 0) {
+        const price = parseFloat(itemPrice);
+        if (!itemName.trim() || !itemPrice || isNaN(price) || price <= 0) {
             return;
         }
 
@@ -46,7 +47,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
             id: `custom-${Date.now()}`,
             menu_item_id: `custom-${Date.now()}`,
             name: itemName.trim(),
-            price: parseFloat(itemPrice),
+            price: price,
             quantity: 1,
             customizations: {},
             isCustomItem: true
@@ -156,7 +157,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                     </Button>
                     <Button
                         onClick={handleAdd}
-                        disabled={!itemName.trim() || !itemPrice || parseFloat(itemPrice) <= 0}
+                        disabled={!itemName.trim() || !itemPrice || isNaN(parseFloat(itemPrice)) || parseFloat(itemPrice) <= 0}
                         className="flex-1 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
                     >
                         Add to Cart
@@ -187,6 +188,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                             }
                         }}
                         onClose={() => setShowKeyboard(false)}
+                        isDark={isDark}
                     />
                 )}
             </DialogContent>

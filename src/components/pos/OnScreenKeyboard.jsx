@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Delete, Space } from 'lucide-react';
 
-export default function OnScreenKeyboard({ onKeyPress, onBackspace, onSpace, onClose }) {
+export default function OnScreenKeyboard({ onKeyPress, onBackspace, onSpace, onClose, isDark = true }) {
     const keys = [
         ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
         ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -10,8 +10,18 @@ export default function OnScreenKeyboard({ onKeyPress, onBackspace, onSpace, onC
         ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
     ];
 
+    const containerCls = isDark
+        ? 'bg-gray-900 border-t-2 border-gray-700'
+        : 'bg-white border-t-2 border-gray-300';
+    const keyCls = isDark
+        ? 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600'
+        : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-300';
+    const spaceCls = isDark
+        ? 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600'
+        : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-300';
+
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t-2 border-gray-700 p-2 z-[9999] shadow-2xl">
+        <div className={`fixed bottom-0 left-0 right-0 ${containerCls} p-2 z-[9999] shadow-2xl`}>
             <div className="max-w-4xl mx-auto space-y-1">
                 {keys.map((row, rowIndex) => (
                     <div key={rowIndex} className="flex gap-1 justify-center">
@@ -19,7 +29,7 @@ export default function OnScreenKeyboard({ onKeyPress, onBackspace, onSpace, onC
                             <Button
                                 key={key}
                                 onClick={() => onKeyPress(key)}
-                                className="h-12 min-w-[2.5rem] flex-1 max-w-[4rem] bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg border border-gray-600"
+                                className={`h-12 min-w-[2.5rem] flex-1 max-w-[4rem] font-bold text-lg border ${keyCls}`}
                             >
                                 {key}
                             </Button>
@@ -35,7 +45,7 @@ export default function OnScreenKeyboard({ onKeyPress, onBackspace, onSpace, onC
                     </Button>
                     <Button
                         onClick={onSpace}
-                        className="h-12 flex-[3] bg-gray-700 hover:bg-gray-600 text-white font-bold border border-gray-600"
+                        className={`h-12 flex-[3] font-bold border ${spaceCls}`}
                     >
                         <Space className="h-5 w-5" />
                     </Button>

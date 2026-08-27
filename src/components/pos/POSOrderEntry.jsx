@@ -74,6 +74,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const [heldDrawerOpen, setHeldDrawerOpen] = useState(false);
     const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
     const [phoneDetails, setPhoneDetails] = useState({});
+
+    // Clear phone details when switching away from phone order types
+    useEffect(() => {
+        if (orderType !== 'phone_collection' && orderType !== 'phone_delivery') {
+            setPhoneDetails({});
+        }
+    }, [orderType]);
     const [categoryGridMode, setCategoryGridMode] = useState(false);
     const [quickLookupOpen, setQuickLookupOpen] = useState(false);
 
@@ -311,7 +318,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)} className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>← Back</button>
                     </div>
-                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); onClearCart(); }} onBackToCart={() => setShowPayment(false)} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} posTheme={posTheme} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} />
+                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); onClearCart(); }} onBackToCart={() => setShowPayment(false)} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} posTheme={posTheme} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} phoneDetails={phoneDetails} />
                 </div>
             );
         }
@@ -445,15 +452,15 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <button
                             onClick={() => setPhoneDialogOpen(true)}
                             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border font-semibold text-sm transition-colors ${
-                                window.__phoneOrderDetails?.name
+                                phoneDetails?.name
                                     ? isDark ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700'
                                     : isDark ? 'bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20' : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100'
                             }`}
                         >
                             <div className="flex items-center gap-2">
                                 <Phone className="h-4 w-4" />
-                                {window.__phoneOrderDetails?.name
-                                    ? <span>{window.__phoneOrderDetails.name}</span>
+                                {phoneDetails?.name
+                                    ? <span>{phoneDetails.name}</span>
                                     : <span>Enter Customer Details</span>
                                 }
                             </div>
@@ -522,11 +529,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             <CustomItemDialog open={customItemOpen} onClose={() => setCustomItemOpen(false)} onAdd={(item) => onAddItem(item)} restaurantId={restaurantId} posTheme={posTheme} />
             <PhoneOrderDialog
                 open={phoneDialogOpen}
-                onClose={() => { setPhoneDialogOpen(false); setPhoneDetails(window.__phoneOrderDetails || {}); }}
+                onClose={() => setPhoneDialogOpen(false)}
                 orderType={orderType}
                 onOrderTypeChange={setOrderType}
                 isDark={isDark}
                 restaurantId={restaurantId}
+                onDetailsChange={setPhoneDetails}
             />
             <HeldOrdersDrawer
                 open={heldDrawerOpen}
@@ -548,7 +556,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             />
 
             {showKeyboard && (
-                <OnScreenKeyboard onKeyPress={(key) => setSearchQuery(p => p + key)} onBackspace={() => setSearchQuery(p => p.slice(0, -1))} onSpace={() => setSearchQuery(p => p + ' ')} onClose={() => setShowKeyboard(false)} />
+                <OnScreenKeyboard onKeyPress={(key) => setSearchQuery(p => p + key)} onBackspace={() => setSearchQuery(p => p.slice(0, -1))} onSpace={() => setSearchQuery(p => p + ' ')} onClose={() => setShowKeyboard(false)} isDark={isDark} />
             )}
         </div>
     );

@@ -9,7 +9,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
-export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
+export default function BillSplitDialog({ order, open, onClose, onUpdate, posTheme = 'dark' }) {
+    const isDark = posTheme === 'dark';
     const [splitCount, setSplitCount] = useState(2);
     const [customSplits, setCustomSplits] = useState([]);
     const [selectedItems, setSelectedItems] = useState({});
@@ -73,15 +74,15 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="bg-gray-800 border-gray-700 max-w-2xl">
+            <DialogContent className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} max-w-2xl`}>
                 <DialogHeader>
-                    <DialogTitle className="text-white">Split Bill - Order #{order?.id.slice(0, 8)}</DialogTitle>
+                    <DialogTitle className={isDark ? 'text-white' : 'text-gray-900'}>Split Bill - Order #{order?.id.slice(0, 8)}</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4">
                     {/* Total */}
-                    <div className="bg-gray-700 p-3 rounded">
-                        <p className="text-gray-400 text-sm">Order Total</p>
+                    <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded`}>
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Order Total</p>
                         <p className="text-orange-400 text-2xl font-bold">£{order?.total.toFixed(2)}</p>
                     </div>
 
@@ -89,13 +90,13 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
                     {customSplits.length === 0 ? (
                         <div className="space-y-3">
                             <div>
-                                <Label className="text-white">Number of Splits</Label>
+                                <Label className={isDark ? 'text-white' : 'text-gray-900'}>Number of Splits</Label>
                                 <Input
                                     type="number"
                                     min="2"
                                     value={splitCount}
                                     onChange={(e) => setSplitCount(parseInt(e.target.value) || 2)}
-                                    className="bg-gray-700 border-gray-600 text-white"
+                                    className={isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}
                                 />
                             </div>
                             <div className="flex gap-2">
@@ -108,7 +109,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
                                 <Button
                                     onClick={handleCustomSplit}
                                     variant="outline"
-                                    className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                                    className={`flex-1 ${isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200'}`}
                                 >
                                     Custom Split
                                 </Button>
@@ -116,10 +117,10 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            <Label className="text-white">Payment Amounts</Label>
+                            <Label className={isDark ? 'text-white' : 'text-gray-900'}>Payment Amounts</Label>
                             {customSplits.map((split, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
-                                    <span className="text-white font-medium w-12">Split {idx + 1}</span>
+                                    <span className={`font-medium w-12 ${isDark ? 'text-white' : 'text-gray-900'}`}>Split {idx + 1}</span>
                                     <div className="flex-1">
                                         <Input
                                             type="number"
@@ -127,17 +128,17 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
                                             onChange={(e) => updateSplitAmount(idx, e.target.value)}
                                             step="0.01"
                                             placeholder="0.00"
-                                            className="bg-gray-700 border-gray-600 text-white"
+                                            className={isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}
                                         />
                                     </div>
-                                    <span className="text-gray-400">£{split.amount.toFixed(2)}</span>
+                                    <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>£{split.amount.toFixed(2)}</span>
                                 </div>
                             ))}
                             
                             {/* Validation Message */}
                             {customSplits.length > 0 && (
-                                <div className="bg-gray-700 p-2 rounded text-sm">
-                                    <p className="text-gray-400">
+                                <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded text-sm`}>
+                                    <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
                                         Total: <span className={customSplits.reduce((sum, s) => sum + s.amount, 0) === order?.total ? 'text-green-400' : 'text-red-400'}>
                                             £{customSplits.reduce((sum, s) => sum + s.amount, 0).toFixed(2)}
                                         </span>
@@ -149,7 +150,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate }) {
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} className="bg-gray-700 border-gray-600 text-white">Cancel</Button>
+                    <Button variant="outline" onClick={onClose} className={isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'}>Cancel</Button>
                     <Button onClick={finalizeSplit} className="bg-orange-500 hover:bg-orange-600" disabled={customSplits.length === 0}>
                         Complete Split
                     </Button>

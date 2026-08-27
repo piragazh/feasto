@@ -233,6 +233,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                     open={!!splittingOrder}
                     onClose={() => setSplittingOrder(null)}
                     onUpdate={refetch}
+                    posTheme={posTheme}
                 />
                 )}
 
@@ -243,6 +244,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                     onClose={() => setApplyingPromo(null)}
                     onUpdate={refetch}
                     restaurantId={restaurantId}
+                    posTheme={posTheme}
                 />
                 )}
 

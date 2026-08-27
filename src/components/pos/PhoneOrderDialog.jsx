@@ -23,7 +23,7 @@ async function autocompletePostcode(partial) {
     return data.result || [];
 }
 
-export default function PhoneOrderDialog({ open, onClose, orderType, onOrderTypeChange, isDark, restaurantId }) {
+export default function PhoneOrderDialog({ open, onClose, orderType, onOrderTypeChange, isDark, restaurantId, onDetailsChange }) {
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -46,10 +46,12 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
     const [showNewPostcodeDropdown, setShowNewPostcodeDropdown] = useState(false);
     const [postcodeInfo, setPostcodeInfo] = useState(null);
 
-    // Sync to window so POS cart can read
+    // Sync phone order details to parent via callback (replaces window.__phoneOrderDetails global)
     useEffect(() => {
-        window.__phoneOrderDetails = { phone: customerPhone, name: customerName, address: deliveryAddress, collectionTime, notes };
-    }, [customerPhone, customerName, deliveryAddress, collectionTime, notes]);
+        if (onDetailsChange) {
+            onDetailsChange({ phone: customerPhone, name: customerName, address: deliveryAddress, collectionTime, notes });
+        }
+    }, [customerPhone, customerName, deliveryAddress, collectionTime, notes, onDetailsChange]);
 
     if (!open) return null;
 
@@ -183,7 +185,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
         setNotes(''); setFoundCustomer(null); setCollectionTime('ASAP');
         setPostcode(''); setPostcodeResults([]); setShowNewCustomerForm(false);
         setNewAddressLine(''); setNewPostcode(''); setPostcodeInfo(null); setIncomingCall(null);
-        window.__phoneOrderDetails = {};
+        if (onDetailsChange) onDetailsChange({});
     };
 
     const confirmAndClose = () => {
