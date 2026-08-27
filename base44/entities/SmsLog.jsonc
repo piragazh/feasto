@@ -29,10 +29,12 @@
         "failed",
         "simulated",
         "uncertain",
-        "pending"
+        "pending",
+        "delivered",
+        "expired"
       ],
       "default": "sent",
-      "description": "sent=provider accepted, failed=provider rejected, simulated=no provider configured, uncertain=ambiguous result (may or may not have been sent \u2014 no fallback applied), pending=awaiting provider webhook"
+      "description": "sent=provider confirmed send, failed=provider rejected, simulated=no provider configured, uncertain=ambiguous result (no fallback applied), pending=HTTPSMS accepted awaiting webhook, delivered=confirmed delivered via webhook, expired=HTTPSMS message expired before send"
     },
     "message_sid": {
       "type": "string",
@@ -67,20 +69,37 @@
     },
     "request_id": {
       "type": "string",
-      "description": "HTTPSMS request_id used for idempotency tracking"
+      "description": "HTTPSMS request_id used for idempotency tracking and webhook correlation"
     },
     "is_fallback": {
       "type": "boolean",
       "default": false,
-      "description": "True if this provider was used as a fallback (e.g. Twilio after HTTPSMS deterministic failure)"
+      "description": "True if this provider was used as a fallback (e.g. Twilio after HTTPSMS failure)"
     },
     "failure_reason": {
       "type": "string",
-      "description": "Reason for provider failure (logged before fallback attempt)"
+      "description": "Reason for provider failure (logged before fallback attempt or from webhook event)"
     },
     "idempotency_key": {
       "type": "string",
       "description": "Deterministic key to prevent duplicate SMS (order_id + type + recipient)"
+    },
+    "fallback_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "sent",
+        "failed",
+        "skipped"
+      ],
+      "default": "none",
+      "description": "Tracks async Twilio fallback state for HTTPSMS messages: none=not needed, pending=atomically claimed (Twilio being called), sent=Twilio succeeded, failed=Twilio failed, skipped=Twilio not configured or message already terminal"
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When delivery was confirmed via HTTPSMS webhook (message.phone.delivered event)"
     }
   },
   "required": [

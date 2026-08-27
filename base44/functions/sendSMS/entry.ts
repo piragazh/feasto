@@ -202,6 +202,7 @@ async function logSmsAttempt(base44, p) {
             is_fallback: p.isFallback || false,
             failure_reason: p.failureReason || null,
             idempotency_key: p.idempotencyKey || null,
+            fallback_status: p.fallbackStatus || 'none',
         });
     } catch (e) {
         console.error('[SMS-ROUTER] Failed to log SMS attempt:', e?.message);
@@ -302,15 +303,18 @@ Deno.serve(async (req) => {
             });
 
             if (httpsmsResult.success) {
+                // HTTPSMS HTTP 200 = accepted for processing, NOT confirmed sent.
+                // Status is "pending" until the webhook confirms sent/delivered/failed/expired.
                 await logSmsAttempt(base44, {
                     ...logParams,
-                    status: 'sent',
+                    status: 'pending',
                     provider: 'httpsms',
                     providerMessageId: httpsmsResult.provider_message_id,
                     requestId: httpsmsResult.request_id,
+                    fallbackStatus: 'none',
                 });
                 const maskedPhone = formattedPhone.replace(/\d(?=\d{3})/g, '*');
-                console.log(`✅ SMS sent via HTTPSMS to ${maskedPhone}, ID: ${httpsmsResult.provider_message_id}`);
+                console.log(`✅ SMS accepted by HTTPSMS (pending webhook) to ${maskedPhone}, ID: ${httpsmsResult.provider_message_id}`);
                 return Response.json({
                     success: true,
                     messageSid: httpsmsResult.provider_message_id,
