@@ -273,6 +273,13 @@ Deno.serve(async (req) => {
             ...safeOrderData
         } = orderData;
 
+        // Whitelist of valid initial POS statuses — prevents clients from
+        // jumping the order lifecycle (e.g. directly to 'delivered'/'cancelled')
+        const ALLOWED_POS_STATUSES = ['confirmed', 'preparing'];
+        const orderStatus = ALLOWED_POS_STATUSES.includes(orderData.status)
+            ? orderData.status
+            : 'confirmed';
+
         const order = await base44.asServiceRole.entities.Order.create({
             ...safeOrderData,
             items: verifiedItems,
@@ -283,7 +290,7 @@ Deno.serve(async (req) => {
             coupon_codes: approvedCouponCodes.length > 0 ? approvedCouponCodes : undefined,
             coupon_code: approvedCouponCodes.length > 0 ? approvedCouponCodes[0] : undefined,
             total: serverTotal,
-            status: 'confirmed',
+            status: orderStatus,
             payment_method: orderData.payment_method || 'cash',
             order_type: orderData.order_type || 'collection'
         });

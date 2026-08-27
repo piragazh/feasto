@@ -118,7 +118,6 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const createOrder = async (paymentSummary) => {
         if (!restaurantId || skipOrderCreation) return { offline: false, skipped: true };
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
-        const phoneDetails = window.__phoneOrderDetails || {};
         const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
         const splitNotes = paymentSummary.length > 1
             ? paymentSummary.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
@@ -181,7 +180,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             };
             await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
         } catch (e) {
-            console.warn('Auto-print failed:', e.message);
+            console.error('[POS-PRINT] Receipt auto-print failed after payment:', e?.message || e, { restaurantId, orderTotal: effectiveTotal });
             toast.error('Receipt did not print — use Print Receipt button to retry', { duration: 6000 });
         }
     };
@@ -221,16 +220,15 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 coupon_code: coupon?.coupon_code || undefined,
                 total: effectiveTotal,
                 status: 'confirmed',
-                order_type: (() => { const p = window.__phoneOrderDetails || {}; const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return isPh ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection'); })(),
+                order_type: (() => { const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return isPh ? (orderType === 'phone_delivery' ? 'delivery' : 'collection') : (orderType || 'collection'); })(),
                 payment_method: finalPayments.length === 1 ? finalPayments[0].method : 'cash',
                 notes: (() => {
-                    const ph = window.__phoneOrderDetails || {};
                     const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery';
                     const splitNotes = finalPayments.length > 1 ? finalPayments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : null;
                     const changeNote = hasCash && changeNow > 0.005 ? `Change: £${changeNow.toFixed(2)}` : null;
-                    return [isPh && ph.notes ? ph.notes : null, isPh && ph.collectionTime && orderType === 'phone_collection' ? `Ready in: ${ph.collectionTime}` : null, splitNotes, changeNote].filter(Boolean).join(' | ') || undefined;
+                    return [isPh && phoneDetails.notes ? phoneDetails.notes : null, isPh && phoneDetails.collectionTime && orderType === 'phone_collection' ? `Ready in: ${phoneDetails.collectionTime}` : null, splitNotes, changeNote].filter(Boolean).join(' | ') || undefined;
                 })(),
-                ...(() => { const ph = window.__phoneOrderDetails || {}; const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return { ...(isPh && ph.phone ? { phone: ph.phone } : {}), ...(isPh && ph.name ? { guest_name: ph.name } : {}), ...(isPh && ph.address ? { delivery_address: ph.address } : {}) }; })(),
+                ...(() => { const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return { ...(isPh && phoneDetails.phone ? { phone: phoneDetails.phone } : {}), ...(isPh && phoneDetails.name ? { guest_name: phoneDetails.name } : {}), ...(isPh && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}) }; })(),
             };
 
             await printReceiptAfterPayment(orderDataForPrint, finalPayments);

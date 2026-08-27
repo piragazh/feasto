@@ -197,14 +197,22 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         if (isAddingToTable) return;
         setIsAddingToTable(true);
         try {
-            const created = await base44.entities.Order.create({
+            // Route through posCreateOrder for server-side tenant check + subtotal recompute
+            const res = await base44.functions.invoke('posCreateOrder', {
                 restaurant_id: restaurantId,
                 restaurant_name: restaurant?.name || 'POS Order',
                 items: optimisticCart.map(item => ({ menu_item_id: item.menu_item_id || item.id, name: item.name, price: item.price, quantity: item.quantity, customizations: item.customizations || {} })),
-                subtotal: cartTotal, delivery_fee: 0, discount: 0, total: cartTotal,
-                status: 'preparing', order_type: 'dine_in', payment_method: null,
-                table_id: table.id, table_number: table.table_number,
+                delivery_fee: 0,
+                discount: 0,
+                status: 'preparing',
+                order_type: 'dine_in',
+                payment_method: null,
+                table_id: table.id,
+                table_number: table.table_number,
             });
+            if (res?.data?.error) throw new Error(res.data.error);
+            const created = res?.data?.order;
+            if (!created) throw new Error('Order creation returned no order object');
             await base44.entities.RestaurantTable.update(table.id, { status: 'occupied', current_order_id: created.id });
             toast.success(`Order added to ${table.table_number}!`);
             onClearCart();
