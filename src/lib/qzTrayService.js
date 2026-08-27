@@ -30,6 +30,9 @@ class QZTrayService {
         this._certFetchTimeoutMs = 8000;  // Cert/signing fetch timeout
         this._cooldownUntil = 0;           // Timestamp; connect() returns false before this
         this._setupSecurity();
+        // Backend signs challenges with SHA-256 (see signQzTrayRequest/entry.ts).
+        // QZ Tray defaults to SHA1 — must override to match or signature verification fails.
+        qz.security.setSignatureAlgorithm('SHA256');
     }
 
     // ── Security (certificate + signature) ────────────────────────────────────
@@ -39,7 +42,12 @@ class QZTrayService {
         this._certCacheTime = 0;
         this._certTTL = 5 * 60 * 1000; // 5 minutes — handles cert rotation
 
-        qz.security.setCertificatePromise(() => {
+        // CRITICAL: These MUST be `async` functions, not regular arrow functions
+        // that return Promises. QZ Tray 2.2.6 detects AsyncFunction via
+        // .constructor.name === "AsyncFunction" and calls the factory directly.
+        // Regular functions get wrapped in new Promise(fn) which never resolves,
+        // causing the handshake to hang → connection timeout.
+        qz.security.setCertificatePromise(async () => {
             // Invalidate stale cache
             if (this._certCache && Date.now() - this._certCacheTime > this._certTTL) {
                 this._certCache = null;
@@ -47,17 +55,19 @@ class QZTrayService {
             return withTimeout(this._getCertificate(), this._certFetchTimeoutMs, 'QZ Tray certificate fetch');
         });
 
-        qz.security.setSignaturePromise((toSign) => {
-            return withTimeout(
-                this._signChallenge(toSign),
-                this._certFetchTimeoutMs,
-                'QZ Tray signature'
-            ).catch((e) => {
+        qz.security.setSignaturePromise(async (toSign) => {
+            try {
+                return await withTimeout(
+                    this._signChallenge(toSign),
+                    this._certFetchTimeoutMs,
+                    'QZ Tray signature'
+                );
+            } catch (e) {
                 // If signing fails, return empty string so QZ falls back to
                 // prompt mode cleanly — resolving with undefined can hang QZ.
                 console.warn('[QZTray] Signing failed, using prompt mode:', e?.message || e);
                 return '';
-            });
+            }
         });
     }
 
