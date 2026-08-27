@@ -94,15 +94,11 @@ class QZTrayService {
     // ── Connection ────────────────────────────────────────────────────────────
 
     /**
-     * Connect to QZ Tray using INSECURE ws://localhost.
+     * Connect to QZ Tray using SECURE wss://localhost.
      *
-     * Localhost is exempt from mixed-content blocking on HTTPS pages (W3C
-     * "potentially trustworthy origin"), and QZ Tray accepts ws:// connections
-     * by default — so this bypasses the self-signed certificate entirely.
-     * No "Accept Cert" step needed, no cert/signature backend calls.
-     *
-     * A single attempt avoids the qz-tray library's stuck inProgress flag
-     * that occurs when a second connect() is called before the first settles.
+     * QZ Tray requires a trusted self-signed certificate for wss:// on HTTPS
+     * pages. The user must accept it once by visiting https://localhost:8181.
+     * A single attempt avoids the qz-tray library's stuck inProgress flag.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
@@ -112,7 +108,7 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        return this._attemptConnect(false, 10000);
+        return this._attemptConnect(true, 15000);
     }
 
     /**
@@ -127,7 +123,7 @@ class QZTrayService {
                 if (settled) return;
                 settled = true;
                 console.warn(`[QZTray] Watchdog: connect timed out after ${timeoutMs / 1000}s`);
-                this._lastError = 'Connection timed out. Make sure QZ Tray is running on this computer.';
+                this._lastError = 'Connection timed out. Make sure QZ Tray is running, then accept its certificate by visiting https://localhost:8181 in a new tab.';
                 this._connecting = false;
                 this._notifyStatus();
 
