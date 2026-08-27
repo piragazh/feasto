@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown, WifiOff, RefreshCw, Clock, Sun, Moon, ClipboardList, ExternalLink, UserCog, TabletSmartphone, Sunset } from 'lucide-react';
+import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarChart3, ChevronDown, WifiOff, RefreshCw, Clock, Sun, Moon, ClipboardList, ExternalLink, UserCog, TabletSmartphone, Sunset, Settings } from 'lucide-react';
 import { publishCustomerDisplay } from '@/components/pos/CustomerDisplay';
 import { createPageUrl } from '@/utils';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
@@ -19,6 +19,7 @@ import POSStaffManager from '@/components/pos/POSStaffManager.jsx';
 import POSStaffLogin from '@/components/pos/POSStaffLogin.jsx';
 import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
 import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
+import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
 import { toast } from 'sonner';
 
 function useTime() {
@@ -174,6 +175,7 @@ export default function POSDashboard() {
         { id: 'reports', label: 'Reports', icon: BarChart3 },
         { id: 'eod', label: 'End of Day', icon: Sunset },
         { id: 'staff', label: 'Staff', icon: UserCog },
+        { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
     if (accessDenied) return (
@@ -419,6 +421,7 @@ export default function POSDashboard() {
                 {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} posTheme={posTheme} />}
                 {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
                 {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
+                {activeTab === 'settings' && <POSPrinterSettings restaurantId={restaurant.id} />}
             </main>
         </div>
     );
