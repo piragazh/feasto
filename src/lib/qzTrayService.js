@@ -28,7 +28,6 @@ class QZTrayService {
         this._autoReconnectTimer = null;
         this._reconnectAttempts = 0;
         this._certFetchTimeoutMs = 8000;  // Cert/signing fetch timeout
-        this._disconnecting = false;       // True while awaiting qz.websocket.disconnect() in watchdog
         this._cooldownUntil = 0;           // Timestamp; connect() returns false before this
         this._setupSecurity();
     }
@@ -99,16 +98,21 @@ class QZTrayService {
      *
      * Uses retries: 0 so the library fails on the first attempt instead of
      * looping internally. A hard watchdog timer fires after 10s if the
-     * library's connect promise hasn't settled — the watchdog awaits
-     * qz.websocket.disconnect() (so the library clears its internal inProgress
-     * flag) and blocks reconnects during a cooldown period. This prevents the
-     * "The current connection attempt has not returned yet" error that occurs
-     * when connect() is called while the library is still mid-handshake.
+     * library's connect promise hasn't settled (common on HTTPS when the
+     * browser silently blocks the self-signed cert). The watchdog fires
+     * disconnect() with a 3s timeout — NOT awaited directly, because
+     * disconnect() can also hang if the underlying WebSocket is stuck in
+     * CONNECTING state.
+     *
+     * qz.websocket.connect() can throw "The current connection attempt has
+     * not returned yet" synchronously (not as a rejected promise) if the
+     * library's internal inProgress flag is stuck — so the call is wrapped
+     * in try/catch in addition to the .catch() handler.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
-        // Block during cooldown / cleanup — library needs time after a watchdog timeout
-        if (this._disconnecting || Date.now() < this._cooldownUntil) return false;
+        // Block during cooldown — library needs time after a watchdog timeout
+        if (Date.now() < this._cooldownUntil) return false;
 
         this._connecting = true;
         this._notifyStatus();
@@ -119,7 +123,7 @@ class QZTrayService {
 
         return new Promise((resolve) => {
             // Hard watchdog — fires after 10s if library hasn't settled
-            const watchdogTimer = setTimeout(async () => {
+            const watchdogTimer = setTimeout(() => {
                 if (settled) return;
                 settled = true;
                 console.warn('[QZTray] Watchdog: connection timed out after 10s');
@@ -129,23 +133,45 @@ class QZTrayService {
                 this._connecting = false;
                 this._notifyStatus();
 
-                // Block ALL reconnect attempts until disconnect fully completes
-                this._disconnecting = true;
-                try { await qz.websocket.disconnect(); } catch {}
-                this._disconnecting = false;
+                // Fire disconnect with a 3s timeout — do NOT await directly,
+                // because disconnect() can hang if the WebSocket is stuck.
+                Promise.race([
+                    Promise.resolve().then(() => { try { return qz.websocket.disconnect(); } catch {} }),
+                    new Promise((r) => setTimeout(r, 3000)),
+                ]).catch(() => {});
+
                 this._cooldownUntil = Date.now() + 3000;
 
                 // Do NOT auto-reconnect — library state is uncertain after timeout.
-                // User must manually click Reconnect after fixing the cert / QZ Tray.
                 resolve(false);
             }, 10000);
 
-            // Library connection attempt
-            qz.websocket.connect({
-                retries: 0,
-                delay: 0,
-                usingSecure: isHttps,
-            }).then(() => {
+            // Library connection attempt — wrapped in try/catch because the
+            // library can throw "has not returned yet" synchronously.
+            let connectPromise;
+            try {
+                connectPromise = qz.websocket.connect({
+                    retries: 0,
+                    delay: 0,
+                    usingSecure: isHttps,
+                });
+            } catch (syncErr) {
+                if (settled) return;
+                settled = true;
+                clearTimeout(watchdogTimer);
+                const msg = syncErr?.message || String(syncErr);
+                console.warn('[QZTray] Library connect threw synchronously:', msg);
+                this._lastError = msg;
+                this._connecting = false;
+                this._notifyStatus();
+                if (!/has not returned yet/i.test(msg)) {
+                    this._scheduleReconnect();
+                }
+                resolve(false);
+                return;
+            }
+
+            connectPromise.then(() => {
                 if (settled) return;
                 settled = true;
                 clearTimeout(watchdogTimer);
@@ -198,8 +224,8 @@ class QZTrayService {
         const attempt = async () => {
             this._autoReconnectTimer = null;
             if (this._connected || this._connecting) return;
-            // Skip if in cooldown / cleanup phase
-            if (this._disconnecting || Date.now() < this._cooldownUntil) {
+            // Skip if in cooldown phase
+            if (Date.now() < this._cooldownUntil) {
                 this._reconnectAttempts++;
                 const interval = Math.min(10000 * Math.pow(1.5, this._reconnectAttempts), 60000);
                 this._autoReconnectTimer = setTimeout(attempt, interval);
@@ -225,7 +251,6 @@ class QZTrayService {
             this._autoReconnectTimer = null;
         }
         this._reconnectAttempts = 0;
-        this._disconnecting = false;
         this._cooldownUntil = 0;
         try { qz.websocket.disconnect(); } catch {}
         this._connected = false;
