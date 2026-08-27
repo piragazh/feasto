@@ -27,14 +27,16 @@
       "enum": [
         "sent",
         "failed",
-        "simulated"
+        "simulated",
+        "uncertain",
+        "pending"
       ],
       "default": "sent",
-      "description": "Whether the SMS was sent, failed, or simulated (Twilio not configured)"
+      "description": "sent=provider accepted, failed=provider rejected, simulated=no provider configured, uncertain=ambiguous result (may or may not have been sent \u2014 no fallback applied), pending=awaiting provider webhook"
     },
     "message_sid": {
       "type": "string",
-      "description": "Twilio message SID on success"
+      "description": "Legacy Twilio message SID on success (kept for backward compatibility)"
     },
     "error_details": {
       "type": "string",
@@ -49,6 +51,36 @@
       ],
       "default": "customer_notification",
       "description": "Type of SMS"
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "httpsms",
+        "twilio",
+        "none"
+      ],
+      "description": "SMS provider that handled (or attempted) this message"
+    },
+    "provider_message_id": {
+      "type": "string",
+      "description": "Message ID returned by the provider (HTTPSMS data.id or Twilio message SID)"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "HTTPSMS request_id used for idempotency tracking"
+    },
+    "is_fallback": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this provider was used as a fallback (e.g. Twilio after HTTPSMS deterministic failure)"
+    },
+    "failure_reason": {
+      "type": "string",
+      "description": "Reason for provider failure (logged before fallback attempt)"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deterministic key to prevent duplicate SMS (order_id + type + recipient)"
     }
   },
   "required": [
