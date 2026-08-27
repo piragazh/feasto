@@ -9,7 +9,7 @@
  * ("-----BEGIN RSA PRIVATE KEY-----") private key formats.
  */
 
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
 
 function base64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64);

@@ -225,6 +225,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                 try {
                     const { default: qzTrayService } = await import('@/lib/qzTrayService');
                     const { buildReportBytes } = await import('@/lib/escpos');
+                    if (!qzTrayService.isConnected()) await qzTrayService.connect();
                     if (qzTrayService.isConnected()) {
                         const reportBytes = buildReportBytes(restaurant, {
                             reportLabel,

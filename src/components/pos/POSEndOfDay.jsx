@@ -86,6 +86,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                 try {
                     const { default: qzTrayService } = await import('@/lib/qzTrayService');
                     const { buildEODBytes } = await import('@/lib/escpos');
+                    if (!qzTrayService.isConnected()) await qzTrayService.connect();
                     if (qzTrayService.isConnected()) {
                         const eodBytes = buildEODBytes(restaurant, stats, format(new Date(reportDate), 'dd MMM yyyy'), config);
                         await qzTrayService.print(config.qz_printer_name, eodBytes);

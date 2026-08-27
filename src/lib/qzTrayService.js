@@ -36,8 +36,14 @@ class QZTrayService {
 
     _setupSecurity() {
         this._certCache = null;
+        this._certCacheTime = 0;
+        this._certTTL = 5 * 60 * 1000; // 5 minutes — handles cert rotation
 
         qz.security.setCertificatePromise(() => {
+            // Invalidate stale cache
+            if (this._certCache && Date.now() - this._certCacheTime > this._certTTL) {
+                this._certCache = null;
+            }
             return withTimeout(this._getCertificate(), this._certFetchTimeoutMs, 'QZ Tray certificate fetch');
         });
 
@@ -56,11 +62,12 @@ class QZTrayService {
     }
 
     async _getCertificate() {
-        if (this._certCache) return this._certCache;
+        if (this._certCache && Date.now() - this._certCacheTime < this._certTTL) return this._certCache;
         try {
             const res = await base44.functions.invoke('signQzTrayRequest', { action: 'getCert' });
             if (!res?.data?.certificate) throw new Error('No certificate in response');
             this._certCache = res.data.certificate;
+            this._certCacheTime = Date.now();
             console.log('[QZTray] Certificate obtained from backend');
             return this._certCache;
         } catch (e) {
@@ -207,10 +214,14 @@ class QZTrayService {
 
     _scheduleReconnect() {
         if (this._autoReconnectTimer) return;
+        // Stop after 5 failed attempts — user can manually Reconnect.
+        if (this._reconnectAttempts >= 5) {
+            console.log('[QZTray] Max reconnect attempts reached. Use Reconnect button to retry.');
+            return;
+        }
         const attempt = async () => {
             this._autoReconnectTimer = null;
             if (this._connected || this._connecting) return;
-            // Skip if in cooldown phase
             if (Date.now() < this._cooldownUntil) {
                 this._reconnectAttempts++;
                 const interval = Math.min(10000 * Math.pow(1.5, this._reconnectAttempts), 60000);
@@ -223,7 +234,6 @@ class QZTrayService {
                 return;
             }
             this._reconnectAttempts++;
-            // Exponential backoff: 10s → 15s → 22s … capped at 60s
             const interval = Math.min(10000 * Math.pow(1.5, this._reconnectAttempts), 60000);
             this._autoReconnectTimer = setTimeout(attempt, interval);
         };
@@ -238,6 +248,7 @@ class QZTrayService {
         }
         this._reconnectAttempts = 0;
         this._cooldownUntil = 0;
+        this._lastError = null;
         try { qz.websocket.disconnect(); } catch {}
         this._connected = false;
         this._notifyStatus();
@@ -308,9 +319,14 @@ class QZTrayService {
         let binary = '';
         for (let i = 0; i < escposBytes.length; i++) binary += String.fromCharCode(escposBytes[i]);
         const base64 = btoa(binary);
-        await qz.print(config, [
-            { type: 'raw', format: 'command', flavor: 'base64', data: base64 }
-        ]);
+        // 20s timeout — prevents POS freeze if printer is offline/out of paper
+        await withTimeout(
+            qz.print(config, [
+                { type: 'raw', format: 'command', flavor: 'base64', data: base64 }
+            ]),
+            20000,
+            'QZ Tray print'
+        );
         return true;
     }
 
