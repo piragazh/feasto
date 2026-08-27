@@ -96,43 +96,68 @@ class QZTrayService {
     /**
      * Connect to QZ Tray. Safe to call multiple times — returns immediately
      * if already connected. Fails fast (within 15s) if QZ Tray is unreachable.
+     *
+     * On HTTPS pages, tries secure WebSocket (wss://) first. If that fails
+     * (browser blocking self-signed cert), falls back to insecure (ws://) —
+     * this works if the user has enabled chrome://flags/#allow-insecure-localhost
+     * or if the browser permits ws:// to localhost.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
         this._connecting = true;
         this._notifyStatus();
 
-        const connectPromise = qz.websocket.connect({
-            retries: 2,
-            delay: 1,
-            usingSecure: typeof window !== 'undefined' && window.location?.protocol === 'https:',
-        });
+        const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+        // On HTTPS: try secure first, then insecure. On HTTP: just use insecure.
+        const attempts = isHttps ? [true, false] : [false];
+        this._lastError = null;
 
-        try {
-            await withTimeout(connectPromise, this._connectTimeoutMs, 'QZ Tray connection');
-            this._connected = true;
-            this._reconnectAttempts = 0;
-            console.log('[QZTray] Connected successfully');
-            this._notifyStatus();
+        for (const secure of attempts) {
+            try {
+                console.log(`[QZTray] Attempting connection (secure=${secure})…`);
+                await withTimeout(
+                    qz.websocket.connect({
+                        retries: 1,
+                        delay: 1,
+                        usingSecure: secure,
+                    }),
+                    this._connectTimeoutMs,
+                    `QZ Tray connection (secure=${secure})`
+                );
+                this._connected = true;
+                this._reconnectAttempts = 0;
+                this._connectedSecure = secure;
+                console.log(`[QZTray] Connected successfully (secure=${secure})`);
+                this._notifyStatus();
 
-            qz.websocket.setErrorCallbacks(
-                (err) => {
-                    console.warn('[QZTray] Connection error:', err?.message || err);
-                    this._handleDisconnect();
-                },
-                () => {
-                    console.log('[QZTray] Connection closed');
-                    this._handleDisconnect();
-                }
-            );
-        } catch (e) {
-            console.warn('[QZTray] Failed to connect:', e?.message || e);
-            this._connected = false;
+                qz.websocket.setErrorCallbacks(
+                    (err) => {
+                        console.warn('[QZTray] Connection error:', err?.message || err);
+                        this._handleDisconnect();
+                    },
+                    () => {
+                        console.log('[QZTray] Connection closed');
+                        this._handleDisconnect();
+                    }
+                );
+                this._lastError = null;
+                break;
+            } catch (e) {
+                const msg = e?.message || String(e);
+                console.warn(`[QZTray] Connection failed (secure=${secure}):`, msg);
+                this._lastError = msg;
+                // Clean up any partial state before next attempt
+                try { qz.websocket.disconnect(); } catch {}
+            }
+        }
+
+        if (!this._connected) {
+            console.warn('[QZTray] All connection attempts failed. Last error:', this._lastError);
             this._notifyStatus();
             this._scheduleReconnect();
-        } finally {
-            this._connecting = false;
         }
+
+        this._connecting = false;
         return this._connected;
     }
 
@@ -180,6 +205,7 @@ class QZTrayService {
         return {
             connected: this.isConnected(),
             connecting: this._connecting,
+            lastError: this._lastError || null,
         };
     }
 

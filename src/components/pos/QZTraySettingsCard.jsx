@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Printer, CheckCircle2, Circle, RefreshCw, Search, Save, Zap, Download, AlertCircle } from 'lucide-react';
+import { Printer, CheckCircle2, Circle, RefreshCw, Search, Save, Zap, Download, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import qzTrayService from '@/lib/qzTrayService';
 
@@ -141,11 +141,35 @@ export default function QZTraySettingsCard({ restaurantId }) {
                             </Badge>
                         )}
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => qzTrayService.connect()} disabled={status.connecting}>
-                        <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${status.connecting ? 'animate-spin' : ''}`} />
-                        Reconnect
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {!status.connected && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open('https://localhost:8181', '_blank')}
+                                title="Open this URL in your browser and accept the certificate warning, then click Reconnect"
+                            >
+                                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                Accept Cert
+                            </Button>
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => qzTrayService.connect()} disabled={status.connecting}>
+                            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${status.connecting ? 'animate-spin' : ''}`} />
+                            Reconnect
+                        </Button>
+                    </div>
                 </div>
+
+                {/* Last error diagnostic */}
+                {!status.connected && !status.connecting && status.lastError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2 text-xs text-red-800">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-semibold mb-0.5">Connection Error:</p>
+                            <p className="font-mono break-all">{status.lastError}</p>
+                        </div>
+                    </div>
+                )}
 
                 {!status.connected && !status.connecting && (
                     <div className="space-y-2">
