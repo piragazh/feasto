@@ -84,6 +84,38 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
         setSearchResults(results.length > 0 ? results : []);
     };
 
+    // Apply a server-validated coupon to an existing order
+    const handleApplyCouponToOrder = async (couponResult) => {
+        const order = applyingPromo;
+        if (!order || !couponResult?.valid) return;
+
+        try {
+            const existingCodes = Array.isArray(order.coupon_codes) ? [...order.coupon_codes] : (order.coupon_code ? [order.coupon_code] : []);
+            // Avoid duplicates
+            if (!existingCodes.includes(couponResult.coupon_code)) {
+                existingCodes.push(couponResult.coupon_code);
+            }
+            const newCodes = existingCodes.slice(0, 3); // max 3
+
+            const newDiscount = (order.discount || 0) + couponResult.discount_amount;
+            const newTotal = Math.max(0, (order.total || 0) - couponResult.discount_amount);
+
+            await base44.entities.Order.update(order.id, {
+                coupon_codes: newCodes,
+                coupon_code: newCodes[0], // legacy compat
+                discount: parseFloat(newDiscount.toFixed(2)),
+                total: parseFloat(newTotal.toFixed(2)),
+            });
+
+            toast.success(`Coupon ${couponResult.coupon_code} applied — £${couponResult.discount_amount.toFixed(2)} off`);
+            setApplyingPromo(null);
+            refetch();
+        } catch (err) {
+            console.error('[POSOrderQueue] Failed to apply coupon to order:', err);
+            toast.error(err?.message || 'Failed to apply coupon to order');
+        }
+    };
+
     const StatusBadge = ({ status }) => {
         const styles = {
             pending: 'bg-red-500',
@@ -239,11 +271,15 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
                 {applyingPromo && (
                 <ApplyPromotionDialog
-                    order={applyingPromo}
                     open={!!applyingPromo}
                     onClose={() => setApplyingPromo(null)}
-                    onUpdate={refetch}
+                    onApplyCoupon={handleApplyCouponToOrder}
                     restaurantId={restaurantId}
+                    cartSubtotal={applyingPromo?.subtotal || applyingPromo?.total || 0}
+                    customerPhone={applyingPromo?.customer_phone || applyingPromo?.phone || null}
+                    customerEmail={applyingPromo?.customer_email || null}
+                    hasManualDiscount={!!applyingPromo?.discount && !applyingPromo?.coupon_codes?.length && !applyingPromo?.coupon_code}
+                    appliedCouponCount={Array.isArray(applyingPromo?.coupon_codes) ? applyingPromo.coupon_codes.length : (applyingPromo?.coupon_code ? 1 : 0)}
                     posTheme={posTheme}
                 />
                 )}
