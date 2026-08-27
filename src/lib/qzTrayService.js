@@ -14,6 +14,7 @@
  */
 
 import qz from 'qz-tray';
+import { base44 } from '@/api/base44Client';
 import { buildReceiptBytes, buildTestBytes, buildCashDrawerBytes } from '@/lib/escpos';
 
 class QZTrayService {
@@ -26,25 +27,51 @@ class QZTrayService {
     }
 
     /**
-     * Configure QZ Tray certificate/signature handling for a trusted local environment.
-     * QZ Tray provides its own self-signed cert via its built-in HTTP server.
+     * Configure QZ Tray certificate + signature handling.
+     *
+     * Uses a server-side RSA key pair (QZ_TRAY_CERTIFICATE / QZ_TRAY_PRIVATE_KEY
+     * secrets) so connections are trusted and prompt-free. The browser fetches the
+     * public cert and a signed challenge from the signQzTrayRequest backend
+     * function — the private key never reaches the client.
+     *
+     * If the key pair isn't configured, falls back to QZ Tray's own self-signed
+     * cert + unsigned (prompt mode), so QZ Tray still works with a manual allow.
      */
     _setupSecurity() {
+        this._certCache = null;
+
+        qz.security.setCertificatePromise((resolve, reject) => {
+            this._getCertificate()
+                .then(resolve)
+                .catch(reject);
+        });
+
+        qz.security.setSignaturePromise((toSign, resolve) => {
+            this._signChallenge(toSign)
+                .then(resolve)
+                .catch((e) => {
+                    console.warn('[QZTray] Signing failed, falling back to prompt mode:', e?.message || e);
+                    resolve();
+                });
+        });
+    }
+
+    async _getCertificate() {
+        if (this._certCache) return this._certCache;
         try {
-            // Fetch the certificate from QZ Tray's built-in HTTP server
-            qz.security.setCertificatePromise((resolve, reject) => {
-                fetch('https://localhost:8181/cert.pem')
-                    .then(r => r.text())
-                    .then(resolve)
-                    .catch(reject);
-            });
-            // No signing required — local trusted environment
-            qz.security.setSignaturePromise((toSign, resolve) => {
-                resolve();
-            });
+            const res = await base44.functions.invoke('signQzTrayRequest', { action: 'getCert' });
+            this._certCache = res.data.certificate;
+            return this._certCache;
         } catch (e) {
-            console.warn('[QZTray] Security setup failed:', e.message);
+            // Fallback: QZ Tray's own self-signed cert (prompt mode)
+            const r = await fetch('https://localhost:8181/cert.pem');
+            return await r.text();
         }
+    }
+
+    async _signChallenge(toSign) {
+        const res = await base44.functions.invoke('signQzTrayRequest', { action: 'sign', toSign });
+        return res.data.signature;
     }
 
     /**
