@@ -70,10 +70,18 @@ export default function POSTablesView({ restaurantId }) {
         for (const order of ordersForTable) {
             await base44.entities.Order.update(order.id, { status: 'delivered' });
         }
+        // Free the table — mark as needs_cleaning so staff can reset it
+        try {
+            await base44.entities.RestaurantTable.update(viewingTable.id, {
+                status: 'needs_cleaning',
+                current_order_id: null,
+            });
+        } catch { /* non-blocking — table cleanup can be done manually */ }
         toast.success('Payment completed!');
         setShowPayment(false);
         setViewingTable(null);
         refetchTableOrders();
+        refetchTables();
     };
 
     // ── Payment View ─────────────────────────────────────────────────────────

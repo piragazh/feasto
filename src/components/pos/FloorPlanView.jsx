@@ -8,6 +8,7 @@ import TableActionsDialog from './TableActionsDialog';
 export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableClick }) {
     const [isDragging, setIsDragging] = useState(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [dragMoved, setDragMoved] = useState(false);
     const [tableActionsOpen, setTableActionsOpen] = useState(false);
     const [selectedTable, setSelectedTable] = useState(null);
 
@@ -39,6 +40,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
         
         const rect = e.currentTarget.getBoundingClientRect();
         setIsDragging(table.id);
+        setDragMoved(false);
         setDragOffset({
             x: e.clientX - rect.left,
             y: e.clientY - rect.top
@@ -47,6 +49,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
 
     const handleMouseMove = (e) => {
         if (!isDragging) return;
+        setDragMoved(true);
 
         const container = document.getElementById('floor-plan-container');
         const rect = container.getBoundingClientRect();
@@ -62,6 +65,12 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
 
     const handleMouseUp = async (e) => {
         if (!isDragging) return;
+
+        // Only save position if the table was actually dragged (not just clicked)
+        if (!dragMoved) {
+            setIsDragging(null);
+            return;
+        }
 
         const container = document.getElementById('floor-plan-container');
         const rect = container.getBoundingClientRect();

@@ -151,6 +151,18 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
     const handleCleanTable = async () => {
         setLoading(true);
         try {
+            // Unmerge other tables' references before clearing this table
+            const mergedWith = table.merged_with || [];
+            for (const mergedTableId of mergedWith) {
+                const mergedTable = tables.find(t => t.id === mergedTableId);
+                if (mergedTable) {
+                    const updatedMerged = (mergedTable.merged_with || []).filter(id => id !== table.id);
+                    await base44.entities.RestaurantTable.update(mergedTableId, {
+                        merged_with: updatedMerged
+                    });
+                }
+            }
+
             await base44.entities.RestaurantTable.update(table.id, {
                 status: 'available',
                 notes: '',

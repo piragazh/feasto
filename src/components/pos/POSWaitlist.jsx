@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +20,14 @@ export default function POSWaitlist({ posTheme = 'dark' }) {
         summary:    isDark ? 'bg-white/[0.04]'                 : 'bg-gray-50',
         emptyText:  isDark ? 'text-gray-400'                   : 'text-gray-400',
     };
-    const [waitlist, setWaitlist] = useState([]);
+    const [waitlist, setWaitlist] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('pos_waitlist') || '[]'); } catch { return []; }
+    });
+
+    // Persist waitlist to localStorage so it survives reloads
+    useEffect(() => {
+        try { localStorage.setItem('pos_waitlist', JSON.stringify(waitlist)); } catch { /* quota */ }
+    }, [waitlist]);
     const [guestName, setGuestName] = useState('');
     const [partySize, setPartySize] = useState('2');
 

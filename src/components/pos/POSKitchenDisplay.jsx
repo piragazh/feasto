@@ -12,7 +12,7 @@ export default function POSKitchenDisplay({ restaurantId }) {
 
      const { data: orders = [], refetch } = useQuery({
          queryKey: ['pos-kitchen-orders', restaurantId],
-         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
+         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, status: { $in: ['pending', 'preparing', 'ready_for_collection'] } }, '-created_date', 100),
          enabled: !!restaurantId,
          refetchInterval: 2000,
      });
