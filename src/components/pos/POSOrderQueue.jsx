@@ -32,7 +32,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
     const { data: orders = [], refetch } = useQuery({
         queryKey: ['pos-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, status: { $in: ['pending', 'confirmed', 'preparing', 'ready_for_collection'] } }, '-created_date', 100),
         enabled: !!restaurantId,
         refetchInterval: 5000,
     });

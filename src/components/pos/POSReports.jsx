@@ -66,7 +66,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
 
     const { data: orders = [] } = useQuery({
         queryKey: ['pos-reports-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 1000),
         enabled: !!restaurantId,
     });
 
@@ -213,7 +213,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
     const printReport = async () => {
         const config = restaurant?.printer_config || {};
         const printerInfo = config.bluetooth_printer;
-        if (!printerInfo?.id) {
+        if (!printerInfo?.id && !config.qz_printer_name) {
             toast.error('No thermal printer configured. Set one up in Restaurant Settings > Printing.');
             return;
         }

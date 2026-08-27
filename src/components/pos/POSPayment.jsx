@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff, CheckCircle, XCircle, Loader2, Monitor, FileText, Tag } from 'lucide-react';
@@ -91,6 +91,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const [terminalAmount, setTerminalAmount] = useState(0);
     const [terminalTransactionRef, setTerminalTransactionRef] = useState('');
     const [terminalError, setTerminalError] = useState('');
+    const terminalCancelRef = useRef(false);
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
     const remaining = Math.max(0, effectiveTotal - totalPaid);
@@ -289,6 +290,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const processCard = async () => {
         const amount = numericInput > 0 ? numericInput : remaining;
         setShowCardConfirm(false);
+        terminalCancelRef.current = false;
 
         if (hasConfiguredTerminal) {
             setTerminalAmount(amount);
@@ -310,6 +312,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 terminalConfig: cardTerminal,
                 transactionRef: txnRef
             });
+            if (terminalCancelRef.current) return; // User cancelled while waiting
             if (response.data?.success) {
                 handleTerminalSuccess();
             } else {
@@ -317,6 +320,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 setTerminalStep('failed');
             }
         } catch (error) {
+            if (terminalCancelRef.current) return;
             setTerminalError('Failed to communicate with terminal: ' + (error.message || 'Unknown error'));
             setTerminalStep('failed');
         }
@@ -384,7 +388,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     items: cart,
                                     subtotal: cartSubtotal,
                                     delivery_fee: 0,
-                                    discount: discount?.amount || 0,
+                                    discount: manualDiscountAmount + couponDiscountAmount,
                                     total: effectiveTotal,
                                     payment_method: payments.length === 1 ? payments[0].method : 'cash',
                                     order_type: orderType || 'takeaway',
@@ -680,11 +684,25 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     </div>
                                 </div>
                                 <p className={`${t.subtext} text-xs text-center`}>
-                                    Customer should tap or insert their card. Do not cancel.
+                                    Customer should tap or insert their card.
                                 </p>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <Button
+                            onClick={() => {
+                                terminalCancelRef.current = true;
+                                setTerminalStep(null);
+                                setActiveMethod(null);
+                                toast.info('Card payment cancelled');
+                            }}
+                            variant="outline"
+                            className={`flex-1 ${t.cancelDlg}`}
+                        >
+                            Cancel
+                        </Button>
+                    </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 

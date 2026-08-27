@@ -87,6 +87,11 @@ export default function POSDashboard() {
                 if (!managers.length) { toast.error('No POS access'); base44.auth.redirectToLogin(); return; }
                 const manager = managers[0];
                 if (!manager.restaurant_ids?.length) { toast.error('No restaurants assigned'); return; }
+                if (urlRestaurantId && !manager.restaurant_ids.includes(urlRestaurantId)) {
+                    toast.error('Access denied to this restaurant');
+                    base44.auth.redirectToLogin();
+                    return;
+                }
                 restaurantId = urlRestaurantId || manager.restaurant_ids[0];
             }
 

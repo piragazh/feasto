@@ -28,7 +28,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
 
     const { data: orders = [], isFetching, refetch } = useQuery({
         queryKey: ['eod-orders', restaurantId, reportDate],
-        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }),
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 500),
         staleTime: 0,
     });
 
@@ -75,7 +75,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
 
     const printEOD = async () => {
         const config = restaurant?.printer_config;
-        if (!config?.bluetooth_printer?.id) {
+        if (!config?.bluetooth_printer?.id && !config?.qz_printer_name) {
             toast.error('No printer configured. Please connect a printer in Settings > Printing.');
             return;
         }
@@ -208,7 +208,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                     <Button
                         size="sm"
                         onClick={printEOD}
-                        disabled={isPrinting || !restaurant?.printer_config?.bluetooth_printer?.id}
+                        disabled={isPrinting || (!restaurant?.printer_config?.bluetooth_printer?.id && !restaurant?.printer_config?.qz_printer_name)}
                         className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
                     >
                         <Printer className="h-4 w-4" />
