@@ -94,13 +94,15 @@ class QZTrayService {
     // ── Connection ────────────────────────────────────────────────────────────
 
     /**
-     * Connect to QZ Tray.
+     * Connect to QZ Tray using INSECURE ws://localhost.
      *
-     * Strategy: try INSECURE (ws://localhost) first. Localhost is exempt from
-     * mixed-content blocking on HTTPS pages (W3C "potentially trustworthy
-     * origin"), and QZ Tray accepts ws:// connections by default — so this
-     * bypasses the self-signed certificate entirely, no "Accept Cert" step
-     * needed. Falls back to SECURE (wss://) only if insecure fails.
+     * Localhost is exempt from mixed-content blocking on HTTPS pages (W3C
+     * "potentially trustworthy origin"), and QZ Tray accepts ws:// connections
+     * by default — so this bypasses the self-signed certificate entirely.
+     * No "Accept Cert" step needed, no cert/signature backend calls.
+     *
+     * A single attempt avoids the qz-tray library's stuck inProgress flag
+     * that occurs when a second connect() is called before the first settles.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
@@ -110,30 +112,12 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        // Attempt 1: insecure (ws://) — fast, no cert needed
-        const insecureOk = await this._attemptConnect(false, 6000);
-        if (insecureOk) return true;
-        if (this._connected) return true;
-
-        // Attempt 2: secure (wss://) — needs cert acceptance on HTTPS
-        const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
-        if (!isHttps) {
-            // Already tried insecure on HTTP — nothing else to try
-            this._connecting = false;
-            this._notifyStatus();
-            return false;
-        }
-        // Re-set _connecting — the insecure watchdog may have cleared it
-        this._connecting = true;
-        this._notifyStatus();
-        return this._attemptConnect(true, 12000);
+        return this._attemptConnect(false, 10000);
     }
 
     /**
      * Single connection attempt with a hard watchdog.
      * Returns true on success, false on failure/timeout.
-     * Does NOT manage _connecting (caller handles that) — but DOES set
-     * _connected and _lastError.
      */
     _attemptConnect(usingSecure, timeoutMs) {
         return new Promise((resolve) => {
@@ -142,12 +126,8 @@ class QZTrayService {
             const watchdogTimer = setTimeout(() => {
                 if (settled) return;
                 settled = true;
-                console.warn(`[QZTray] Watchdog: ${usingSecure ? 'secure' : 'insecure'} connect timed out after ${timeoutMs / 1000}s`);
-                if (usingSecure) {
-                    this._lastError = 'Connection timed out. Click "Accept Cert" to trust the QZ Tray certificate, then Reconnect.';
-                } else {
-                    this._lastError = 'Connection timed out. Make sure QZ Tray is running on this computer.';
-                }
+                console.warn(`[QZTray] Watchdog: connect timed out after ${timeoutMs / 1000}s`);
+                this._lastError = 'Connection timed out. Make sure QZ Tray is running on this computer.';
                 this._connecting = false;
                 this._notifyStatus();
 
@@ -173,15 +153,11 @@ class QZTrayService {
                 settled = true;
                 clearTimeout(watchdogTimer);
                 const msg = syncErr?.message || String(syncErr);
-                console.warn(`[QZTray] ${usingSecure ? 'secure' : 'insecure'} connect threw:`, msg);
-                // Don't set _lastError here — let the fallback attempt try.
-                // Only set it if this is the final attempt.
-                if (usingSecure) {
-                    this._lastError = msg;
-                    this._connecting = false;
-                    this._notifyStatus();
-                }
-                if (usingSecure && !/has not returned yet/i.test(msg)) {
+                console.warn('[QZTray] Connect threw:', msg);
+                this._lastError = msg;
+                this._connecting = false;
+                this._notifyStatus();
+                if (!/has not returned yet/i.test(msg)) {
                     this._scheduleReconnect();
                 }
                 resolve(false);
@@ -194,7 +170,7 @@ class QZTrayService {
                 clearTimeout(watchdogTimer);
                 this._connected = true;
                 this._reconnectAttempts = 0;
-                console.log(`[QZTray] Connected (${usingSecure ? 'secure' : 'insecure'})`);
+                console.log('[QZTray] Connected successfully');
                 this._connecting = false;
                 this._lastError = null;
                 this._notifyStatus();
@@ -215,17 +191,13 @@ class QZTrayService {
                 settled = true;
                 clearTimeout(watchdogTimer);
                 const msg = e?.message || String(e);
-                console.warn(`[QZTray] ${usingSecure ? 'secure' : 'insecure'} connect failed:`, msg);
-                if (usingSecure) {
-                    this._lastError = msg;
-                    this._connecting = false;
-                    this._notifyStatus();
-                    if (!/has not returned yet/i.test(msg)) {
-                        this._scheduleReconnect();
-                    }
+                console.warn('[QZTray] Connect failed:', msg);
+                this._lastError = msg;
+                this._connecting = false;
+                this._notifyStatus();
+                if (!/has not returned yet/i.test(msg)) {
+                    this._scheduleReconnect();
                 }
-                // For insecure failure, don't set _lastError — the secure
-                // fallback will set it if it also fails.
                 resolve(false);
             });
         });
