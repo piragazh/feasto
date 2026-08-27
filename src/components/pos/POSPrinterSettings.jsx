@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
 import { printerManager } from '@/components/restaurant/PrinterService';
+import QZTraySettingsCard from '@/components/pos/QZTraySettingsCard';
 
 // ── Per-printer status badge ───────────────────────────────────────────────
 function PrinterStatusBadge({ service, label }) {
@@ -258,6 +259,8 @@ export default function POSPrinterSettings({ restaurantId }) {
     if (isLoading) return <div className="text-center py-8 text-gray-400">Loading printer settings...</div>;
 
     return (
+        <div className="space-y-6">
+        <QZTraySettingsCard restaurantId={restaurantId} />
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -389,5 +392,6 @@ export default function POSPrinterSettings({ restaurantId }) {
                 </Button>
             </CardContent>
         </Card>
+        </div>
     );
 }

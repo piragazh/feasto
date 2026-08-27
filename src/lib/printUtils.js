@@ -7,6 +7,7 @@
  */
 import { printerManager } from '@/components/restaurant/PrinterService';
 import { base44 } from '@/api/base44Client';
+import qzTrayService from '@/lib/qzTrayService';
 
 const btServices = () => [printerManager.printerA, printerManager.printerB];
 
@@ -95,6 +96,19 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
     const globalCfg = restaurant?.printer_config || {};
     const centralized = globalCfg.centralized_printers || [];
     const svcs = btServices();
+
+    // ── QZ Tray (preferred for Windows POS with local/network printers) ──
+    // Sends raw ESC/POS bytes directly via localhost — instant, reaches LAN printers.
+    const qzPrinterName = globalCfg.qz_printer_name;
+    if (qzPrinterName && qzTrayService.isConnected()) {
+        try {
+            const cfg = buildPerPrinterConfig(globalCfg, {});
+            await qzTrayService.printReceipt(qzPrinterName, order, restaurant, cfg);
+            return qzPrinterName;
+        } catch (e) {
+            console.warn('[printUtils] QZ Tray print failed, falling back:', e.message);
+        }
+    }
 
     if (centralized.length > 0) {
         const effectiveChannel = resolveChannel(channel, centralized);
@@ -254,6 +268,17 @@ export async function openCashDrawer(restaurant) {
     const globalCfg = restaurant?.printer_config || {};
     const centralized = globalCfg.centralized_printers || [];
     const svcs = btServices();
+
+    // ── QZ Tray (preferred) ──
+    const qzPrinterName = globalCfg.qz_printer_name;
+    if (qzPrinterName && qzTrayService.isConnected()) {
+        try {
+            await qzTrayService.openCashDrawer(qzPrinterName);
+            return true;
+        } catch (e) {
+            console.warn('[printUtils] QZ Tray cash drawer failed, falling back:', e.message);
+        }
+    }
 
     // Find the first pos_order printer
     const candidates = centralized.length > 0

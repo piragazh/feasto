@@ -1,0 +1,197 @@
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Printer, CheckCircle2, Circle, RefreshCw, Search, Save, Zap, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import qzTrayService from '@/lib/qzTrayService';
+
+/**
+ * QZ Tray settings card — manages the local QZ Tray connection,
+ * printer selection, test print, and test cash drawer.
+ * The selected printer name persists in restaurant.printer_config.qz_printer_name.
+ */
+export default function QZTraySettingsCard({ restaurantId }) {
+    const queryClient = useQueryClient();
+    const [status, setStatus] = useState(qzTrayService.getStatus());
+    const [printerName, setPrinterName] = useState('');
+    const [searching, setSearching] = useState(false);
+    const [availablePrinters, setAvailablePrinters] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant-qz', restaurantId],
+        queryFn: async () => {
+            const [r] = await base44.entities.Restaurant.filter({ id: restaurantId });
+            return r;
+        },
+        enabled: !!restaurantId,
+    });
+
+    useEffect(() => {
+        qzTrayService.setConnectionStatusCallback((s) => setStatus(s));
+        qzTrayService.connect();
+        return () => { qzTrayService.setConnectionStatusCallback(null); };
+    }, []);
+
+    useEffect(() => {
+        if (restaurant?.printer_config?.qz_printer_name) {
+            setPrinterName(restaurant.printer_config.qz_printer_name);
+        }
+    }, [restaurant]);
+
+    const mutation = useMutation({
+        mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['restaurant-qz', restaurantId]);
+            queryClient.invalidateQueries(['restaurant-pos-printer', restaurantId]);
+            toast.success('QZ Tray printer saved');
+        },
+        onError: () => toast.error('Failed to save QZ Tray printer'),
+    });
+
+    const handleSearch = async () => {
+        if (!status.connected) {
+            toast.error('QZ Tray is not connected. Install and start QZ Tray first.');
+            return;
+        }
+        setSearching(true);
+        try {
+            const printers = await qzTrayService.findPrinters();
+            setAvailablePrinters(printers);
+            setShowDropdown(true);
+            if (printers.length === 0) toast.info('No printers found via QZ Tray');
+        } catch (e) {
+            toast.error('Printer search failed: ' + e.message);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const handleSave = () => {
+        const existingConfig = restaurant?.printer_config || {};
+        mutation.mutate({ printer_config: { ...existingConfig, qz_printer_name: printerName } });
+    };
+
+    const handleTestPrint = async () => {
+        if (!printerName) { toast.error('Select a printer first'); return; }
+        if (!status.connected) { toast.error('QZ Tray not connected'); return; }
+        try {
+            await qzTrayService.printTest(printerName, restaurant?.printer_config?.command_set || 'esc_pos');
+            toast.success('Test print sent');
+        } catch (e) {
+            toast.error('Test print failed: ' + e.message);
+        }
+    };
+
+    const handleTestDrawer = async () => {
+        if (!printerName) { toast.error('Select a printer first'); return; }
+        if (!status.connected) { toast.error('QZ Tray not connected'); return; }
+        try {
+            await qzTrayService.openCashDrawer(printerName);
+            toast.success('Cash drawer opened');
+        } catch (e) {
+            toast.error('Drawer test failed: ' + e.message);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-orange-500" />
+                    QZ Tray (Direct Local Printing)
+                </CardTitle>
+                <CardDescription>
+                    Connects directly to QZ Tray on this computer for instant receipt printing and cash drawer control — no cloud round-trip.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {/* Connection status */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                        {status.connecting ? (
+                            <Badge className="bg-amber-100 text-amber-700 gap-1.5">
+                                <RefreshCw className="h-3 w-3 animate-spin" /> Connecting…
+                            </Badge>
+                        ) : status.connected ? (
+                            <Badge className="bg-green-100 text-green-700 gap-1.5">
+                                <CheckCircle2 className="h-3 w-3" /> QZ Tray Online
+                            </Badge>
+                        ) : (
+                            <Badge className="bg-red-100 text-red-700 gap-1.5">
+                                <Circle className="h-3 w-3" /> QZ Tray Offline
+                            </Badge>
+                        )}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => qzTrayService.connect()} disabled={status.connecting}>
+                        <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${status.connecting ? 'animate-spin' : ''}`} />
+                        Reconnect
+                    </Button>
+                </div>
+
+                {!status.connected && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
+                        <Download className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <span>
+                            Download and install <strong>QZ Tray</strong> (free) from{' '}
+                            <a href="https://qz.io/download" target="_blank" rel="noopener noreferrer" className="underline font-semibold">qz.io/download</a>{' '}
+                            on this Windows PC, then launch it. This card will show "Online" automatically.
+                        </span>
+                    </div>
+                )}
+
+                {/* Printer name selection */}
+                <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-gray-500">Printer Name (via QZ Tray)</Label>
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Input
+                                placeholder="e.g. EPSON_TM_T20III"
+                                value={printerName}
+                                onChange={(e) => { setPrinterName(e.target.value); setShowDropdown(false); }}
+                                onFocus={() => availablePrinters.length && setShowDropdown(true)}
+                                className="font-mono text-sm"
+                            />
+                            {showDropdown && availablePrinters.length > 0 && (
+                                <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white border rounded-lg shadow-lg">
+                                    {availablePrinters.map((p) => (
+                                        <button
+                                            key={p}
+                                            onClick={() => { setPrinterName(p); setShowDropdown(false); }}
+                                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 font-mono"
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <Button size="sm" variant="outline" onClick={handleSearch} disabled={searching || !status.connected}>
+                            <Search className={`h-3.5 w-3.5 mr-1.5 ${searching ? 'animate-spin' : ''}`} />
+                            Search
+                        </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">Type the name or click Search to discover printers connected to this PC.</p>
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-3 gap-2">
+                    <Button onClick={handleSave} disabled={mutation.isPending || !printerName} variant="outline" size="sm">
+                        <Save className="h-3.5 w-3.5 mr-1.5" /> Save
+                    </Button>
+                    <Button onClick={handleTestPrint} disabled={!status.connected || !printerName} variant="outline" size="sm">
+                        <Printer className="h-3.5 w-3.5 mr-1.5" /> Test Print
+                    </Button>
+                    <Button onClick={handleTestDrawer} disabled={!status.connected || !printerName} variant="outline" size="sm">
+                        <Zap className="h-3.5 w-3.5 mr-1.5" /> Test Drawer
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}

@@ -18,6 +18,7 @@ import POSTablesView from '@/components/pos/POSTablesView.jsx';
 import POSStaffManager from '@/components/pos/POSStaffManager.jsx';
 import POSStaffLogin from '@/components/pos/POSStaffLogin.jsx';
 import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
+import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
 import { toast } from 'sonner';
 
 function useTime() {
@@ -301,6 +302,9 @@ export default function POSDashboard() {
                             <ShoppingCart className="h-4 w-4 text-orange-400" />
                             <span className="text-orange-500 font-bold text-sm">{cart.reduce((s, i) => s + i.quantity, 0)} · £{cartTotal.toFixed(2)}</span>
                         </div>
+
+                        {/* QZ Tray status + Open Cash Drawer button */}
+                        <QZTrayStatusBadge restaurant={restaurant} isDark={isDark} />
 
                         {/* Theme toggle */}
                         <button 

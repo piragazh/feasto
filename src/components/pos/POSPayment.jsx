@@ -8,7 +8,7 @@ import POSDiscountPanel from './POSDiscountPanel';
 import ApplyPromotionDialog from './ApplyPromotionDialog';
 import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
-import { printWithCentralizedConfig, hasPrinterForChannel } from '@/lib/printUtils';
+import { printWithCentralizedConfig, hasPrinterForChannel, openCashDrawer } from '@/lib/printUtils';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
@@ -201,6 +201,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 toast.success(`Payment complete. Change: £${changeNow.toFixed(2)}`);
             } else {
                 toast.success('Payment complete');
+            }
+            // Open cash drawer automatically after cash payment (via QZ Tray if available)
+            if (hasCash) {
+                try { await openCashDrawer(restaurant); } catch (e) { console.warn('[POS] Cash drawer open failed:', e.message); }
             }
             publishCustomerDisplay({
                 status: 'paid',
