@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
     const [mealCustomizations, setMealCustomizations] = useState({});
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [step, setStep] = useState(0); // which option group we're on
+    const autoAdvanceTimer = useRef(null);
 
     useEffect(() => {
         setCustomizations({});
@@ -29,7 +30,22 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
         setIsMeal(false);
         setShowKeyboard(false);
         setStep(0);
+        // Clear any pending auto-advance timer when item/dialog resets
+        if (autoAdvanceTimer.current) {
+            clearTimeout(autoAdvanceTimer.current);
+            autoAdvanceTimer.current = null;
+        }
     }, [item?.id, open]);
+
+    // Clean up pending auto-advance timer on unmount
+    useEffect(() => {
+        return () => {
+            if (autoAdvanceTimer.current) {
+                clearTimeout(autoAdvanceTimer.current);
+                autoAdvanceTimer.current = null;
+            }
+        };
+    }, []);
 
     // Helper: effective POS price for an option
     const optPrice = (opt) => {
@@ -145,7 +161,11 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
         }
         // Auto-advance to next step after a short delay for single-select
         if (autoAdvance && !isLastStep) {
-            setTimeout(() => setStep(s => s + 1), 250);
+            if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+            autoAdvanceTimer.current = setTimeout(() => {
+                autoAdvanceTimer.current = null;
+                setStep(s => s + 1);
+            }, 250);
         }
     };
 

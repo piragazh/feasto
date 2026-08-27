@@ -161,19 +161,19 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
     const { from, to } = DATE_PRESETS.find(p => p.label === datePreset)?.getDates() || {};
 
     const { data: orders = [], isLoading } = useQuery({
-        queryKey: ['pos-order-history', restaurantId, datePreset],
+        queryKey: ['pos-order-history', restaurantId, datePreset, from?.toISOString(), to?.toISOString()],
         queryFn: async () => {
             const query = { restaurant_id: restaurantId };
-            const all = await base44.entities.Order.filter(query, '-created_date', 200);
-            return all;
+            if (from) query.created_date = { ...query.created_date, $gte: from.toISOString() };
+            if (to)   query.created_date = { ...query.created_date, $lte: to.toISOString() };
+            // Server-side date filter means we only fetch orders in range — no client-side date filtering needed
+            return await base44.entities.Order.filter(query, '-created_date', 200);
         },
         enabled: !!restaurantId,
         refetchInterval: 30000,
     });
 
     const filtered = orders.filter(order => {
-        if (from && new Date(order.created_date) < from) return false;
-        if (to   && new Date(order.created_date) > to)   return false;
         if (statusFilter !== 'all' && order.status !== statusFilter) return false;
         if (typeFilter !== 'all' && order.order_type !== typeFilter) return false;
         if (search) {

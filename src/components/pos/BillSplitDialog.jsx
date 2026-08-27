@@ -55,14 +55,21 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
         }
 
         try {
-            // Store split information in order notes
+            // Store split information in order notes (routed via posUpdateOrder for tenant verification)
             const splitInfo = customSplits.map((s, idx) => 
                 `Split ${idx + 1}: £${s.amount.toFixed(2)}`
             ).join(' | ');
 
-            await base44.entities.Order.update(order.id, {
-                notes: `${order.notes || ''} | BILL SPLIT: ${splitInfo}`
+            const res = await base44.functions.invoke('posUpdateOrder', {
+                order_id: order.id,
+                updates: {
+                    notes: `${order.notes || ''} | BILL SPLIT: ${splitInfo}`,
+                },
             });
+
+            if (res?.data?.error) {
+                throw new Error(res.data.error);
+            }
 
             toast.success('Bill split saved');
             onUpdate();
