@@ -82,7 +82,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
         if (!postcode || postcode.length < 3) return;
         setPostcodeSearching(true);
         try {
-            const customers = await base44.entities.Customer.filter({ restaurant_id: restaurantId });
+            const customers = await base44.entities.Customer.filter({ restaurant_id: restaurantId }, '-created_date', 500);
             const matches = customers.filter(c =>
                 c.delivery_address?.toLowerCase().includes(postcode.toLowerCase().replace(/\s/g, ''))
                 || c.delivery_address?.toLowerCase().includes(postcode.toLowerCase())

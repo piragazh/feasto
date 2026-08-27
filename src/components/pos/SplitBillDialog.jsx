@@ -63,7 +63,6 @@ export default function SplitBillDialog({ open, onClose, orders, table, onPaymen
     const handleProcessSplit = async () => {
         if (splitMethod === 'equal') {
             toast.success(`Bill split equally: £${(totalAmount / numberOfPeople).toFixed(2)} per person`);
-            onClose();
         } else {
             const totalAssigned = customSplits.reduce((sum, split) => sum + split.amount, 0);
             if (Math.abs(totalAssigned - totalAmount) > 0.01) {
@@ -71,8 +70,9 @@ export default function SplitBillDialog({ open, onClose, orders, table, onPaymen
                 return;
             }
             toast.success('Bill split successfully!');
-            onClose();
         }
+        onClose();
+        onPaymentComplete?.();
     };
 
     return (

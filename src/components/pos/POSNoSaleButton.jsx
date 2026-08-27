@@ -21,11 +21,12 @@ export default function POSNoSaleButton({ restaurant, isDark, t }) {
             // 2. Log the no-sale action
             const user = await base44.auth.me().catch(() => null);
             await base44.entities.DashboardActivity.create({
-                activity_type: 'no_sale',
-                description: `No Sale — cash drawer opened`,
-                restaurant_id: restaurant?.id || '',
-                performed_by: user?.email || 'unknown',
-                metadata: { timestamp: new Date().toISOString() },
+                user_email: user?.email || 'unknown',
+                action: 'POS_NO_SALE',
+                resource_type: 'Restaurant',
+                resource_id: restaurant?.id || null,
+                details: JSON.stringify({ description: 'No Sale — cash drawer opened', timestamp: new Date().toISOString() }),
+                severity: 'warning',
             }).catch(() => {}); // Non-blocking — don't fail if logging fails
 
             toast.success('Cash drawer opened (No Sale logged)');

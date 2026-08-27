@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,16 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
     const [discount, setDiscount] = useState(order?.discount || 0);
     const [confirmSave, setConfirmSave] = useState(false);
     const [pendingRemoveIdx, setPendingRemoveIdx] = useState(null);
+
+    // Reset state when a different order is opened
+    useEffect(() => {
+        if (open) {
+            setItems(order?.items || []);
+            setDiscount(order?.discount || 0);
+            setConfirmSave(false);
+            setPendingRemoveIdx(null);
+        }
+    }, [open, order?.id]);
 
     const { data: menuItems = [] } = useQuery({
         queryKey: ['menu-items', restaurantId],
@@ -53,7 +63,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
             setItems([...items, {
                 menu_item_id: menuItem.id,
                 name: menuItem.name,
-                price: menuItem.price,
+                price: menuItem.pos_price != null ? menuItem.pos_price : menuItem.price,
                 quantity: 1
             }]);
         }
