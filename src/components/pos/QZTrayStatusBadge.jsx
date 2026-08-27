@@ -12,10 +12,10 @@ export default function QZTrayStatusBadge({ restaurant, isDark }) {
     const [opening, setOpening] = useState(false);
 
     useEffect(() => {
-        qzTrayService.setConnectionStatusCallback((s) => setStatus(s));
+        const unsub = qzTrayService.subscribe((s) => setStatus(s));
         // Attempt auto-connect on POS mount
         qzTrayService.connect();
-        return () => { qzTrayService.setConnectionStatusCallback(null); };
+        return unsub;
     }, []);
 
     const handleOpenDrawer = async () => {
@@ -52,7 +52,7 @@ export default function QZTrayStatusBadge({ restaurant, isDark }) {
                     <Circle className="h-3.5 w-3.5 text-red-400" />
                 )}
                 <span className={`text-xs font-semibold ${status.connected ? 'text-green-400' : status.connecting ? 'text-amber-400' : 'text-red-400'}`}>
-                    {status.connecting ? 'QZ…' : status.connected ? 'QZ' : 'QZ'}
+                    {status.connecting ? 'QZ…' : status.connected ? 'QZ' : 'QZ Off'}
                 </span>
             </div>
 

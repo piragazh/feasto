@@ -100,7 +100,7 @@ export async function printWithCentralizedConfig(order, restaurant, channel, bro
     // ── QZ Tray (preferred for Windows POS with local/network printers) ──
     // Sends raw ESC/POS bytes directly via localhost — instant, reaches LAN printers.
     const qzPrinterName = globalCfg.qz_printer_name;
-    if (qzPrinterName && qzTrayService.isConnected()) {
+    if (qzPrinterName && qzTrayService.isConnected() && channel === 'pos_order') {
         try {
             const cfg = buildPerPrinterConfig(globalCfg, {});
             await qzTrayService.printReceipt(qzPrinterName, order, restaurant, cfg);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,6 +22,7 @@ export default function QZTraySettingsCard({ restaurantId }) {
     const [searching, setSearching] = useState(false);
     const [availablePrinters, setAvailablePrinters] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
+    const dropdownRef = useRef(null);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant-qz', restaurantId],
@@ -33,10 +34,22 @@ export default function QZTraySettingsCard({ restaurantId }) {
     });
 
     useEffect(() => {
-        qzTrayService.setConnectionStatusCallback((s) => setStatus(s));
+        const unsub = qzTrayService.subscribe((s) => setStatus(s));
         qzTrayService.connect();
-        return () => { qzTrayService.setConnectionStatusCallback(null); };
+        return unsub;
     }, []);
+
+    // Close printer dropdown when clicking outside
+    useEffect(() => {
+        if (!showDropdown) return;
+        const handler = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showDropdown]);
 
     useEffect(() => {
         if (restaurant?.printer_config?.qz_printer_name) {
@@ -81,7 +94,7 @@ export default function QZTraySettingsCard({ restaurantId }) {
         if (!printerName) { toast.error('Select a printer first'); return; }
         if (!status.connected) { toast.error('QZ Tray not connected'); return; }
         try {
-            await qzTrayService.printTest(printerName, restaurant?.printer_config?.command_set || 'esc_pos');
+            await qzTrayService.printTest(printerName, restaurant?.printer_config?.command_set || 'esc_pos', restaurant?.printer_config?.printer_width || '80mm');
             toast.success('Test print sent');
         } catch (e) {
             toast.error('Test print failed: ' + e.message);
@@ -148,7 +161,7 @@ export default function QZTraySettingsCard({ restaurantId }) {
                 {/* Printer name selection */}
                 <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wide text-gray-500">Printer Name (via QZ Tray)</Label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" ref={dropdownRef}>
                         <div className="relative flex-1">
                             <Input
                                 placeholder="e.g. EPSON_TM_T20III"

@@ -47,12 +47,23 @@ function wrapText(text, lineWidth) {
     const lines = [];
     let current = '';
     for (const word of words) {
-        if ((current + (current ? ' ' : '') + word).length <= lineWidth) {
-            current += (current ? ' ' : '') + word;
+        const candidate = current + (current ? ' ' : '') + word;
+        if (byteLen(candidate) <= lineWidth) {
+            current = candidate;
         } else {
             if (current) lines.push(current);
-            if (word.length > lineWidth) {
-                for (let i = 0; i < word.length; i += lineWidth) lines.push(word.slice(i, i + lineWidth));
+            if (byteLen(word) > lineWidth) {
+                // Hard-break long words by byte width (handles multibyte £ etc.)
+                let i = 0;
+                while (i < word.length) {
+                    let chunk = '';
+                    while (i < word.length && byteLen(chunk + word[i]) <= lineWidth) {
+                        chunk += word[i];
+                        i++;
+                    }
+                    if (chunk) lines.push(chunk);
+                    else i++; // safety: skip a char that exceeds lineWidth alone
+                }
                 current = '';
             } else {
                 current = word;
@@ -115,6 +126,9 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
 
     if (restaurant?.address && restaurant.address !== 'null' && !isCompact) {
         add(`${restaurant.address}\n`);
+    }
+    if (restaurant?.phone && restaurant.phone !== 'null' && !isCompact) {
+        add(`Tel: ${restaurant.phone}\n`);
     }
     if (config.header_text) {
         blank();
@@ -242,24 +256,26 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
     return buf;
 }
 
-export function buildTestBytes(printerName, commandSet = 'esc_pos') {
+export function buildTestBytes(printerName, commandSet = 'esc_pos', printerWidth = '80mm') {
     const cmd = buildCommands(commandSet);
+    const W = (printerWidth === '58mm') ? 32 : 48;
     const now = new Date().toLocaleString();
     const chunks = [];
     const add = (...parts) => chunks.push(bytes(...parts));
+    const sep = () => add(`${'='.repeat(W)}\n`);
 
     add(cmd.init, cmd.alignCenter, cmd.boldOn, cmd.doubleHeight);
     add('PRINTER TEST\n');
     add(cmd.normal, cmd.boldOff);
-    add('================================\n');
+    sep();
     add(cmd.alignLeft);
     add(`Printer:  ${printerName || 'Printer'}\n`);
     add(`Time:     ${now}\n`);
     add(`Command:  ${commandSet}\n`);
-    add('================================\n');
+    sep();
     add(cmd.boldOn, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcd\n', cmd.boldOff);
     add('1234567890 !@#$%^&*()_+-=[]{}|\n');
-    add('================================\n');
+    sep();
     add(cmd.alignCenter, 'QZ Tray printer test OK!\n\n\n', cmd.cut);
 
     const total_len = chunks.reduce((n, c) => n + c.length, 0);

@@ -21,8 +21,9 @@ class QZTrayService {
     constructor() {
         this._connected = false;
         this._connecting = false;
-        this._statusCallback = null;
+        this._listeners = new Set();
         this._autoReconnectTimer = null;
+        this._reconnectAttempts = 0;
         this._setupSecurity();
     }
 
@@ -119,22 +120,30 @@ class QZTrayService {
 
     _scheduleReconnect() {
         if (this._autoReconnectTimer) return;
-        this._autoReconnectTimer = setInterval(async () => {
-            if (!this._connected && !this._connecting) {
-                const ok = await this.connect();
-                if (ok) {
-                    clearInterval(this._autoReconnectTimer);
-                    this._autoReconnectTimer = null;
-                }
+        const attempt = async () => {
+            this._autoReconnectTimer = null;
+            if (this._connected || this._connecting) return;
+            const ok = await this.connect();
+            if (ok) {
+                this._reconnectAttempts = 0;
+                return;
             }
-        }, 10000);
+            this._reconnectAttempts++;
+            // Exponential backoff: 10s → 15s → 22s … capped at 60s
+            const interval = Math.min(10000 * Math.pow(1.5, this._reconnectAttempts), 60000);
+            this._autoReconnectTimer = setTimeout(attempt, interval);
+        };
+        const interval = Math.min(10000 * Math.pow(1.5, this._reconnectAttempts), 60000);
+        this._autoReconnectTimer = setTimeout(attempt, interval);
     }
 
     disconnect() {
         if (this._autoReconnectTimer) {
+            clearTimeout(this._autoReconnectTimer);
             clearInterval(this._autoReconnectTimer);
             this._autoReconnectTimer = null;
         }
+        this._reconnectAttempts = 0;
         try { qz.websocket.disconnect(); } catch {}
         this._connected = false;
         this._notifyStatus();
@@ -151,12 +160,26 @@ class QZTrayService {
         };
     }
 
+    /**
+     * Subscribe to connection status changes. Returns an unsubscribe function.
+     * Multiple components can subscribe simultaneously — no single-callback
+     * overwrite.
+     */
+    subscribe(callback) {
+        this._listeners.add(callback);
+        callback(this.getStatus());
+        return () => { this._listeners.delete(callback); };
+    }
+
+    /** Legacy shim — prefer subscribe(). */
     setConnectionStatusCallback(callback) {
-        this._statusCallback = callback;
+        if (!callback) return () => {};
+        return this.subscribe(callback);
     }
 
     _notifyStatus() {
-        if (this._statusCallback) this._statusCallback(this.getStatus());
+        const status = this.getStatus();
+        this._listeners.forEach((cb) => cb(status));
     }
 
     /**
@@ -232,8 +255,8 @@ class QZTrayService {
      * @param {string} printerName
      * @param {string} commandSet
      */
-    async printTest(printerName, commandSet = 'esc_pos') {
-        const bytes = buildTestBytes(printerName, commandSet);
+    async printTest(printerName, commandSet = 'esc_pos', printerWidth = '80mm') {
+        const bytes = buildTestBytes(printerName, commandSet, printerWidth);
         return this.print(printerName, bytes);
     }
 

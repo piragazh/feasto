@@ -181,6 +181,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
         } catch (e) {
             console.warn('Auto-print failed:', e.message);
+            toast.error('Receipt did not print — use Print Receipt button to retry', { duration: 6000 });
         }
     };
 
@@ -201,10 +202,6 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 toast.success(`Payment complete. Change: £${changeNow.toFixed(2)}`);
             } else {
                 toast.success('Payment complete');
-            }
-            // Open cash drawer automatically after cash payment (via QZ Tray if available)
-            if (hasCash) {
-                try { await openCashDrawer(restaurant); } catch (e) { console.warn('[POS] Cash drawer open failed:', e.message); }
             }
             publishCustomerDisplay({
                 status: 'paid',
@@ -236,6 +233,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             };
 
             await printReceiptAfterPayment(orderDataForPrint, finalPayments);
+            // Open cash drawer after the receipt prints (via QZ Tray if available)
+            if (hasCash) {
+                try { await openCashDrawer(restaurant); } catch (e) { console.warn('[POS] Cash drawer open failed:', e.message); }
+            }
             onPaymentComplete();
         } catch (e) {
             toast.error('Payment failed: ' + (e?.message || 'Unknown error'));
