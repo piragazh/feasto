@@ -4,12 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit2, Split, Percent, Search } from 'lucide-react';
+import { Edit2, Split, Percent, Search, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 import OrderSearch from './OrderSearch';
 import OrderEditDialog from './OrderEditDialog';
 import BillSplitDialog from './BillSplitDialog';
 import ApplyPromotionDialog from './ApplyPromotionDialog';
+import VoidOrderDialog from './VoidOrderDialog';
 
 export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
     const isDark = posTheme === 'dark';
@@ -29,6 +30,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
     const [editingOrder, setEditingOrder] = useState(null);
     const [splittingOrder, setSplittingOrder] = useState(null);
     const [applyingPromo, setApplyingPromo] = useState(null);
+    const [voidingOrder, setVoidingOrder] = useState(null);
 
     const { data: orders = [], refetch } = useQuery({
         queryKey: ['pos-orders', restaurantId],
@@ -169,6 +171,15 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                                                     Promo
                                                 </Button>
                                             </div>
+                                            <Button
+                                                onClick={() => setVoidingOrder(order)}
+                                                size="sm"
+                                                className="w-full bg-red-600/90 hover:bg-red-600 text-white text-xs h-7"
+                                                title="Void / cancel this order"
+                                            >
+                                                <Ban className="h-3 w-3 mr-1" />
+                                                Void
+                                            </Button>
                                         </div>
 
                                         <div className="space-y-1 flex flex-col gap-1">
@@ -232,6 +243,16 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                     onClose={() => setApplyingPromo(null)}
                     onUpdate={refetch}
                     restaurantId={restaurantId}
+                />
+                )}
+
+                {voidingOrder && (
+                <VoidOrderDialog
+                    order={voidingOrder}
+                    open={!!voidingOrder}
+                    onClose={() => setVoidingOrder(null)}
+                    onUpdate={refetch}
+                    isDark={isDark}
                 />
                 )}
                 </div>

@@ -17,7 +17,7 @@ import {
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -116,7 +116,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     }, [cart, discount, coupon, effectiveTotal, remaining, activeMethod]);
 
     const createOrder = async (paymentSummary) => {
-        if (!restaurantId) return;
+        if (!restaurantId || skipOrderCreation) return { offline: false, skipped: true };
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
         const phoneDetails = window.__phoneOrderDetails || {};
         const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
@@ -174,7 +174,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             const changeAmt = Math.max(0, finalPayments.reduce((s, p) => s + p.amount, 0) - effectiveTotal);
             const printOrder = {
                 ...orderData,
-                id: Date.now().toString(),
+                id: existingOrderIds?.[0] || Date.now().toString(),
                 created_date: new Date().toISOString(),
                 payment_method: dominantMethod,
                 notes: hasCash && changeAmt > 0 ? `Change: £${changeAmt.toFixed(2)}` : orderData.notes,

@@ -81,6 +81,26 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         }
         setIsPrinting(true);
         try {
+            // ── Try QZ Tray first (preferred for Windows POS) ─────────────────
+            if (config.qz_printer_name) {
+                try {
+                    const { default: qzTrayService } = await import('@/lib/qzTrayService');
+                    const { buildEODBytes } = await import('@/lib/escpos');
+                    if (qzTrayService.isConnected()) {
+                        const eodBytes = buildEODBytes(restaurant, stats, format(new Date(reportDate), 'dd MMM yyyy'), config);
+                        await qzTrayService.print(config.qz_printer_name, eodBytes);
+                        toast.success('EOD report printed');
+                        return;
+                    }
+                } catch (qzErr) {
+                    console.warn('[EOD] QZ Tray print failed, falling back to Bluetooth:', qzErr?.message);
+                }
+            }
+            // ── Fall back to Bluetooth ────────────────────────────────────────
+            if (!config.bluetooth_printer?.id) {
+                toast.error('QZ Tray not connected and no Bluetooth printer configured. Please connect a printer in Settings.');
+                return;
+            }
             const ESC = '\x1B';
             const GS = '\x1D';
             const cmd = {

@@ -220,6 +220,37 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
 
         setIsPrinting(true);
         try {
+            // ── Try QZ Tray first (preferred for Windows POS) ─────────────────
+            if (config.qz_printer_name) {
+                try {
+                    const { default: qzTrayService } = await import('@/lib/qzTrayService');
+                    const { buildReportBytes } = await import('@/lib/escpos');
+                    if (qzTrayService.isConnected()) {
+                        const reportBytes = buildReportBytes(restaurant, {
+                            reportLabel,
+                            filteredOrders,
+                            totalRevenue,
+                            cashRevenue,
+                            cardRevenue,
+                            averageOrder,
+                            peakHour,
+                            orderTypeData,
+                            menuItemsData,
+                            salesData,
+                        }, config);
+                        await qzTrayService.print(config.qz_printer_name, reportBytes);
+                        toast.success('Report printed successfully');
+                        return;
+                    }
+                } catch (qzErr) {
+                    console.warn('[REPORTS] QZ Tray print failed, falling back to Bluetooth:', qzErr?.message);
+                }
+            }
+            // ── Fall back to Bluetooth ────────────────────────────────────────
+            if (!printerInfo?.id) {
+                toast.error('QZ Tray not connected and no Bluetooth printer configured. Please connect a printer in Settings.');
+                return;
+            }
             await printerService.connect(printerInfo, true);
             printerService.setCommandSet(config.command_set || 'esc_pos');
             const cmd = printerService.getCommands();

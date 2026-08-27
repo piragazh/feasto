@@ -288,3 +288,141 @@ export function buildTestBytes(printerName, commandSet = 'esc_pos', printerWidth
 export function buildCashDrawerBytes() {
     return new Uint8Array(CASH_DRAWER_CMD);
 }
+
+/**
+ * Build EOD (End of Day) report ESC/POS bytes.
+ * @param {object} restaurant - Restaurant data
+ * @param {object} stats - EOD stats { orderCount, totalSales, avgOrder, totalDiscount, byMethod, cashTotal, cancelled }
+ * @param {string} reportDate - Formatted date string
+ * @param {object} config - Printer config (command_set, printer_width)
+ * @returns {Uint8Array} Raw ESC/POS bytes
+ */
+export function buildEODBytes(restaurant, stats, reportDate, config = {}) {
+    const cmd = buildCommands(config.command_set);
+    const W = (config.printer_width === '58mm') ? 32 : 48;
+    const chunks = [];
+    const add = (...parts) => chunks.push(bytes(...parts));
+    const line = (char = '-') => add(`${char.repeat(W)}\n`);
+    const rPadLine = (label, value) => add(`${rPad(label, value, W)}\n`);
+
+    add(cmd.init);
+    add(cmd.alignCenter, cmd.boldOn, cmd.doubleHeight);
+    add(`${(restaurant?.name || 'RESTAURANT').toUpperCase()}\n`);
+    add(cmd.normal, cmd.boldOff);
+    add('END OF DAY REPORT\n');
+    add(`${reportDate}\n`);
+    add(`Printed: ${new Date().toLocaleString('en-GB')}\n`);
+    add(cmd.alignLeft);
+    line('=');
+
+    add(cmd.boldOn, 'SALES SUMMARY\n', cmd.boldOff);
+    rPadLine('Total Orders:', String(stats.orderCount || 0));
+    rPadLine('Total Sales:', `\xA3${(stats.totalSales || 0).toFixed(2)}`);
+    rPadLine('Avg Order:', `\xA3${(stats.avgOrder || 0).toFixed(2)}`);
+    if (stats.totalDiscount > 0) rPadLine('Discounts Given:', `-\xA3${(stats.totalDiscount || 0).toFixed(2)}`);
+    line('-');
+
+    add(cmd.boldOn, 'PAYMENT BREAKDOWN\n', cmd.boldOff);
+    for (const [method, data] of Object.entries(stats.byMethod || {})) {
+        rPadLine(`${method.toUpperCase()} (${data.count}):`, `\xA3${(data.total || 0).toFixed(2)}`);
+    }
+    line('-');
+
+    add(cmd.boldOn, 'CASH SUMMARY\n', cmd.boldOff);
+    rPadLine('Cash Collected:', `\xA3${(stats.cashTotal || 0).toFixed(2)}`);
+    line('-');
+
+    add(cmd.boldOn, `CANCELLED (${(stats.cancelled || []).length})\n`, cmd.boldOff);
+    if (!stats.cancelled || stats.cancelled.length === 0) {
+        add('  None\n');
+    } else {
+        for (const o of stats.cancelled) {
+            const num = o.order_number || `#${(o.id || '').slice(-6)}`;
+            add(`  ${num}  \xA3${(o.total || 0).toFixed(2)}\n`);
+        }
+    }
+    line('=');
+    add(cmd.alignCenter, '--- End of Day Complete ---\n\n\n', cmd.cut);
+
+    const total_len = chunks.reduce((n, c) => n + c.length, 0);
+    const buf = new Uint8Array(total_len);
+    let offset = 0;
+    for (const c of chunks) { buf.set(c, offset); offset += c.length; }
+    return buf;
+}
+
+/**
+ * Build Sales Report ESC/POS bytes.
+ * @param {object} restaurant - Restaurant data
+ * @param {object} reportData - { reportLabel, filteredOrders, totalRevenue, cashRevenue, cardRevenue, averageOrder, peakHour, orderTypeData, menuItemsData, salesData }
+ * @param {object} config - Printer config (command_set, printer_width)
+ * @returns {Uint8Array} Raw ESC/POS bytes
+ */
+export function buildReportBytes(restaurant, reportData, config = {}) {
+    const cmd = buildCommands(config.command_set);
+    const W = (config.printer_width === '58mm') ? 32 : 48;
+    const chunks = [];
+    const add = (...parts) => chunks.push(bytes(...parts));
+    const line = (char = '-') => add(`${char.repeat(W)}\n`);
+    const rPadLine = (label, value) => add(`${rPad(label, value, W)}\n`);
+    const pad = (left, right, width = W) => {
+        const gap = width - byteLen(left) - byteLen(right);
+        return `${left}${' '.repeat(Math.max(1, gap))}${right}`;
+    };
+
+    add(cmd.init);
+    add(cmd.alignCenter, cmd.boldOn, cmd.doubleHeight);
+    add(`${(restaurant?.name || 'POS REPORT').toUpperCase()}\n`);
+    add(cmd.normal, cmd.boldOff);
+    add('POS SALES REPORT\n');
+    add(`${reportData.reportLabel || ''}\n`);
+    add(`Printed: ${new Date().toLocaleString('en-GB')}\n`);
+    add(cmd.alignLeft);
+    line('=');
+
+    add(cmd.boldOn, 'SUMMARY\n', cmd.boldOff);
+    line('-');
+    rPadLine('Total Orders:', String(reportData.filteredOrders?.length || 0));
+    rPadLine('Total Revenue:', `\xA3${(reportData.totalRevenue || 0).toFixed(2)}`);
+    rPadLine('Cash:', `\xA3${(reportData.cashRevenue || 0).toFixed(2)}`);
+    rPadLine('Card:', `\xA3${(reportData.cardRevenue || 0).toFixed(2)}`);
+    rPadLine('Avg Order:', `\xA3${(reportData.averageOrder || 0).toFixed(2)}`);
+    rPadLine('Peak Hour:', String(reportData.peakHour || 'N/A'));
+
+    if (reportData.orderTypeData?.length > 0) {
+        line('=');
+        add(cmd.boldOn, 'ORDER TYPES\n', cmd.boldOff);
+        line('-');
+        for (const ot of reportData.orderTypeData) {
+            rPadLine(`${ot.name.replace(/_/g, ' ').toUpperCase()}:`, String(ot.value));
+        }
+    }
+
+    if (reportData.menuItemsData?.length > 0) {
+        line('=');
+        add(cmd.boldOn, 'TOP ITEMS\n', cmd.boldOff);
+        line('-');
+        for (const item of reportData.menuItemsData.slice(0, 8)) {
+            const short = item.name.length > W - 12 ? item.name.slice(0, W - 14) + '..' : item.name;
+            add(`${pad(short, `x${item.count} \xA3${(item.revenue || 0).toFixed(2)}`)}\n`);
+        }
+    }
+
+    if (reportData.salesData?.length > 1) {
+        line('=');
+        add(cmd.boldOn, 'DAILY BREAKDOWN\n', cmd.boldOff);
+        line('-');
+        for (const d of reportData.salesData) {
+            rPadLine(d.date, `\xA3${(d.total || 0).toFixed(2)}`);
+        }
+    }
+
+    line('=');
+    add(cmd.alignCenter, '--- End of Report ---\n\n\n', cmd.cut);
+
+    const total_len = chunks.reduce((n, c) => n + c.length, 0);
+    const buf = new Uint8Array(total_len);
+    let offset = 0;
+    for (const c of chunks) { buf.set(c, offset); offset += c.length; }
+    return buf;
+}

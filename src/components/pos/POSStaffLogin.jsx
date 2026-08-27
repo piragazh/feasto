@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { UtensilsCrossed, Delete } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 const ROLES = {
     waiter:        { label: 'Waiter',        color: 'bg-blue-500' },
@@ -56,6 +58,7 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
     const [selected, setSelected] = useState(null);
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
+    const [verifying, setVerifying] = useState(false);
 
     const activeStaff = staffList.filter(s => s.is_active);
 
@@ -82,18 +85,31 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
         setError('');
     };
 
-    const verifyPin = (p = pin) => {
-        if (!selected) return;
+    const verifyPin = async (p = pin) => {
+        if (!selected || verifying) return;
+        // No PIN set on the staff record — allow login without verification
         if (!selected.pin) {
-            // No PIN set — allow login without one
             onLogin(selected);
             return;
         }
-        if (p === selected.pin) {
-            onLogin(selected);
-        } else {
-            setError('Incorrect PIN. Try again.');
+        setVerifying(true);
+        setError('');
+        try {
+            const result = await base44.functions.invoke('posVerifyStaffPin', {
+                staff_id: selected.id,
+                pin: p,
+            });
+            if (result?.data?.valid) {
+                onLogin(result.data.staff);
+            } else {
+                setError(result?.data?.error || 'Incorrect PIN. Try again.');
+                setPin('');
+            }
+        } catch (e) {
+            setError('Verification failed. Please try again.');
             setPin('');
+        } finally {
+            setVerifying(false);
         }
     };
 
