@@ -5,17 +5,20 @@
  * QZ Tray lets the browser send raw ESC/POS bytes directly to local
  * thermal printers and open cash drawers — bypassing the cloud backend
  * which cannot reach LAN printer IPs.
- *
- * Usage:
- *   import qzTrayService from '@/lib/qzTrayService';
- *   await qzTrayService.connect();
- *   await qzTrayService.print('EPSON_TM_T20III', receiptBytes);
- *   await qzTrayService.openCashDrawer('EPSON_TM_T20III');
  */
 
 import qz from 'qz-tray';
 import { base44 } from '@/api/base44Client';
 import { buildReceiptBytes, buildTestBytes, buildCashDrawerBytes } from '@/lib/escpos';
+
+/** Promise wrapper with a timeout — rejects if not resolved within ms. */
+function withTimeout(promise, ms, label) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 class QZTrayService {
     constructor() {
@@ -24,36 +27,31 @@ class QZTrayService {
         this._listeners = new Set();
         this._autoReconnectTimer = null;
         this._reconnectAttempts = 0;
+        this._connectTimeoutMs = 15000;  // Overall connection timeout
+        this._certFetchTimeoutMs = 8000;  // Cert/signing fetch timeout
         this._setupSecurity();
     }
 
-    /**
-     * Configure QZ Tray certificate + signature handling.
-     *
-     * Uses a server-side RSA key pair (QZ_TRAY_CERTIFICATE / QZ_TRAY_PRIVATE_KEY
-     * secrets) so connections are trusted and prompt-free. The browser fetches the
-     * public cert and a signed challenge from the signQzTrayRequest backend
-     * function — the private key never reaches the client.
-     *
-     * If the key pair isn't configured, falls back to QZ Tray's own self-signed
-     * cert + unsigned (prompt mode), so QZ Tray still works with a manual allow.
-     */
+    // ── Security (certificate + signature) ────────────────────────────────────
+
     _setupSecurity() {
         this._certCache = null;
 
-        qz.security.setCertificatePromise((resolve, reject) => {
-            this._getCertificate()
-                .then(resolve)
-                .catch(reject);
+        qz.security.setCertificatePromise(() => {
+            return withTimeout(this._getCertificate(), this._certFetchTimeoutMs, 'QZ Tray certificate fetch');
         });
 
-        qz.security.setSignaturePromise((toSign, resolve) => {
-            this._signChallenge(toSign)
-                .then(resolve)
-                .catch((e) => {
-                    console.warn('[QZTray] Signing failed, falling back to prompt mode:', e?.message || e);
-                    resolve();
-                });
+        qz.security.setSignaturePromise((toSign) => {
+            return withTimeout(
+                this._signChallenge(toSign),
+                this._certFetchTimeoutMs,
+                'QZ Tray signature'
+            ).catch((e) => {
+                // If signing fails, return empty string so QZ falls back to
+                // prompt mode cleanly — resolving with undefined can hang QZ.
+                console.warn('[QZTray] Signing failed, using prompt mode:', e?.message || e);
+                return '';
+            });
         });
     }
 
@@ -61,33 +59,62 @@ class QZTrayService {
         if (this._certCache) return this._certCache;
         try {
             const res = await base44.functions.invoke('signQzTrayRequest', { action: 'getCert' });
+            if (!res?.data?.certificate) throw new Error('No certificate in response');
             this._certCache = res.data.certificate;
+            console.log('[QZTray] Certificate obtained from backend');
             return this._certCache;
         } catch (e) {
-            // Fallback: QZ Tray's own self-signed cert (prompt mode)
-            const r = await fetch('https://localhost:8181/cert.pem');
-            return await r.text();
+            console.warn('[QZTray] Backend cert fetch failed, trying local cert:', e?.message || e);
+            // Fallback: QZ Tray's own self-signed cert via direct HTTP fetch.
+            // Use AbortController so this doesn't hang if the browser blocks
+            // the self-signed cert (common on HTTPS pages).
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            try {
+                const r = await fetch('https://localhost:8181/cert.pem', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const cert = await r.text();
+                console.log('[QZTray] Certificate obtained from local QZ Tray');
+                return cert;
+            } catch (fetchErr) {
+                clearTimeout(timeoutId);
+                console.error('[QZTray] Local cert fetch also failed:', fetchErr?.message || fetchErr);
+                throw new Error('Could not obtain QZ Tray certificate. Ensure QZ Tray is running.');
+            }
         }
     }
 
     async _signChallenge(toSign) {
         const res = await base44.functions.invoke('signQzTrayRequest', { action: 'sign', toSign });
+        if (!res?.data?.signature) throw new Error('No signature in response');
         return res.data.signature;
     }
 
+    // ── Connection ────────────────────────────────────────────────────────────
+
     /**
      * Connect to QZ Tray. Safe to call multiple times — returns immediately
-     * if already connected.
+     * if already connected. Fails fast (within 15s) if QZ Tray is unreachable.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
         this._connecting = true;
         this._notifyStatus();
+
+        const connectPromise = qz.websocket.connect({
+            retries: 2,
+            delay: 1,
+            usingSecure: typeof window !== 'undefined' && window.location?.protocol === 'https:',
+        });
+
         try {
-            await qz.websocket.connect({ retries: 2, delay: 1 });
+            await withTimeout(connectPromise, this._connectTimeoutMs, 'QZ Tray connection');
             this._connected = true;
+            this._reconnectAttempts = 0;
+            console.log('[QZTray] Connected successfully');
             this._notifyStatus();
-            // Listen for QZ Tray closing/restarting
+
             qz.websocket.setErrorCallbacks(
                 (err) => {
                     console.warn('[QZTray] Connection error:', err?.message || err);
@@ -109,9 +136,6 @@ class QZTrayService {
         return this._connected;
     }
 
-    /**
-     * Called when QZ Tray disconnects — schedule an auto-reconnect.
-     */
     _handleDisconnect() {
         this._connected = false;
         this._notifyStatus();
@@ -140,7 +164,6 @@ class QZTrayService {
     disconnect() {
         if (this._autoReconnectTimer) {
             clearTimeout(this._autoReconnectTimer);
-            clearInterval(this._autoReconnectTimer);
             this._autoReconnectTimer = null;
         }
         this._reconnectAttempts = 0;
@@ -160,11 +183,6 @@ class QZTrayService {
         };
     }
 
-    /**
-     * Subscribe to connection status changes. Returns an unsubscribe function.
-     * Multiple components can subscribe simultaneously — no single-callback
-     * overwrite.
-     */
     subscribe(callback) {
         this._listeners.add(callback);
         callback(this.getStatus());
@@ -182,10 +200,8 @@ class QZTrayService {
         this._listeners.forEach((cb) => cb(status));
     }
 
-    /**
-     * Find all available printers known to QZ Tray.
-     * @returns {Promise<string[]>} Printer names
-     */
+    // ── Printing ──────────────────────────────────────────────────────────────
+
     async findPrinters() {
         if (!this.isConnected()) await this.connect();
         if (!this.isConnected()) return [];
@@ -198,11 +214,6 @@ class QZTrayService {
         }
     }
 
-    /**
-     * Find a specific printer by name (fuzzy match supported).
-     * @param {string} name - Printer name or partial name
-     * @returns {Promise<string|null>} Exact printer name if found
-     */
     async findPrinter(name) {
         if (!name) return null;
         if (!this.isConnected()) await this.connect();
@@ -216,18 +227,12 @@ class QZTrayService {
         }
     }
 
-    /**
-     * Send raw ESC/POS bytes to a printer.
-     * @param {string} printerName - Target printer name
-     * @param {Uint8Array} escposBytes - Raw ESC/POS command bytes
-     */
     async print(printerName, escposBytes) {
         if (!this.isConnected()) await this.connect();
         if (!this.isConnected()) throw new Error('QZ Tray is not connected. Make sure QZ Tray is running on this computer.');
 
         const resolvedName = await this.findPrinter(printerName) || printerName;
         const config = qz.configs.create(resolvedName);
-        // QZ Tray accepts base64-flavored raw commands
         let binary = '';
         for (let i = 0; i < escposBytes.length; i++) binary += String.fromCharCode(escposBytes[i]);
         const base64 = btoa(binary);
@@ -237,34 +242,16 @@ class QZTrayService {
         return true;
     }
 
-    /**
-     * Print a receipt using existing ESC/POS byte generation.
-     * @param {string} printerName
-     * @param {object} order
-     * @param {object} restaurant
-     * @param {object} config - Receipt config
-     * @param {boolean} openCashDrawer - Open drawer after printing
-     */
     async printReceipt(printerName, order, restaurant, config, openCashDrawer = false) {
         const bytes = buildReceiptBytes(order, restaurant, config, openCashDrawer);
         return this.print(printerName, bytes);
     }
 
-    /**
-     * Print a test receipt.
-     * @param {string} printerName
-     * @param {string} commandSet
-     */
     async printTest(printerName, commandSet = 'esc_pos', printerWidth = '80mm') {
         const bytes = buildTestBytes(printerName, commandSet, printerWidth);
         return this.print(printerName, bytes);
     }
 
-    /**
-     * Open the cash drawer connected to a printer's DK port.
-     * Sends the ESC p command via QZ Tray to the specified printer.
-     * @param {string} printerName
-     */
     async openCashDrawer(printerName) {
         const bytes = buildCashDrawerBytes();
         return this.print(printerName, bytes);

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Printer, CheckCircle2, Circle, RefreshCw, Search, Save, Zap, Download } from 'lucide-react';
+import { Printer, CheckCircle2, Circle, RefreshCw, Search, Save, Zap, Download, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import qzTrayService from '@/lib/qzTrayService';
 
@@ -147,14 +147,25 @@ export default function QZTraySettingsCard({ restaurantId }) {
                     </Button>
                 </div>
 
-                {!status.connected && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
-                        <Download className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <span>
-                            Download and install <strong>QZ Tray</strong> (free) from{' '}
-                            <a href="https://qz.io/download" target="_blank" rel="noopener noreferrer" className="underline font-semibold">qz.io/download</a>{' '}
-                            on this Windows PC, then launch it. This card will show "Online" automatically.
-                        </span>
+                {!status.connected && !status.connecting && (
+                    <div className="space-y-2">
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
+                            <Download className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <span>
+                                Download and install <strong>QZ Tray</strong> (free) from{' '}
+                                <a href="https://qz.io/download" target="_blank" rel="noopener noreferrer" className="underline font-semibold">qz.io/download</a>{' '}
+                                on this Windows PC, then launch it. Then click <strong>Reconnect</strong>.
+                            </span>
+                        </div>
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 text-xs text-amber-800">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <span>
+                                Still not connecting? This site uses HTTPS, so your browser must trust QZ Tray's
+                                local certificate. Open{' '}
+                                <a href="https://localhost:8181" target="_blank" rel="noopener noreferrer" className="underline font-semibold">https://localhost:8181</a>{' '}
+                                in a new tab, click <strong>Advanced → Proceed</strong>, then come back and click <strong>Reconnect</strong>.
+                            </span>
+                        </div>
                     </div>
                 )}
 
