@@ -667,22 +667,31 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
 
             {/* Order type assignments */}
             <div>
-                <Label className="text-xs text-gray-500 uppercase tracking-wide block mb-2">Receives Jobs From</Label>
+                <Label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Receives Jobs From</Label>
+                <p className="text-xs text-gray-400 mb-2">Tap an order type to send its tickets to this printer. You can pick more than one.</p>
                 <div className="flex flex-wrap gap-2">
                     {ORDER_CHANNELS.map(ch => {
                         const assigned = (printer.assigned_channels || []).includes(ch.id);
                         return (
                             <button
+                                type="button"
                                 key={ch.id}
+                                aria-pressed={assigned}
+                                title={assigned ? `Stop sending ${ch.label} to this printer` : `Send ${ch.label} to this printer`}
                                 onClick={() => {
                                     const current = printer.assigned_channels || [];
                                     const updated = assigned ? current.filter(c => c !== ch.id) : [...current, ch.id];
                                     onUpdate({ assigned_channels: updated });
                                 }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all ${
-                                    assigned ? `${ch.bg} ${ch.color} ${ch.border}` : 'bg-gray-50 text-gray-400 border-gray-200'
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold border-2 cursor-pointer transition-all ${
+                                    assigned
+                                        ? `${ch.bg} ${ch.color} ${ch.border} shadow-sm`
+                                        : 'bg-white text-gray-600 border-dashed border-gray-300 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50'
                                 }`}
                             >
+                                {assigned
+                                    ? <CheckCircle2 className="h-3.5 w-3.5" />
+                                    : <Plus className="h-3.5 w-3.5 opacity-70" />}
                                 <ch.icon className="h-3.5 w-3.5" />
                                 {ch.label}
                             </button>
