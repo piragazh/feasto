@@ -205,18 +205,26 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
     const items = order.items || [];
     items.forEach((item, idx) => {
         const qty = item.quantity || 1;
-        const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
         const itemLabel = `${idx + 1}. ${qty}x ${item.name}`;
 
-        add(cmd.boldOn);
-        if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
-            add(`${rPad(itemLabel, itemPrice, W)}\n`);
-        } else {
+        if (isKitchen) {
+            // Kitchen tickets: no price, larger text — this is what to make, not what it costs.
+            add(cmd.boldOn, cmd.doubleHeight);
             const nameLines = wrapText(itemLabel, W);
             for (const nl of nameLines) add(`${nl}\n`);
-            add(`${' '.repeat(Math.max(0, W - itemPrice.length))}${itemPrice}\n`);
+            add(cmd.normal, cmd.boldOff);
+        } else {
+            const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
+            add(cmd.boldOn);
+            if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
+                add(`${rPad(itemLabel, itemPrice, W)}\n`);
+            } else {
+                const nameLines = wrapText(itemLabel, W);
+                for (const nl of nameLines) add(`${nl}\n`);
+                add(`${' '.repeat(Math.max(0, W - itemPrice.length))}${itemPrice}\n`);
+            }
+            add(cmd.boldOff);
         }
-        add(cmd.boldOff);
 
         const custLines = formatCustomizations(item);
         for (const cl of custLines) add(`${cl}\n`);
