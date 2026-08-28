@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt, getAllPendingTableOrders, markTableOrderSynced, markTableOrderSyncFailed } from './POSOfflineDB';
+import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt, getAllPendingTableOrders, markTableOrderSynced, markTableOrderSyncFailed, getRetryablePendingOrders, getRetryableTableOrders, getStuckOrders, getStuckTableOrders, resetOrderSyncAttempts, resetTableOrderSyncAttempts, discardPendingOrder, discardPendingTableOrder, MAX_SYNC_ATTEMPTS } from './POSOfflineDB';
+import { checkBackendReachable } from '@/lib/networkStatus';
 import { WifiOff, RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Shared sync state so header indicator and banner stay in sync
 const listeners = new Set();
-let sharedState = { isOnline: navigator.onLine, pendingCount: 0, isSyncing: false, lastSynced: null };
+let sharedState = { isOnline: navigator.onLine, pendingCount: 0, stuckCount: 0, isSyncing: false, lastSynced: null };
 
 function notifyListeners() {
     listeners.forEach(fn => fn({ ...sharedState }));
@@ -25,6 +26,48 @@ export function useOfflineSyncState() {
         return () => listeners.delete(setState);
     }, []);
     return state;
+}
+
+// ── Reachability heartbeat ─────────────────────────────────────────────
+// navigator.onLine only reports whether a network interface is up — it stays
+// true when the restaurant's router is fine but the ISP is down. A single
+// shared heartbeat actually probes the backend so the indicator staff see
+// reflects reality. Runs once globally, not per component instance.
+let heartbeatTimer = null;
+let heartbeatSubscribers = 0;
+
+async function runHeartbeat() {
+    const reachable = await checkBackendReachable();
+    if (reachable !== sharedState.isOnline) {
+        updateShared({ isOnline: reachable });
+    }
+}
+
+function startHeartbeat() {
+    heartbeatSubscribers++;
+    if (heartbeatTimer) return;
+    runHeartbeat();
+    // 20s is frequent enough to catch an outage within a service beat without
+    // adding meaningful load.
+    heartbeatTimer = setInterval(runHeartbeat, 20000);
+}
+
+function stopHeartbeat() {
+    heartbeatSubscribers = Math.max(0, heartbeatSubscribers - 1);
+    if (heartbeatSubscribers === 0 && heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
+}
+
+// Exponential backoff between automatic sync attempts while a failure persists,
+// so an outage doesn't mean hammering the backend every few seconds.
+let consecutiveSyncFailures = 0;
+let nextSyncAllowedAt = 0;
+
+function backoffDelayMs(failures) {
+    // 3s, 6s, 12s, 24s, 48s, capped at 60s
+    return Math.min(3000 * Math.pow(2, Math.max(0, failures - 1)), 60000);
 }
 
 let syncPromise = null;
