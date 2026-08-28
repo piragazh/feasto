@@ -120,6 +120,7 @@ export default function POSDashboard() {
     };
 
     const addToCart = (item) => {
+        playItemAdded();
         setCart(prev => {
             const hasCustomizations = item.customizations && Object.keys(item.customizations).length > 0;
             const hasSpecialInstructions = !!item.specialInstructions;
@@ -142,10 +143,18 @@ export default function POSDashboard() {
             return [...prev, { ...item, id: uniqueId, menu_item_id: item.menu_item_id || item.id, quantity: item.quantity || 1 }];
         });
     };
-    const removeFromCart = (itemId) => setCart(prev => prev.filter(i => i.id !== itemId));
+    const removeFromCart = (itemId) => {
+        playItemRemoved();
+        setCart(prev => prev.filter(i => i.id !== itemId));
+    };
     const updateQuantity = (itemId, quantity) => {
         if (quantity < 1) { removeFromCart(itemId); return; }
-        setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity } : i));
+        setCart(prev => prev.map(i => {
+            if (i.id !== itemId) return i;
+            if (quantity > i.quantity) playItemAdded();
+            else if (quantity < i.quantity) playItemRemoved();
+            return { ...i, quantity };
+        }));
     };
     const clearCart = () => {
         setCart([]);
