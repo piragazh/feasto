@@ -323,8 +323,23 @@ export class PrinterService {
 
         const lineWidth = config.printer_width === '80mm' ? 48 : 32;
 
+        if (isKitchen) {
+            await this.sendCommand(cmd.alignCenter);
+            await this.sendCommand(cmd.boldOn);
+            await this.sendText('*** KITCHEN TICKET ***\n');
+            await this.sendCommand(cmd.boldOff);
+            await this.sendCommand(cmd.alignLeft);
+        }
+
         for (const item of (order.items || [])) {
-            if (config.template === 'itemized') {
+            if (isKitchen) {
+                // Kitchen tickets: no price, larger text — what to make, not what it costs.
+                await this.sendCommand(cmd.boldOn);
+                await this.sendCommand(cmd.doubleHeight);
+                await this.sendText(`${item.quantity}x ${item.name}\n`);
+                await this.sendCommand(cmd.normal);
+                await this.sendCommand(cmd.boldOff);
+            } else if (config.template === 'itemized') {
                 await this.sendCommand(cmd.boldOn);
                 await this.sendText(`${item.quantity}x ${item.name}\n`);
                 await this.sendCommand(cmd.boldOff);
@@ -335,7 +350,7 @@ export class PrinterService {
                 const padding = lineWidth - itemName.length - price.length;
                 await this.sendText(`${itemName}${' '.repeat(Math.max(1, padding))}${price}\n`);
             }
-            if ((config.template === 'detailed' || config.template === 'itemized') && item.customizations) {
+            if ((config.template === 'detailed' || config.template === 'itemized' || isKitchen) && item.customizations) {
                 for (const [key, value] of Object.entries(item.customizations)) {
                     if (typeof value !== 'object') await this.sendText(`  ${key}: ${value}\n`);
                 }
