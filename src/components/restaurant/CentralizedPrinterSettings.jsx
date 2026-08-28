@@ -12,7 +12,7 @@ import {
     Printer, Bluetooth, Usb, Wifi, Save, CheckCircle2,
     AlertCircle, Info, RefreshCw, ShoppingBag, Cpu,
     TabletSmartphone, ArrowRight, Zap, Plus, Trash2, FlaskConical,
-    WifiOff, ChevronDown, ChevronUp
+    WifiOff, ChevronDown, ChevronUp, ChefHat, Receipt, ExternalLink, Circle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
@@ -22,6 +22,7 @@ import NetworkPrinterManager, { NetworkPrinterStatusBadge } from '@/components/r
 import LocalPrintAgentPanel from '@/components/restaurant/LocalPrintAgentPanel';
 import PrinterDiagnosticTool from '@/components/restaurant/PrinterDiagnosticTool';
 import AndroidAgentSetupPanel from '@/components/restaurant/AndroidAgentSetupPanel';
+import qzTrayService from '@/lib/qzTrayService';
 
 // ── Order type channels ────────────────────────────────────────────────────
 const ORDER_CHANNELS = [
