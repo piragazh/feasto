@@ -94,8 +94,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         }
     };
 
-    async function _deadCodeToRemove_printEOD_legacy() {
-        const config = restaurant?.printer_config;
+
         if (!config?.bluetooth_printer?.id && !config?.qz_printer_name) {
             toast.error('No printer configured. Please connect a printer in Settings > Printing.');
             return;
@@ -208,8 +207,6 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         } finally {
             setIsPrinting(false);
         }
-    };
-
     const PAYMENT_ICONS = {
         cash: <Banknote className="h-4 w-4 text-green-400" />,
         card: <CreditCard className="h-4 w-4 text-blue-400" />,
