@@ -516,8 +516,9 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                         <AlertCircle className="h-3 w-3" />Bluetooth is only available on printer slots 1 & 2. Use Network or USB for this slot.
                     </p>
                 )}
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                     {[
+                        { value: 'qz_tray',   label: 'QZ Tray',   icon: Zap       },
                         { value: 'bluetooth', label: 'Bluetooth', icon: Bluetooth },
                         { value: 'usb',       label: 'USB',       icon: Usb       },
                         { value: 'network',   label: 'Network',   icon: Wifi      },
