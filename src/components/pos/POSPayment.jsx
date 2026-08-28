@@ -178,7 +178,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 payment_method: dominantMethod,
                 notes: hasCash && changeAmt > 0 ? `Change: £${changeAmt.toFixed(2)}` : orderData.notes,
             };
-            await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
+            const result = await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
+            if (result.printed.length === 0) {
+                console.error('[POS-PRINT] Receipt auto-print failed after payment:', result.failed, { restaurantId, orderTotal: effectiveTotal });
+                toast.error('Receipt did not print — use Print Receipt button to retry', { duration: 6000 });
+            }
         } catch (e) {
             console.error('[POS-PRINT] Receipt auto-print failed after payment:', e?.message || e, { restaurantId, orderTotal: effectiveTotal });
             toast.error('Receipt did not print — use Print Receipt button to retry', { duration: 6000 });
