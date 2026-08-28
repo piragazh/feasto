@@ -92,28 +92,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         } finally {
             setIsPrinting(false);
         }
-REMOVED_A
-            toast.error('No printer configured. Please connect a printer in Settings > Printing.');
-            return;
-        }
-        setIsPrinting(true);
-        try {
-            // ── Try QZ Tray first (preferred for Windows POS) ─────────────────
-            if (config.qz_printer_name) {
-                try {
-                    const { default: qzTrayService } = await import('@/lib/qzTrayService');
-                    const { buildEODBytes } = await import('@/lib/escpos');
-                    if (!qzTrayService.isConnected()) await qzTrayService.connect();
-                    if (qzTrayService.isConnected()) {
-                        const eodBytes = buildEODBytes(restaurant, stats, format(new Date(reportDate), 'dd MMM yyyy'), config);
-                        await qzTrayService.print(config.qz_printer_name, eodBytes);
-                        toast.success('EOD report printed');
-                        return;
-                    }
-                } catch (qzErr) {
-                    console.warn('[EOD] QZ Tray print failed, falling back to Bluetooth:', qzErr?.message);
-                }
-            }
+REMOVED_B
             // ── Fall back to Bluetooth ────────────────────────────────────────
             if (!config.bluetooth_printer?.id) {
                 toast.error('QZ Tray not connected and no Bluetooth printer configured. Please connect a printer in Settings.');
