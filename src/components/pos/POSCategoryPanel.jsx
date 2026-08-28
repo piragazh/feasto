@@ -11,7 +11,7 @@ export default function POSCategoryPanel({ categories, selectedCategory, onSelec
                     <button
                         key={id}
                         onClick={() => onSelect(id)}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all truncate ${
+                        className={`w-full text-left px-3 min-h-[48px] py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] leading-snug ${
                             selectedCategory === id
                                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
                                 : t.catBtn
