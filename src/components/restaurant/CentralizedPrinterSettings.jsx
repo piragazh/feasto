@@ -489,7 +489,7 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                             Reconnect
                         </button>
                     )}
-                    {type !== 'network' && service && (
+                    {((type !== 'network' && service) || type === 'qz_tray') && (
                         <button
                             onClick={handleTestPrint}
                             disabled={testing}
