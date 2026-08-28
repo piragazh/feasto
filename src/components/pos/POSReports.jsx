@@ -211,127 +211,29 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
 
     // ─── Print to Thermal Printer ──────────────────────────────────────────────
     const printReport = async () => {
-        const config = restaurant?.printer_config || {};
-        const printerInfo = config.bluetooth_printer;
-        if (!printerInfo?.id && !config.qz_printer_name) {
-            toast.error('No thermal printer configured. Set one up in Restaurant Settings > Printing.');
-            return;
-        }
-
         setIsPrinting(true);
         try {
-            // ── Try QZ Tray first (preferred for Windows POS) ─────────────────
-            if (config.qz_printer_name) {
-                try {
-                    const { default: qzTrayService } = await import('@/lib/qzTrayService');
-                    const { buildReportBytes } = await import('@/lib/escpos');
-                    if (!qzTrayService.isConnected()) await qzTrayService.connect();
-                    if (qzTrayService.isConnected()) {
-                        const reportBytes = buildReportBytes(restaurant, {
-                            reportLabel,
-                            filteredOrders,
-                            totalRevenue,
-                            cashRevenue,
-                            cardRevenue,
-                            averageOrder,
-                            peakHour,
-                            orderTypeData,
-                            menuItemsData,
-                            salesData,
-                        }, config);
-                        await qzTrayService.print(config.qz_printer_name, reportBytes);
-                        toast.success('Report printed successfully');
-                        return;
-                    }
-                } catch (qzErr) {
-                    console.warn('[REPORTS] QZ Tray print failed, falling back to Bluetooth:', qzErr?.message);
-                }
-            }
-            // ── Fall back to Bluetooth ────────────────────────────────────────
-            if (!printerInfo?.id) {
-                toast.error('QZ Tray not connected and no Bluetooth printer configured. Please connect a printer in Settings.');
+            const { buildReportBytes } = await import('@/lib/escpos');
+            const { printRawBytesToPosPrinter, resolvePosUtilityPrinter } = await import('@/lib/printUtils');
+            const printer = resolvePosUtilityPrinter(restaurant);
+            if (!printer) {
+                toast.error('No printer assigned to POS Orders. Set one up in Settings > Printing.');
                 return;
             }
-            await printerService.connect(printerInfo, true);
-            printerService.setCommandSet(config.command_set || 'esc_pos');
-            const cmd = printerService.getCommands();
-            const lw = config.printer_width === '58mm' ? 32 : 48;
-            const line = '='.repeat(lw);
-            const dashes = '-'.repeat(lw);
-
-            const pad = (left, right, width = lw) => {
-                const gap = width - left.length - right.length;
-                return `${left}${' '.repeat(Math.max(1, gap))}${right}`;
-            };
-
-            await printerService.sendCommand(cmd.init);
-            await printerService.sendCommand(cmd.alignCenter);
-            await printerService.sendCommand(cmd.boldOn);
-            await printerService.sendCommand(cmd.doubleHeight);
-            await printerService.sendText(`${restaurant?.name || 'POS Report'}\n`);
-            await printerService.sendCommand(cmd.normal);
-            await printerService.sendCommand(cmd.boldOff);
-            await printerService.sendText(`POS SALES REPORT\n`);
-            await printerService.sendText(`${reportLabel}\n`);
-            await printerService.sendText(`Printed: ${moment().format('DD/MM/YYYY HH:mm')}\n`);
-            await printerService.sendCommand(cmd.alignLeft);
-            await printerService.sendText(`${line}\n`);
-
-            // Summary
-            await printerService.sendCommand(cmd.boldOn);
-            await printerService.sendText('SUMMARY\n');
-            await printerService.sendCommand(cmd.boldOff);
-            await printerService.sendText(`${dashes}\n`);
-            await printerService.sendText(pad('Total Orders:', `${filteredOrders.length}`) + '\n');
-            await printerService.sendText(pad('Total Revenue:', `£${totalRevenue.toFixed(2)}`) + '\n');
-            await printerService.sendText(pad('Cash:', `£${cashRevenue.toFixed(2)}`) + '\n');
-            await printerService.sendText(pad('Card:', `£${cardRevenue.toFixed(2)}`) + '\n');
-            await printerService.sendText(pad('Avg Order:', `£${averageOrder.toFixed(2)}`) + '\n');
-            await printerService.sendText(pad('Peak Hour:', peakHour) + '\n');
-
-            // Order types
-            if (orderTypeData.length > 0) {
-                await printerService.sendText(`${line}\n`);
-                await printerService.sendCommand(cmd.boldOn);
-                await printerService.sendText('ORDER TYPES\n');
-                await printerService.sendCommand(cmd.boldOff);
-                await printerService.sendText(`${dashes}\n`);
-                for (const ot of orderTypeData) {
-                    await printerService.sendText(pad(ot.name.replace('_', ' ').toUpperCase() + ':', `${ot.value}`) + '\n');
-                }
-            }
-
-            // Top items
-            if (menuItemsData.length > 0) {
-                await printerService.sendText(`${line}\n`);
-                await printerService.sendCommand(cmd.boldOn);
-                await printerService.sendText('TOP ITEMS\n');
-                await printerService.sendCommand(cmd.boldOff);
-                await printerService.sendText(`${dashes}\n`);
-                for (const item of menuItemsData.slice(0, 8)) {
-                    const short = item.name.length > lw - 12 ? item.name.slice(0, lw - 14) + '..' : item.name;
-                    await printerService.sendText(pad(short, `x${item.count} £${item.revenue.toFixed(2)}`) + '\n');
-                }
-            }
-
-            // Daily breakdown
-            if (salesData.length > 1) {
-                await printerService.sendText(`${line}\n`);
-                await printerService.sendCommand(cmd.boldOn);
-                await printerService.sendText('DAILY BREAKDOWN\n');
-                await printerService.sendCommand(cmd.boldOff);
-                await printerService.sendText(`${dashes}\n`);
-                for (const d of salesData) {
-                    await printerService.sendText(pad(d.date, `£${d.total.toFixed(2)}`) + '\n');
-                }
-            }
-
-            await printerService.sendText(`${line}\n`);
-            await printerService.sendCommand(cmd.alignCenter);
-            await printerService.sendText('--- End of Report ---\n\n\n');
-            await printerService.sendCommand(cmd.cut);
-
-            toast.success('Report printed successfully');
+            const reportBytes = buildReportBytes(restaurant, {
+                reportLabel,
+                filteredOrders,
+                totalRevenue,
+                cashRevenue,
+                cardRevenue,
+                averageOrder,
+                peakHour,
+                orderTypeData,
+                menuItemsData,
+                salesData,
+            }, printer);
+            const printerName = await printRawBytesToPosPrinter(restaurant, reportBytes);
+            toast.success(`Report printed via ${printerName}`);
         } catch (e) {
             toast.error(`Print failed: ${e.message}`);
         } finally {
