@@ -614,6 +614,30 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                 <NetworkPrinterManager printer={printer} onUpdate={onUpdate} restaurantId={restaurantId} />
             )}
 
+            {/* Printer role: customer receipt vs kitchen ticket */}
+            <div>
+                <Label className="text-xs text-gray-500 uppercase tracking-wide block mb-2">Printer Role</Label>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={() => onUpdate({ role: 'receipt' })}
+                        className={`flex items-center justify-center gap-1.5 p-2.5 rounded-lg border-2 text-xs font-medium transition-all ${
+                            (printer.role || 'receipt') === 'receipt' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 hover:border-gray-300 text-gray-500'
+                        }`}
+                    >
+                        <Receipt className="h-4 w-4" />Receipt (with prices)
+                    </button>
+                    <button
+                        onClick={() => onUpdate({ role: 'kitchen' })}
+                        className={`flex items-center justify-center gap-1.5 p-2.5 rounded-lg border-2 text-xs font-medium transition-all ${
+                            printer.role === 'kitchen' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 hover:border-gray-300 text-gray-500'
+                        }`}
+                    >
+                        <ChefHat className="h-4 w-4" />Kitchen (items only)
+                    </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">A Receipt printer and a Kitchen printer can both be assigned to the same order type below — both get a copy automatically.</p>
+            </div>
+
             {/* Order type assignments */}
             <div>
                 <Label className="text-xs text-gray-500 uppercase tracking-wide block mb-2">Receives Jobs From</Label>
