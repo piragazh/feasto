@@ -196,9 +196,15 @@ class QZTrayService {
                     retries: 0,
                     delay: 0,
                     usingSecure,
-                    // Only try localhost:8181 — avoids slow multi-port scanning
+                    // Try 'localhost' then the explicit IPv4 loopback. On some
+                    // dual-stack systems (notably Windows) the browser resolves
+                    // 'localhost' to the IPv6 loopback (::1) first; QZ Tray only
+                    // binds to IPv4 127.0.0.1, so that first attempt is refused
+                    // immediately even though QZ Tray is running fine. Falling
+                    // back to 127.0.0.1 catches that case. usingSurf stays off
+                    // to avoid slow multi-port/qz.surf scanning.
                     usingSurf: false,
-                    host: ['localhost'],
+                    host: ['localhost', '127.0.0.1'],
                     port: { secure: [8181], insecure: [], portIndex: 0 },
                 });
             } catch (syncErr) {
