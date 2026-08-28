@@ -927,6 +927,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                                 key={i}
                                 index={i}
                                 printer={printer}
+                                printers={printers}
                                 onUpdate={(changes) => updatePrinter(i, changes)}
                                 onRemove={() => removePrinter(i)}
                                 restaurantId={restaurantId}
