@@ -359,33 +359,35 @@ export class PrinterService {
 
         await this.sendText('================================\n');
 
-        if (config.template !== 'compact') {
-            const subtotal = `£${(order.subtotal || 0).toFixed(2)}`;
-            await this.sendText(`Subtotal:${' '.repeat(Math.max(1, lineWidth - 9 - subtotal.length))}${subtotal}\n`);
-            if ((order.delivery_fee || 0) > 0) {
-                const fee = `£${order.delivery_fee.toFixed(2)}`;
-                await this.sendText(`Delivery:${' '.repeat(Math.max(1, lineWidth - 9 - fee.length))}${fee}\n`);
+        if (!isKitchen) {
+            if (config.template !== 'compact') {
+                const subtotal = `£${(order.subtotal || 0).toFixed(2)}`;
+                await this.sendText(`Subtotal:${' '.repeat(Math.max(1, lineWidth - 9 - subtotal.length))}${subtotal}\n`);
+                if ((order.delivery_fee || 0) > 0) {
+                    const fee = `£${order.delivery_fee.toFixed(2)}`;
+                    await this.sendText(`Delivery:${' '.repeat(Math.max(1, lineWidth - 9 - fee.length))}${fee}\n`);
+                }
+                if ((order.discount || 0) > 0) {
+                    const disc = `-£${order.discount.toFixed(2)}`;
+                    await this.sendText(`Discount:${' '.repeat(Math.max(1, lineWidth - 9 - disc.length))}${disc}\n`);
+                }
             }
-            if ((order.discount || 0) > 0) {
-                const disc = `-£${order.discount.toFixed(2)}`;
-                await this.sendText(`Discount:${' '.repeat(Math.max(1, lineWidth - 9 - disc.length))}${disc}\n`);
-            }
+
+            await this.sendCommand(cmd.boldOn);
+            if (config.template === 'itemized') await this.sendCommand(cmd.doubleHeight);
+            const total = `£${(order.total || 0).toFixed(2)}`;
+            await this.sendText(`TOTAL:${' '.repeat(Math.max(1, lineWidth - 6 - total.length))}${total}\n`);
+            await this.sendCommand(cmd.normal);
+            await this.sendCommand(cmd.boldOff);
+
+            if (config.template !== 'minimal') await this.sendText(`Payment: ${order.payment_method || 'N/A'}\n`);
         }
-
-        await this.sendCommand(cmd.boldOn);
-        if (config.template === 'itemized') await this.sendCommand(cmd.doubleHeight);
-        const total = `£${(order.total || 0).toFixed(2)}`;
-        await this.sendText(`TOTAL:${' '.repeat(Math.max(1, lineWidth - 6 - total.length))}${total}\n`);
-        await this.sendCommand(cmd.normal);
-        await this.sendCommand(cmd.boldOff);
-
-        if (config.template !== 'minimal') await this.sendText(`Payment: ${order.payment_method || 'N/A'}\n`);
         if (order.notes) {
             await this.sendText('--------------------------------\n');
             await this.sendText(`Notes: ${order.notes}\n`);
         }
 
-        if (config.footer_text) {
+        if (config.footer_text && !isKitchen) {
             await this.sendText('================================\n');
             await this.sendCommand(cmd.alignCenter);
             await this.sendText(`${config.footer_text}\n`);
