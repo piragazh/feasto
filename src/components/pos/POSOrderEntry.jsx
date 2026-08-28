@@ -279,8 +279,21 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 }
                 toast.success('Payment recorded offline — will sync when connected');
             } else {
-                for (const order of ordersForTable) await base44.entities.Order.update(order.id, { status: 'delivered' });
-                toast.success('Payment completed!');
+                // Fall back to queueing if the backend is unreachable mid-update, so a
+                // completed payment is never silently lost.
+                try {
+                    for (const order of ordersForTable) await base44.entities.Order.update(order.id, { status: 'delivered' });
+                    toast.success('Payment completed!');
+                } catch (err) {
+                    if (isNetworkError(err)) {
+                        for (const order of ordersForTable) {
+                            await savePendingStatusUpdate(order.id, 'delivered');
+                        }
+                        toast.success('Connection lost — payment recorded offline, will sync automatically');
+                    } else {
+                        throw err;
+                    }
+                }
             }
             setShowPayment(false); setViewingTable(null); setViewMode('tables');
             refetchTableOrders();
