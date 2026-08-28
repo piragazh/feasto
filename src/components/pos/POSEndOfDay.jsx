@@ -74,6 +74,27 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
     }, [orders, reportDate]);
 
     const printEOD = async () => {
+        setIsPrinting(true);
+        try {
+            const { buildEODBytes } = await import('@/lib/escpos');
+            const { printRawBytesToPosPrinter, resolvePosUtilityPrinter } = await import('@/lib/printUtils');
+            const printer = resolvePosUtilityPrinter(restaurant);
+            if (!printer) {
+                toast.error('No printer assigned to POS Orders. Set one up in Settings > Printing.');
+                setIsPrinting(false);
+                return;
+            }
+            const eodBytes = buildEODBytes(restaurant, stats, format(new Date(reportDate), 'dd MMM yyyy'), printer);
+            const printerName = await printRawBytesToPosPrinter(restaurant, eodBytes);
+            toast.success(`EOD report printed via ${printerName}`);
+        } catch (e) {
+            toast.error('Print failed: ' + e.message);
+        } finally {
+            setIsPrinting(false);
+        }
+    };
+
+    async function _deadCodeToRemove_printEOD_legacy() {
         const config = restaurant?.printer_config;
         if (!config?.bluetooth_printer?.id && !config?.qz_printer_name) {
             toast.error('No printer configured. Please connect a printer in Settings > Printing.');
