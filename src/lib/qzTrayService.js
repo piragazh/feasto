@@ -176,31 +176,6 @@ class QZTrayService {
     }
 
     /**
-     * Quick fetch to https://localhost:8181 to verify the self-signed cert
-     * is trusted by the browser. Returns true if the fetch succeeds (even
-     * with a non-200 status), false if it fails due to cert rejection.
-     * NOTE: kept only as a helper for _getCertificate()'s fallback path
-     * below — no longer used as a connect() gate, since on non-localhost
-     * origins this fetch fails identically for LNA blocks and real cert
-     * issues, and the real qz-tray WebSocket connect is a better source of
-     * truth (see connect() above).
-     */
-    async _preflightCertCheck() {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        try {
-            // Any response (even 404/500) means the TLS handshake succeeded.
-            await fetch('https://localhost:8181', { signal: controller.signal, mode: 'no-cors' });
-            clearTimeout(timeoutId);
-            return true;
-        } catch (e) {
-            clearTimeout(timeoutId);
-            console.warn('[QZTray] Pre-flight cert check failed:', e?.message || e);
-            return false;
-        }
-    }
-
-    /**
      * Single connection attempt with a hard watchdog.
      * Returns true on success, false on failure/timeout.
      */
