@@ -259,7 +259,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     // ══════════════════════════════════════════
     line('=');
 
-    if (!isCompact && !isMinimal) {
+    if (!isKitchen && !isCompact && !isMinimal) {
         const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;
         add(`${rPad('Subtotal:', sub, W)}\n`);
         if ((order.delivery_fee || 0) > 0) {
