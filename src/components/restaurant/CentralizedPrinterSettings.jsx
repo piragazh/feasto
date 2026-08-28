@@ -172,12 +172,16 @@ function TemplatePreviewStrip({ tpl }) {
 const DEFAULT_PRINTER = {
     name: '',
     enabled: true,
+    // 'receipt' = customer-facing copy (prices, totals, payment method).
+    // 'kitchen' = item-only ticket for the kitchen — no prices, larger item text.
+    role: 'receipt',
     connection_type: 'bluetooth',
     bluetooth_printer: null,
     usb_vendor_id: '',
     usb_product_id: '',
     network_ip: '',
     network_port: '9100',
+    qz_printer_name: '',
     assigned_channels: [],
     printer_width: '80mm',
     command_set: 'esc_pos',
