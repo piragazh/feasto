@@ -787,6 +787,20 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     });
                 }
             }
+            // Fold in a standalone legacy QZ Tray printer name (from the old POS
+            // Settings screen) as its own printer, same as the branch above.
+            if (c.qz_printer_name) {
+                migratedPrinters.push({
+                    ...DEFAULT_PRINTER,
+                    name: 'QZ Tray Printer (migrated)',
+                    connection_type: 'qz_tray',
+                    qz_printer_name: c.qz_printer_name,
+                    assigned_channels: ['pos_order'],
+                    printer_width: c.printer_width || '80mm',
+                    command_set: c.command_set || 'esc_pos',
+                    template: c.template || 'standard',
+                });
+            }
             setPrinters(migratedPrinters);
         }
     }, [restaurant]);
