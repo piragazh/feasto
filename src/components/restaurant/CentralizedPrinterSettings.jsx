@@ -385,9 +385,9 @@ function resolveBtSlotIndex(printers, printer) {
 }
 
 // ── Single printer card ────────────────────────────────────────────────────
-function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
-    // Slots 0 and 1 → BT service A and B. Slots 2+ → no BT service (network/USB only)
-    const service = BT_SERVICES[index] || null;
+function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantId }) {
+    const btSlotIndex = resolveBtSlotIndex(printers || [printer], printer);
+    const service = BT_SERVICES[btSlotIndex] ?? null;
     const type = printer.connection_type || 'bluetooth';
     const accentClass = index === 0 ? 'border-orange-200' : 'border-blue-200';
     const [testing, setTesting] = useState(false);
