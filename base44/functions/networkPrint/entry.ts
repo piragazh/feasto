@@ -277,14 +277,16 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
         line('-');
     }
 
-    // TOTAL — double height for instant visibility
-    add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
-    add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
-    add(cmd.normal, cmd.boldOff, cmd.alignLeft);
+    if (!isKitchen) {
+        // TOTAL — double height for instant visibility
+        add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
+        add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
+        add(cmd.normal, cmd.boldOff, cmd.alignLeft);
 
-    if (!isMinimal) {
-        const payLabel = (order.payment_method || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        add(`Payment: ${payLabel}\n`);
+        if (!isMinimal) {
+            const payLabel = (order.payment_method || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            add(`Payment: ${payLabel}\n`);
+        }
     }
 
     // ══════════════════════════════════════════
