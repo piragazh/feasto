@@ -531,7 +531,7 @@ Provide only the time range (e.g., "25-30 min").`;
         const config = restaurant?.printer_config || {};
         const centralized = config.centralized_printers || [];
 
-        const printerName = await printWithCentralizedConfig(order, restaurant, channel, () => {
+        const result = await printWithCentralizedConfig(order, restaurant, channel, () => {
             // Fallback: show order dialog when no printer available
             const fallbackCfg = centralized.length > 0 ? { ...config, ...centralized[0] } : config;
             setPrintFallback({
@@ -542,7 +542,11 @@ Provide only the time range (e.g., "25-30 min").`;
             });
         });
 
-        if (printerName) toast.success(`Printed via ${printerName}`);
+        if (result.printed.length > 0) {
+            toast.success(`Printed via ${result.printed.map(p => p.name).join(', ')}`);
+        } else if (result.failed.length > 0) {
+            toast.error(`Print failed: ${result.failed[0].error}`);
+        }
     };
 
 
