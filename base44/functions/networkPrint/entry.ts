@@ -106,6 +106,8 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     const W = (config.printer_width === '58mm') ? 32 : 48;  // line width chars
     const isCompact = config.template === 'compact';
     const isMinimal = config.template === 'minimal';
+    // Kitchen tickets are item-focused and never show prices/totals/payment.
+    const isKitchen = config.role === 'kitchen';
     const chunks = [];
     const add = (...parts) => chunks.push(bytes(...parts));
     const line  = (char = '-') => add(`${char.repeat(W)}\n`);
